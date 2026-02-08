@@ -6,9 +6,8 @@ We release patches for security vulnerabilities. Currently supported versions:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.6.x   | :white_check_mark: |
-| 0.5.x   | :white_check_mark: |
-| < 0.5   | :x:                |
+| 1.0.x   | :white_check_mark: |
+| < 1.0   | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -36,7 +35,7 @@ When deploying MeetEasier, please follow these security best practices:
 
 ### Authentication & Authorization
 
-1. **Protect Admin Endpoints**: Always set a strong `WIFI_API_TOKEN` in your `.env` file
+1. **Protect Admin Endpoints**: Always set a strong `API_TOKEN` in your `.env` file
    ```bash
    # Generate a secure token (64+ characters recommended)
    openssl rand -hex 32
@@ -45,11 +44,12 @@ When deploying MeetEasier, please follow these security best practices:
 2. **Microsoft Graph API Permissions**: Use the principle of least privilege
    - Only grant necessary permissions (Calendars.Read, Calendars.ReadWrite, Place.Read.All, User.Read.All)
    - Use application permissions, not delegated permissions
-   - Regularly review and rotate client secrets
+   - Regularly review and rotate client secrets (recommended: every 90 days)
 
 3. **Environment Variables**: Never commit `.env` files to version control
    - Use `.env.template` as a reference
    - Store secrets in secure secret management systems (AWS Secrets Manager, Azure Key Vault, etc.)
+   - Use different tokens for different environments (dev, staging, production)
 
 ### Network Security
 
@@ -105,8 +105,9 @@ When deploying MeetEasier, please follow these security best practices:
 ### Configuration Security
 
 1. **Environment-Based Configuration**: Use environment variables for sensitive settings
-2. **Configuration Locks**: When environment variables are set, admin panel sections are hidden
-3. **API Token Protection**: Admin endpoints require authentication via `WIFI_API_TOKEN`
+2. **Configuration Locks**: When environment variables are set, admin panel sections are locked and hidden
+3. **API Token Protection**: All admin endpoints require authentication via `API_TOKEN`
+4. **Token Storage**: Store `API_TOKEN` securely, never in client-side code or logs
 
 ### Monitoring & Incident Response
 
@@ -128,9 +129,11 @@ When deploying MeetEasier, please follow these security best practices:
    - Do not use for secure/internal networks
 
 3. **Admin Panel**:
-   - Protected by API token
-   - No user authentication system (single token)
+   - Protected by API token (`API_TOKEN`)
+   - No user authentication system (single shared token)
+   - Token is sent in Authorization header or X-API-Token header
    - Consider implementing proper user authentication for production
+   - Restrict network access to admin panel via firewall rules
 
 ## Security Updates
 
