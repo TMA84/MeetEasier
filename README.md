@@ -14,6 +14,14 @@ MeetEasier is a web application that visualizes meeting room availability. It wo
 
 **Note: The Exchange Web Services (EWS) is deprecated and will be removed in the future.**
 
+## Quick Start
+
+📚 **[Installation Guide](INSTALLATION.md)** - Complete step-by-step installation instructions
+
+📖 **[Configuration Reference](CONFIGURATION.md)** - Detailed configuration options and settings
+
+🔒 **[Security Policy](SECURITY.md)** - Security best practices and vulnerability reporting
+
 ---
 
 ## Screenshots
