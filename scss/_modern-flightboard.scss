@@ -1,0 +1,305 @@
+// Modern Flightboard Display Styles
+// =============================================================================
+
+@use 'sass:color';
+@use 'modern-variables' as *;
+
+#page-wrap {
+  min-height: 100vh;
+  background: $neutral-900;
+}
+
+// Navbar ------------------------------------------------------------------
+#title-bar-wrap {
+  position: sticky;
+  top: 0;
+  z-index: $z-sticky;
+  box-shadow: $shadow-lg;
+  
+  .title-bar {
+    background: linear-gradient(135deg, $neutral-800 0%, $neutral-900 100%);
+    border-bottom: 2px solid $primary-500;
+    padding: clamp($space-3, 2vw, $space-4) clamp($space-4, 3vw, $space-6);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .title-bar-left,
+    .title-bar-right {
+      display: flex;
+      align-items: center;
+    }
+    
+    .fb__nav-menu {
+      display: flex;
+      align-items: center;
+      gap: clamp($space-3, 3vw, $space-6);
+      margin: 0;
+      
+      li {
+        padding: clamp($space-1, 1vw, $space-2) clamp($space-2, 2vw, $space-4);
+        font-size: clamp(0.875rem, 1.3vw, 1.25rem);
+        font-weight: $font-weight-semibold;
+        color: $text-inverse;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: all $transition-base;
+        border-radius: $radius-md;
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
+      }
+      
+      img {
+        max-height: clamp(40px, 6vh, 60px);
+        height: auto;
+      }
+      
+      #fb__navbar-title {
+        font-size: clamp(1rem, 1.5vw, 1.75rem);
+        font-weight: $font-weight-bold;
+        color: $text-inverse;
+      }
+    }
+    
+    .fb__nav-menu-right {
+      li {
+        padding: clamp($space-1, 1vw, $space-2) clamp($space-3, 3vw, $space-6);
+        border-left: 2px solid rgba(255, 255, 255, 0.2);
+        font-size: clamp(1.25rem, 2vw, 2rem);
+        font-weight: $font-weight-light;
+        color: $text-inverse;
+        
+        &:first-child {
+          border-left: none;
+        }
+        
+        #clock {
+          display: flex;
+          align-items: center;
+          gap: clamp(0.5rem, 1vw, 1rem);
+          font-size: clamp(1rem, 1.5vw, 1.5rem);
+          
+          span {
+            white-space: nowrap;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Flightboard Rows --------------------------------------------------------
+.tracker-wrap {
+  padding: clamp($space-4, 3vw, $space-6) clamp($space-3, 2vw, $space-4);
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.meeting-room__row {
+  margin-bottom: clamp($space-1, 1vh, $space-2);
+  animation: fadeIn $transition-base ease-out;
+}
+
+.meeting-room {
+  background: $neutral-800;
+  border-radius: $radius-lg;
+  border-left: clamp(4px, 0.5vw, 6px) solid $success-500;
+  padding: clamp($space-3, 2vw, $space-4) clamp($space-4, 3vw, $space-6);
+  transition: all $transition-base;
+  box-shadow: $shadow-md;
+  min-height: clamp(80px, 10vh, 100px);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-xl;
+    background: color.adjust($neutral-800, $lightness: 3%);
+  }
+  
+  // Busy state
+  &.meeting-room-busy {
+    border-left-color: $error-500;
+    background: linear-gradient(90deg, rgba($error-500, 0.15) 0%, $neutral-800 10%);
+  }
+  
+  // Error state
+  &.meeting-room-error {
+    border-left-color: $warning-500;
+    background: linear-gradient(90deg, rgba($warning-500, 0.15) 0%, $neutral-800 10%);
+  }
+  
+  .row {
+    display: flex;
+    align-items: center;
+    gap: clamp($space-3, 3vw, $space-8);
+    width: 100%;
+    flex: 1;
+    
+    > .columns {
+      flex-shrink: 0;
+      
+      &.medium-1 {
+        width: clamp(80px, 10vw, 120px);
+      }
+      
+      &.medium-3 {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      
+      &.medium-4 {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+    }
+  }
+  
+  // Status indicator
+  .meeting-room__status {
+    flex-shrink: 0;
+    margin-right: clamp($space-3, 3vw, $space-8);
+    width: clamp(80px, 10vw, 120px);
+    
+    > div {
+      display: inline-flex;
+      align-items: center;
+      gap: clamp($space-1, 1vw, $space-2);
+      font-size: clamp(1rem, 1.5vw, 1.5rem);
+      font-weight: $font-weight-bold;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: clamp($space-1, 1vw, $space-2) clamp($space-2, 1.5vw, $space-3);
+      border-radius: $radius-md;
+      
+      &::before {
+        content: '';
+        width: clamp(8px, 1vw, 12px);
+        height: clamp(8px, 1vw, 12px);
+        border-radius: $radius-full;
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+    }
+    
+    .meeting-open {
+      color: $success-600;
+      background: rgba($success-500, 0.1);
+      
+      &::before {
+        background: $success-500;
+      }
+    }
+    
+    .meeting-busy {
+      color: $error-600;
+      background: rgba($error-500, 0.1);
+      
+      &::before {
+        background: $error-500;
+      }
+    }
+    
+    .meeting-upcoming {
+      color: $warning-600;
+      background: rgba($warning-500, 0.1);
+      
+      &::before {
+        background: $warning-500;
+      }
+    }
+    
+    .meeting-error {
+      color: $warning-600;
+      background: rgba($warning-500, 0.1);
+      
+      &::before {
+        background: $warning-500;
+      }
+    }
+  }
+  
+  // Room name
+  .meeting-room__name {
+    font-size: clamp(1.25rem, 2vw, 2rem);
+    font-weight: $font-weight-semibold;
+    color: $text-inverse;
+    text-transform: capitalize;
+    line-height: $line-height-tight;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  
+  // Seats capacity
+  .seats-capacity {
+    font-size: clamp(1rem, 1.5vw, 1.75rem);
+    font-weight: $font-weight-bold;
+    color: $text-inverse;
+    text-align: center;
+    width: clamp(40px, 5vw, 60px);
+  }
+  
+  .seats {
+    font-size: clamp(0.75rem, 1vw, 1rem);
+    font-weight: $font-weight-normal;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    width: clamp(40px, 5vw, 60px);
+  }
+  
+  // Meeting information
+  .meeting-organizer {
+    font-size: clamp(1rem, 1.4vw, 1.5rem);
+    font-weight: $font-weight-medium;
+    color: $text-inverse;
+    margin-bottom: clamp(0rem, 0.5vh, $space-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    
+    .meeting-upcoming {
+      font-size: clamp(0.75rem, 1.1vw, 1rem);
+      font-weight: $font-weight-semibold;
+      color: $warning-600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+  }
+  
+  .meeting-time {
+    font-size: clamp(0.75rem, 1.1vw, 1.125rem);
+    font-weight: $font-weight-normal;
+    color: rgba(255, 255, 255, 0.7);
+  }
+}
+
+// Spinner -----------------------------------------------------------------
+#fb__spinner-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+  
+  #fb__spinner {
+    width: clamp(60px, 8vw, 80px);
+    height: clamp(60px, 8vw, 80px);
+  }
+}
+
+// Error message -----------------------------------------------------------
+.credentials-error {
+  text-align: center;
+  padding: clamp($space-6, 4vw, $space-8);
+  font-size: clamp(1rem, 1.5vw, 1.5rem);
+  color: $error-500;
+  background: rgba($error-500, 0.1);
+  border-radius: $radius-lg;
+  margin: clamp($space-4, 3vw, $space-6);
+}

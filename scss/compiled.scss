@@ -1,0 +1,11 @@
+// Legacy styles (converted to @use) - loaded first for backward compatibility
+@use 'variables' as *;
+@use 'globals';
+
+// Modern Design System (using @use for new modular approach - no deprecation warnings)
+// Loaded after legacy to allow modern styles to override
+@use 'modern-variables' as *;
+@use 'modern-globals';
+@use 'modern-single-room';
+@use 'modern-room-minimal';
+@use 'modern-flightboard';

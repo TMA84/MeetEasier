@@ -1,0 +1,451 @@
+// globals
+@use 'variables' as *;
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+#app {
+  font-family: 'Titillium Web', sans-serif;
+}
+
+body,
+html {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  color: $primaryFont;
+  background-color: $bodyBackground;
+}
+
+.credentials-error {
+  text-align: center;
+}
+
+.guestText {
+  font-size: 1.1vw;
+  font-family: 'Titillium Web', sans-serif;
+}
+
+.wifi-class {
+  font-size: 2.5vw;
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+#single-room__meeting-title_next {
+  font-size: 1.8v;
+}
+
+#wlanDetailsTable {
+  border:none;
+  margin: 0 auto;
+  width: auto;	
+}
+
+#wlanDetailsTable td {
+  border:none!important;
+  font-size: 2.3vw!important;
+  padding: 0 5px!important;
+}
+
+#wlanDetailsTable tr {
+  border: none!important;
+}
+
+
+
+#fb__spinner-wrap {
+  text-align: center;
+
+  #fb__spinner {
+    width: 100px;
+    height: 100px;
+    margin: 20px;
+  }
+}
+
+.row {
+  max-width: 99%;
+}
+
+.title-bar {
+  background: $titleBarBackground;
+  padding: 0;
+  border-bottom: 1px solid $titleBarBottomBorder;
+}
+
+.title-bar-title {
+  padding-left: 25px;
+}
+
+.menu-icon {
+  padding-right: 25px;
+}
+
+.fb__nav-menu i,
+.fb__nav-menu-right i {
+  font-size: 24px;
+  padding-right: 8px;
+}
+
+.fb__nav-menu {
+  a {
+    color: $primaryFont;
+  }
+  li {
+    text-transform: uppercase;
+    font-size: 1.3vw;
+    line-height: 2;
+    color: $primaryFont;
+    padding: 8px 30px;
+  }
+
+  img {
+    max-height: 70px;
+  }
+
+  .fb__dropdown {
+    margin-top: 0px;
+
+    li {
+      line-height: normal;
+      padding: 8px 30px;
+      font-size: 1.3vw;
+
+      .fb__child-dropdown {
+        li {
+          min-width: 250px;
+          font-size: 12px;
+          padding: 0.7rem 1rem;
+          color: $titleBarLiBorder !important;
+          cursor: pointer;
+
+          a {
+            color: $titleBarLiBorder !important;
+          }
+        }
+      }
+    }
+  }
+}
+
+.fb__nav-menu-right {
+  li {
+    text-transform: uppercase;
+    padding: 8px 30px;
+    border-left: 1px solid $titleBarLiBorder;
+    color: $primaryFont;
+    font-size: 28px;
+    line-height: 2;
+  }
+
+  li:first-child {
+    border: 0;
+  }
+
+  li:first-child:hover {
+    background: $titleBarBackground;
+  }
+}
+
+.fb__nav-menu li:hover,
+.fb__nav-menu-right li:hover {
+  background-color: rgba(69, 89, 117, .1);
+}
+
+.fb__menu-button,
+.fb__menu-button a{
+  color: $titleBarButton;
+  font-size: 36px;
+}
+
+.row-padder {
+  padding: 2px 0;
+}
+
+.tracker-wrap {
+  padding-top: 15px;
+}
+
+.full-width {
+   width: 100%;
+   margin-left: auto;
+   margin-right: auto;
+   max-width: initial;
+}
+
+.meeting-room {
+  border: 1px solid $cardBorder;
+  border-left: 10px solid $green;
+  width: 100%;
+  background-color: $cardBackground;
+  padding: 10px 50px;
+
+  .meeting-room__status {
+  }
+
+  .meeting-busy {
+    font-size: 40px;
+    color: $red;
+  }
+
+  .meeting-open {
+    font-size: 40px;
+    color: $green;
+  }
+
+  .meeting-upcoming {
+    font-size: 30px;
+    color: $yellow;
+  }
+
+  .meeting-error {
+    font-size: 40px;
+    color: $orange;
+  }
+
+  .meeting-room__name {
+    font-size: 40px;
+    color: $grayLightest;
+  }
+
+  .meeting-room__name:first-letter {
+    text-transform: uppercase;
+  }
+
+  .meeting-subject {
+    font-size: 24vw;
+  }
+
+  .meeting-time {
+    font-size: 24px;
+    color: $grayLight;
+  }
+
+  .meeting-start, .meeting-end {
+
+  }
+
+  .meeting-organizer {
+    font-size: 30px;
+  }
+
+  .meeting-fullscreen a{
+    font-size: 36px;
+    color: $grayLight;
+
+    &:hover {
+      color: white;
+    }
+  }
+
+  .seats-capacity {
+    font-size: 30px;
+  }
+
+  .seats {
+    font-size: 24px;
+    color: $grayLight;
+  }
+
+}
+
+.meeting-room-busy {
+  border-left: 8px solid $red !important;
+}
+
+.meeting-room-error {
+  border-left: 8px solid $orange !important;
+}
+
+#single-room__wrap {
+  height: 100vh;
+  width: 100%;
+
+  .full-height {
+    height: 100vh;
+    width: 100%;
+
+    .columns {
+      height: 100vh;
+    }
+
+    .left-col {
+      background: black;
+      padding: 30px;
+
+      #single-room__room-name {
+        font-size: 3vw;
+      }
+
+      #single-room__room-status {
+        text-transform: uppercase;
+        padding: 4% 0;
+        font-size: 12vw;
+        font-weight: lighter;
+      }
+
+      #single-room__meeting-title {
+        font-size: 3.5vw;
+        font-weight: lighter;
+
+        #single-room__next-up {
+          font-weight: bold;
+        }
+      }
+
+      #single-room__meeting-time {
+        font-size: 3vw;
+        font-weight: lighter;
+      }
+
+      #single-room__next-up_next {
+        font-size: 2.5vw;
+        font-weight: bold;
+      }
+
+      #single-room__meeting-subject_next {
+        font-size: 2.5vw;
+        font-weight: lighter;
+      }
+
+      #single-room__meeting-time_next {
+        font-size: 2.5vw;
+        font-weight: lighter;
+      }
+
+      #single-room__meeting-organizer {
+        font-size: 1.6vw;
+        font-weight: lighter;
+      }
+    }
+
+    .busy {
+      background: $red;
+    }
+
+    .open {
+      background: $greenDark;
+    }
+    
+    .busyAlert {
+      background: $yellow;
+    }
+
+    .right-col {
+      background: white;
+      padding: 30px;
+      color: black;
+
+      #single-room__clock-wrap {
+        padding-bottom: 20px;
+        font-weight: lighter;
+
+        #single-room__clock {
+          text-align: center;
+
+          #single-room__time {
+            font-size: 5vw;
+          }
+          #single-room__date {
+            font-size: 3vw;
+            color: $gray;
+          }
+        }
+
+      }
+
+      #upcoming-title {
+        font-size: 2.2vw;
+        text-transform: uppercase;
+        font-weight: lighter;
+      }
+	
+      table {
+        tr {
+          border-bottom: 1px solid $grayLightest;
+
+          td {
+            padding: 10px 8px;
+          }
+
+          td.up__meeting-title {
+            font-size: 1.8vw;
+          }
+
+          td.up__meeting-time {
+            font-size: 1.4vw;
+            color: $gray;
+          }
+        }
+      }
+
+      .upcoming-item {
+
+      }
+    }
+  }
+
+  .Logo {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        width: 200px;
+        
+
+        padding-bottom: 5px;
+   }
+
+  .QR {
+	display: block;
+	margin-left: auto;
+	margin-right: auto; 
+   	width: 180px;
+	height: 180px;
+   }
+
+  .guestText {
+        font-size: 2vw;
+ 	font-family: 'Titillium Web', sans-serif;
+   }
+
+ #error-wrap {
+    width: 600px;
+    margin: 0 auto;
+    padding-top: 50px;
+
+    #error-text {
+      font-size: 2.8vw;
+
+      #error-header {
+        font-weight: bold;
+        font-size: 3.2vw;
+        padding-bottom: 25px;
+      }
+    }
+  }
+}
+
+
+@media screen and (min-width: 40em) {
+  .valign-middle {
+    display: table;
+    width: 100%;
+
+    > .columns {
+        display: table-cell;
+        vertical-align: middle;
+    }
+
+    > .columns, > [class*="column"] + [class*="column"]:last-child {
+        float: none;
+    }
+  }
+}

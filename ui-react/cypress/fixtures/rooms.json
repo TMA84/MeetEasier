@@ -1,0 +1,68 @@
+[
+  {
+    "Name": "Conference Room A",
+    "RoomAlias": "conference-a",
+    "Roomlist": "Building 1",
+    "Busy": false,
+    "Appointments": [
+      {
+        "Subject": "Team Standup",
+        "Organizer": "John Doe",
+        "Start": 1770507600000,
+        "End": 1770509400000,
+        "Private": false
+      },
+      {
+        "Subject": "Project Review",
+        "Organizer": "Jane Smith",
+        "Start": 1770514800000,
+        "End": 1770518400000,
+        "Private": false
+      }
+    ]
+  },
+  {
+    "Name": "Meeting Room B",
+    "RoomAlias": "meeting-b",
+    "Roomlist": "Building 1",
+    "Busy": true,
+    "Appointments": [
+      {
+        "Subject": "Client Presentation",
+        "Organizer": "Bob Johnson",
+        "Start": 1770502200000,
+        "End": 1770505800000,
+        "Private": false
+      },
+      {
+        "Subject": "Design Workshop",
+        "Organizer": "Alice Williams",
+        "Start": 1770511200000,
+        "End": 1770514800000,
+        "Private": false
+      }
+    ]
+  },
+  {
+    "Name": "Board Room",
+    "RoomAlias": "board-room",
+    "Roomlist": "Building 2",
+    "Busy": false,
+    "Appointments": []
+  },
+  {
+    "Name": "Training Room",
+    "RoomAlias": "training",
+    "Roomlist": "Building 2",
+    "Busy": true,
+    "Appointments": [
+      {
+        "Subject": "Private Meeting",
+        "Organizer": "Sarah Davis",
+        "Start": 1770502200000,
+        "End": 1770505800000,
+        "Private": true
+      }
+    ]
+  }
+]

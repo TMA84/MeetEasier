@@ -1,0 +1,75 @@
+# Environment and secrets
+/.env
+.env.local
+.env.*.local
+
+# Dependencies
+/node_modules/
+/ui-react/node_modules/
+
+# Build outputs
+/ui-react/build/
+/static/css/styles.css
+/static/css/styles.css.map
+
+# Testing
+/ui-react/coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE and OS files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.sass-cache/
+
+# IIS
+/iisnode/
+
+# Deprecated config files
+/config/ews.js
+/config/auth.js
+/config/authx.js
+
+# Temporary files
+tree.txt
+_OLD_TODO.md
+
+# Cache files
+/data/cache.json
+
+# Uploaded logo files (user-generated content)
+/static/img/uploads/*
+!/static/img/uploads/.gitkeep
+
+# Runtime configuration files (created via API or environment)
+/data/wifi-config.json
+/data/logo-config.json
+/data/sidebar-config.json
+/data/booking-config.json
+
+# Infrastructure as Code (contains sensitive deployment info)
+/gitlab-ci.yml
+/.gitlab-ci.yml
+/main.tf
+/terraform.tfvars
+/variables.tf
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Deployment and CI/CD
+/deploy/*.pyc
+__pycache__/
+
+# Docker
+docker-compose.override.yml
+
+# Shrinkwrap (optional - some prefer to commit this)
+# npm-shrinkwrap.json

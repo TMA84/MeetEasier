@@ -1,0 +1,36 @@
+{
+  "name": "meet-easier",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "postinstall": "cd ui-react && npm install",
+    "build": "cd ui-react && npm run build",
+    "start": "node server",
+    "start-ui-dev": "cd ui-react && npm start",
+    "build-css": "sass scss/compiled.scss static/css/styles.css",
+    "watch-css": "sass --watch scss/compiled.scss:static/css/styles.css"
+  },
+  "dependencies": {
+    "@azure/msal-node": "^2.16.3",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "dotenv": "^16.6.1",
+    "ews-javascript-api": "^0.15.3",
+    "express": "^4.21.2",
+    "isomorphic-fetch": "^3.0.0",
+    "multer": "^2.0.2",
+    "qrcode": "^1.5.4",
+    "reload": "^3.4.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "sass": "^1.97.3"
+  },
+  "overrides": {
+    "cross-spawn": "^7.0.5",
+    "brace-expansion": "^2.0.2"
+  }
+}
