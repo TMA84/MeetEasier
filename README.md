@@ -14,7 +14,48 @@ MeetEasier is a web application that visualizes meeting room availability. It wo
 
 **Note: The Exchange Web Services (EWS) is deprecated and will be removed in the future.**
 
-![Mockup 1](mockups/mockup-1.jpg)
+---
+
+## Screenshots
+
+### Flightboard View
+Overview of all meeting rooms with their current status and upcoming meetings.
+
+![Flightboard](screenshots/flightboard.png)
+
+### Single Room Display
+Detailed view for individual meeting rooms showing current and upcoming meetings.
+
+**Available Room:**
+![Single Room - Available](screenshots/single-room.png)
+
+**Busy Room:**
+![Single Room - Busy](screenshots/single-room-busy.png)
+
+**With Meeting Titles:**
+![Single Room - With Titles](screenshots/single-room-busy-titles.png)
+
+### Room Minimal Display
+Compact display perfect for smaller screens or door-mounted tablets.
+
+**Available Room:**
+![Room Minimal - Available](screenshots/room-minimal.png)
+
+**Busy Room:**
+![Room Minimal - Busy](screenshots/room-minimal-busy.png)
+
+**With Meeting Titles:**
+![Room Minimal - With Titles](screenshots/room-minimal-free-title.png)
+
+### WiFi Information Display
+Dedicated WiFi information page with QR code for easy network access.
+
+![WiFi Info](screenshots/WiFi-Info.png)
+
+### Admin Panel
+Comprehensive admin panel for managing WiFi, logos, sidebar settings, and booking configuration.
+
+![Admin Panel](screenshots/admin.png)
 
 ---
 
