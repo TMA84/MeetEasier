@@ -28,6 +28,14 @@ In the event of wanting to commercially distribute a closed source modification 
 
 ## Updates
 
+- v1.0.1
+  - **Bug Fixes & Improvements**
+    - Fixed admin panel JavaScript error (bookingPermissionMissing undefined)
+    - Renamed WIFI_API_TOKEN to API_TOKEN for clarity
+    - Consolidated authentication to single API_TOKEN
+    - Fixed meeting cards alignment to bottom on single-room display
+    - Updated documentation with simplified token configuration
+
 - v1.0.0
   - **First Public Release** 🎉
   - **Room Booking Feature** - Book rooms directly from displays
@@ -246,7 +254,7 @@ services:
       - ./data:/opt/meeteasier/data
       - ./static/img/uploads:/opt/meeteasier/static/img/uploads
     environment:
-      - WIFI_API_TOKEN=${WIFI_API_TOKEN}
+      - API_TOKEN=${API_TOKEN}
       - WIFI_SSID=${WIFI_SSID}
       - WIFI_PASSWORD=${WIFI_PASSWORD}
       - LOGO_DARK_URL=${LOGO_DARK_URL}
@@ -273,7 +281,7 @@ docker run -d -p 8080:8080 \
   -e OAUTH_CLIENT_ID=your_client_id \
   -e OAUTH_AUTHORITY=https://login.microsoftonline.com/your_tenant_id \
   -e OAUTH_CLIENT_SECRET=your_client_secret \
-  -e WIFI_API_TOKEN=your_secure_token \
+  -e API_TOKEN=your_secure_token \
   -e WIFI_SSID=your_wifi_network \
   -e WIFI_PASSWORD=your_wifi_password \
   -e LOGO_DARK_URL=/img/logo-dark.svg \
@@ -447,12 +455,12 @@ Use a .env file (recommended method). See .env.template for all available variab
    ENABLE_BOOKING=true
    
    # Admin API Security
-   WIFI_API_TOKEN=generate-a-secure-random-token-here
+   API_TOKEN=generate-a-secure-random-token-here
    ```
 
 **Note:** 
 - EWS (Exchange Web Services) variables are deprecated and no longer needed.
-- The WIFI_API_TOKEN is required to protect admin endpoints. Generate a secure random token (64+ characters recommended).
+- The API_TOKEN is required to protect admin endpoints. Generate a secure random token (64+ characters recommended).
 - Microsoft Graph API now supports pagination, so MAXROOMS and MAXITEMS can be set higher than the API's 30-item limit.
 
 ---
@@ -491,7 +499,7 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 
 **Security:**
 - Protected by API token authentication
-- Set WIFI_API_TOKEN in .env file
+- Set API_TOKEN in .env file
 - Token required in Authorization header or X-API-Token header
 
 **Environment Variable Configuration:**

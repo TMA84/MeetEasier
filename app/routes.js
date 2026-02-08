@@ -325,19 +325,19 @@ module.exports = function(app) {
 	// WiFi configuration endpoints
 	const wifiManager = require('./wifi-manager');
 
-	// Middleware to check WiFi API token
-	const checkWiFiToken = (req, res, next) => {
+	// Middleware to check API token
+	const checkApiToken = (req, res, next) => {
 		const token = req.headers['authorization'] || req.headers['x-api-token'];
 		
 		// If no token is configured, allow access (backward compatibility)
-		if (!config.wifiApiToken) {
-			console.warn('WARNING: WIFI_API_TOKEN not set. WiFi API is unprotected!');
+		if (!config.apiToken) {
+			console.warn('WARNING: API_TOKEN not set. Admin API is unprotected!');
 			return next();
 		}
 
 		// Check if token matches
 		const providedToken = token?.replace('Bearer ', '');
-		if (providedToken === config.wifiApiToken) {
+		if (providedToken === config.apiToken) {
 			return next();
 		}
 
@@ -359,7 +359,7 @@ module.exports = function(app) {
 	});
 
 	// Update WiFi configuration and regenerate QR code (protected - requires token)
-	app.post('/api/wifi', checkWiFiToken, async function(req, res) {
+	app.post('/api/wifi', checkApiToken, async function(req, res) {
 		try {
 			const { ssid, password } = req.body;
 			
@@ -390,7 +390,7 @@ module.exports = function(app) {
 	});
 
 	// Update logo configuration (protected - requires token)
-	app.post('/api/logo', checkWiFiToken, async function(req, res) {
+	app.post('/api/logo', checkApiToken, async function(req, res) {
 		try {
 			const { logoDarkUrl, logoLightUrl } = req.body;
 			
@@ -411,7 +411,7 @@ module.exports = function(app) {
 	});
 
 	// Upload logo file (protected - requires token)
-	app.post('/api/logo/upload', checkWiFiToken, upload.single('logo'), async function(req, res) {
+	app.post('/api/logo/upload', checkApiToken, upload.single('logo'), async function(req, res) {
 		try {
 			if (!req.file) {
 				return res.status(400).json({ error: 'No file uploaded' });
@@ -480,7 +480,7 @@ module.exports = function(app) {
 	});
 
 	// Update sidebar configuration (protected - requires token)
-	app.post('/api/sidebar', checkWiFiToken, async function(req, res) {
+	app.post('/api/sidebar', checkApiToken, async function(req, res) {
 		try {
 			const { showWiFi, showUpcomingMeetings, showMeetingTitles } = req.body;
 			
@@ -523,7 +523,7 @@ module.exports = function(app) {
 	});
 
 	// Update booking configuration (protected - requires token)
-	app.post('/api/booking-config', checkWiFiToken, async function(req, res) {
+	app.post('/api/booking-config', checkApiToken, async function(req, res) {
 		try {
 			const { enableBooking } = req.body;
 			

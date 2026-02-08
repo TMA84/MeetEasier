@@ -52,8 +52,8 @@ module.exports = {
 		maxItems: process.env.SEARCH_MAXITEMS ? process.env.SEARCH_MAXITEMS : 6
 	},
 
-	// WiFi API security token
-	wifiApiToken: process.env.WIFI_API_TOKEN || null,
+	// API security token
+	apiToken: process.env.API_TOKEN || null,
 
 	// WiFi default configuration
 	wifiDefaults: {

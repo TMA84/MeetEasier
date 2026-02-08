@@ -62,8 +62,14 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
     padding: 1rem;
+  }
+  
+  // Main content area
+  .status-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
   }
   
   // Fixed header section

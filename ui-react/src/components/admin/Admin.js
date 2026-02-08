@@ -542,7 +542,8 @@ class Admin extends Component {
       enableBooking,
       wifiMessage, wifiMessageType, logoMessage, logoMessageType, sidebarMessage, sidebarMessageType,
       bookingMessage, bookingMessageType,
-      wifiLocked, logoLocked, sidebarLocked, bookingLocked
+      wifiLocked, logoLocked, sidebarLocked, bookingLocked,
+      bookingPermissionMissing
     } = this.state;
     const t = this.getTranslations();
 
