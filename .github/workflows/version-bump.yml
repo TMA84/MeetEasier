@@ -1,0 +1,118 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch  # 1.1.1 -> 1.1.2
+          - minor  # 1.1.1 -> 1.2.0
+          - major  # 1.1.1 -> 2.0.0
+      changelog_entry:
+        description: 'Brief description of changes (will be added to CHANGELOG)'
+        required: true
+        type: string
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+      
+      - name: Get current version
+        id: current_version
+        run: |
+          # Extract version from README.md
+          CURRENT_VERSION=$(grep -oP '(?<=Current Version: )\d+\.\d+\.\d+' README.md)
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+      
+      - name: Calculate new version
+        id: new_version
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          TYPE="${{ github.event.inputs.version_type }}"
+          
+          IFS='.' read -r major minor patch <<< "$CURRENT"
+          
+          case $TYPE in
+            major)
+              NEW_VERSION="$((major + 1)).0.0"
+              ;;
+            minor)
+              NEW_VERSION="$major.$((minor + 1)).0"
+              ;;
+            patch)
+              NEW_VERSION="$major.$minor.$((patch + 1))"
+              ;;
+          esac
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+      
+      - name: Update CHANGELOG.md
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          DATE=$(date +%Y-%m-%d)
+          CHANGES="${{ github.event.inputs.changelog_entry }}"
+          
+          # Create new changelog entry
+          cat > temp_changelog.md << EOF
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [$NEW_VERSION] - $DATE
+
+### Changed
+- $CHANGES
+
+EOF
+          
+          # Append existing changelog (skip first 7 lines which are header)
+          tail -n +8 CHANGELOG.md >> temp_changelog.md
+          mv temp_changelog.md CHANGELOG.md
+          
+          # Update version links at the bottom
+          PREV_VERSION="${{ steps.current_version.outputs.version }}"
+          sed -i "s|## Version History Summary|## Version History Summary\n\n- **$NEW_VERSION** - $CHANGES|" CHANGELOG.md
+          sed -i "s|\[1.1.1\]: https://github.com/TMA84/MeetEasier/compare/v1.1.0...v1.1.1|[$NEW_VERSION]: https://github.com/TMA84/MeetEasier/compare/v$PREV_VERSION...v$NEW_VERSION\n[1.1.1]: https://github.com/TMA84/MeetEasier/compare/v1.1.0...v1.1.1|" CHANGELOG.md
+      
+      - name: Update README.md
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          sed -i "s/Current Version: .*/Current Version: $NEW_VERSION/" README.md
+      
+      - name: Commit changes
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          git add CHANGELOG.md README.md
+          git commit -m "chore: Bump version to $NEW_VERSION"
+          git push origin master
+      
+      - name: Create and push tag
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+          git push origin "v$NEW_VERSION"
