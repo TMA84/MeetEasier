@@ -1,17 +1,17 @@
 // Initialize WiFi configuration and generate initial QR code
-const wifiManager = require('./wifi-manager');
+const configManager = require('./config-manager');
 
 async function initWiFi() {
 	try {
-		const config = wifiManager.getWiFiConfig();
+		const config = configManager.getWiFiConfig();
 		console.log('Current WiFi config:', config);
 		
 		// Generate QR code with current config
 		if (config.ssid) {
-			await wifiManager.generateQRCode(config.ssid, config.password || '');
+			await configManager.generateQRCode(config.ssid, config.password || '');
 			console.log('✓ WiFi QR code generated successfully');
 		} else {
-			console.log('⚠ No WiFi SSID configured. Please update via /api/wifi or wifi-admin.html');
+			console.log('⚠ No WiFi SSID configured. Please update via /api/wifi or admin panel');
 		}
 	} catch (err) {
 		console.error('Error initializing WiFi:', err);

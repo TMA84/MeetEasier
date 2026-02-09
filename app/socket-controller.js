@@ -13,9 +13,9 @@ const msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
 module.exports = function(io) {
   let isRunning = false;
 
-  // Pass Socket.IO instance to wifi-manager for real-time configuration updates
-  const wifiManager = require('./wifi-manager');
-  wifiManager.setSocketIO(io);
+  // Pass Socket.IO instance to config-manager for real-time configuration updates
+  const configManager = require('./config-manager');
+  configManager.setSocketIO(io);
 
   /**
    * Handle new Socket.IO connections

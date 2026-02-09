@@ -73,34 +73,67 @@
   margin-bottom: clamp(1rem, 2vh, 2rem);
   text-align: center;
   
-  .room-minimal--available & {
-    border-color: rgba(34, 197, 94, 0.6);
-    box-shadow: 
-      0 0 40px rgba(34, 197, 94, 0.5),
-      0 0 80px rgba(34, 197, 94, 0.3),
-      0 0 120px rgba(34, 197, 94, 0.2),
-      inset 0 0 40px rgba(34, 197, 94, 0.2);
-    animation: glowAvailable 3s ease-in-out infinite;
-  }
+  // Filled style (default)
+  &.minimal-room-header--filled {
+    .room-minimal--available & {
+      background: rgba(34, 197, 94, 0.6);
+      border-color: rgba(34, 197, 94, 0.1);
+      box-shadow: 
+        0 0 40px rgba(34, 197, 94, 0.5),
+        0 0 80px rgba(34, 197, 94, 0.3),
+        0 0 120px rgba(34, 197, 94, 0.2),
+        inset 0 0 10px rgba(34, 197, 94, 0.2);
+    }
 
-  .room-minimal--busy & {
-    border-color: rgba(239, 68, 68, 0.6);
-    box-shadow: 
-      0 0 40px rgba(239, 68, 68, 0.5),
-      0 0 80px rgba(239, 68, 68, 0.3),
-      0 0 120px rgba(239, 68, 68, 0.2),
-      inset 0 0 40px rgba(239, 68, 68, 0.2);
-    animation: glowBusy 3s ease-in-out infinite;
-  }
+    .room-minimal--busy & {
+      background: rgba(239, 68, 68, 0.6);
+      border-color: rgba(239, 68, 68, 0.1);
+      box-shadow: 
+        0 0 40px rgba(239, 68, 68, 0.5),
+        0 0 80px rgba(239, 68, 68, 0.3),
+        0 0 120px rgba(239, 68, 68, 0.2),
+        inset 0 0 10px rgba(239, 68, 68, 0.2);
+    }
 
-  .room-minimal--upcoming & {
-    border-color: rgba(245, 158, 11, 0.6);
-    box-shadow: 
-      0 0 40px rgba(245, 158, 11, 0.5),
-      0 0 80px rgba(245, 158, 11, 0.3),
-      0 0 120px rgba(245, 158, 11, 0.2),
-      inset 0 0 40px rgba(245, 158, 11, 0.2);
-    animation: glowUpcoming 3s ease-in-out infinite;
+    .room-minimal--upcoming & {
+      background: rgba(245, 158, 11, 0.6);
+      border-color: rgba(245, 158, 11, 0.1);
+      box-shadow: 
+        0 0 40px rgba(245, 158, 11, 0.5),
+        0 0 80px rgba(245, 158, 11, 0.3),
+        0 0 120px rgba(245, 158, 11, 0.2),
+        inset 0 0 10px rgba(245, 158, 11, 0.2);
+    }
+  }
+  
+  // Transparent style
+  &.minimal-room-header--transparent {
+    .room-minimal--available & {
+      background: transparent;
+      border-color: rgba(34, 197, 94, 0.3);
+      box-shadow: 
+        0 0 40px rgba(34, 197, 94, 0.5),
+        0 0 80px rgba(34, 197, 94, 0.3),
+        0 0 120px rgba(34, 197, 94, 0.2);
+    }
+
+    .room-minimal--busy & {
+      background: transparent;
+      border-color: rgba(239, 68, 68, 0.3);
+      box-shadow: 
+        0 0 40px rgba(239, 68, 68, 0.5),
+        0 0 80px rgba(239, 68, 68, 0.3),
+        0 0 120px rgba(239, 68, 68, 0.2);
+    }
+
+    .room-minimal--upcoming & {
+      background: transparent;
+      border-color: rgba(245, 158, 11, 0.3);
+      box-shadow: 
+        0 0 40px rgba(245, 158, 11, 0.5),
+        0 0 80px rgba(245, 158, 11, 0.3),
+        0 0 120px rgba(245, 158, 11, 0.2);
+    }
   }
 }
 
@@ -117,17 +150,26 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  transition: color 0.3s ease;
   
-  .room-minimal--available & {
-    color: #22c55e;
+  // Filled style - always white text
+  .minimal-room-header--filled & {
+    color: #ffffff;
   }
+  
+  // Transparent style - colored text matching room state
+  .minimal-room-header--transparent & {
+    .room-minimal--available & {
+      color: #22c55e;
+    }
 
-  .room-minimal--busy & {
-    color: #ef4444;
-  }
+    .room-minimal--busy & {
+      color: #ef4444;
+    }
 
-  .room-minimal--upcoming & {
-    color: #f59e0b;
+    .room-minimal--upcoming & {
+      color: #f59e0b;
+    }
   }
 }
 

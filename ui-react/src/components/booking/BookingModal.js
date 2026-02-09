@@ -11,16 +11,11 @@ class BookingModal extends Component {
   constructor(props) {
     super(props);
     
-    const now = new Date();
-    const defaultEnd = new Date(now.getTime() + 30 * 60000); // 30 min default
-    
     this.state = {
       subject: this.getDefaultSubject(),
-      startTime: this.formatDateTimeLocal(now),
-      endTime: this.formatDateTimeLocal(defaultEnd),
+      selectedDuration: 30, // default 30 minutes
       isSubmitting: false,
-      error: null,
-      showCustomTime: false
+      error: null
     };
   }
 
@@ -80,9 +75,14 @@ class BookingModal extends Component {
         title: 'Book Room',
         quickBook: 'Quick Book:',
         custom: 'Custom',
+        date: 'Date:',
         startTime: 'Start Time:',
+        duration: 'Duration:',
         endTime: 'End Time:',
-        subject: 'Meeting Subject:',
+        today: 'Today',
+        tomorrow: 'Tomorrow',
+        minutes: 'min',
+        hours: 'hours',
         cancel: 'Cancel',
         bookRoom: 'Book Room',
         booking: 'Booking...',
@@ -93,9 +93,14 @@ class BookingModal extends Component {
         title: 'Raum buchen',
         quickBook: 'Schnellbuchung:',
         custom: 'Benutzerdefiniert',
+        date: 'Datum:',
         startTime: 'Startzeit:',
+        duration: 'Dauer:',
         endTime: 'Endzeit:',
-        subject: 'Besprechungsthema:',
+        today: 'Heute',
+        tomorrow: 'Morgen',
+        minutes: 'Min',
+        hours: 'Std',
         cancel: 'Abbrechen',
         bookRoom: 'Raum buchen',
         booking: 'Wird gebucht...',
@@ -124,61 +129,23 @@ class BookingModal extends Component {
   }
 
   // Quick book for specified duration in minutes
-  // Starts immediately (now), not rounded to next 15-minute interval
   handleQuickBook = (durationMinutes) => {
-    const now = new Date();
-    const end = new Date(now.getTime() + durationMinutes * 60000);
-    
     this.setState({
-      startTime: this.formatDateTimeLocal(now),
-      endTime: this.formatDateTimeLocal(end),
-      showCustomTime: false
+      selectedDuration: durationMinutes,
+      error: null
     });
-  };
-
-  handleInputChange = (e) => {
-    const { name, value } = e.target;
-    
-    // If start time is changed, automatically set end time to +15 minutes
-    if (name === 'startTime') {
-      const newStart = new Date(value);
-      const newEnd = new Date(newStart.getTime() + 15 * 60000); // +15 minutes
-      this.setState({ 
-        startTime: value,
-        endTime: this.formatDateTimeLocal(newEnd),
-        error: null 
-      });
-    } else {
-      this.setState({ [name]: value, error: null });
-    }
   };
 
   handleSubmit = async (e) => {
     e.preventDefault();
     
-    const { subject, startTime, endTime } = this.state;
+    const { subject, selectedDuration } = this.state;
     const { room, onClose, onSuccess } = this.props;
 
-    // Validate
-    if (!subject.trim()) {
-      this.setState({ error: 'Please enter a meeting subject' });
-      return;
-    }
-
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-
-    if (start >= end) {
-      this.setState({ error: 'End time must be after start time' });
-      return;
-    }
-
-    // Allow bookings that start within the last minute (to account for processing time)
-    const oneMinuteAgo = new Date(Date.now() - 60000);
-    if (start < oneMinuteAgo) {
-      this.setState({ error: 'Cannot book in the past' });
-      return;
-    }
+    // Calculate start and end times (start now, end = now + duration)
+    const now = new Date();
+    const start = now;
+    const end = new Date(now.getTime() + selectedDuration * 60000);
 
     this.setState({ isSubmitting: true, error: null });
 
@@ -223,7 +190,7 @@ class BookingModal extends Component {
 
   render() {
     const { room, onClose, theme } = this.props;
-    const { subject, startTime, endTime, isSubmitting, error, showCustomTime } = this.state;
+    const { selectedDuration, isSubmitting, error } = this.state;
     
     const isDark = theme === 'dark';
     const t = this.getTranslations();
@@ -231,13 +198,6 @@ class BookingModal extends Component {
     return (
       <div className={`booking-modal-overlay ${isDark ? 'minimal-display' : ''}`} onClick={onClose}>
         <div className={`booking-modal ${isDark ? 'minimal-display' : ''}`} onClick={(e) => e.stopPropagation()}>
-          <div className="booking-modal-header">
-            <h2>{t.title}</h2>
-            <button className="booking-modal-close" onClick={onClose} aria-label="Close">
-              ×
-            </button>
-          </div>
-
           <div className="booking-modal-body">
             {error && (
               <div className="booking-error">
@@ -248,69 +208,37 @@ class BookingModal extends Component {
             <form onSubmit={this.handleSubmit}>
               {/* Quick Book Buttons */}
               <div className="quick-book-section">
-                <label>{t.quickBook}</label>
                 <div className="quick-book-buttons">
                   <button
                     type="button"
-                    className="quick-book-btn"
+                    className={`quick-book-btn ${selectedDuration === 15 ? 'active' : ''}`}
                     onClick={() => this.handleQuickBook(15)}
                   >
-                    15 min
+                    15 {t.minutes}
                   </button>
                   <button
                     type="button"
-                    className="quick-book-btn"
+                    className={`quick-book-btn ${selectedDuration === 30 ? 'active' : ''}`}
                     onClick={() => this.handleQuickBook(30)}
                   >
-                    30 min
+                    30 {t.minutes}
                   </button>
                   <button
                     type="button"
-                    className="quick-book-btn"
+                    className={`quick-book-btn ${selectedDuration === 60 ? 'active' : ''}`}
                     onClick={() => this.handleQuickBook(60)}
                   >
-                    60 min
+                    60 {t.minutes}
                   </button>
                   <button
                     type="button"
-                    className="quick-book-btn quick-book-btn-custom"
-                    onClick={() => this.setState({ showCustomTime: !showCustomTime })}
+                    className={`quick-book-btn ${selectedDuration === 120 ? 'active' : ''}`}
+                    onClick={() => this.handleQuickBook(120)}
                   >
-                    {t.custom}
+                    120 {t.minutes}
                   </button>
                 </div>
               </div>
-
-              {/* Custom Time Selection */}
-              {showCustomTime && (
-                <div className="custom-time-section">
-                  <div className="form-group">
-                    <label htmlFor="startTime">{t.startTime}</label>
-                    <input
-                      type="datetime-local"
-                      id="startTime"
-                      name="startTime"
-                      value={startTime}
-                      onChange={this.handleInputChange}
-                      step="900"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="endTime">{t.endTime}</label>
-                    <input
-                      type="datetime-local"
-                      id="endTime"
-                      name="endTime"
-                      value={endTime}
-                      onChange={this.handleInputChange}
-                      step="900"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
 
               {/* Action Buttons */}
               <div className="booking-modal-actions">

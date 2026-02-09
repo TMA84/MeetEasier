@@ -4,7 +4,7 @@ const QRCode = require('qrcode');
 const config = require('../config/config');
 
 /**
- * WiFi Manager - Handles WiFi, logo, and sidebar configuration
+ * Configuration Manager - Handles WiFi, logo, information, and booking configuration
  * Manages configuration files and generates WiFi QR codes
  * Broadcasts configuration updates via Socket.IO for real-time updates
  */
@@ -63,8 +63,8 @@ function getLogoConfig() {
 }
 
 /**
- * Read Sidebar configuration from file or return defaults
- * @returns {Object} Sidebar configuration with display settings and lastUpdated
+ * Read Information configuration from file or return defaults
+ * @returns {Object} Information configuration with display settings and lastUpdated
  */
 function getSidebarConfig() {
 	try {
@@ -76,6 +76,7 @@ function getSidebarConfig() {
 			showWiFi: config.sidebarDefaults.showWiFi,
 			showUpcomingMeetings: config.sidebarDefaults.showUpcomingMeetings,
 			showMeetingTitles: config.sidebarDefaults.showMeetingTitles,
+			minimalHeaderStyle: 'filled',
 			lastUpdated: null
 		};
 	}
@@ -131,9 +132,9 @@ function saveLogoConfig(config) {
 }
 
 /**
- * Save Sidebar configuration to file
+ * Save Information configuration to file
  * Preserves existing fields that are not being updated
- * @param {Object} config - Sidebar configuration with display settings
+ * @param {Object} config - Information configuration with display settings
  * @returns {Object} Saved configuration with timestamp
  */
 function saveSidebarConfig(config) {
@@ -150,6 +151,7 @@ function saveSidebarConfig(config) {
 		showWiFi: config.showWiFi !== undefined ? config.showWiFi : (existingConfig.showWiFi !== undefined ? existingConfig.showWiFi : true),
 		showUpcomingMeetings: config.showUpcomingMeetings !== undefined ? config.showUpcomingMeetings : (existingConfig.showUpcomingMeetings !== undefined ? existingConfig.showUpcomingMeetings : false),
 		showMeetingTitles: config.showMeetingTitles !== undefined ? config.showMeetingTitles : (existingConfig.showMeetingTitles !== undefined ? existingConfig.showMeetingTitles : false),
+		minimalHeaderStyle: config.minimalHeaderStyle !== undefined ? config.minimalHeaderStyle : (existingConfig.minimalHeaderStyle || 'filled'),
 		lastUpdated: new Date().toISOString()
 	};
 	
@@ -240,20 +242,21 @@ async function updateLogoConfig(logoDarkUrl, logoLightUrl) {
 }
 
 /**
- * Update Sidebar configuration
+ * Update Information configuration
  * Broadcasts update to all connected clients via Socket.IO
  * @param {boolean} showWiFi - Whether to show WiFi section
  * @param {boolean} showUpcomingMeetings - Whether to show upcoming meetings
  * @param {boolean} showMeetingTitles - Whether to show meeting titles
+ * @param {string} minimalHeaderStyle - Header style for minimal display ('filled' or 'transparent')
  * @returns {Promise<Object>} Updated configuration
  */
-async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles) {
-	const config = saveSidebarConfig({ showWiFi, showUpcomingMeetings, showMeetingTitles });
+async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle) {
+	const config = saveSidebarConfig({ showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle });
 	
 	// Emit Socket.IO event to notify all connected clients
 	if (io) {
 		io.of('/').emit('sidebarConfigUpdated', config);
-		console.log('Sidebar config updated, notified all clients via Socket.IO');
+		console.log('Information config updated, notified all clients via Socket.IO');
 	}
 	
 	return config;

@@ -26,21 +26,23 @@ class Admin extends Component {
       logoMessageType: null,
       uploadMode: 'url', // 'url' or 'file'
       
-      // Sidebar state
+      // Information state
       currentShowWiFi: true,
       currentShowUpcomingMeetings: false,
       currentShowMeetingTitles: false,
-      sidebarLastUpdated: '',
+      currentMinimalHeaderStyle: 'filled',
+      informationLastUpdated: '',
       showWiFi: true,
       showUpcomingMeetings: false,
       showMeetingTitles: false,
-      sidebarMessage: null,
-      sidebarMessageType: null,
+      minimalHeaderStyle: 'filled',
+      informationMessage: null,
+      informationMessageType: null,
       
       // Config locks (which settings are configured via .env)
       wifiLocked: false,
       logoLocked: false,
-      sidebarLocked: false,
+      informationLocked: false,
       bookingLocked: false,
       
       // Booking state
@@ -52,7 +54,10 @@ class Admin extends Component {
       bookingPermissionMissing: false,
       
       // Auth
-      apiToken: ''
+      apiToken: '',
+      
+      // UI state
+      activeTab: 'display'
     };
   }
 
@@ -72,7 +77,7 @@ class Admin extends Component {
         this.setState({
           wifiLocked: data.wifiLocked || false,
           logoLocked: data.logoLocked || false,
-          sidebarLocked: data.sidebarLocked || false,
+          informationLocked: data.sidebarLocked || false,
           bookingLocked: data.bookingLocked || false
         });
       })
@@ -122,7 +127,11 @@ class Admin extends Component {
         showWiFiLabel: 'WiFi-Informationen anzeigen',
         showUpcomingMeetingsLabel: 'Anstehende Meetings anzeigen',
         showMeetingTitlesLabel: 'Meeting-Titel anzeigen',
-        showMeetingTitlesHelp: 'Gilt für Statusanzeige und anstehende Meetings',
+        showMeetingTitlesHelp: 'Gilt für Einzelraum-, Raum-Minimal- und Flightboard-Anzeigen',
+        minimalHeaderStyleLabel: 'Raum-Minimal Header-Stil',
+        minimalHeaderStyleFilled: 'Gefüllt (Farbiger Hintergrund)',
+        minimalHeaderStyleTransparent: 'Transparent (Nur Rahmen)',
+        minimalHeaderStyleHelp: 'Wählen Sie den visuellen Stil für den Raumstatus-Header nur für Raum-Minimal-Anzeigen',
         submitSidebarButton: 'Informationen aktualisieren',
         sidebarHelp: 'Wählen Sie aus, was in der Sidebar der Raumanzeigen angezeigt werden soll',
         enableBookingLabel: 'Buchungsfunktion aktivieren',
@@ -171,7 +180,11 @@ class Admin extends Component {
         showWiFiLabel: 'Show WiFi Information',
         showUpcomingMeetingsLabel: 'Show Upcoming Meetings',
         showMeetingTitlesLabel: 'Show Meeting Titles',
-        showMeetingTitlesHelp: 'Applies to both status panel and upcoming meetings list',
+        showMeetingTitlesHelp: 'Applies to single-room, room-minimal, and flightboard displays',
+        minimalHeaderStyleLabel: 'Room-Minimal Header Style',
+        minimalHeaderStyleFilled: 'Filled (Colored Background)',
+        minimalHeaderStyleTransparent: 'Transparent (Border Only)',
+        minimalHeaderStyleHelp: 'Choose the visual style for the room status header on room-minimal displays only',
         submitSidebarButton: 'Update Information',
         sidebarHelp: 'Choose what to display in the sidebar of room displays',
         enableBookingLabel: 'Enable Booking Feature',
@@ -226,7 +239,7 @@ class Admin extends Component {
         console.error('Error loading logo config:', err);
       });
     
-    // Load Sidebar config
+    // Load Information config
     fetch('/api/sidebar')
       .then(response => response.json())
       .then(data => {
@@ -234,16 +247,18 @@ class Admin extends Component {
           currentShowWiFi: data.showWiFi !== undefined ? data.showWiFi : true,
           currentShowUpcomingMeetings: data.showUpcomingMeetings !== undefined ? data.showUpcomingMeetings : false,
           currentShowMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false,
-          sidebarLastUpdated: data.lastUpdated 
+          currentMinimalHeaderStyle: data.minimalHeaderStyle || 'filled',
+          informationLastUpdated: data.lastUpdated 
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
             : '-',
           showWiFi: data.showWiFi !== undefined ? data.showWiFi : true,
           showUpcomingMeetings: data.showUpcomingMeetings !== undefined ? data.showUpcomingMeetings : false,
-          showMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false
+          showMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false,
+          minimalHeaderStyle: data.minimalHeaderStyle || 'filled'
         });
       })
       .catch(err => {
-        console.error('Error loading sidebar config:', err);
+        console.error('Error loading information config:', err);
       });
     
     // Load Booking config
@@ -434,7 +449,7 @@ class Admin extends Component {
   handleSidebarSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
-    const { apiToken, showWiFi, showUpcomingMeetings, showMeetingTitles } = this.state;
+    const { apiToken, showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle } = this.state;
     
     const headers = {
       'Content-Type': 'application/json',
@@ -447,7 +462,7 @@ class Admin extends Component {
     fetch('/api/sidebar', {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify({ showWiFi, showUpcomingMeetings, showMeetingTitles })
+      body: JSON.stringify({ showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle })
     })
     .then(response => {
       if (response.status === 401) {
@@ -458,25 +473,25 @@ class Admin extends Component {
     .then(data => {
       if (data.success) {
         this.setState({
-          sidebarMessage: t.sidebarSuccessMessage,
-          sidebarMessageType: 'success'
+          informationMessage: t.sidebarSuccessMessage,
+          informationMessageType: 'success'
         });
         this.loadCurrentConfig();
         
         setTimeout(() => {
-          this.setState({ sidebarMessage: null, sidebarMessageType: null });
+          this.setState({ informationMessage: null, informationMessageType: null });
         }, 5000);
       } else {
         this.setState({
-          sidebarMessage: `${t.errorPrefix} ${data.error || t.errorUnknown}`,
-          sidebarMessageType: 'error'
+          informationMessage: `${t.errorPrefix} ${data.error || t.errorUnknown}`,
+          informationMessageType: 'error'
         });
       }
     })
     .catch(err => {
       this.setState({
-        sidebarMessage: `${t.errorPrefix} ${err.message}`,
-        sidebarMessageType: 'error'
+        informationMessage: `${t.errorPrefix} ${err.message}`,
+        informationMessageType: 'error'
       });
     });
   }
@@ -531,57 +546,233 @@ class Admin extends Component {
     });
   }
 
+  switchTab = (tabName) => {
+    this.setState({ activeTab: tabName });
+  }
+
   render() {
     const { 
       currentSsid, currentPassword, wifiLastUpdated, 
       currentLogoDarkUrl, currentLogoLightUrl, logoLastUpdated,
-      currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, sidebarLastUpdated,
+      currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, currentMinimalHeaderStyle, informationLastUpdated,
       currentEnableBooking, bookingLastUpdated,
       apiToken, ssid, password, logoDarkUrl, logoLightUrl, logoDarkFile, logoLightFile, uploadMode,
-      showWiFi, showUpcomingMeetings, showMeetingTitles,
+      showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle,
       enableBooking,
-      wifiMessage, wifiMessageType, logoMessage, logoMessageType, sidebarMessage, sidebarMessageType,
+      wifiMessage, wifiMessageType, logoMessage, logoMessageType, informationMessage, informationMessageType,
       bookingMessage, bookingMessageType,
-      wifiLocked, logoLocked, sidebarLocked, bookingLocked,
-      bookingPermissionMissing
+      wifiLocked, logoLocked, informationLocked, bookingLocked,
+      bookingPermissionMissing,
+      activeTab
     } = this.state;
     const t = this.getTranslations();
 
     return (
       <div className="admin-page">
-        <div className="admin-container">
-          <div className="admin-logo">
-            <img src={currentLogoLightUrl || "/img/logo.W.png"} alt="Logo" onError={(e) => { e.target.src = "/img/logo.W.png"; }} />
+        {/* Header */}
+        <div className="admin-header">
+          <div className="admin-header-content">
+            <div className="admin-logo">
+              <img src={currentLogoLightUrl || "/img/logo.W.png"} alt="Logo" onError={(e) => { e.target.src = "/img/logo.W.png"; }} />
+            </div>
+            <h1>{t.title}</h1>
           </div>
+        </div>
 
-          <h1>{t.title}</h1>
-          
-          {/* API Token Section */}
-          <div className="admin-token-section">
-            <div className="admin-form-group">
-              <label htmlFor="apiToken">{t.apiTokenLabel}</label>
-              <input
-                type="password"
-                id="apiToken"
-                value={apiToken}
-                onChange={(e) => this.setState({ apiToken: e.target.value })}
-                placeholder={t.apiTokenPlaceholder}
-                autoComplete="off"
-              />
-              <small>{t.apiTokenHelp}</small>
+        <div className="admin-container">
+          {/* API Token Banner */}
+          <div className="admin-token-banner">
+            <div className="admin-token-content">
+              <div className="token-input-wrapper">
+                <label htmlFor="apiToken">{t.apiTokenLabel}</label>
+                <input
+                  type="password"
+                  id="apiToken"
+                  value={apiToken}
+                  onChange={(e) => this.setState({ apiToken: e.target.value })}
+                  placeholder={t.apiTokenPlaceholder}
+                  autoComplete="off"
+                />
+                <small>{t.apiTokenHelp}</small>
+              </div>
             </div>
           </div>
 
-          {/* WiFi Configuration Section */}
+          {/* Tabs */}
+          <div className="admin-tabs">
+            <button 
+              className={`admin-tab ${activeTab === 'display' ? 'active' : ''}`}
+              onClick={() => this.switchTab('display')}
+            >
+              {t.sidebarSectionTitle || 'Display'}
+            </button>
+            <button 
+              className={`admin-tab ${activeTab === 'wifi' ? 'active' : ''}`}
+              onClick={() => this.switchTab('wifi')}
+            >
+              {t.wifiSectionTitle || 'WiFi'}
+            </button>
+            <button 
+              className={`admin-tab ${activeTab === 'logo' ? 'active' : ''}`}
+              onClick={() => this.switchTab('logo')}
+            >
+              {t.logoSectionTitle || 'Logo'}
+            </button>
+            <button 
+              className={`admin-tab ${activeTab === 'booking' ? 'active' : ''}`}
+              onClick={() => this.switchTab('booking')}
+            >
+              {t.bookingSectionTitle || 'Booking'}
+            </button>
+          </div>
+
+          {/* Display Configuration Tab */}
+          <div className={`admin-tab-content ${activeTab === 'display' ? 'active' : ''}`}>
+            {!informationLocked && (
+            <div className="admin-section">
+              <h2>{t.sidebarSectionTitle}</h2>
+              
+              <div className="admin-current-config">
+                <h3>{t.currentConfigTitle}</h3>
+                <div className="config-grid">
+                  <div className="config-item">
+                    <span className="config-label">{t.showWiFiLabel}</span>
+                    <span className="config-value">{currentShowWiFi ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.showUpcomingMeetingsLabel}</span>
+                    <span className="config-value">{currentShowUpcomingMeetings ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.showMeetingTitlesLabel}</span>
+                    <span className="config-value">{currentShowMeetingTitles ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.minimalHeaderStyleLabel}</span>
+                    <span className="config-value">{currentMinimalHeaderStyle === 'filled' ? t.minimalHeaderStyleFilled : t.minimalHeaderStyleTransparent}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.lastUpdatedLabel}</span>
+                    <span className="config-value">{informationLastUpdated}</span>
+                  </div>
+                </div>
+              </div>
+
+              <form onSubmit={this.handleSidebarSubmit}>
+                <div className="admin-form-group">
+                  <label className="inline-label">
+                    <span className="label-text">{t.showWiFiLabel}</span>
+                    <input
+                      type="radio"
+                      name="sidebarDisplay"
+                      checked={showWiFi && !showUpcomingMeetings}
+                      onChange={() => this.setState({ showWiFi: true, showUpcomingMeetings: false })}
+                    />
+                  </label>
+                </div>
+                
+                <div className="admin-form-group">
+                  <label className="inline-label">
+                    <span className="label-text">{t.showUpcomingMeetingsLabel}</span>
+                    <input
+                      type="radio"
+                      name="sidebarDisplay"
+                      checked={!showWiFi && showUpcomingMeetings}
+                      onChange={() => this.setState({ showWiFi: false, showUpcomingMeetings: true })}
+                    />
+                  </label>
+                </div>
+                
+                <hr className="admin-form-divider" />
+                
+                <div className="admin-form-group">
+                  <label className="inline-label">
+                    <span className="label-text">{t.showMeetingTitlesLabel}</span>
+                    <input
+                      type="checkbox"
+                      checked={showMeetingTitles}
+                      onChange={(e) => this.setState({ showMeetingTitles: e.target.checked })}
+                    />
+                  </label>
+                  <small>{t.showMeetingTitlesHelp}</small>
+                </div>
+                
+                <hr className="admin-form-divider" />
+                
+                <div className="admin-form-group">
+                  <label style={{ display: 'block', marginBottom: '0.75rem' }}>
+                    {t.minimalHeaderStyleLabel}
+                  </label>
+                  <small style={{ display: 'block', marginBottom: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>
+                    {t.minimalHeaderStyleHelp}
+                  </small>
+                  <label className="inline-label">
+                    <span className="label-text">{t.minimalHeaderStyleFilled}</span>
+                    <input
+                      type="radio"
+                      name="minimalHeaderStyle"
+                      value="filled"
+                      checked={minimalHeaderStyle === 'filled'}
+                      onChange={(e) => this.setState({ minimalHeaderStyle: e.target.value })}
+                    />
+                  </label>
+                  <label className="inline-label" style={{ marginTop: '0.5rem' }}>
+                    <span className="label-text">{t.minimalHeaderStyleTransparent}</span>
+                    <input
+                      type="radio"
+                      name="minimalHeaderStyle"
+                      value="transparent"
+                      checked={minimalHeaderStyle === 'transparent'}
+                      onChange={(e) => this.setState({ minimalHeaderStyle: e.target.value })}
+                    />
+                  </label>
+                </div>
+                
+                <button type="submit" className="admin-submit-button">
+                  {t.submitSidebarButton}
+                </button>
+              </form>
+
+              {informationMessage && (
+                <div className={`admin-message admin-message-${informationMessageType}`}>
+                  {informationMessage}
+                </div>
+              )}
+            </div>
+            )}
+
+            {informationLocked && (
+            <div className="admin-section">
+              <h2>{t.sidebarSectionTitle}</h2>
+              <div className="admin-locked-message">
+                <p>{t.configuredViaEnv}</p>
+              </div>
+            </div>
+            )}
+          </div>
+
+          {/* WiFi Configuration Tab */}
+          <div className={`admin-tab-content ${activeTab === 'wifi' ? 'active' : ''}`}>
           {!wifiLocked && (
           <div className="admin-section">
             <h2>{t.wifiSectionTitle}</h2>
             
             <div className="admin-current-config">
               <h3>{t.currentConfigTitle}</h3>
-              <p><strong>{t.ssidLabel}</strong> {currentSsid}</p>
-              <p><strong>{t.passwordLabel}</strong> {currentPassword}</p>
-              <p><strong>{t.lastUpdatedLabel}</strong> {wifiLastUpdated}</p>
+              <div className="config-grid">
+                <div className="config-item">
+                  <span className="config-label">{t.ssidLabel}</span>
+                  <span className="config-value">{currentSsid}</span>
+                </div>
+                <div className="config-item">
+                  <span className="config-label">{t.passwordLabel}</span>
+                  <span className="config-value">{currentPassword}</span>
+                </div>
+                <div className="config-item">
+                  <span className="config-label">{t.lastUpdatedLabel}</span>
+                  <span className="config-value">{wifiLastUpdated}</span>
+                </div>
+              </div>
             </div>
 
             <form onSubmit={this.handleWiFiSubmit}>
@@ -637,17 +828,30 @@ class Admin extends Component {
             </div>
           </div>
           )}
+          </div>
 
-          {/* Logo Configuration Section */}
+          {/* Logo Configuration Tab */}
+          <div className={`admin-tab-content ${activeTab === 'logo' ? 'active' : ''}`}>
           {!logoLocked && (
           <div className="admin-section">
             <h2>{t.logoSectionTitle}</h2>
             
             <div className="admin-current-config">
               <h3>{t.currentConfigTitle}</h3>
-              <p><strong>{t.logoDarkUrlLabel}</strong> {currentLogoDarkUrl}</p>
-              <p><strong>{t.logoLightUrlLabel}</strong> {currentLogoLightUrl}</p>
-              <p><strong>{t.lastUpdatedLabel}</strong> {logoLastUpdated}</p>
+              <div className="config-grid">
+                <div className="config-item">
+                  <span className="config-label">{t.logoDarkUrlLabel}</span>
+                  <span className="config-value">{currentLogoDarkUrl}</span>
+                </div>
+                <div className="config-item">
+                  <span className="config-label">{t.logoLightUrlLabel}</span>
+                  <span className="config-value">{currentLogoLightUrl}</span>
+                </div>
+                <div className="config-item">
+                  <span className="config-label">{t.lastUpdatedLabel}</span>
+                  <span className="config-value">{logoLastUpdated}</span>
+                </div>
+              </div>
             </div>
 
             {/* Upload Mode Toggle */}
@@ -744,17 +948,17 @@ class Admin extends Component {
 
             <div className="admin-logo-preview">
               <h3>Preview:</h3>
-              <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <div>
-                  <p style={{ marginBottom: '0.5rem', color: 'rgba(255,255,255,0.7)' }}>Dark Logo:</p>
+              <div className="preview-grid">
+                <div className="preview-item">
+                  <p>Dark Logo:</p>
                   <img 
                     src={logoDarkUrl || currentLogoDarkUrl} 
                     alt="Dark Logo Preview" 
                     onError={(e) => { e.target.src = "/img/logo.B.png"; }}
                   />
                 </div>
-                <div>
-                  <p style={{ marginBottom: '0.5rem', color: 'rgba(255,255,255,0.7)' }}>Light Logo:</p>
+                <div className="preview-item">
+                  <p>Light Logo:</p>
                   <img 
                     src={logoLightUrl || currentLogoLightUrl} 
                     alt="Light Logo Preview" 
@@ -774,104 +978,41 @@ class Admin extends Component {
             </div>
           </div>
           )}
-
-          {/* Sidebar Configuration Section */}
-          {!sidebarLocked && (
-          <div className="admin-section">
-            <h2>{t.sidebarSectionTitle}</h2>
-            
-            <div className="admin-current-config">
-              <h3>{t.currentConfigTitle}</h3>
-              <p><strong>{t.showWiFiLabel}:</strong> {currentShowWiFi ? 'Yes' : 'No'}</p>
-              <p><strong>{t.showUpcomingMeetingsLabel}:</strong> {currentShowUpcomingMeetings ? 'Yes' : 'No'}</p>
-              <p><strong>{t.showMeetingTitlesLabel}:</strong> {currentShowMeetingTitles ? 'Yes' : 'No'}</p>
-              <p><strong>{t.lastUpdatedLabel}</strong> {sidebarLastUpdated}</p>
-            </div>
-
-            <form onSubmit={this.handleSidebarSubmit}>
-              <div className="admin-form-group">
-                <label className="inline-label">
-                  <span className="label-text">{t.showWiFiLabel}</span>
-                  <input
-                    type="radio"
-                    name="sidebarDisplay"
-                    checked={showWiFi && !showUpcomingMeetings}
-                    onChange={() => this.setState({ showWiFi: true, showUpcomingMeetings: false })}
-                  />
-                </label>
-              </div>
-              
-              <div className="admin-form-group">
-                <label className="inline-label">
-                  <span className="label-text">{t.showUpcomingMeetingsLabel}</span>
-                  <input
-                    type="radio"
-                    name="sidebarDisplay"
-                    checked={!showWiFi && showUpcomingMeetings}
-                    onChange={() => this.setState({ showWiFi: false, showUpcomingMeetings: true })}
-                  />
-                </label>
-              </div>
-              
-              <div className="admin-form-group" style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-                <label className="inline-label">
-                  <span className="label-text">{t.showMeetingTitlesLabel}</span>
-                  <input
-                    type="checkbox"
-                    checked={showMeetingTitles}
-                    onChange={(e) => this.setState({ showMeetingTitles: e.target.checked })}
-                  />
-                </label>
-                <small style={{ display: 'block', marginTop: '0.5rem', marginLeft: '1rem', color: 'rgba(255,255,255,0.6)' }}>
-                  {t.showMeetingTitlesHelp || 'Applies to both status panel and upcoming meetings list'}
-                </small>
-              </div>
-              
-              <small style={{ display: 'block', marginBottom: '1rem', color: 'rgba(255,255,255,0.7)' }}>
-                {t.sidebarHelp}
-              </small>
-              
-              <button type="submit" className="admin-submit-button">
-                {t.submitSidebarButton}
-              </button>
-            </form>
-
-            {sidebarMessage && (
-              <div className={`admin-message admin-message-${sidebarMessageType}`}>
-                {sidebarMessage}
-              </div>
-            )}
           </div>
-          )}
 
-          {sidebarLocked && (
-          <div className="admin-section">
-            <h2>{t.sidebarSectionTitle}</h2>
-            <div className="admin-locked-message">
-              <p>{t.configuredViaEnv}</p>
-            </div>
-          </div>
-          )}
-
-          {/* Booking Configuration Section */}
+          {/* Booking Configuration Tab */}
+          <div className={`admin-tab-content ${activeTab === 'booking' ? 'active' : ''}`}>
           {!bookingLocked && (
           <div className="admin-section">
             <h2>{t.bookingSectionTitle}</h2>
             
             {bookingPermissionMissing && (
               <div className="admin-message admin-message-warning" style={{ marginBottom: '1rem' }}>
-                <strong>⚠️ Permission Missing:</strong> Calendars.ReadWrite permission is not granted in Azure AD. 
-                The booking feature is automatically disabled. Please grant this permission to enable room booking.
+                <div>
+                  <strong>Permission Missing:</strong> Calendars.ReadWrite permission is not granted in Azure AD. 
+                  The booking feature is automatically disabled. Please grant this permission to enable room booking.
+                </div>
               </div>
             )}
             
             <div className="admin-current-config">
               <h3>{t.currentConfigTitle}</h3>
-              <p><strong>{t.enableBookingLabel}:</strong> {currentEnableBooking ? 'Yes' : 'No'}</p>
-              {bookingPermissionMissing && (
-                <p style={{ color: '#f59e0b' }}><strong>Status:</strong> Disabled (Permission Missing)</p>
-              )}
-              <p><strong>{t.lastUpdatedLabel}</strong> {bookingLastUpdated}</p>
+              <div className="config-grid">
+                <div className="config-item">
+                  <span className="config-label">{t.enableBookingLabel}</span>
+                  <span className="config-value">{currentEnableBooking ? 'Yes' : 'No'}</span>
+                </div>
+                {bookingPermissionMissing && (
+                  <div className="config-item">
+                    <span className="config-label">Status</span>
+                    <span className="config-value" style={{ color: '#f59e0b' }}>Disabled (Permission Missing)</span>
+                  </div>
+                )}
+                <div className="config-item">
+                  <span className="config-label">{t.lastUpdatedLabel}</span>
+                  <span className="config-value">{bookingLastUpdated}</span>
+                </div>
+              </div>
             </div>
 
             <form onSubmit={this.handleBookingSubmit}>
@@ -885,7 +1026,7 @@ class Admin extends Component {
                     disabled={bookingPermissionMissing}
                   />
                 </label>
-                <small style={{ display: 'block', marginTop: '0.5rem', marginLeft: '1rem', color: 'rgba(255,255,255,0.6)' }}>
+                <small>
                   {bookingPermissionMissing 
                     ? 'Cannot enable: Calendars.ReadWrite permission is missing'
                     : t.enableBookingHelp
@@ -918,6 +1059,8 @@ class Admin extends Component {
             </div>
           </div>
           )}
+          </div>
+
         </div>
       </div>
     );

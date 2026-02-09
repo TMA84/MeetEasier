@@ -27,7 +27,8 @@ class Display extends Component {
       sidebarConfig: {
         showMeetingTitles: false,
         showWiFi: true,
-        showUpcomingMeetings: false
+        showUpcomingMeetings: false,
+        minimalHeaderStyle: 'filled'
       },
       bookingConfig: {
         enableBooking: true
@@ -138,7 +139,8 @@ class Display extends Component {
           sidebarConfig: {
             showMeetingTitles: config.showMeetingTitles !== undefined ? config.showMeetingTitles : false,
             showWiFi: config.showWiFi !== undefined ? config.showWiFi : true,
-            showUpcomingMeetings: config.showUpcomingMeetings !== undefined ? config.showUpcomingMeetings : false
+            showUpcomingMeetings: config.showUpcomingMeetings !== undefined ? config.showUpcomingMeetings : false,
+            minimalHeaderStyle: config.minimalHeaderStyle || 'filled'
           }
         });
       });
@@ -200,7 +202,8 @@ class Display extends Component {
           sidebarConfig: {
             showMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false,
             showWiFi: data.showWiFi !== undefined ? data.showWiFi : true,
-            showUpcomingMeetings: data.showUpcomingMeetings !== undefined ? data.showUpcomingMeetings : false
+            showUpcomingMeetings: data.showUpcomingMeetings !== undefined ? data.showUpcomingMeetings : false,
+            minimalHeaderStyle: data.minimalHeaderStyle || 'filled'
           }
         });
       })
@@ -267,7 +270,7 @@ class Display extends Component {
             <div className="minimal-main-content">
               
               {/* Room Name and Status */}
-              <div className="minimal-room-header">
+              <div className={`minimal-room-header minimal-room-header--${sidebarConfig.minimalHeaderStyle}`}>
                 <div className="minimal-room-name">{room.Name}</div>
                 <div className="minimal-room-status">
                   {room.Busy ? config.statusBusy : config.statusAvailable}

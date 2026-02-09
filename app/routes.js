@@ -322,8 +322,8 @@ module.exports = function(app) {
 		}
 	});
 
-	// WiFi configuration endpoints
-	const wifiManager = require('./wifi-manager');
+	// Configuration endpoints
+	const configManager = require('./config-manager');
 
 	// Middleware to check API token
 	const checkApiToken = (req, res, next) => {
@@ -351,7 +351,7 @@ module.exports = function(app) {
 	// Get current WiFi configuration (public - no auth required)
 	app.get('/api/wifi', function(req, res) {
 		try {
-			const config = wifiManager.getWiFiConfig();
+			const config = configManager.getWiFiConfig();
 			res.json(config);
 		} catch (err) {
 			res.status(500).json({ error: 'Failed to retrieve WiFi configuration' });
@@ -367,7 +367,7 @@ module.exports = function(app) {
 				return res.status(400).json({ error: 'SSID is required' });
 			}
 
-			const config = await wifiManager.updateWiFiConfig(ssid, password || '');
+			const config = await configManager.updateWiFiConfig(ssid, password || '');
 			res.json({ 
 				success: true, 
 				config,
@@ -382,7 +382,7 @@ module.exports = function(app) {
 	// Get current logo configuration (public - no auth required)
 	app.get('/api/logo', function(req, res) {
 		try {
-			const logoConfig = wifiManager.getLogoConfig();
+			const logoConfig = configManager.getLogoConfig();
 			res.json(logoConfig);
 		} catch (err) {
 			res.status(500).json({ error: 'Failed to retrieve logo configuration' });
@@ -398,7 +398,7 @@ module.exports = function(app) {
 				return res.status(400).json({ error: 'At least one logo URL is required' });
 			}
 
-			const config = await wifiManager.updateLogoConfig(logoDarkUrl, logoLightUrl);
+			const config = await configManager.updateLogoConfig(logoDarkUrl, logoLightUrl);
 			res.json({ 
 				success: true, 
 				config,
@@ -427,14 +427,14 @@ module.exports = function(app) {
 			const logoUrl = `/img/uploads/${req.file.filename}`;
 			
 			// Get current config
-			const currentConfig = wifiManager.getLogoConfig();
+			const currentConfig = configManager.getLogoConfig();
 			
 			// Update only the specified logo
 			const logoDarkUrl = logoType === 'dark' ? logoUrl : currentConfig.logoDarkUrl;
 			const logoLightUrl = logoType === 'light' ? logoUrl : currentConfig.logoLightUrl;
 			
 			// Update the logo configuration with the new file path
-			const config = await wifiManager.updateLogoConfig(logoDarkUrl, logoLightUrl);
+			const config = await configManager.updateLogoConfig(logoDarkUrl, logoLightUrl);
 			
 			res.json({ 
 				success: true, 
@@ -454,13 +454,13 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get current sidebar configuration (public - no auth required)
+	// Get current information configuration (public - no auth required)
 	app.get('/api/sidebar', function(req, res) {
 		try {
-			const sidebarConfig = wifiManager.getSidebarConfig();
+			const sidebarConfig = configManager.getSidebarConfig();
 			res.json(sidebarConfig);
 		} catch (err) {
-			res.status(500).json({ error: 'Failed to retrieve sidebar configuration' });
+			res.status(500).json({ error: 'Failed to retrieve information configuration' });
 		}
 	});
 
@@ -479,31 +479,31 @@ module.exports = function(app) {
 		}
 	});
 
-	// Update sidebar configuration (protected - requires token)
+	// Update information configuration (protected - requires token)
 	app.post('/api/sidebar', checkApiToken, async function(req, res) {
 		try {
-			const { showWiFi, showUpcomingMeetings, showMeetingTitles } = req.body;
+			const { showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle } = req.body;
 			
-			if (showWiFi === undefined && showUpcomingMeetings === undefined && showMeetingTitles === undefined) {
+			if (showWiFi === undefined && showUpcomingMeetings === undefined && showMeetingTitles === undefined && minimalHeaderStyle === undefined) {
 				return res.status(400).json({ error: 'At least one configuration option is required' });
 			}
 
-			const config = await wifiManager.updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles);
+			const config = await configManager.updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle);
 			res.json({ 
 				success: true, 
 				config,
-				message: 'Sidebar configuration updated'
+				message: 'Information configuration updated'
 			});
 		} catch (err) {
-			console.error('Error updating sidebar config:', err);
-			res.status(500).json({ error: 'Failed to update sidebar configuration' });
+			console.error('Error updating information config:', err);
+			res.status(500).json({ error: 'Failed to update information configuration' });
 		}
 	});
 
 	// Get current booking configuration (public - no auth required)
 	app.get('/api/booking-config', async function(req, res) {
 		try {
-			const bookingConfig = wifiManager.getBookingConfig();
+			const bookingConfig = configManager.getBookingConfig();
 			
 			// Check if Calendars.ReadWrite permission is available
 			const hasPermission = await checkCalendarWritePermission();
@@ -541,7 +541,7 @@ module.exports = function(app) {
 				});
 			}
 
-			const config = await wifiManager.updateBookingConfig(enableBooking);
+			const config = await configManager.updateBookingConfig(enableBooking);
 			res.json({ 
 				success: true, 
 				config,
