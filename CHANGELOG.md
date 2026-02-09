@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-02-09
+
+### Added
+- **Dynamic Logo on WiFi Info Page**
+  - WiFi info page now loads logo from API configuration
+  - Real-time logo updates via Socket.IO
+  - Consistent with admin panel logo management
+
+### Changed
+- **Reduced Flightboard Row Spacing**
+  - Decreased spacing between meeting room rows for more compact display
+  - Allows more rooms to be visible on screen at once
+  - Better space utilization on displays
+
 ## [1.1.0] - 2026-02-09
 
 ### Added
@@ -174,6 +188,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
+- **1.1.1** - Dynamic logo on WiFi page, reduced flightboard spacing
 - **1.1.0** - Configurable header styles, redesigned admin panel, simplified booking
 - **1.0.1** - Bug fixes, consolidated authentication, improved alignment
 - **1.0.0** - First public release with booking, modern UI, multi-language support
@@ -182,6 +197,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **0.3.1** - Backend filtering optimization
 - **0.1.0** - Initial release
 
+[1.1.1]: https://github.com/TMA84/MeetEasier/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/TMA84/MeetEasier/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/TMA84/MeetEasier/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/TMA84/MeetEasier/releases/tag/v1.0.0

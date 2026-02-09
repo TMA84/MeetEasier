@@ -77,7 +77,7 @@ In the event of wanting to commercially distribute a closed source modification 
 
 ## Version
 
-**Current Version:** 1.1.0
+**Current Version:** 1.1.1
 
 For detailed version history and changelog, see [CHANGELOG.md](CHANGELOG.md).
 
