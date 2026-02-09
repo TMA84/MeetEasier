@@ -9,13 +9,15 @@ class WiFiInfo extends Component {
       loading: true,
       error: null,
       ssid: '',
-      password: ''
+      password: '',
+      logoLightUrl: '/img/logo.W.png'
     };
     this.socket = null;
   }
 
   componentDidMount() {
     this.loadWiFiInfo();
+    this.loadLogoConfig();
     
     // Connect to Socket.IO for real-time updates
     this.socket = io();
@@ -36,10 +38,21 @@ class WiFiInfo extends Component {
           qrImage.src = `/img/wifi-qr.png?t=${Date.now()}`;
         }
       });
+      
+      // Listen for logo config updates
+      this.socket.on('logoConfigUpdated', (config) => {
+        console.log('Logo config updated via Socket.IO:', config);
+        this.setState({
+          logoLightUrl: config.logoLightUrl || '/img/logo.W.png'
+        });
+      });
     }
     
     // Reload every 30 seconds as backup
-    this.interval = setInterval(() => this.loadWiFiInfo(), 30000);
+    this.interval = setInterval(() => {
+      this.loadWiFiInfo();
+      this.loadLogoConfig();
+    }, 30000);
     
     // Set page title
     const t = this.getTranslations();
@@ -73,6 +86,19 @@ class WiFiInfo extends Component {
       });
   }
 
+  loadLogoConfig = () => {
+    fetch('/api/logo')
+      .then(response => response.json())
+      .then(data => {
+        this.setState({
+          logoLightUrl: data.logoLightUrl || '/img/logo.W.png'
+        });
+      })
+      .catch(err => {
+        console.error('Error loading logo config:', err);
+      });
+  }
+
   getTranslations() {
     const browserLang = navigator.language || navigator.userLanguage;
     const lang = browserLang.split('-')[0];
@@ -98,14 +124,14 @@ class WiFiInfo extends Component {
   }
 
   render() {
-    const { loading, error, ssid, password } = this.state;
+    const { loading, error, ssid, password, logoLightUrl } = this.state;
     const t = this.getTranslations();
 
     return (
       <div className="wifi-page">
         <div className="wifi-container">
           <div className="wifi-logo">
-            <img src="/img/logo.W.png" alt="Logo" onError={(e) => e.target.style.display = 'none'} />
+            <img src={logoLightUrl} alt="Logo" onError={(e) => { e.target.src = '/img/logo.W.png'; }} />
           </div>
 
           <h1>{t.title}</h1>

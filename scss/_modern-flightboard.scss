@@ -98,7 +98,7 @@
 }
 
 .meeting-room__row {
-  margin-bottom: clamp($space-1, 1vh, $space-2);
+  margin-bottom: clamp(0.25rem, 0.3vh, 0.5rem);
   animation: fadeIn $transition-base ease-out;
 }
 
