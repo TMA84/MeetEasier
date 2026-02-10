@@ -16,9 +16,11 @@ WORKDIR /opt/meeteasier
 COPY package*.json ./
 COPY ui-react/package*.json ./ui-react/
 
-# Install all dependencies (including dev dependencies needed for build)
-# Note: postinstall script will also install ui-react dependencies
-RUN npm install
+# Install root dependencies first (without postinstall)
+RUN npm install --ignore-scripts
+
+# Install ui-react dependencies separately
+RUN cd ui-react && npm install
 
 # Copy source code
 COPY . .
@@ -28,8 +30,7 @@ COPY .env.template .env
 RUN npx sass scss/compiled.scss static/css/styles.css
 
 # Build React application with Vite (outputs to ui-react/build/)
-# Use npx to ensure vite is found
-RUN cd ui-react && npx vite build
+RUN cd ui-react && npm run build
 
 # Verify build output exists
 RUN ls -la ui-react/build/
