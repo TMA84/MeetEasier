@@ -21,15 +21,15 @@ WORKDIR /opt/meeteasier
 COPY package*.json ./
 COPY ui-react/package*.json ./ui-react/
 
-# Install dependencies (including dev dependencies for build)
+# Install all dependencies (including dev dependencies needed for build)
 RUN npm install && cd ui-react && npm install
 
 # Copy source code
 COPY . .
 COPY .env.template .env
 
-# Build SCSS first
-RUN npm run build-css
+# Build SCSS first (use npx to run sass from node_modules)
+RUN npx sass scss/compiled.scss static/css/styles.css
 
 # Build React application
 RUN cd ui-react && npm run build
