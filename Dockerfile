@@ -2,7 +2,6 @@ FROM node:20-alpine
 
 # Note: OAuth credentials should be provided at runtime via environment variables
 # for security. Build-time args are only used as placeholders for the build process.
-ENV NODE_ENV=production
 
 # Update packages and install security updates
 RUN apk update && apk upgrade
@@ -20,8 +19,8 @@ COPY ui-react/package*.json ./ui-react/
 # Root dependencies (excluding postinstall that would try to install ui-react)
 RUN npm install --ignore-scripts
 
-# Install ui-react dependencies including devDependencies (needed for vite build)
-RUN cd ui-react && NODE_ENV=development npm install
+# Install ui-react dependencies (includes devDependencies needed for vite build)
+RUN cd ui-react && npm install
 
 # Copy source code
 COPY . .
@@ -40,6 +39,9 @@ RUN ls -la ui-react/build/
 RUN npm prune --omit=dev && \
     cd ui-react && npm prune --omit=dev && \
     npm cache clean --force
+
+# Set NODE_ENV to production for runtime
+ENV NODE_ENV=production
 
 # Remove npm binaries after build is complete
 RUN rm -rf /usr/local/lib/node_modules/npm && \
