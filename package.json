@@ -9,6 +9,7 @@
     "postinstall": "cd ui-react && npm install",
     "build": "cd ui-react && npm run build",
     "start": "node server",
+    "start-dev": "concurrently \"npm run start\" \"npm run start-ui-dev\" --names \"backend,frontend\" --prefix-colors \"blue,green\"",
     "start-ui-dev": "cd ui-react && npm start",
     "build-css": "sass scss/compiled.scss static/css/styles.css",
     "watch-css": "sass --watch scss/compiled.scss:static/css/styles.css"

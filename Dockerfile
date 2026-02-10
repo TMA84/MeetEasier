@@ -26,8 +26,11 @@ COPY .env.template .env
 # Build SCSS first (use npx to run sass from node_modules)
 RUN npx sass scss/compiled.scss static/css/styles.css
 
-# Build React application (needs sass from root node_modules)
+# Build React application with Vite (outputs to ui-react/build/)
 RUN cd ui-react && npm run build
+
+# Verify build output exists
+RUN ls -la ui-react/build/
 
 # Now remove dev dependencies and npm to reduce CVEs
 RUN npm prune --omit=dev && \

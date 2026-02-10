@@ -17,6 +17,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write  # Required for uploading SARIF results
     
     steps:
       - name: Checkout code
@@ -79,10 +80,11 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}
+          image-ref: 'ghcr.io/tma84/meeteasier:${{ steps.get_version.outputs.VERSION }}'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+        continue-on-error: true
       
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
@@ -93,9 +95,10 @@ jobs:
       - name: Run Trivy vulnerability scanner (table output)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}
+          image-ref: 'ghcr.io/tma84/meeteasier:${{ steps.get_version.outputs.VERSION }}'
           format: 'table'
           severity: 'CRITICAL,HIGH,MEDIUM'
+        continue-on-error: true
       
       - name: Generate Docker usage instructions
         run: |

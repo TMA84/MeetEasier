@@ -45,4 +45,4 @@ const translations = {
 };
 
 const lang = getLanguage();
-module.exports = translations[lang];
+export default translations[lang];

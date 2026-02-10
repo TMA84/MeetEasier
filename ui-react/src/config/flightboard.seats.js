@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   'capacity' : {
     'SY-Lounge' : '45',
     'Sonne' : '10',
