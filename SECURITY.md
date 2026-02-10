@@ -6,8 +6,16 @@ We release patches for security vulnerabilities. Currently supported versions:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.0.x   | :white_check_mark: |
+| 1.2.x   | :white_check_mark: |
+| 1.1.x   | :white_check_mark: |
+| 1.0.x   | :x:                |
 | < 1.0   | :x:                |
+
+**Latest Version:** 1.2.0 (February 2026)
+- All production CVEs fixed (0 vulnerabilities)
+- Fixed CVE-2026-25639 (axios mergeConfig vulnerability)
+- Migrated to Vite for improved security and performance
+- Enhanced Docker security scanning with Trivy
 
 ## Reporting a Vulnerability
 
@@ -69,6 +77,27 @@ When deploying MeetEasier, please follow these security best practices:
 2. **Minimal Base Image**: Uses Alpine Linux for reduced attack surface
 3. **No npm in Production**: npm is removed after build to reduce CVEs
 4. **Regular Updates**: Keep base images and dependencies updated
+5. **Runtime Secrets Only**: OAuth credentials provided at runtime, not build-time
+6. **Automated Scanning**: All Docker images scanned with Trivy for vulnerabilities
+7. **Multi-Architecture Support**: Secure builds for amd64 and arm64 platforms
+
+### Recent Security Improvements (v1.2.0)
+
+1. **CVE Fixes**:
+   - Fixed CVE-2026-25639 (axios mergeConfig __proto__ vulnerability)
+   - All production dependencies have 0 known vulnerabilities
+   - Added explicit overrides for axios (^1.13.5) to ensure patched version
+
+2. **Build Security**:
+   - Migrated to Vite for modern, secure build tooling
+   - Removed deprecated packages and dependencies
+   - Proper NODE_ENV handling in Docker builds
+
+3. **CI/CD Security**:
+   - Automated Trivy scanning on all releases
+   - SARIF results uploaded to GitHub Security tab
+   - Daily scheduled security scans
+   - Multi-platform image verification before scanning
 
 ### Data Protection
 
