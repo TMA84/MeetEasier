@@ -16,11 +16,12 @@ WORKDIR /opt/meeteasier
 COPY package*.json ./
 COPY ui-react/package*.json ./ui-react/
 
-# Install root dependencies first (without postinstall)
+# Install all dependencies (including devDependencies needed for build)
+# Root dependencies (excluding postinstall that would try to install ui-react)
 RUN npm install --ignore-scripts
 
-# Install ui-react dependencies separately
-RUN cd ui-react && npm install
+# Install ui-react dependencies including devDependencies (needed for vite build)
+RUN cd ui-react && NODE_ENV=development npm install
 
 # Copy source code
 COPY . .
