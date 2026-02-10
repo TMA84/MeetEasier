@@ -39,6 +39,10 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
       
+      - name: Convert repository name to lowercase
+        id: repo_lowercase
+        run: echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+      
       - name: Extract changelog for this version
         id: changelog
         run: |
@@ -76,7 +80,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -160,7 +164,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Pull the image:" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Run the container:" >> $GITHUB_STEP_SUMMARY
@@ -169,7 +173,7 @@ jobs:
           echo "  -e OAUTH_CLIENT_ID=your_client_id \\" >> $GITHUB_STEP_SUMMARY
           echo "  -e OAUTH_AUTHORITY=your_authority \\" >> $GITHUB_STEP_SUMMARY
           echo "  -e OAUTH_CLIENT_SECRET=your_secret \\" >> $GITHUB_STEP_SUMMARY
-          echo "  ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "  ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
       
       - name: Update Release with Docker info
@@ -187,9 +191,9 @@ jobs:
             
             **Pull the image:**
             ```bash
-            docker pull ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}
+            docker pull ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}:${{ steps.get_version.outputs.VERSION }}
             # or use the latest tag
-            docker pull ghcr.io/${{ github.repository }}:latest
+            docker pull ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}:latest
             ```
             
             **Run the container:**
@@ -198,7 +202,7 @@ jobs:
               -e OAUTH_CLIENT_ID=your_client_id \
               -e OAUTH_AUTHORITY=your_authority \
               -e OAUTH_CLIENT_SECRET=your_secret \
-              ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}
+              ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}:${{ steps.get_version.outputs.VERSION }}
             ```
             
             **Available tags:**

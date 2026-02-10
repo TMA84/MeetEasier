@@ -52,12 +52,16 @@ jobs:
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
       
+      - name: Convert repository name to lowercase
+        id: repo_lowercase
+        run: echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+      
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/${{ github.repository }}
+            ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}
             ${{ secrets.DOCKERHUB_USERNAME != '' && format('{0}/meeteasier', secrets.DOCKERHUB_USERNAME) || '' }}
           tags: |
             type=semver,pattern={{version}}
@@ -129,7 +133,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### GitHub Container Registry" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [[ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]]; then
@@ -148,7 +152,7 @@ jobs:
           echo "  -e API_TOKEN=your_secure_token \\" >> $GITHUB_STEP_SUMMARY
           echo "  -v \$(pwd)/data:/opt/meeteasier/data \\" >> $GITHUB_STEP_SUMMARY
           echo "  -v \$(pwd)/static/img/uploads:/opt/meeteasier/static/img/uploads \\" >> $GITHUB_STEP_SUMMARY
-          echo "  ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "  ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Docker Compose" >> $GITHUB_STEP_SUMMARY
@@ -156,7 +160,7 @@ jobs:
           echo "version: '3.8'" >> $GITHUB_STEP_SUMMARY
           echo "services:" >> $GITHUB_STEP_SUMMARY
           echo "  meeteasier:" >> $GITHUB_STEP_SUMMARY
-          echo "    image: ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "    image: ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "    ports:" >> $GITHUB_STEP_SUMMARY
           echo "      - '8080:8080'" >> $GITHUB_STEP_SUMMARY
           echo "    environment:" >> $GITHUB_STEP_SUMMARY
