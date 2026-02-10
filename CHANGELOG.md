@@ -30,19 +30,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Security Vulnerabilities**
   - Fixed all production CVEs (0 vulnerabilities)
+  - Fixed CVE-2026-25639 (axios mergeConfig __proto__ crash) with explicit override to v1.13.5
   - Removed deprecated npm packages
   - Updated axios to fix DoS vulnerability
   - Added overrides for esbuild and diff (dev dependencies only)
 
 - **GitHub Actions**
   - Fixed Trivy image scanning with correct repository name format
+  - Fixed Trivy scan timing - added 30s wait for multi-platform images
+  - Fixed SARIF file upload errors with existence checks
+  - Fixed security-scan workflow to skip Docker scan on push events
   - Added security-events permission for SARIF uploads
   - Added continue-on-error for Trivy scans to prevent workflow failures
+  - Improved error handling and logging in all workflows
 
 - **Docker Build**
   - Updated Dockerfile comments for Vite
+  - Fixed production build process (proper NODE_ENV handling)
   - Added build verification step
   - Removed build-time secrets (now runtime only)
+
+- **UI Components**
+  - Fixed room status label not showing in single-room view
+  - Fixed config imports after ES module conversion (changed from namespace to default imports)
 
 ### Removed
 - **Deprecated Dependencies**

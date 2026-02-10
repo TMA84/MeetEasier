@@ -139,10 +139,14 @@ This application requires:
    npm start
    ```
 
-6. **Development mode** (optional):
+6. **Development mode** (optional - runs both backend and frontend with HMR):
    ```bash
-   npm run start-ui-dev
+   npm run start-dev
    ```
+   
+   This starts:
+   - Backend server on http://localhost:8080
+   - Vite dev server on http://localhost:3000 with hot module replacement
 
 ## Docker Installation
 
