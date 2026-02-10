@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import * as config from '../../config/flightboard.config.js';
-import * as seats from '../../config/flightboard.seats.js';
+import config from '../../config/flightboard.config.js';
+import seats from '../../config/flightboard.seats.js';
 import { formatTimeRange } from '../../utils/timeFormat.js';
 
 /**

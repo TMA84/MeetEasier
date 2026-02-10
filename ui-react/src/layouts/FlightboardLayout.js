@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import Flightboard from '../components/flightboard/Flightboard';
 import Navbar from '../components/flightboard/Navbar';
-import * as config from '../config/flightboard.config.js';
+import config from '../config/flightboard.config.js';
 
 function FlightboardLayout() {
   const [searchParams, setSearchParams] = useSearchParams();

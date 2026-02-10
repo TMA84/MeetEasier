@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import * as config from '../../config/singleRoom.config.js';
+import config from '../../config/singleRoom.config.js';
 import io from 'socket.io-client';
 import { formatTimeRange } from '../../utils/timeFormat.js';
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import * as config from '../../config/flightboard.config.js';
+import config from '../../config/flightboard.config.js';
 import './RoomFilter.scss';
 
 /**

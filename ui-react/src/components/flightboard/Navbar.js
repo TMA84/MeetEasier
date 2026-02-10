@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';
-import * as config from '../../config/flightboard.config.js';
+import config from '../../config/flightboard.config.js';
 
 import Clock from './Clock';
 import RoomFilterContainer from './RoomFilterContainer';
