@@ -21,18 +21,23 @@ WORKDIR /opt/meeteasier
 COPY package*.json ./
 COPY ui-react/package*.json ./ui-react/
 
-# Install dependencies
-RUN npm install --omit=dev && cd ui-react && npm install
+# Install dependencies (including dev dependencies for build)
+RUN npm install && cd ui-react && npm install
 
 # Copy source code
 COPY . .
 COPY .env.template .env
 
-# Build application
+# Build SCSS first
+RUN npm run build-css
+
+# Build React application
 RUN cd ui-react && npm run build
 
-# Remove npm and unnecessary packages to reduce CVEs
-RUN npm cache clean --force && \
+# Remove dev dependencies and npm to reduce CVEs
+RUN npm prune --omit=dev && \
+    cd ui-react && npm prune --omit=dev && \
+    npm cache clean --force && \
     rm -rf /usr/local/lib/node_modules/npm && \
     rm -rf /usr/local/bin/npm /usr/local/bin/npx && \
     rm -rf ~/.npm
