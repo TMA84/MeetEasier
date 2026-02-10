@@ -90,10 +90,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            OAUTH_CLIENT_ID=placeholder
-            OAUTH_AUTHORITY=placeholder
-            OAUTH_CLIENT_SECRET=placeholder
           platforms: linux/amd64,linux/arm64
       
       - name: Run Trivy vulnerability scanner

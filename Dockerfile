@@ -1,12 +1,7 @@
 FROM node:20-alpine
 
-ARG OAUTH_CLIENT_ID
-ARG OAUTH_AUTHORITY
-ARG OAUTH_CLIENT_SECRET
-
-ENV OAUTH_CLIENT_ID=$OAUTH_CLIENT_ID
-ENV OAUTH_AUTHORITY=$OAUTH_AUTHORITY
-ENV OAUTH_CLIENT_SECRET=$OAUTH_CLIENT_SECRET
+# Note: OAuth credentials should be provided at runtime via environment variables
+# for security. Build-time args are only used as placeholders for the build process.
 ENV NODE_ENV=production
 
 # Update packages and install security updates
@@ -50,4 +45,7 @@ USER nodejs
 
 EXPOSE 8080
 
+# OAuth credentials and other sensitive data should be provided at runtime
+# Example:
+# docker run -e OAUTH_CLIENT_ID=xxx -e OAUTH_AUTHORITY=xxx -e OAUTH_CLIENT_SECRET=xxx ...
 CMD [ "node", "server.js" ]

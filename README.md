@@ -151,16 +151,35 @@ This application requires:
 Build and run with Docker:
 
 ```bash
-docker build --build-arg OAUTH_CLIENT_ID=your_client_id \
-             --build-arg OAUTH_AUTHORITY=https://login.microsoftonline.com/your_tenant_id \
-             --build-arg OAUTH_CLIENT_SECRET=your_client_secret \
-             -t meeteasier .
+# Build the image (no build args needed - secrets provided at runtime)
+docker build -t meeteasier .
 
+# Run with environment variables for OAuth credentials
 docker run -d -p 8080:8080 \
+  -e OAUTH_CLIENT_ID=your_client_id \
+  -e OAUTH_AUTHORITY=https://login.microsoftonline.com/your_tenant_id \
+  -e OAUTH_CLIENT_SECRET=your_client_secret \
+  -e API_TOKEN=your_secure_token \
   -v $(pwd)/data:/opt/meeteasier/data \
   -v $(pwd)/static/img/uploads:/opt/meeteasier/static/img/uploads \
   --name meeteasier \
   meeteasier
+```
+
+**Or use the pre-built image from GitHub Container Registry:**
+
+```bash
+docker pull ghcr.io/tma84/meeteasier:latest
+
+docker run -d -p 8080:8080 \
+  -e OAUTH_CLIENT_ID=your_client_id \
+  -e OAUTH_AUTHORITY=https://login.microsoftonline.com/your_tenant_id \
+  -e OAUTH_CLIENT_SECRET=your_client_secret \
+  -e API_TOKEN=your_secure_token \
+  -v $(pwd)/data:/opt/meeteasier/data \
+  -v $(pwd)/static/img/uploads:/opt/meeteasier/static/img/uploads \
+  --name meeteasier \
+  ghcr.io/tma84/meeteasier:latest
 ```
 
 ### Persistent Storage
@@ -177,21 +196,26 @@ version: '3.8'
 
 services:
   meeteasier:
-    build:
-      context: .
-      args:
-        OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID}
-        OAUTH_AUTHORITY: ${OAUTH_AUTHORITY}
-        OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET}
+    image: ghcr.io/tma84/meeteasier:latest
+    # Or build locally:
+    # build:
+    #   context: .
     ports:
       - "8080:8080"
     volumes:
       - ./data:/opt/meeteasier/data
       - ./static/img/uploads:/opt/meeteasier/static/img/uploads
     environment:
+      # OAuth Configuration (required)
+      - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID}
+      - OAUTH_AUTHORITY=${OAUTH_AUTHORITY}
+      - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET}
+      # Admin API Token (required)
       - API_TOKEN=${API_TOKEN}
+      # Optional: WiFi Configuration
       - WIFI_SSID=${WIFI_SSID}
       - WIFI_PASSWORD=${WIFI_PASSWORD}
+      # Optional: Logo Configuration
       - LOGO_DARK_URL=${LOGO_DARK_URL}
       - LOGO_LIGHT_URL=${LOGO_LIGHT_URL}
     restart: unless-stopped
