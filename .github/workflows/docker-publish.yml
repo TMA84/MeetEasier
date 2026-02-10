@@ -1,13 +1,24 @@
 name: Publish Docker Image
 
+# This workflow is disabled - Docker publishing is handled by release.yml
+# Uncomment the 'on' section below to re-enable if needed
+
+# on:
+#   push:
+#     tags:
+#       - 'v*.*.*'
+#   workflow_dispatch:
+#     inputs:
+#       tag:
+#         description: 'Docker tag to build'
+#         required: true
+#         default: 'latest'
+
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Docker tag to build'
+        description: 'Docker tag to build (manual trigger only)'
         required: true
         default: 'latest'
 

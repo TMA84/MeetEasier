@@ -214,10 +214,13 @@ jobs:
             - `linux/arm64` (ARM64/Apple Silicon)
             
             **Security:**
-            - Scanned with Trivy for vulnerabilities
-            - See workflow logs for security scan details
+            - ✅ Scanned with Trivy for vulnerabilities
+            - 📊 [View Security Scan Results](https://github.com/${{ github.repository }}/security/code-scanning)
+            - 🔍 [View Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             
-            **View on GitHub Container Registry:**
-            [ghcr.io/${{ github.repository }}](https://github.com/${{ github.repository }}/pkgs/container/meeteasier)
+            **Links:**
+            - 📦 [GitHub Container Registry](https://github.com/${{ github.repository }}/pkgs/container/meeteasier)
+            - 🔒 [Security Policy](https://github.com/${{ github.repository }}/blob/master/SECURITY.md)
+            - 📝 [Full Changelog](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
