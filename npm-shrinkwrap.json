@@ -3641,7 +3641,7 @@
       "integrity": "sha512-vUMv1XwUvoGmlhLl0b/zXDB7qIUz4WCQqy70vsdl71RhnWXxnlUA/hIL0VkOBJSLBPEBkhsmERkbhBpnGvpkng==",
       "requires": {
         "@ewsjs/ntlm-client": "^3.0.1",
-        "axios": "^1.6.8",
+        "axios": "^1.13.5",
         "http-cookie-agent": "^5.0.4",
         "tough-cookie": "^4.1.3"
       },
