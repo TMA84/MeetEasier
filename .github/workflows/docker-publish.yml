@@ -67,6 +67,7 @@ jobs:
             type=raw,value=${{ steps.get_version.outputs.VERSION }}
       
       - name: Build and push Docker image
+        id: docker_build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -77,6 +78,17 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
       
+      - name: Wait for image to be available
+        run: |
+          echo "Waiting for Docker image to be fully available in registry..."
+          sleep 30
+          echo "Attempting to pull image to verify availability..."
+          if docker pull ghcr.io/tma84/meeteasier:${{ steps.get_version.outputs.VERSION }}; then
+            echo "✅ Image successfully pulled and verified"
+          else
+            echo "⚠️ Warning: Could not pull image, but continuing with scan attempt"
+          fi
+      
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -86,9 +98,20 @@ jobs:
           severity: 'CRITICAL,HIGH'
         continue-on-error: true
       
+      - name: Check if SARIF file exists
+        id: check_sarif
+        run: |
+          if [ -f trivy-results.sarif ]; then
+            echo "sarif_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Trivy SARIF file generated successfully"
+          else
+            echo "sarif_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Trivy SARIF file not found"
+          fi
+      
       - name: Upload Trivy results to GitHub Security
+        if: steps.check_sarif.outputs.sarif_exists == 'true'
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
         with:
           sarif_file: 'trivy-results.sarif'
       

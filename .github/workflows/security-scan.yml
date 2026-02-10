@@ -69,6 +69,8 @@ jobs:
   docker-scan:
     name: Docker Image Vulnerability Scan
     runs-on: ubuntu-latest
+    # Only run if triggered by schedule or manual dispatch (not on push)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       security-events: write
@@ -93,7 +95,20 @@ jobs:
           echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "Scanning image: ghcr.io/${{ github.repository }}:$LATEST_TAG"
       
+      - name: Check if image exists
+        id: check_image
+        run: |
+          if docker pull ghcr.io/${{ github.repository }}:${{ steps.get_tag.outputs.tag }}; then
+            echo "image_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Image found and pulled successfully"
+          else
+            echo "image_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Image not found in registry"
+          fi
+        continue-on-error: true
+      
       - name: Run Trivy vulnerability scanner on Docker image
+        if: steps.check_image.outputs.image_exists == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/${{ github.repository }}:${{ steps.get_tag.outputs.tag }}
@@ -102,14 +117,26 @@ jobs:
           severity: 'CRITICAL,HIGH'
         continue-on-error: true
       
+      - name: Check if SARIF file exists
+        id: check_sarif
+        run: |
+          if [ -f trivy-docker-results.sarif ]; then
+            echo "sarif_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Trivy SARIF file generated successfully"
+          else
+            echo "sarif_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Trivy SARIF file not found"
+          fi
+      
       - name: Upload Trivy Docker results
+        if: steps.check_sarif.outputs.sarif_exists == 'true'
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
         with:
           sarif_file: 'trivy-docker-results.sarif'
           category: 'docker-image'
       
       - name: Run Trivy vulnerability scanner (detailed report)
+        if: steps.check_image.outputs.image_exists == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/${{ github.repository }}:${{ steps.get_tag.outputs.tag }}
@@ -126,7 +153,11 @@ jobs:
           echo "- ✅ NPM Dependencies (root)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ NPM Dependencies (ui-react)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Filesystem vulnerabilities" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Docker image: ghcr.io/${{ github.repository }}:${{ steps.get_tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_image.outputs.image_exists }}" == "true" ]; then
+            echo "- ✅ Docker image: ghcr.io/${{ github.repository }}:${{ steps.get_tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ Docker image scan skipped (image not found)" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### View Results" >> $GITHUB_STEP_SUMMARY
           echo "Check the Security tab for detailed vulnerability reports:" >> $GITHUB_STEP_SUMMARY

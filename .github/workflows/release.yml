@@ -99,8 +99,12 @@ jobs:
         run: |
           echo "Waiting for Docker image to be fully available in registry..."
           sleep 30
-          # Try to pull the image to verify it's available
-          docker pull ghcr.io/tma84/meeteasier:${{ steps.get_version.outputs.VERSION }} || true
+          echo "Attempting to pull image to verify availability..."
+          if docker pull ghcr.io/tma84/meeteasier:${{ steps.get_version.outputs.VERSION }}; then
+            echo "✅ Image successfully pulled and verified"
+          else
+            echo "⚠️ Warning: Could not pull image, but continuing with scan attempt"
+          fi
       
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -111,9 +115,20 @@ jobs:
           severity: 'CRITICAL,HIGH'
         continue-on-error: true
       
+      - name: Check if SARIF file exists
+        id: check_sarif
+        run: |
+          if [ -f trivy-results.sarif ]; then
+            echo "sarif_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Trivy SARIF file generated successfully"
+          else
+            echo "sarif_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Trivy SARIF file not found"
+          fi
+      
       - name: Upload Trivy results to GitHub Security
+        if: steps.check_sarif.outputs.sarif_exists == 'true'
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
         with:
           sarif_file: 'trivy-results.sarif'
       
@@ -136,8 +151,12 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Security Scan" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Image scanned for vulnerabilities with Trivy" >> $GITHUB_STEP_SUMMARY
-          echo "📊 Results uploaded to GitHub Security tab" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_sarif.outputs.sarif_exists }}" == "true" ]; then
+            echo "✅ Image scanned for vulnerabilities with Trivy" >> $GITHUB_STEP_SUMMARY
+            echo "📊 Results uploaded to GitHub Security tab" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Trivy scan encountered issues - check workflow logs" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Pull the image:" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
@@ -191,8 +210,8 @@ jobs:
             - `linux/arm64` (ARM64/Apple Silicon)
             
             **Security:**
-            - ✅ Scanned with Trivy for vulnerabilities
-            - 📊 Security scan results available in the [Security tab](https://github.com/${{ github.repository }}/security/code-scanning)
+            - Scanned with Trivy for vulnerabilities
+            - See workflow logs for security scan details
             
             **View on GitHub Container Registry:**
             [ghcr.io/${{ github.repository }}](https://github.com/${{ github.repository }}/pkgs/container/meeteasier)
