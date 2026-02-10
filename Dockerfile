@@ -31,16 +31,18 @@ COPY .env.template .env
 # Build SCSS first (use npx to run sass from node_modules)
 RUN npx sass scss/compiled.scss static/css/styles.css
 
-# Build React application
+# Build React application (needs sass from root node_modules)
 RUN cd ui-react && npm run build
 
-# Remove dev dependencies and npm to reduce CVEs
+# Now remove dev dependencies and npm to reduce CVEs
 RUN npm prune --omit=dev && \
     cd ui-react && npm prune --omit=dev && \
-    npm cache clean --force && \
-    rm -rf /usr/local/lib/node_modules/npm && \
+    npm cache clean --force
+
+# Remove npm binaries after build is complete
+RUN rm -rf /usr/local/lib/node_modules/npm && \
     rm -rf /usr/local/bin/npm /usr/local/bin/npx && \
-    rm -rf ~/.npm
+    rm -rf ~/.npm /root/.npm
 
 # Change ownership and switch to non-root user
 RUN chown -R nodejs:nodejs /opt/meeteasier

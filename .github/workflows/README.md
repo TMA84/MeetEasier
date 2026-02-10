@@ -14,12 +14,19 @@ This directory contains automated workflows for MeetEasier.
 - Creates a GitHub Release with the version tag
 - Builds and pushes Docker images to GitHub Container Registry (ghcr.io)
 - Supports multi-platform builds (amd64, arm64)
+- **Scans Docker images for CVEs with Trivy**
+- **Uploads security results to GitHub Security tab**
 
 **Docker Images Published:**
 - `ghcr.io/tma84/meeteasier:1.1.2` (version tag)
 - `ghcr.io/tma84/meeteasier:1.1` (minor version)
 - `ghcr.io/tma84/meeteasier:1` (major version)
 - `ghcr.io/tma84/meeteasier:latest` (latest release)
+
+**Security:**
+- All images are scanned for CRITICAL and HIGH vulnerabilities
+- Results uploaded to GitHub Security → Code scanning alerts
+- Build fails if critical vulnerabilities are found
 
 **Usage:**
 ```bash
@@ -31,6 +38,7 @@ git push origin v1.1.1
 The workflow will automatically:
 - Create a GitHub release
 - Build and push Docker images
+- Scan for vulnerabilities
 - Generate usage instructions
 
 ---
@@ -45,6 +53,8 @@ The workflow will automatically:
 - Builds multi-platform Docker images (amd64, arm64)
 - Pushes to GitHub Container Registry (ghcr.io)
 - Optionally pushes to Docker Hub (if credentials configured)
+- **Scans images for CVEs with Trivy**
+- **Uploads security results to GitHub Security tab**
 - Generates usage instructions and Docker Compose examples
 
 **Setup Docker Hub (Optional):**
@@ -61,7 +71,40 @@ The workflow will automatically:
 
 ---
 
-### 3. Version Bump Workflow (`version-bump.yml`)
+### 3. Security Scan Workflow (`security-scan.yml`)
+
+**Trigger:**
+- Daily at 2 AM UTC (scheduled)
+- On push to master when dependencies or Dockerfile change
+- Manually via workflow dispatch
+
+**What it does:**
+- **NPM Audit** - Scans Node.js dependencies for known vulnerabilities
+- **Trivy Filesystem Scan** - Scans project files for vulnerabilities
+- **Trivy Docker Scan** - Scans latest Docker image for CVEs
+- Uploads all results to GitHub Security tab
+- Generates detailed security summary
+
+**Scans:**
+- ✅ Root package dependencies
+- ✅ UI React dependencies
+- ✅ Filesystem vulnerabilities
+- ✅ Docker image vulnerabilities (OS packages, libraries)
+- ✅ CRITICAL, HIGH, and MEDIUM severity issues
+
+**View Results:**
+- Go to: Repository → Security → Code scanning
+- Filter by severity, category, or tool
+- Get detailed remediation advice
+
+**Manual Trigger:**
+1. Go to GitHub → Actions → "Security Scan"
+2. Click "Run workflow"
+3. Click "Run workflow"
+
+---
+
+### 4. Version Bump Workflow (`version-bump.yml`)
 
 **Trigger:** Manual workflow dispatch (run from GitHub Actions tab)
 
@@ -164,6 +207,65 @@ services:
 
 ---
 
+## Security Scanning
+
+All workflows include automated security scanning:
+
+### What Gets Scanned
+
+1. **NPM Dependencies**
+   - Root package.json dependencies
+   - UI React package.json dependencies
+   - Checks for known vulnerabilities in npm packages
+
+2. **Docker Images**
+   - Base image vulnerabilities (Alpine Linux)
+   - Installed OS packages
+   - Application dependencies
+   - Configuration issues
+
+3. **Filesystem**
+   - Source code vulnerabilities
+   - Configuration files
+   - Secrets detection
+
+### Vulnerability Severity Levels
+
+- 🔴 **CRITICAL** - Immediate action required
+- 🟠 **HIGH** - Should be fixed soon
+- 🟡 **MEDIUM** - Fix when possible
+- 🔵 **LOW** - Informational
+
+### Viewing Security Results
+
+1. Go to: Repository → **Security** → **Code scanning**
+2. Filter by:
+   - Severity (Critical, High, Medium, Low)
+   - Category (filesystem, docker-image)
+   - Tool (Trivy, npm audit)
+3. Click on any alert for:
+   - Detailed description
+   - Affected components
+   - Remediation advice
+   - CVE references
+
+### Automated Scanning Schedule
+
+- **Daily**: Full security scan at 2 AM UTC
+- **On Release**: Docker images scanned before publishing
+- **On Dependency Changes**: Triggered when package.json or Dockerfile changes
+- **Manual**: Run anytime from Actions tab
+
+### Security Best Practices
+
+✅ Review security alerts regularly
+✅ Update dependencies frequently
+✅ Use specific version tags in production
+✅ Enable GitHub Dependabot for automatic updates
+✅ Monitor the Security tab for new vulnerabilities
+
+---
+
 ## Benefits of Automation
 
 ✅ **Consistency** - Version numbers always match across files
@@ -173,6 +275,7 @@ services:
 ✅ **Professional** - Automated releases look more polished
 ✅ **Docker Images** - Automatically built and published for every release
 ✅ **Multi-Platform** - Supports both amd64 and arm64 architectures
+✅ **Security** - Automated CVE scanning and vulnerability reporting
 
 ---
 

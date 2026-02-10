@@ -80,6 +80,27 @@ jobs:
             OAUTH_CLIENT_SECRET=placeholder
           platforms: linux/amd64,linux/arm64
       
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Run Trivy vulnerability scanner (table output)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+      
       - name: Generate Docker usage instructions
         run: |
           echo "## Docker Images Published 🐳" >> $GITHUB_STEP_SUMMARY
