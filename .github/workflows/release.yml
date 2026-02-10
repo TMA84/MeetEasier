@@ -50,7 +50,8 @@ jobs:
             echo "Release version $VERSION" > release_notes.md
           fi
       
-      - name: Create GitHub Release
+      - name: Create GitHub Release (initial)
+        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           name: Release v${{ steps.get_version.outputs.VERSION }}
@@ -143,3 +144,49 @@ jobs:
           echo "  -e OAUTH_CLIENT_SECRET=your_secret \\" >> $GITHUB_STEP_SUMMARY
           echo "  ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+      
+      - name: Update Release with Docker info
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          append_body: true
+          body: |
+            
+            ---
+            
+            ## 🐳 Docker Images
+            
+            Docker images for this release are available on GitHub Container Registry:
+            
+            **Pull the image:**
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}
+            # or use the latest tag
+            docker pull ghcr.io/${{ github.repository }}:latest
+            ```
+            
+            **Run the container:**
+            ```bash
+            docker run -d -p 8080:8080 \
+              -e OAUTH_CLIENT_ID=your_client_id \
+              -e OAUTH_AUTHORITY=your_authority \
+              -e OAUTH_CLIENT_SECRET=your_secret \
+              ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }}
+            ```
+            
+            **Available tags:**
+            - `${{ steps.get_version.outputs.VERSION }}` - This specific version
+            - `latest` - Latest stable release
+            
+            **Platforms:**
+            - `linux/amd64` (x86_64)
+            - `linux/arm64` (ARM64/Apple Silicon)
+            
+            **Security:**
+            - ✅ Scanned with Trivy for vulnerabilities
+            - 📊 Security scan results available in the [Security tab](https://github.com/${{ github.repository }}/security/code-scanning)
+            
+            **View on GitHub Container Registry:**
+            [ghcr.io/${{ github.repository }}](https://github.com/${{ github.repository }}/pkgs/container/meeteasier)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
