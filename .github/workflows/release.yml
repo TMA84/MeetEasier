@@ -84,6 +84,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
       
       - name: Build and push Docker image
+        id: docker_build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -93,6 +94,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+      
+      - name: Wait for image to be available
+        run: |
+          echo "Waiting for Docker image to be fully available in registry..."
+          sleep 30
+          # Try to pull the image to verify it's available
+          docker pull ghcr.io/tma84/meeteasier:${{ steps.get_version.outputs.VERSION }} || true
       
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
