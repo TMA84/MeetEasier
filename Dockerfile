@@ -17,7 +17,8 @@ COPY package*.json ./
 COPY ui-react/package*.json ./ui-react/
 
 # Install all dependencies (including dev dependencies needed for build)
-RUN npm install && cd ui-react && npm install
+# Note: postinstall script will also install ui-react dependencies
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -27,7 +28,8 @@ COPY .env.template .env
 RUN npx sass scss/compiled.scss static/css/styles.css
 
 # Build React application with Vite (outputs to ui-react/build/)
-RUN cd ui-react && npm run build
+# Use npx to ensure vite is found
+RUN cd ui-react && npx vite build
 
 # Verify build output exists
 RUN ls -la ui-react/build/
