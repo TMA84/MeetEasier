@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:25-alpine
 
 # Note: OAuth credentials should be provided at runtime via environment variables
 # for security. Build-time args are only used as placeholders for the build process.
