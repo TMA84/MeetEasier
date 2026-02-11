@@ -122,6 +122,30 @@ cd ui-react
 npm install
 ```
 
+## Docker Multi-Stage Build
+
+The Dockerfile now uses a multi-stage build to eliminate dev dependencies and build tools from the final production image:
+
+**Build Stage:**
+- Installs all dependencies (including devDependencies)
+- Builds SCSS with sass
+- Builds React app with Vite
+- Outputs to `ui-react/build/`
+
+**Production Stage:**
+- Installs ONLY production dependencies (`--omit=dev`)
+- Copies built files from build stage
+- No Vite, Vitest, sass, or other dev tools
+- Significantly reduces CVE surface area
+- Smaller final image size (~400MB vs larger with dev deps)
+
+**Benefits:**
+- ✅ No dev dependencies in production image
+- ✅ Reduced CVE vulnerabilities
+- ✅ Smaller image size
+- ✅ Faster container startup
+- ✅ Better security posture
+
 ## Notes
 
 - Dev server port changed from 3000 to 3000 (same, but configurable in vite.config.js)
