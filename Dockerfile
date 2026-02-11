@@ -1,5 +1,5 @@
 # Build stage - includes all dev dependencies and build tools
-FROM node:25-alpine AS builder
+FROM node:current-alpine3.23 AS builder
 
 # Update packages and install security updates
 RUN apk update && apk upgrade
@@ -42,7 +42,8 @@ COPY package*.json ./
 
 # Install ONLY production dependencies (no devDependencies)
 RUN npm install --omit=dev --ignore-scripts && \
-    npm cache clean --force
+    npm cache clean --force && \
+    rm -rf /root/.npm
 
 # Copy built files from builder stage
 COPY --from=builder /opt/meeteasier/ui-react/build ./ui-react/build
@@ -57,6 +58,12 @@ COPY .env.template .env
 
 # Set NODE_ENV to production
 ENV NODE_ENV=production
+
+# Remove npm and its dependencies after installation to reduce CVEs
+# We don't need npm at runtime, only node
+RUN rm -rf /usr/local/lib/node_modules/npm && \
+    rm -rf /usr/local/bin/npm /usr/local/bin/npx && \
+    find /usr/local/lib/node_modules -type d -name ".bin" -exec rm -rf {} + 2>/dev/null || true
 
 # Change ownership and switch to non-root user
 RUN chown -R nodejs:nodejs /opt/meeteasier
