@@ -10,6 +10,7 @@ Complete reference for all configuration options in MeetEasier.
 2. [Admin Panel Configuration](#admin-panel-configuration)
 3. [Display Customization](#display-customization)
 4. [Advanced Configuration](#advanced-configuration)
+5. [API Reference](#api-reference)
 
 ---
 
@@ -677,9 +678,391 @@ socket.on('disconnect', () => console.log('Disconnected'));
 
 ---
 
+## API Reference
+
+MeetEasier provides REST API endpoints for programmatic configuration. All admin endpoints require authentication via API token.
+
+### Authentication
+
+All admin API endpoints require the `API_TOKEN` to be sent in one of these headers:
+- `Authorization: Bearer YOUR_API_TOKEN`
+- `X-API-Token: YOUR_API_TOKEN`
+
+**Example:**
+```bash
+# Set your API token
+export API_TOKEN="your_secure_token_here"
+```
+
+---
+
+### WiFi Configuration API
+
+#### Get WiFi Configuration
+
+**Endpoint:** `GET /api/wifi`
+
+**Authentication:** Not required (public endpoint)
+
+**Response:**
+```json
+{
+  "ssid": "GUEST-NETWORK",
+  "password": "SecurePass2030",
+  "lastUpdated": "2026-02-10T12:00:00.000Z"
+}
+```
+
+**Example:**
+```bash
+curl http://localhost:8080/api/wifi
+```
+
+#### Update WiFi Configuration
+
+**Endpoint:** `POST /api/wifi`
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "ssid": "NEW-NETWORK",
+  "password": "NewPassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "config": {
+    "ssid": "NEW-NETWORK",
+    "password": "NewPassword123",
+    "lastUpdated": "2026-02-10T12:30:00.000Z"
+  },
+  "message": "WiFi configuration updated and QR code generated"
+}
+```
+
+**Examples:**
+
+Using Authorization header:
+```bash
+curl -X POST http://localhost:8080/api/wifi \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${API_TOKEN}" \
+  -d '{
+    "ssid": "GUEST-NETWORK",
+    "password": "SecurePass2030"
+  }'
+```
+
+Using X-API-Token header:
+```bash
+curl -X POST http://localhost:8080/api/wifi \
+  -H "Content-Type: application/json" \
+  -H "X-API-Token: ${API_TOKEN}" \
+  -d '{
+    "ssid": "GUEST-NETWORK",
+    "password": "SecurePass2030"
+  }'
+```
+
+**Notes:**
+- QR code is automatically regenerated when WiFi config is updated
+- Password is optional (can be empty string for open networks)
+- Changes are immediately reflected on all connected displays via Socket.IO
+
+---
+
+### Sidebar Configuration API
+
+#### Get Sidebar Configuration
+
+**Endpoint:** `GET /api/sidebar`
+
+**Authentication:** Not required
+
+**Response:**
+```json
+{
+  "showWiFi": true,
+  "showUpcomingMeetings": true,
+  "showMeetingTitles": false,
+  "minimalHeaderStyle": false
+}
+```
+
+**Example:**
+```bash
+curl http://localhost:8080/api/sidebar
+```
+
+#### Update Sidebar Configuration
+
+**Endpoint:** `POST /api/sidebar`
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "showWiFi": true,
+  "showUpcomingMeetings": true,
+  "showMeetingTitles": false,
+  "minimalHeaderStyle": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "config": {
+    "showWiFi": true,
+    "showUpcomingMeetings": true,
+    "showMeetingTitles": false,
+    "minimalHeaderStyle": false
+  },
+  "message": "Sidebar configuration updated"
+}
+```
+
+**Example:**
+```bash
+curl -X POST http://localhost:8080/api/sidebar \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${API_TOKEN}" \
+  -d '{
+    "showWiFi": true,
+    "showUpcomingMeetings": true,
+    "showMeetingTitles": false
+  }'
+```
+
+---
+
+### Booking Configuration API
+
+#### Get Booking Configuration
+
+**Endpoint:** `GET /api/booking-config`
+
+**Authentication:** Not required
+
+**Response:**
+```json
+{
+  "enableBooking": true
+}
+```
+
+**Example:**
+```bash
+curl http://localhost:8080/api/booking-config
+```
+
+#### Update Booking Configuration
+
+**Endpoint:** `POST /api/booking-config`
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "enableBooking": true
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "config": {
+    "enableBooking": true
+  },
+  "message": "Booking configuration updated"
+}
+```
+
+**Example:**
+```bash
+curl -X POST http://localhost:8080/api/booking-config \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${API_TOKEN}" \
+  -d '{"enableBooking": true}'
+```
+
+---
+
+### Logo Configuration API
+
+#### Get Logo Configuration
+
+**Endpoint:** `GET /api/logo`
+
+**Authentication:** Not required
+
+**Response:**
+```json
+{
+  "darkLogoUrl": "/img/uploads/logo-dark.png",
+  "lightLogoUrl": "/img/uploads/logo-light.png"
+}
+```
+
+**Example:**
+```bash
+curl http://localhost:8080/api/logo
+```
+
+#### Upload Logo
+
+**Endpoint:** `POST /api/logo`
+
+**Authentication:** Required
+
+**Request:** Multipart form data with file upload
+
+**Form Fields:**
+- `logo`: Image file (PNG, JPG, JPEG, GIF, SVG)
+- `type`: Either `"dark"` or `"light"`
+
+**Response:**
+```json
+{
+  "success": true,
+  "filename": "logo-1234567890.png",
+  "url": "/img/uploads/logo-1234567890.png",
+  "type": "dark"
+}
+```
+
+**Example:**
+```bash
+curl -X POST http://localhost:8080/api/logo \
+  -H "Authorization: Bearer ${API_TOKEN}" \
+  -F "logo=@/path/to/logo.png" \
+  -F "type=dark"
+```
+
+---
+
+### Rooms API
+
+#### Get All Rooms
+
+**Endpoint:** `GET /api/rooms`
+
+**Authentication:** Not required
+
+**Response:**
+```json
+[
+  {
+    "Name": "Conference Room A",
+    "RoomAlias": "conf-a",
+    "Busy": false,
+    "Appointments": [
+      {
+        "Subject": "Team Meeting",
+        "Organizer": "John Doe",
+        "Start": 1707566400000,
+        "End": 1707570000000,
+        "Private": false
+      }
+    ]
+  }
+]
+```
+
+**Example:**
+```bash
+curl http://localhost:8080/api/rooms
+```
+
+---
+
+### Configuration Locks API
+
+#### Get Configuration Locks Status
+
+**Endpoint:** `GET /api/config-locks`
+
+**Authentication:** Not required
+
+**Response:**
+```json
+{
+  "wifiLocked": false,
+  "logoLocked": false,
+  "sidebarLocked": false,
+  "bookingLocked": false
+}
+```
+
+**Example:**
+```bash
+curl http://localhost:8080/api/config-locks
+```
+
+**Notes:**
+- Locked configurations are controlled by environment variables
+- When locked, admin panel sections are hidden and API updates are blocked
+- Used to enforce configuration in production environments
+
+---
+
+### Complete Example Script
+
+Here's a complete bash script to update all configurations:
+
+```bash
+#!/bin/bash
+
+# Configuration
+API_TOKEN="your_secure_token_here"
+BASE_URL="http://localhost:8080"
+
+# Update WiFi
+echo "Updating WiFi configuration..."
+curl -X POST "${BASE_URL}/api/wifi" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${API_TOKEN}" \
+  -d '{
+    "ssid": "GUEST-NETWORK",
+    "password": "SecurePass2030"
+  }'
+
+echo -e "\n\nUpdating sidebar configuration..."
+curl -X POST "${BASE_URL}/api/sidebar" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${API_TOKEN}" \
+  -d '{
+    "showWiFi": true,
+    "showUpcomingMeetings": true,
+    "showMeetingTitles": false
+  }'
+
+echo -e "\n\nUpdating booking configuration..."
+curl -X POST "${BASE_URL}/api/booking-config" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${API_TOKEN}" \
+  -d '{"enableBooking": true}'
+
+echo -e "\n\nConfiguration update complete!"
+```
+
+Save as `update-config.sh`, make executable with `chmod +x update-config.sh`, and run with `./update-config.sh`.
+
+---
+
 ## Support
 
 For configuration help:
 - Check [INSTALLATION.md](INSTALLATION.md) for setup guide
 - Check [README.md](README.md) for feature overview
 - Open issue on [GitHub](https://github.com/TMA84/MeetEasier/issues)
+

@@ -18,9 +18,11 @@ MeetEasier is a web application that visualizes meeting room availability. It wo
 
 📚 **[Installation Guide](INSTALLATION.md)** - Complete step-by-step installation instructions
 
-📖 **[Configuration Reference](CONFIGURATION.md)** - Detailed configuration options and settings
+📖 **[Configuration Reference](CONFIGURATION.md)** - Detailed configuration options and API reference
 
 🔒 **[Security Policy](SECURITY.md)** - Security best practices and vulnerability reporting
+
+🔧 **[API Documentation](CONFIGURATION.md#api-reference)** - REST API for programmatic configuration
 
 ---
 
