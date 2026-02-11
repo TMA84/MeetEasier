@@ -86,7 +86,7 @@ jobs:
           CHANGELOG_EOF
           
           echo "" >> temp_changelog.md
-          echo "## [$NEW_VERSION] - $DATE" >> temp_changelog.md
+          echo "## [${NEW_VERSION}] - ${DATE}" >> temp_changelog.md
           echo "" >> temp_changelog.md
           echo "### Changed" >> temp_changelog.md
           echo "- $CHANGES" >> temp_changelog.md
