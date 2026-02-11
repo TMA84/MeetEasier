@@ -206,6 +206,10 @@ jobs:
               -e OAUTH_CLIENT_ID=your_client_id \
               -e OAUTH_AUTHORITY=your_authority \
               -e OAUTH_CLIENT_SECRET=your_secret \
+              -e API_TOKEN=your_secure_token \
+              -v $(pwd)/data:/opt/meeteasier/data \
+              -v $(pwd)/static/img/uploads:/opt/meeteasier/static/img/uploads \
+              -v $(pwd)/static/img/uploads:/opt/meeteasier/static/img/uploads
               ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}:${{ steps.get_version.outputs.VERSION }}
             ```
             
