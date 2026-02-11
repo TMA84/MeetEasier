@@ -173,7 +173,11 @@ jobs:
           echo "  -e OAUTH_CLIENT_ID=your_client_id \\" >> $GITHUB_STEP_SUMMARY
           echo "  -e OAUTH_AUTHORITY=your_authority \\" >> $GITHUB_STEP_SUMMARY
           echo "  -e OAUTH_CLIENT_SECRET=your_secret \\" >> $GITHUB_STEP_SUMMARY
-          echo "  ghcr.io/${{ steps.repo_lowercase.outputs.REPO_LOWER }}:${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "  -e API_TOKEN=your_secure_token \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -v $(pwd)/data:/opt/meeteasier/data \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -v $(pwd)/static/img/uploads:/opt/meeteasier/static/img/uploads \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -v $(pwd)/static/img/uploads:/opt/meeteasier/static/img/uploads \\" >> $GITHUB_STEP_SUMMARY
+          echo "  --name meeteasier \\" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
       
       - name: Update Release with Docker info
