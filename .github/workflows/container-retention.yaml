@@ -16,5 +16,5 @@ jobs:
           image-names: "*"
           tag-selection: untagged  # target any image that has a tag starting with the word test or dev
           cut-off: 1h
-          dry-run: true
+          dry-run: false
 
