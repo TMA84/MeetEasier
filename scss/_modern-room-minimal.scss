@@ -187,6 +187,11 @@
   padding: clamp(0.75rem, 1.5vw, 1.25rem);
   margin-bottom: clamp(0.5rem, 1vh, 1rem);
   text-align: left;
+  
+  @media (max-width: 900px) {
+    padding: clamp(0.5rem, 1vw, 0.9rem);
+    margin-bottom: clamp(0.3rem, 0.6vh, 0.75rem);
+  }
 
   &.minimal-meeting-card--next {
     opacity: 0.8;
@@ -231,15 +236,21 @@
 }
 
 .minimal-sidebar {
-  width: clamp(300px, 25vw, 400px);
-  min-width: 300px;
+  width: clamp(240px, 25vw, 400px);
+  min-width: 240px;
   flex-shrink: 0;
   background: rgba(45, 49, 66, 0.95);
   display: flex;
   flex-direction: column;
-  padding: clamp(1rem, 2vw, 2rem);
+  padding: clamp(2.5rem, 5vh, 4rem) clamp(0.75rem, 1.5vw, 2rem);
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   min-height: 100vh;
+  
+  @media (max-width: 900px) {
+    width: clamp(200px, 22vw, 300px);
+    min-width: 200px;
+    padding: clamp(1.5rem, 3vh, 2.5rem) clamp(0.5rem, 1vw, 1.5rem);
+  }
 }
 
 .minimal-sidebar-header {
@@ -248,14 +259,23 @@
 }
 
 .minimal-logo {
-  margin-bottom: clamp(0.75rem, 1.5vh, 1.5rem);
+  margin-bottom: clamp(0.5rem, 1.5vh, 1.5rem);
   text-align: center;
   
   img {
-    max-height: clamp(80px, 10vh, 120px);
-    max-width: clamp(160px, 20vw, 240px);
+    max-height: clamp(50px, 8vh, 120px);
+    max-width: clamp(100px, 18vw, 240px);
     width: auto;
     height: auto;
+  }
+  
+  @media (max-width: 900px) {
+    margin-bottom: clamp(0.25rem, 0.75vh, 0.75rem);
+    
+    img {
+      max-height: clamp(40px, 6vh, 80px);
+      max-width: clamp(80px, 15vw, 160px);
+    }
   }
 }
 
@@ -264,38 +284,46 @@
 }
 
 .minimal-time {
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(1.5rem, 3vw, 3rem);
   font-weight: 700;
   color: #ffffff;
   line-height: 1;
-  margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
+  margin-bottom: clamp(0.25rem, 0.75vh, 0.75rem);
   font-variant-numeric: tabular-nums;
+  
+  @media (max-width: 900px) {
+    font-size: clamp(1.25rem, 2.5vw, 2rem);
+  }
 }
 
 .minimal-date {
-  font-size: clamp(0.875rem, 1.5vw, 1.25rem);
+  font-size: clamp(0.75rem, 1.25vw, 1.25rem);
   color: rgba(255, 255, 255, 0.7);
   font-weight: 500;
+  
+  @media (max-width: 900px) {
+    font-size: clamp(0.65rem, 1vw, 0.85rem);
+  }
 }
 
 .minimal-upcoming {
   flex: 1;
-  margin-bottom: clamp(1rem, 2vh, 1.5rem);
+  margin-bottom: clamp(0.75rem, 1.5vh, 1.5rem);
   overflow-y: auto;
   
   .minimal-upcoming-title {
-    font-size: clamp(1rem, 1.5vw, 1.25rem);
+    font-size: clamp(0.85rem, 1.25vw, 1.25rem);
     font-weight: 600;
     color: #ffffff;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-bottom: clamp(0.5rem, 1vh, 1rem);
+    margin-bottom: clamp(0.25rem, 0.5vh, 0.75rem);
   }
   
   .minimal-upcoming-list {
     .minimal-upcoming-item {
-      padding: clamp(0.75rem, 1.5vw, 1rem);
-      margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
+      padding: clamp(0.5rem, 1vw, 1rem);
+      margin-bottom: clamp(0.25rem, 0.5vh, 0.75rem);
       background: rgba(26, 29, 41, 0.5);
       border-radius: 0.5rem;
       transition: all 0.3s ease;
@@ -306,28 +334,31 @@
       }
       
       .minimal-upcoming-subject {
-        font-size: clamp(0.875rem, 1.25vw, 1rem);
+        font-size: clamp(0.75rem, 1.1vw, 0.95rem);
         font-weight: 600;
         color: #ffffff;
-        margin-bottom: clamp(0.25rem, 0.5vh, 0.5rem);
+        margin-bottom: clamp(0.15rem, 0.3vh, 0.25rem);
       }
       
       .minimal-upcoming-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: clamp(0.5rem, 1vw, 1rem);
+        gap: clamp(0.25rem, 0.5vw, 0.75rem);
       }
       
       .minimal-upcoming-organizer {
-        font-size: clamp(0.75rem, 1vw, 0.875rem);
+        font-size: clamp(0.65rem, 0.9vw, 0.8rem);
         font-weight: 400;
         color: rgba(255, 255, 255, 0.7);
         flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       
       .minimal-upcoming-time {
-        font-size: clamp(0.75rem, 1vw, 0.875rem);
+        font-size: clamp(0.65rem, 0.9vw, 0.8rem);
         font-weight: 400;
         color: rgba(255, 255, 255, 0.7);
         white-space: nowrap;
@@ -335,11 +366,19 @@
     }
     
     .minimal-upcoming-empty {
-      padding: clamp(1rem, 2vw, 1.5rem);
+      padding: clamp(0.75rem, 1.5vw, 1.5rem);
       text-align: center;
       color: rgba(255, 255, 255, 0.5);
-      font-size: clamp(0.875rem, 1.25vw, 1rem);
+      font-size: clamp(0.7rem, 1vw, 0.95rem);
       font-style: italic;
+    }
+  }
+  
+  @media (max-width: 900px) {
+    margin-bottom: clamp(0.5rem, 1vh, 1rem);
+    
+    .minimal-upcoming-title {
+      font-size: clamp(0.75rem, 1vw, 1rem);
     }
   }
 }
@@ -356,15 +395,15 @@
 // Booking button section in sidebar
 .minimal-sidebar-booking {
   flex-shrink: 0;
-  margin-top: clamp(1rem, 2vh, 1.5rem);
+  margin-top: clamp(0.75rem, 1.5vh, 1.5rem);
   
   .minimal-sidebar-book-btn {
     width: 100%;
     background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
     color: #ffffff;
     border: none;
-    padding: clamp(0.875rem, 1.5vh, 1.25rem) clamp(1.5rem, 2.5vw, 2rem);
-    font-size: clamp(1rem, 1.5vw, 1.25rem);
+    padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
+    font-size: clamp(0.85rem, 1.2vw, 1.25rem);
     font-weight: 700;
     border-radius: 0.75rem;
     cursor: pointer;
@@ -382,6 +421,11 @@
     &:active {
       transform: translateY(0);
     }
+    
+    @media (max-width: 900px) {
+      padding: clamp(0.5rem, 0.9vh, 0.85rem) clamp(0.75rem, 1.5vw, 1.25rem);
+      font-size: clamp(0.75rem, 1vw, 1rem);
+    }
   }
 }
 
@@ -392,30 +436,49 @@
   justify-content: center;
   background: rgba(26, 29, 41, 0.5);
   border-radius: 1rem;
-  padding: clamp(1.5rem, 2.5vw, 2.5rem);
+  padding: clamp(1rem, 2vw, 2rem);
   flex-shrink: 0;
+  
+  @media (max-width: 900px) {
+    padding: clamp(0.75rem, 1.5vw, 1.5rem);
+    border-radius: 0.75rem;
+  }
 }
 
 .minimal-wifi-title {
-  font-size: clamp(1.125rem, 1.75vw, 1.5rem);
+  font-size: clamp(1.1rem, 1.75vw, 1.5rem);
   font-weight: 600;
   color: #ffffff;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: clamp(0.5rem, 1vh, 1rem);
+  
+  @media (max-width: 900px) {
+    font-size: clamp(0.95rem, 1.4vw, 1.25rem);
+    margin-bottom: clamp(0.3rem, 0.6vh, 0.75rem);
+  }
 }
 
 .minimal-qr {
   margin-bottom: clamp(0.5rem, 1vh, 1rem);
   
   img {
-    width: clamp(120px, 15vw, 150px);
-    height: clamp(120px, 15vw, 150px);
+    width: clamp(110px, 15vw, 160px);
+    height: clamp(110px, 15vw, 160px);
     border-radius: 0.5rem;
     
     &.minimal-qr-inverted {
       filter: invert(1);
       background: transparent;
+    }
+  }
+  
+  @media (max-width: 900px) {
+    margin-bottom: clamp(0.35rem, 0.7vh, 0.75rem);
+    
+    img {
+      width: clamp(90px, 12vw, 120px);
+      height: clamp(90px, 12vw, 120px);
     }
   }
 }
@@ -426,19 +489,27 @@
 }
 
 .minimal-wifi-ssid {
-  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  font-size: clamp(1.15rem, 1.8vw, 1.75rem);
   font-weight: 700;
   color: #ffffff;
-  margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
+  margin-bottom: clamp(0.35rem, 0.75vh, 0.75rem);
   word-break: break-all;
+  
+  @media (max-width: 900px) {
+    font-size: clamp(1rem, 1.5vw, 1.35rem);
+  }
 }
 
 .minimal-wifi-password {
-  font-size: clamp(1.125rem, 1.75vw, 1.5rem);
+  font-size: clamp(1.05rem, 1.65vw, 1.5rem);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.7);
   font-family: 'Courier New', monospace;
   word-break: break-all;
+  
+  @media (max-width: 900px) {
+    font-size: clamp(0.9rem, 1.4vw, 1.2rem);
+  }
 }
 
 @keyframes rotate {
