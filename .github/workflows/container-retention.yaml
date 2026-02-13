@@ -2,7 +2,7 @@ name: Container-Retention
 on:
   workflow_dispatch:
   schedule:
-    - cron: "5 * * * *"  # every hour
+    - cron: "5 0 * * *"  # every hour
 
 jobs:
   clean:
