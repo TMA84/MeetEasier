@@ -1,3 +1,5 @@
+@use 'modern-variables' as *;
+
 .room-minimal {
   font-family: 'Titillium Web', sans-serif;
   background: #1a1d29;
@@ -395,7 +397,7 @@
 // Booking button section in sidebar
 .minimal-sidebar-booking {
   flex-shrink: 0;
-  margin-top: clamp(0.75rem, 1.5vh, 1.5rem);
+  margin-top: clamp(1rem, 2vh, 1.5rem);
   
   .minimal-sidebar-book-btn {
     width: 100%;
@@ -404,8 +406,8 @@
     border: none;
     padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
     font-size: clamp(0.85rem, 1.2vw, 1.25rem);
-    font-weight: 700;
-    border-radius: 0.75rem;
+    font-weight: $font-weight-bold;
+    border-radius: $radius-lg;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -420,11 +422,6 @@
     
     &:active {
       transform: translateY(0);
-    }
-    
-    @media (max-width: 900px) {
-      padding: clamp(0.5rem, 0.9vh, 0.85rem) clamp(0.75rem, 1.5vw, 1.25rem);
-      font-size: clamp(0.75rem, 1vw, 1rem);
     }
   }
 }
