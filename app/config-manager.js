@@ -14,6 +14,7 @@ const configPath = path.join(__dirname, '../data/wifi-config.json');
 const logoConfigPath = path.join(__dirname, '../data/logo-config.json');
 const sidebarConfigPath = path.join(__dirname, '../data/sidebar-config.json');
 const bookingConfigPath = path.join(__dirname, '../data/booking-config.json');
+const colorsConfigPath = path.join(__dirname, '../data/colors-config.json');
 const qrPath = path.join(__dirname, '../static/img/wifi-qr.png');
 
 let io = null;
@@ -101,6 +102,26 @@ function getBookingConfig() {
 }
 
 /**
+ * Read Colors configuration from file or return defaults
+ * @returns {Object} Colors configuration with bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor, and lastUpdated
+ */
+function getColorsConfig() {
+	try {
+		const data = fs.readFileSync(colorsConfigPath, 'utf8');
+		return JSON.parse(data);
+	} catch (err) {
+		// Return default colors if file doesn't exist
+		return {
+			bookingButtonColor: '#334155',
+			statusAvailableColor: '#22c55e',
+			statusBusyColor: '#ef4444',
+			statusUpcomingColor: '#f59e0b',
+			lastUpdated: null
+		};
+	}
+}
+
+/**
  * Save WiFi configuration to file
  * @param {Object} config - WiFi configuration with ssid and password
  * @returns {Object} Saved configuration with timestamp
@@ -173,6 +194,24 @@ function saveBookingConfig(config) {
 	};
 	
 	fs.writeFileSync(bookingConfigPath, JSON.stringify(configData, null, 2));
+	return configData;
+}
+
+/**
+ * Save Colors configuration to file
+ * @param {Object} config - Colors configuration with bookingButtonColor and status colors
+ * @returns {Object} Saved configuration with timestamp
+ */
+function saveColorsConfig(config) {
+	const configData = {
+		bookingButtonColor: config.bookingButtonColor || '#334155',
+		statusAvailableColor: config.statusAvailableColor || '#22c55e',
+		statusBusyColor: config.statusBusyColor || '#ef4444',
+		statusUpcomingColor: config.statusUpcomingColor || '#f59e0b',
+		lastUpdated: new Date().toISOString()
+	};
+	
+	fs.writeFileSync(colorsConfigPath, JSON.stringify(configData, null, 2));
 	return configData;
 }
 
@@ -283,15 +322,43 @@ async function updateBookingConfig(enableBooking, buttonColor) {
 	return config;
 }
 
+/**
+ * Update Colors configuration
+ * Broadcasts update to all connected clients via Socket.IO
+ * @param {string} bookingButtonColor - Hex color for booking buttons
+ * @param {string} statusAvailableColor - Hex color for available status
+ * @param {string} statusBusyColor - Hex color for busy status
+ * @param {string} statusUpcomingColor - Hex color for upcoming status
+ * @returns {Promise<Object>} Updated configuration
+ */
+async function updateColorsConfig(bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor) {
+	const config = saveColorsConfig({ 
+		bookingButtonColor, 
+		statusAvailableColor, 
+		statusBusyColor, 
+		statusUpcomingColor 
+	});
+	
+	// Emit Socket.IO event to notify all connected clients
+	if (io) {
+		io.of('/').emit('colorsConfigUpdated', config);
+		console.log('Colors config updated, notified all clients via Socket.IO');
+	}
+	
+	return config;
+}
+
 module.exports = {
 	setSocketIO,
 	getWiFiConfig,
 	getLogoConfig,
 	getSidebarConfig,
 	getBookingConfig,
+	getColorsConfig,
 	updateWiFiConfig,
 	updateLogoConfig,
 	updateSidebarConfig,
 	updateBookingConfig,
+	updateColorsConfig,
 	generateQRCode
 };
