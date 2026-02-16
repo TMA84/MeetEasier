@@ -154,11 +154,15 @@ class Display extends Component {
       });
 
       this.socket.on('bookingConfigUpdated', (config) => {
+        const buttonColor = config.buttonColor || '#334155';
         this.setState({ 
           bookingConfig: {
-            enableBooking: config.enableBooking !== undefined ? config.enableBooking : true
+            enableBooking: config.enableBooking !== undefined ? config.enableBooking : true,
+            buttonColor: buttonColor
           }
         });
+        // Apply button color as CSS custom property
+        document.documentElement.style.setProperty('--booking-button-color', buttonColor);
       });
     }
   }
@@ -216,11 +220,15 @@ class Display extends Component {
     fetch('/api/booking-config')
       .then(response => response.json())
       .then(data => {
+        const buttonColor = data.buttonColor || '#334155';
         this.setState({ 
           bookingConfig: {
-            enableBooking: data.enableBooking !== undefined ? data.enableBooking : true
+            enableBooking: data.enableBooking !== undefined ? data.enableBooking : true,
+            buttonColor: buttonColor
           }
         });
+        // Apply button color as CSS custom property
+        document.documentElement.style.setProperty('--booking-button-color', buttonColor);
       })
       .catch(err => {
         console.error('Error fetching booking config:', err);

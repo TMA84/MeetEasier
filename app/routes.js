@@ -542,7 +542,7 @@ module.exports = function(app) {
 	// Update booking configuration (protected - requires token)
 	app.post('/api/booking-config', checkApiToken, async function(req, res) {
 		try {
-			const { enableBooking } = req.body;
+			const { enableBooking, buttonColor } = req.body;
 			
 			if (enableBooking === undefined) {
 				return res.status(400).json({ error: 'enableBooking field is required' });
@@ -558,7 +558,7 @@ module.exports = function(app) {
 				});
 			}
 
-			const config = await configManager.updateBookingConfig(enableBooking);
+			const config = await configManager.updateBookingConfig(enableBooking, buttonColor);
 			res.json({ 
 				success: true, 
 				config,

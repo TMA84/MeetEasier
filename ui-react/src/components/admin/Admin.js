@@ -52,6 +52,8 @@ class Admin extends Component {
       bookingMessage: null,
       bookingMessageType: null,
       bookingPermissionMissing: false,
+      bookingButtonColor: '#334155',
+      currentBookingButtonColor: '#334155',
       
       // Auth
       apiToken: '',
@@ -136,6 +138,9 @@ class Admin extends Component {
         sidebarHelp: 'Wählen Sie aus, was in der Sidebar der Raumanzeigen angezeigt werden soll',
         enableBookingLabel: 'Buchungsfunktion aktivieren',
         enableBookingHelp: 'Ermöglicht Benutzern, Räume direkt über die Anzeige zu buchen',
+        bookingButtonColorLabel: 'Button-Farbe',
+        bookingButtonColorHelp: 'Wählen Sie die Farbe für Buchungs-Buttons',
+        resetToDefaultButton: 'Standard wiederherstellen',
         submitBookingButton: 'Buchung aktualisieren',
         bookingSuccessMessage: 'Buchungs-Konfiguration erfolgreich aktualisiert!',
         errorUnauthorized: 'Nicht autorisiert: Ungültiger oder fehlender API-Token',
@@ -189,6 +194,9 @@ class Admin extends Component {
         sidebarHelp: 'Choose what to display in the sidebar of room displays',
         enableBookingLabel: 'Enable Booking Feature',
         enableBookingHelp: 'Allows users to book rooms directly from the display',
+        bookingButtonColorLabel: 'Button Color',
+        bookingButtonColorHelp: 'Choose the color for booking buttons',
+        resetToDefaultButton: 'Reset to Default',
         submitBookingButton: 'Update Booking',
         bookingSuccessMessage: 'Booking configuration updated successfully!',
         errorUnauthorized: 'Unauthorized: Invalid or missing API token',
@@ -271,7 +279,9 @@ class Admin extends Component {
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
             : '-',
           enableBooking: data.enableBooking !== undefined ? data.enableBooking : true,
-          bookingPermissionMissing: data.permissionMissing || false
+          bookingPermissionMissing: data.permissionMissing || false,
+          bookingButtonColor: data.buttonColor || '#334155',
+          currentBookingButtonColor: data.buttonColor || '#334155'
         });
       })
       .catch(err => {
@@ -499,7 +509,7 @@ class Admin extends Component {
   handleBookingSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
-    const { apiToken, enableBooking } = this.state;
+    const { apiToken, enableBooking, bookingButtonColor } = this.state;
     
     const headers = {
       'Content-Type': 'application/json',
@@ -512,7 +522,7 @@ class Admin extends Component {
     fetch('/api/booking-config', {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify({ enableBooking })
+      body: JSON.stringify({ enableBooking, buttonColor: bookingButtonColor })
     })
     .then(response => {
       if (response.status === 401) {
@@ -555,10 +565,10 @@ class Admin extends Component {
       currentSsid, currentPassword, wifiLastUpdated, 
       currentLogoDarkUrl, currentLogoLightUrl, logoLastUpdated,
       currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, currentMinimalHeaderStyle, informationLastUpdated,
-      currentEnableBooking, bookingLastUpdated,
+      currentEnableBooking, currentBookingButtonColor, bookingLastUpdated,
       apiToken, ssid, password, logoDarkUrl, logoLightUrl, logoDarkFile, logoLightFile, uploadMode,
       showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle,
-      enableBooking,
+      enableBooking, bookingButtonColor,
       wifiMessage, wifiMessageType, logoMessage, logoMessageType, informationMessage, informationMessageType,
       bookingMessage, bookingMessageType,
       wifiLocked, logoLocked, informationLocked, bookingLocked,
@@ -1002,6 +1012,20 @@ class Admin extends Component {
                   <span className="config-label">{t.enableBookingLabel}</span>
                   <span className="config-value">{currentEnableBooking ? 'Yes' : 'No'}</span>
                 </div>
+                <div className="config-item">
+                  <span className="config-label">{t.bookingButtonColorLabel}</span>
+                  <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ 
+                      display: 'inline-block', 
+                      width: '20px', 
+                      height: '20px', 
+                      backgroundColor: currentBookingButtonColor,
+                      border: '1px solid #ddd',
+                      borderRadius: '4px'
+                    }}></span>
+                    {currentBookingButtonColor}
+                  </span>
+                </div>
                 {bookingPermissionMissing && (
                   <div className="config-item">
                     <span className="config-label">Status</span>
@@ -1032,6 +1056,35 @@ class Admin extends Component {
                     : t.enableBookingHelp
                   }
                 </small>
+              </div>
+
+              <div className="admin-form-group">
+                <label>
+                  {t.bookingButtonColorLabel}
+                </label>
+                <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
+                  <input
+                    type="color"
+                    value={bookingButtonColor}
+                    onChange={(e) => this.setState({ bookingButtonColor: e.target.value })}
+                    style={{ width: '60px', height: '40px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '4px', flexShrink: 0 }}
+                  />
+                  <input
+                    type="text"
+                    value={bookingButtonColor}
+                    onChange={(e) => this.setState({ bookingButtonColor: e.target.value })}
+                    placeholder="#334155"
+                    style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => this.setState({ bookingButtonColor: '#334155' })}
+                    className="admin-secondary-button"
+                  >
+                    {t.resetToDefaultButton}
+                  </button>
+                </div>
+                <small>{t.bookingButtonColorHelp}</small>
               </div>
               
               <button 

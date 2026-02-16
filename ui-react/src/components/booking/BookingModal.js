@@ -20,6 +20,19 @@ class BookingModal extends Component {
     };
   }
 
+  componentDidMount() {
+    // Fetch and apply booking button color when modal opens
+    fetch('/api/booking-config')
+      .then(response => response.json())
+      .then(data => {
+        const buttonColor = data.buttonColor || '#334155';
+        document.documentElement.style.setProperty('--booking-button-color', buttonColor);
+      })
+      .catch(err => {
+        console.error('Error fetching booking config:', err);
+      });
+  }
+
   // Get default meeting subject based on browser language
   getDefaultSubject() {
     const lang = navigator.language || navigator.userLanguage || 'en';
