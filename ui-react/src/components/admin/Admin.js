@@ -161,6 +161,9 @@ class Admin extends Component {
         resetToDefaultButton: 'Standard wiederherstellen',
         submitColorsButton: 'Farben aktualisieren',
         colorsSuccessMessage: 'Farb-Konfiguration erfolgreich aktualisiert!',
+        colorPickerGreenVariations: 'Grün-Variationen',
+        colorPickerRedVariations: 'Rot-Variationen',
+        colorPickerYellowVariations: 'Gelb/Orange-Variationen',
         submitBookingButton: 'Buchung aktualisieren',
         bookingSuccessMessage: 'Buchungs-Konfiguration erfolgreich aktualisiert!',
         errorUnauthorized: 'Nicht autorisiert: Ungültiger oder fehlender API-Token',
@@ -226,6 +229,9 @@ class Admin extends Component {
         resetToDefaultButton: 'Reset to Default',
         submitColorsButton: 'Update Colors',
         colorsSuccessMessage: 'Color configuration updated successfully!',
+        colorPickerGreenVariations: 'Green Variations',
+        colorPickerRedVariations: 'Red Variations',
+        colorPickerYellowVariations: 'Yellow/Orange Variations',
         submitBookingButton: 'Update Booking',
         bookingSuccessMessage: 'Booking configuration updated successfully!',
         errorUnauthorized: 'Unauthorized: Invalid or missing API token',
@@ -1290,21 +1296,33 @@ class Admin extends Component {
                 </div>
 
                 <div className="admin-form-group">
-                  <label>{t.statusAvailableColorLabel}</label>
-                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
-                    <input
-                      type="color"
-                      value={statusAvailableColor}
-                      onChange={(e) => this.setState({ statusAvailableColor: e.target.value })}
-                      style={{ width: '60px', height: '40px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '4px', flexShrink: 0 }}
-                    />
-                    <input
-                      type="text"
-                      value={statusAvailableColor}
-                      onChange={(e) => this.setState({ statusAvailableColor: e.target.value })}
-                      placeholder="#22c55e"
-                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px' }}
-                    />
+                  <label>{t.statusAvailableColorLabel} - {t.colorPickerGreenVariations}</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px' }}>
+                    {['#dcfce7', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d'].map(color => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => this.setState({ statusAvailableColor: color })}
+                        style={{
+                          width: '45px',
+                          height: '45px',
+                          backgroundColor: color,
+                          border: statusAvailableColor === color ? '3px solid #000' : '2px solid #999',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          color: ['#dcfce7', '#bbf7d0', '#86efac'].includes(color) ? '#000' : '#fff',
+                          padding: '0'
+                        }}
+                        title={color}
+                      >
+                        {statusAvailableColor === color ? '✓' : ''}
+                      </button>
+                    ))}
                     <button
                       type="button"
                       onClick={() => this.setState({ statusAvailableColor: '#22c55e' })}
@@ -1317,21 +1335,33 @@ class Admin extends Component {
                 </div>
 
                 <div className="admin-form-group">
-                  <label>{t.statusBusyColorLabel}</label>
-                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
-                    <input
-                      type="color"
-                      value={statusBusyColor}
-                      onChange={(e) => this.setState({ statusBusyColor: e.target.value })}
-                      style={{ width: '60px', height: '40px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '4px', flexShrink: 0 }}
-                    />
-                    <input
-                      type="text"
-                      value={statusBusyColor}
-                      onChange={(e) => this.setState({ statusBusyColor: e.target.value })}
-                      placeholder="#ef4444"
-                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px' }}
-                    />
+                  <label>{t.statusBusyColorLabel} - {t.colorPickerRedVariations}</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px' }}>
+                    {['#fee2e2', '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d'].map(color => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => this.setState({ statusBusyColor: color })}
+                        style={{
+                          width: '45px',
+                          height: '45px',
+                          backgroundColor: color,
+                          border: statusBusyColor === color ? '3px solid #000' : '2px solid #999',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          color: ['#fee2e2', '#fecaca', '#fca5a5'].includes(color) ? '#000' : '#fff',
+                          padding: '0'
+                        }}
+                        title={color}
+                      >
+                        {statusBusyColor === color ? '✓' : ''}
+                      </button>
+                    ))}
                     <button
                       type="button"
                       onClick={() => this.setState({ statusBusyColor: '#ef4444' })}
@@ -1344,21 +1374,33 @@ class Admin extends Component {
                 </div>
 
                 <div className="admin-form-group">
-                  <label>{t.statusUpcomingColorLabel}</label>
-                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
-                    <input
-                      type="color"
-                      value={statusUpcomingColor}
-                      onChange={(e) => this.setState({ statusUpcomingColor: e.target.value })}
-                      style={{ width: '60px', height: '40px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '4px', flexShrink: 0 }}
-                    />
-                    <input
-                      type="text"
-                      value={statusUpcomingColor}
-                      onChange={(e) => this.setState({ statusUpcomingColor: e.target.value })}
-                      placeholder="#f59e0b"
-                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px' }}
-                    />
+                  <label>{t.statusUpcomingColorLabel} - {t.colorPickerYellowVariations}</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px' }}>
+                    {['#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#a16207', '#854d0e'].map(color => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => this.setState({ statusUpcomingColor: color })}
+                        style={{
+                          width: '45px',
+                          height: '45px',
+                          backgroundColor: color,
+                          border: statusUpcomingColor === color ? '3px solid #000' : '2px solid #999',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          color: ['#fef3c7', '#fde68a', '#fcd34d', '#fbbf24'].includes(color) ? '#000' : '#fff',
+                          padding: '0'
+                        }}
+                        title={color}
+                      >
+                        {statusUpcomingColor === color ? '✓' : ''}
+                      </button>
+                    ))}
                     <button
                       type="button"
                       onClick={() => this.setState({ statusUpcomingColor: '#f59e0b' })}
