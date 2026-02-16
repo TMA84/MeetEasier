@@ -80,6 +80,7 @@ module.exports = function(callback, msalClient) {
 			let subject = isAppointmentPrivate ? 'Private' : appt.subject;
 
 			room.Appointments.push({
+				Id: appt.id,
 				Subject: subject,
 				Organizer: appt.organizer.emailAddress.name,
 				Start: start,

@@ -26,7 +26,7 @@
   padding: 0;
   position: relative;
   overflow: hidden;
-  transition: background-color $transition-slow;
+  transition: background 0.8s ease-in-out, transform 0.3s ease;
   min-height: 100vh;
   
   // Gradient overlay
@@ -40,6 +40,7 @@
     opacity: 0.1;
     background: radial-gradient(circle at center, rgba(255, 255, 255, 0.2), transparent 70%);
     pointer-events: none;
+    transition: opacity 0.6s ease;
   }
   
   // Available state
@@ -125,7 +126,7 @@
     flex-shrink: 0;
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
-    border-radius: $radius-2xl;
+    border-radius: 1rem;
     padding: clamp(0.75rem, 1.5vw, 1.25rem);
     border: 2px solid rgba(255, 255, 255, 0.2);
     margin-bottom: clamp(0.5rem, 1vh, 1rem);
@@ -142,7 +143,7 @@
     }
     
     .meeting-label {
-      font-size: clamp(0.875rem, 1.5vw, 1rem);
+      font-size: clamp(0.75rem, 1.25vw, 0.875rem);
       font-weight: $font-weight-semibold;
       color: rgba(255, 255, 255, 0.8);
       text-transform: uppercase;
@@ -151,7 +152,7 @@
     }
     
     .meeting-subject {
-      font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+      font-size: clamp(1rem, 1.75vw, 1.25rem);
       font-weight: $font-weight-bold;
       color: $text-on-color;
       margin-bottom: $space-1;
@@ -159,23 +160,61 @@
     }
     
     .meeting-organizer {
-      font-size: clamp(1rem, 2vw, 1.25rem);
+      font-size: clamp(0.875rem, 1.5vw, 1rem);
       font-weight: $font-weight-medium;
       color: rgba(255, 255, 255, 0.85);
       margin-bottom: $space-1;
       line-height: $line-height-tight;
       
       &.meeting-organizer--primary {
-        font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+        font-size: clamp(1rem, 1.75vw, 1.25rem);
         font-weight: $font-weight-bold;
         color: $text-on-color;
       }
     }
     
     .meeting-time {
-      font-size: clamp(1rem, 2vw, 1.5rem);
+      font-size: clamp(0.875rem, 1.5vw, 1.125rem);
       font-weight: $font-weight-light;
       color: rgba(255, 255, 255, 0.95);
+      margin-bottom: $space-2;
+    }
+    
+    .meeting-extend-buttons {
+      display: flex;
+      gap: $space-2;
+      margin-top: $space-2;
+      
+      .extend-button {
+        flex: 1;
+        padding: clamp(0.5rem, 1vw, 0.75rem) clamp(0.75rem, 1.5vw, 1rem);
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-radius: $radius-md;
+        color: $text-on-color;
+        font-size: clamp(0.75rem, 1.25vw, 0.875rem);
+        font-weight: $font-weight-semibold;
+        cursor: pointer;
+        transition: all $transition-base;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.3);
+          border-color: rgba(255, 255, 255, 0.6);
+          transform: translateY(-2px);
+          box-shadow: $shadow-md;
+        }
+        
+        &:active {
+          transform: translateY(0);
+        }
+        
+        &:focus {
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+      }
     }
   }
 }
@@ -243,7 +282,7 @@
     overflow-y: auto;
     
     .upcoming-title {
-      font-size: clamp(1rem, 1.5vw, 1.25rem);
+      font-size: clamp(0.85rem, 1.25vw, 1.25rem);
       font-weight: $font-weight-bold;
       color: $text-primary;
       text-transform: uppercase;
@@ -265,7 +304,7 @@
         }
         
         .upcoming-subject {
-          font-size: clamp(0.875rem, 1.25vw, 1rem);
+          font-size: clamp(0.75rem, 1.1vw, 0.95rem);
           font-weight: $font-weight-medium;
           color: $text-primary;
           margin-bottom: $space-1;
@@ -279,14 +318,14 @@
         }
         
         .upcoming-organizer {
-          font-size: clamp(0.75rem, 1vw, 0.875rem);
+          font-size: clamp(0.65rem, 0.9vw, 0.8rem);
           font-weight: $font-weight-normal;
           color: $text-secondary;
           flex: 1;
         }
         
         .upcoming-time {
-          font-size: clamp(0.75rem, 1vw, 0.875rem);
+          font-size: clamp(0.65rem, 0.9vw, 0.8rem);
           font-weight: $font-weight-normal;
           color: $text-secondary;
           white-space: nowrap;
@@ -297,7 +336,7 @@
         padding: $space-4;
         text-align: center;
         color: $text-secondary;
-        font-size: clamp(0.875rem, 1.25vw, 1rem);
+        font-size: clamp(0.7rem, 1vw, 0.95rem);
         font-style: italic;
       }
     }

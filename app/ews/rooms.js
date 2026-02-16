@@ -85,6 +85,7 @@ module.exports = function(callback) {
 			let subject = isAppointmentPrivate ? 'Private' : appt.Subject;
 
 			room.Appointments.push({
+				Id: appt.Id ? appt.Id.UniqueId : null,
 				Subject: subject,
 				Organizer: appt.Organizer.Name,
 				Start: start,

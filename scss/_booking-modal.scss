@@ -61,6 +61,15 @@
   .minimal-display & {
     border-bottom-color: #333;
   }
+
+  h2 {
+    margin: 0;
+    flex: 1;
+
+    &.error-title {
+      color: #ef4444;
+    }
+  }
 }
 
 .booking-modal-close {
@@ -96,6 +105,16 @@
 
 .booking-modal-body {
   padding: 24px;
+
+  .error-message {
+    font-size: 1.125rem;
+    margin-bottom: 1.5rem;
+    color: #333;
+
+    .minimal-display & {
+      color: white;
+    }
+  }
 }
 
 .booking-error {

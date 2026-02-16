@@ -430,14 +430,66 @@ class Display extends Component {
       });
   }
 
+  /**
+   * Handle extending current meeting
+   * @param {number} minutes - Number of minutes to extend (15 or 30)
+   */
+  handleExtendMeeting = (minutes) => {
+    const { room } = this.state;
+    
+    if (!room || !room.Appointments || room.Appointments.length === 0 || !room.Busy) {
+      console.error('Cannot extend meeting: no active meeting');
+      return;
+    }
+    
+    const currentAppointment = room.Appointments[0];
+    
+    fetch('/api/extend-meeting', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        roomEmail: room.Email,
+        appointmentId: currentAppointment.Id,
+        minutes: minutes
+      })
+    })
+      .then(response => {
+        return response.json().then(data => ({ status: response.status, data }));
+      })
+      .then(({ status, data }) => {
+        if (status === 200 && data.success) {
+          console.log(`Meeting extended by ${minutes} minutes`);
+          // Refresh room data to show updated meeting end time
+          setTimeout(() => this.getRoomsData(), 1000);
+        } else {
+          const errorMsg = data.error || data.message || 'Failed to extend meeting';
+          console.error('Failed to extend meeting:', errorMsg);
+          this.setState({ 
+            showErrorModal: true, 
+            errorMessage: errorMsg
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error extending meeting:', err);
+        this.setState({ 
+          showErrorModal: true, 
+          errorMessage: 'Network error. Please try again.' 
+        });
+      });
+  }
+
   getLanguage = () => {
     const browserLang = navigator.language || navigator.userLanguage;
     return browserLang.split('-')[0];
   }
 
   render() {
-    const { response, room, roomDetails, currentTime, wifiConfig, logoConfig, sidebarConfig, bookingConfig, showBookingModal } = this.state;
+    const { response, room, roomDetails, currentTime, wifiConfig, logoConfig, sidebarConfig, bookingConfig, showBookingModal, showErrorModal, errorMessage } = this.state;
     const lang = this.getLanguage();
+    const errorText = lang === 'de' ? 'Fehler' : 'Error';
 
     if (!response) {
       return <Spinner />;
@@ -507,6 +559,26 @@ class Display extends Component {
                           new Date(parseInt(room.Appointments[0].End, 10)),
                           true
                         )}
+                      </div>
+                    )}
+                    
+                    {/* Extend meeting buttons - only when room is busy */}
+                    {room.Busy && (
+                      <div className="minimal-extend-buttons">
+                        <button 
+                          className="minimal-extend-button" 
+                          onClick={() => this.handleExtendMeeting(15)}
+                          title={lang === 'de' ? 'Um 15 Minuten verlängern' : 'Extend by 15 minutes'}
+                        >
+                          +15 min
+                        </button>
+                        <button 
+                          className="minimal-extend-button" 
+                          onClick={() => this.handleExtendMeeting(30)}
+                          title={lang === 'de' ? 'Um 30 Minuten verlängern' : 'Extend by 30 minutes'}
+                        >
+                          +30 min
+                        </button>
                       </div>
                     )}
                   </div>
@@ -704,6 +776,32 @@ class Display extends Component {
               this.getRoomsData();
             }}
           />
+        )}
+        
+        {/* Error Modal */}
+        {showErrorModal && (
+          <div 
+            className="booking-modal-overlay minimal-display" 
+            onClick={() => this.setState({ showErrorModal: false })}
+          >
+            <div 
+              className="booking-modal" 
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="booking-modal-header">
+                <h2 className="error-title">{errorText}</h2>
+                <button 
+                  className="booking-modal-close" 
+                  onClick={() => this.setState({ showErrorModal: false })}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="booking-modal-body">
+                <p className="error-message">{errorMessage}</p>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     );

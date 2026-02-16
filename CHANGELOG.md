@@ -5,6 +5,78 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-02-16
+
+### Added
+- **Status Change Animations**
+  - Smooth 0.8-second background transitions when room status changes
+  - Applied to single-room, room-minimal, and flightboard displays
+  - Graceful color transitions between available/busy/upcoming states
+
+- **Extend Meeting Functionality**
+  - Added +15 min and +30 min extension buttons to current meeting cards
+  - Buttons appear on both single-room and room-minimal displays when room is busy
+  - Real-time conflict detection prevents overbooking
+  - End-of-day boundary checking prevents extending meetings beyond midnight
+  - Automatic refresh of room data after successful extension
+
+- **Calendar Sync Status Monitoring**
+  - Real-time sync status display in admin panel
+  - Shows seconds since last successful sync with color-coded status indicators
+  - Stale data warning when sync is older than 3 minutes (180 seconds)
+  - Auto-refresh every 30 seconds for real-time monitoring
+  - Displays sync errors and failure messages when issues occur
+
+- **Multi-Language Support Enhancements**
+  - German/English translations for extend meeting error messages
+  - HSL color picker labels now translated (Hue/Farbton, Saturation/Sättigung, Lightness/Helligkeit)
+  - Backend error messages with Accept-Language header detection
+  - Frontend translations using browser language detection (navigator.language)
+  - Proper German word order for time expressions ("vor X Sekunden" vs "X seconds ago")
+
+### Changed
+- **UI/UX Improvements**
+  - Consistent button sizing between single-room and room-minimal displays
+  - Consistent text sizing for upcoming meetings across displays
+  - Meeting card border-radius standardized to 1rem for modern appearance
+  - Error handling moved from browser alerts to styled modal dialogs
+  - All error modals use BookingModal CSS classes for consistent styling
+  - Modal positioning improved (moved outside flex containers, z-index 9999)
+
+- **Sync Status Precision**
+  - Changed from minutes to seconds for more accurate sync monitoring
+  - Calculation: Math.floor((now - lastSync) / 1000)
+
+### Fixed
+- **Microsoft Graph API Integration**
+  - Added missing appointment Id field to calendar events (msgraph/rooms.js and ews/rooms.js)
+  - Fixed date format validation errors (now uses YYYY-MM-DDTHH:MM:SS format)
+  - Improved HTTP status code checking for error handling
+  - Fixed syntax errors (missing closing braces in routes.js)
+
+- **Error Handling**
+  - Modal dialogs now properly display on both single-room and minimal displays
+  - Fixed z-index layering issues by repositioning modals outside flex containers
+  - Improved error state management and user feedback
+
+### Technical
+- **API Endpoints**
+  - New `/api/extend-meeting` endpoint with conflict validation
+  - New `/api/sync-status` endpoint for monitoring calendar sync health
+  - Overlap detection logic: (currentStart < eventEnd) AND (newEnd > eventStart)
+  - Graph API date formatting helper function: formatDateForGraph()
+
+- **Socket.IO Enhancements**
+  - Added lastSyncTime, lastSyncSuccess, syncErrorMessage tracking
+  - New getSyncStatus() function with secondsSinceSync calculation
+  - Real-time sync status updates broadcast to admin panel
+
+- **SCSS Architecture**
+  - Moved inline modal styles to dedicated SCSS classes
+  - Created _admin.scss for centralized admin panel styles
+  - Added error-specific classes (error-title, error-message) to _booking-modal.scss
+  - Updated compiled.scss to include admin styles
+
 ## [1.2.2] - 2026-02-16
 
 ### Fixed
