@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import './Admin.scss';
 
 class Admin extends Component {
   constructor(props) {
@@ -69,6 +68,10 @@ class Admin extends Component {
       // Auth
       apiToken: '',
       
+      // Sync status
+      syncStatus: null,
+      syncStatusLoading: true,
+      
       // UI state
       activeTab: 'display'
     };
@@ -77,10 +80,40 @@ class Admin extends Component {
   componentDidMount() {
     this.loadConfigLocks();
     this.loadCurrentConfig();
+    this.loadSyncStatus();
     
     // Set page title
     const t = this.getTranslations();
     document.title = t.title;
+    
+    // Refresh sync status every 30 seconds
+    this.syncStatusInterval = setInterval(() => {
+      this.loadSyncStatus();
+    }, 30000);
+  }
+
+  componentWillUnmount() {
+    if (this.syncStatusInterval) {
+      clearInterval(this.syncStatusInterval);
+    }
+  }
+
+  loadSyncStatus = () => {
+    fetch('/api/sync-status')
+      .then(response => response.json())
+      .then(data => {
+        this.setState({
+          syncStatus: data,
+          syncStatusLoading: false
+        });
+      })
+      .catch(err => {
+        console.error('Error loading sync status:', err);
+        this.setState({
+          syncStatus: null,
+          syncStatusLoading: false
+        });
+      });
   }
 
   loadConfigLocks = () => {
@@ -238,13 +271,25 @@ class Admin extends Component {
         colorPickerGreenVariations: 'Grün-Variationen',
         colorPickerRedVariations: 'Rot-Variationen',
         colorPickerYellowVariations: 'Gelb/Orange-Variationen',
+        colorPickerHue: 'Farbton',
+        colorPickerSaturation: 'Sättigung',
+        colorPickerLightness: 'Helligkeit',
         submitBookingButton: 'Buchung aktualisieren',
         bookingSuccessMessage: 'Buchungs-Konfiguration erfolgreich aktualisiert!',
         errorUnauthorized: 'Nicht autorisiert: Ungültiger oder fehlender API-Token',
         errorPrefix: 'Fehler:',
         errorUnknown: 'Unbekannter Fehler',
         loading: 'Lädt...',
-        configuredViaEnv: 'Diese Einstellungen sind über Umgebungsvariablen konfiguriert und können hier nicht geändert werden.'
+        configuredViaEnv: 'Diese Einstellungen sind über Umgebungsvariablen konfiguriert und können hier nicht geändert werden.',
+        syncStatusTitle: 'Kalender Synchronisierung',
+        syncStatusLastSync: 'Letzte Synchronisierung:',
+        syncStatusSuccess: 'Erfolgreich',
+        syncStatusFailed: 'Fehlgeschlagen',
+        syncStatusNever: 'Noch nie synchronisiert',
+        syncStatusStale: 'Warnung: Daten könnten veraltet sein',
+        syncStatusMinutesAgo: 'vor',
+        syncStatusMinutes: 'Sekunden',
+        syncStatusError: 'Fehler:'
       },
       en: {
         title: 'Admin Panel',
@@ -306,13 +351,25 @@ class Admin extends Component {
         colorPickerGreenVariations: 'Green Variations',
         colorPickerRedVariations: 'Red Variations',
         colorPickerYellowVariations: 'Yellow/Orange Variations',
+        colorPickerHue: 'Hue',
+        colorPickerSaturation: 'Saturation',
+        colorPickerLightness: 'Lightness',
         submitBookingButton: 'Update Booking',
         bookingSuccessMessage: 'Booking configuration updated successfully!',
         errorUnauthorized: 'Unauthorized: Invalid or missing API token',
         errorPrefix: 'Error:',
         errorUnknown: 'Unknown error',
         loading: 'Loading...',
-        configuredViaEnv: 'These settings are configured via environment variables and cannot be changed here.'
+        configuredViaEnv: 'These settings are configured via environment variables and cannot be changed here.',
+        syncStatusTitle: 'Calendar Synchronization',
+        syncStatusLastSync: 'Last Sync:',
+        syncStatusSuccess: 'Successful',
+        syncStatusFailed: 'Failed',
+        syncStatusNever: 'Never synced',
+        syncStatusStale: 'Warning: Data may be outdated',
+        syncStatusMinutesAgo: 'ago',
+        syncStatusMinutes: 'seconds',
+        syncStatusError: 'Error:'
       }
     };
     
@@ -756,9 +813,15 @@ class Admin extends Component {
       bookingMessage, bookingMessageType, colorMessage, colorMessageType,
       wifiLocked, logoLocked, informationLocked, bookingLocked,
       bookingPermissionMissing,
-      activeTab
+      activeTab,
+      syncStatus,
+      syncStatusLoading
     } = this.state;
     const t = this.getTranslations();
+    
+    // Detect browser language for word order
+    const browserLang = navigator.language || navigator.userLanguage;
+    const lang = browserLang.split('-')[0];
 
     return (
       <div className="admin-page">
@@ -790,6 +853,42 @@ class Admin extends Component {
               </div>
             </div>
           </div>
+
+          {/* Sync Status Banner */}
+          {syncStatus && !syncStatusLoading && (
+            <div className={`admin-message ${syncStatus.isStale || !syncStatus.lastSyncSuccess ? 'admin-message-warning' : 'admin-message-success'}`}
+                 style={{ marginBottom: '2rem' }}>
+              <strong>{t.syncStatusTitle}:</strong> {' '}
+              {syncStatus.hasNeverSynced ? (
+                <span>{t.syncStatusNever}</span>
+              ) : (
+                <>
+                  {t.syncStatusLastSync} {' '}
+                  {syncStatus.secondsSinceSync !== null && (
+                    <span>
+                      {lang === 'de' 
+                        ? `${t.syncStatusMinutesAgo} ${syncStatus.secondsSinceSync} ${t.syncStatusMinutes}`
+                        : `${syncStatus.secondsSinceSync} ${t.syncStatusMinutes} ${t.syncStatusMinutesAgo}`
+                      }
+                    </span>
+                  )} {' - '}
+                  {syncStatus.lastSyncSuccess ? (
+                    <span>{t.syncStatusSuccess}</span>
+                  ) : (
+                    <span>{t.syncStatusFailed}</span>
+                  )}
+                  {syncStatus.isStale && (
+                    <span> - {t.syncStatusStale}</span>
+                  )}
+                  {syncStatus.syncErrorMessage && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      {t.syncStatusError} {syncStatus.syncErrorMessage}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {/* Tabs */}
           <div className="admin-tabs">
@@ -1400,7 +1499,7 @@ class Admin extends Component {
                         <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              Hue: {hsl.h}°
+                              {t.colorPickerHue}: {hsl.h}°
                             </label>
                             <input
                               type="range"
@@ -1420,7 +1519,7 @@ class Admin extends Component {
                         <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              Saturation: {hsl.s}%
+                              {t.colorPickerSaturation}: {hsl.s}%
                             </label>
                             <input
                               type="range"
@@ -1439,7 +1538,7 @@ class Admin extends Component {
                         <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              Lightness: {hsl.l}%
+                              {t.colorPickerLightness}: {hsl.l}%
                             </label>
                             <input
                               type="range"
@@ -1500,7 +1599,7 @@ class Admin extends Component {
                         <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              Hue: {hsl.h}°
+                              {t.colorPickerHue}: {hsl.h}°
                             </label>
                             <input
                               type="range"
@@ -1520,7 +1619,7 @@ class Admin extends Component {
                         <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              Saturation: {hsl.s}%
+                              {t.colorPickerSaturation}: {hsl.s}%
                             </label>
                             <input
                               type="range"
@@ -1539,7 +1638,7 @@ class Admin extends Component {
                         <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              Lightness: {hsl.l}%
+                              {t.colorPickerLightness}: {hsl.l}%
                             </label>
                             <input
                               type="range"
@@ -1600,7 +1699,7 @@ class Admin extends Component {
                         <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              Hue: {hsl.h}°
+                              {t.colorPickerHue}: {hsl.h}°
                             </label>
                             <input
                               type="range"
@@ -1620,7 +1719,7 @@ class Admin extends Component {
                         <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              Saturation: {hsl.s}%
+                              {t.colorPickerSaturation}: {hsl.s}%
                             </label>
                             <input
                               type="range"
@@ -1639,7 +1738,7 @@ class Admin extends Component {
                         <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              Lightness: {hsl.l}%
+                              {t.colorPickerLightness}: {hsl.l}%
                             </label>
                             <input
                               type="range"

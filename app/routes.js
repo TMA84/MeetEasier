@@ -244,6 +244,27 @@ module.exports = function(app) {
 		res.json({ status: 'OK' });
 	});
 
+	// Get calendar sync status
+	app.get('/api/sync-status', function(req, res) {
+		try {
+			const socketController = require('./socket-controller');
+			if (socketController.getSyncStatus) {
+				const syncStatus = socketController.getSyncStatus();
+				res.json(syncStatus);
+			} else {
+				res.json({
+					hasNeverSynced: true,
+					error: 'Sync status not available'
+				});
+			}
+		} catch (err) {
+			res.status(500).json({ 
+				error: 'Failed to retrieve sync status',
+				message: err.message
+			});
+		}
+	});
+
 	// Room booking endpoint
 	app.post('/api/rooms/:roomEmail/book', async function(req, res) {
 		const { roomEmail } = req.params;
@@ -335,6 +356,171 @@ module.exports = function(app) {
 			res.status(500).json({ 
 				error: 'Booking failed',
 				message: error.message || 'Failed to book room'
+			});
+		}
+	});
+
+	// Extend existing meeting endpoint
+	app.post('/api/extend-meeting', async function(req, res) {
+		const { roomEmail, appointmentId, minutes } = req.body;
+
+		// Detect language from Accept-Language header
+		const acceptLanguage = req.headers['accept-language'] || 'en';
+		const lang = acceptLanguage.split(',')[0].split('-')[0]; // Extract primary language code
+		const isGerman = lang === 'de';
+
+		// Translation helper
+		const t = {
+			missingFields: isGerman ? 'Fehlende erforderliche Felder' : 'Missing required fields',
+			missingFieldsDetails: isGerman 
+				? 'Raum-E-Mail, Termin-ID und Minuten sind erforderlich' 
+				: 'Room email, appointment ID, and minutes are required',
+			invalidMinutes: isGerman ? 'Ungültiger Minutenwert' : 'Invalid minutes value',
+			invalidMinutesDetails: isGerman 
+				? 'Minuten müssen entweder 15 oder 30 sein' 
+				: 'Minutes must be either 15 or 30',
+			conflictError: isGerman
+				? 'Meeting kann nicht verlängert werden - ein weiterer Termin ist zu bald geplant. Bitte überprüfen Sie den Raumkalender.'
+				: 'Cannot extend meeting - another meeting is scheduled too soon. Please check the room calendar.',
+			endOfDayError: isGerman
+				? 'Meeting kann nicht über das Tagesende hinaus verlängert werden'
+				: 'Cannot extend meeting beyond end of day',
+			fetchError: isGerman ? 'Fehler beim Abrufen der Termindetails' : 'Failed to fetch event details',
+			updateError: isGerman ? 'Fehler beim Aktualisieren des Termins' : 'Failed to update event',
+			generalError: isGerman ? 'Fehler beim Verlängern des Meetings' : 'Error extending meeting'
+		};
+
+		// Validate input
+		if (!roomEmail || !appointmentId || !minutes) {
+			return res.status(400).json({ 
+				error: t.missingFields,
+				message: t.missingFieldsDetails
+			});
+		}
+
+		// Validate minutes value
+		if (![15, 30].includes(minutes)) {
+			return res.status(400).json({ 
+				error: t.invalidMinutes,
+				message: t.invalidMinutesDetails
+			});
+		}
+
+		const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
+
+		try {
+			if (useGraphAPI) {
+				const graphApi = require('./msgraph/graph.js');
+				
+				// Get the access token
+				const tokenRequest = {
+					scopes: ['https://graph.microsoft.com/.default']
+				};
+				const authResult = await msalClient.acquireTokenByClientCredential(tokenRequest);
+				const accessToken = authResult.accessToken;
+
+				// Get the current event
+				const eventUrl = `https://graph.microsoft.com/v1.0/users/${roomEmail}/events/${appointmentId}`;
+				const eventResponse = await fetch(eventUrl, {
+					headers: {
+						'Authorization': `Bearer ${accessToken}`,
+						'Content-Type': 'application/json'
+					}
+				});
+
+				if (!eventResponse.ok) {
+					throw new Error(t.fetchError);
+				}
+
+				const event = await eventResponse.json();
+				const currentStart = new Date(event.start.dateTime);
+				const currentEnd = new Date(event.end.dateTime);
+				const newEnd = new Date(currentEnd.getTime() + (minutes * 60 * 1000));
+
+				// Format the new end time properly for Graph API
+				// Graph API expects format: "2024-01-15T14:30:00" without the Z
+				const formatDateForGraph = (date) => {
+					const year = date.getFullYear();
+					const month = String(date.getMonth() + 1).padStart(2, '0');
+					const day = String(date.getDate()).padStart(2, '0');
+					const hours = String(date.getHours()).padStart(2, '0');
+					const minutes = String(date.getMinutes()).padStart(2, '0');
+					const seconds = String(date.getSeconds()).padStart(2, '0');
+					return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+				};
+
+				// Check for conflicts with the extension
+				// We need to check if extending from currentEnd to newEnd would overlap with any other meeting
+				const calendarView = await graphApi.getCalendarView(msalClient, roomEmail);
+				const calendarEvents = calendarView.value || [];
+
+				const hasConflict = calendarEvents.some(e => {
+					if (e.id === appointmentId) return false; // Skip current meeting
+					const eventStart = new Date(e.start.dateTime);
+					const eventEnd = new Date(e.end.dateTime);
+					
+					// Check if there's any overlap between the extended meeting and this event
+					// Overlap exists if: (extendedStart < eventEnd) AND (extendedEnd > eventStart)
+					// The extended meeting runs from currentStart to newEnd
+					return currentStart < eventEnd && newEnd > eventStart;
+				});
+
+				if (hasConflict) {
+					return res.status(409).json({
+						success: false,
+						error: t.conflictError
+					});
+				}
+
+				// Additional check: ensure the extension doesn't go beyond a reasonable time (e.g., end of business day)
+				const maxEndTime = new Date(currentStart);
+				maxEndTime.setHours(23, 59, 59, 999); // End of day
+				
+				if (newEnd > maxEndTime) {
+					return res.status(400).json({
+						success: false,
+						error: t.endOfDayError
+					});
+				}
+
+				// Update the event end time
+				const updateUrl = `https://graph.microsoft.com/v1.0/users/${roomEmail}/events/${appointmentId}`;
+				const updateResponse = await fetch(updateUrl, {
+					method: 'PATCH',
+					headers: {
+						'Authorization': `Bearer ${accessToken}`,
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						end: {
+							dateTime: formatDateForGraph(newEnd),
+							timeZone: event.end.timeZone || 'UTC'
+						}
+					})
+				});
+
+				if (!updateResponse.ok) {
+					const errorText = await updateResponse.text();
+					throw new Error(`${t.updateError}: ${errorText}`);
+				}
+
+				res.json({ 
+					success: true,
+					message: `Meeting extended by ${minutes} minutes`,
+					newEndTime: newEnd.toISOString()
+				});
+			} else {
+				// EWS not yet implemented for extend meeting
+				res.status(501).json({ 
+					success: false,
+					error: 'Extend meeting is not yet supported for EWS'
+				});
+			}
+		} catch (error) {
+			console.error('Extend meeting error:', error);
+			res.status(500).json({ 
+				success: false,
+				error: error.message || t.generalError
 			});
 		}
 	});

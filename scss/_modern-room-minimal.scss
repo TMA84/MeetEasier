@@ -17,6 +17,7 @@
   padding: 0;
   position: relative;
   overflow: hidden;
+  transition: background 0.8s ease-in-out;
 
   &::before {
     content: '';
@@ -28,6 +29,7 @@
     opacity: 0.3;
     animation: rotate 20s linear infinite;
     z-index: 0;
+    transition: opacity 0.8s ease-in-out;
   }
 
   &.room-minimal--available::before {
@@ -242,6 +244,44 @@
   font-weight: 600;
   color: #ffffff;
   font-variant-numeric: tabular-nums;
+  margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
+}
+
+.minimal-extend-buttons {
+  display: flex;
+  gap: clamp(0.5rem, 1vw, 0.75rem);
+  margin-top: clamp(0.5rem, 1vh, 0.75rem);
+}
+
+.minimal-extend-button {
+  flex: 1;
+  padding: clamp(0.5rem, 1vw, 0.75rem) clamp(0.75rem, 1.5vw, 1rem);
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.5rem;
+  color: #ffffff;
+  font-size: clamp(0.75rem, 1.25vw, 0.875rem);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+  }
 }
 
 .minimal-sidebar {

@@ -12,6 +12,9 @@ const msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
  */
 module.exports = function(io) {
   let isRunning = false;
+  let lastSyncTime = null;
+  let lastSyncSuccess = null;
+  let syncErrorMessage = null;
 
   // Pass Socket.IO instance to config-manager for real-time configuration updates
   const configManager = require('./config-manager');
@@ -42,14 +45,25 @@ module.exports = function(io) {
 
         // Call the API and broadcast results
         api(function(err, result) {
+          // Update sync status
+          lastSyncTime = new Date().toISOString();
+          
           if (result) {
             if (err) {
               console.error('Error fetching room data:', err);
+              lastSyncSuccess = false;
+              syncErrorMessage = err.message || 'Unknown error';
               return;
             }
             
+            lastSyncSuccess = true;
+            syncErrorMessage = null;
+            
             // Broadcast updated room data to all connected clients
             io.of('/').emit('updatedRooms', result);
+          } else {
+            lastSyncSuccess = false;
+            syncErrorMessage = 'No data returned from API';
           }
 
           // Notify that controller cycle is complete
@@ -68,4 +82,26 @@ module.exports = function(io) {
       console.log('Client disconnected from Socket.IO');
     });
   });
+
+  /**
+   * Get current sync status
+   * Returns information about the last calendar sync
+   */
+  function getSyncStatus() {
+    const now = new Date();
+    const lastSync = lastSyncTime ? new Date(lastSyncTime) : null;
+    const secondsSinceSync = lastSync ? Math.floor((now - lastSync) / 1000) : null;
+    
+    return {
+      lastSyncTime: lastSyncTime,
+      lastSyncSuccess: lastSyncSuccess,
+      syncErrorMessage: syncErrorMessage,
+      secondsSinceSync: secondsSinceSync,
+      isStale: secondsSinceSync !== null && secondsSinceSync > 180, // Stale if > 3 minutes (180 seconds)
+      hasNeverSynced: lastSyncTime === null
+    };
+  }
+
+  // Export sync status getter for routes to use
+  module.exports.getSyncStatus = getSyncStatus;
 };
