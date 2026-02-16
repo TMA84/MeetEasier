@@ -52,8 +52,19 @@ class Admin extends Component {
       bookingMessage: null,
       bookingMessageType: null,
       bookingPermissionMissing: false,
+      
+      // Color state
       bookingButtonColor: '#334155',
       currentBookingButtonColor: '#334155',
+      statusAvailableColor: '#22c55e',
+      currentStatusAvailableColor: '#22c55e',
+      statusBusyColor: '#ef4444',
+      currentStatusBusyColor: '#ef4444',
+      statusUpcomingColor: '#f59e0b',
+      currentStatusUpcomingColor: '#f59e0b',
+      colorMessage: null,
+      colorMessageType: null,
+      colorsLastUpdated: '',
       
       // Auth
       apiToken: '',
@@ -138,9 +149,18 @@ class Admin extends Component {
         sidebarHelp: 'Wählen Sie aus, was in der Sidebar der Raumanzeigen angezeigt werden soll',
         enableBookingLabel: 'Buchungsfunktion aktivieren',
         enableBookingHelp: 'Ermöglicht Benutzern, Räume direkt über die Anzeige zu buchen',
-        bookingButtonColorLabel: 'Button-Farbe',
+        colorsSectionTitle: 'Farb-Konfiguration',
+        bookingButtonColorLabel: 'Buchungs-Button-Farbe',
         bookingButtonColorHelp: 'Wählen Sie die Farbe für Buchungs-Buttons',
+        statusAvailableColorLabel: 'Verfügbar Status-Farbe',
+        statusAvailableColorHelp: 'Farbe für verfügbare Räume',
+        statusBusyColorLabel: 'Besetzt Status-Farbe',
+        statusBusyColorHelp: 'Farbe für belegte Räume',
+        statusUpcomingColorLabel: 'Anstehend Status-Farbe',
+        statusUpcomingColorHelp: 'Farbe für Räume mit anstehendem Termin',
         resetToDefaultButton: 'Standard wiederherstellen',
+        submitColorsButton: 'Farben aktualisieren',
+        colorsSuccessMessage: 'Farb-Konfiguration erfolgreich aktualisiert!',
         submitBookingButton: 'Buchung aktualisieren',
         bookingSuccessMessage: 'Buchungs-Konfiguration erfolgreich aktualisiert!',
         errorUnauthorized: 'Nicht autorisiert: Ungültiger oder fehlender API-Token',
@@ -194,9 +214,18 @@ class Admin extends Component {
         sidebarHelp: 'Choose what to display in the sidebar of room displays',
         enableBookingLabel: 'Enable Booking Feature',
         enableBookingHelp: 'Allows users to book rooms directly from the display',
-        bookingButtonColorLabel: 'Button Color',
+        colorsSectionTitle: 'Color Configuration',
+        bookingButtonColorLabel: 'Booking Button Color',
         bookingButtonColorHelp: 'Choose the color for booking buttons',
+        statusAvailableColorLabel: 'Available Status Color',
+        statusAvailableColorHelp: 'Color for available rooms',
+        statusBusyColorLabel: 'Busy Status Color',
+        statusBusyColorHelp: 'Color for busy rooms',
+        statusUpcomingColorLabel: 'Upcoming Status Color',
+        statusUpcomingColorHelp: 'Color for rooms with upcoming bookings',
         resetToDefaultButton: 'Reset to Default',
+        submitColorsButton: 'Update Colors',
+        colorsSuccessMessage: 'Color configuration updated successfully!',
         submitBookingButton: 'Update Booking',
         bookingSuccessMessage: 'Booking configuration updated successfully!',
         errorUnauthorized: 'Unauthorized: Invalid or missing API token',
@@ -286,6 +315,28 @@ class Admin extends Component {
       })
       .catch(err => {
         console.error('Error loading booking config:', err);
+      });
+    
+    // Load Colors config
+    fetch('/api/colors')
+      .then(response => response.json())
+      .then(data => {
+        this.setState({
+          bookingButtonColor: data.bookingButtonColor || '#334155',
+          currentBookingButtonColor: data.bookingButtonColor || '#334155',
+          statusAvailableColor: data.statusAvailableColor || '#22c55e',
+          currentStatusAvailableColor: data.statusAvailableColor || '#22c55e',
+          statusBusyColor: data.statusBusyColor || '#ef4444',
+          currentStatusBusyColor: data.statusBusyColor || '#ef4444',
+          statusUpcomingColor: data.statusUpcomingColor || '#f59e0b',
+          currentStatusUpcomingColor: data.statusUpcomingColor || '#f59e0b',
+          colorsLastUpdated: data.lastUpdated 
+            ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
+            : '-'
+        });
+      })
+      .catch(err => {
+        console.error('Error loading colors config:', err);
       });
   }
 
@@ -560,17 +611,69 @@ class Admin extends Component {
     this.setState({ activeTab: tabName });
   }
 
+  handleColorsSubmit = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const { apiToken, bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor } = this.state;
+    
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+    
+    fetch('/api/colors', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ 
+        bookingButtonColor, 
+        statusAvailableColor, 
+        statusBusyColor, 
+        statusUpcomingColor 
+      })
+    })
+    .then(response => {
+      if (response.status === 401) {
+        throw new Error(t.errorUnauthorized);
+      }
+      return response.json();
+    })
+    .then(data => {
+      this.setState({
+        colorMessage: t.colorsSuccessMessage,
+        colorMessageType: 'success',
+        currentBookingButtonColor: bookingButtonColor,
+        currentStatusAvailableColor: statusAvailableColor,
+        currentStatusBusyColor: statusBusyColor,
+        currentStatusUpcomingColor: statusUpcomingColor
+      });
+      setTimeout(() => this.setState({ colorMessage: null }), 3000);
+    })
+    .catch(err => {
+      this.setState({
+        colorMessage: `${t.errorPrefix} ${err.message}`,
+        colorMessageType: 'error'
+      });
+    });
+  }
+
   render() {
     const { 
       currentSsid, currentPassword, wifiLastUpdated, 
       currentLogoDarkUrl, currentLogoLightUrl, logoLastUpdated,
       currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, currentMinimalHeaderStyle, informationLastUpdated,
-      currentEnableBooking, currentBookingButtonColor, bookingLastUpdated,
+      currentEnableBooking, bookingLastUpdated,
       apiToken, ssid, password, logoDarkUrl, logoLightUrl, logoDarkFile, logoLightFile, uploadMode,
       showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle,
-      enableBooking, bookingButtonColor,
+      enableBooking,
+      bookingButtonColor, currentBookingButtonColor,
+      statusAvailableColor, currentStatusAvailableColor,
+      statusBusyColor, currentStatusBusyColor,
+      statusUpcomingColor, currentStatusUpcomingColor,
       wifiMessage, wifiMessageType, logoMessage, logoMessageType, informationMessage, informationMessageType,
-      bookingMessage, bookingMessageType,
+      bookingMessage, bookingMessageType, colorMessage, colorMessageType,
       wifiLocked, logoLocked, informationLocked, bookingLocked,
       bookingPermissionMissing,
       activeTab
@@ -627,6 +730,12 @@ class Admin extends Component {
               onClick={() => this.switchTab('logo')}
             >
               {t.logoSectionTitle || 'Logo'}
+            </button>
+            <button 
+              className={`admin-tab ${activeTab === 'colors' ? 'active' : ''}`}
+              onClick={() => this.switchTab('colors')}
+            >
+              {t.colorsSectionTitle || 'Colors'}
             </button>
             <button 
               className={`admin-tab ${activeTab === 'booking' ? 'active' : ''}`}
@@ -1058,35 +1167,6 @@ class Admin extends Component {
                 </small>
               </div>
 
-              <div className="admin-form-group">
-                <label>
-                  {t.bookingButtonColorLabel}
-                </label>
-                <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
-                  <input
-                    type="color"
-                    value={bookingButtonColor}
-                    onChange={(e) => this.setState({ bookingButtonColor: e.target.value })}
-                    style={{ width: '60px', height: '40px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '4px', flexShrink: 0 }}
-                  />
-                  <input
-                    type="text"
-                    value={bookingButtonColor}
-                    onChange={(e) => this.setState({ bookingButtonColor: e.target.value })}
-                    placeholder="#334155"
-                    style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => this.setState({ bookingButtonColor: '#334155' })}
-                    className="admin-secondary-button"
-                  >
-                    {t.resetToDefaultButton}
-                  </button>
-                </div>
-                <small>{t.bookingButtonColorHelp}</small>
-              </div>
-              
               <button 
                 type="submit" 
                 className="admin-submit-button"
@@ -1105,13 +1185,205 @@ class Admin extends Component {
           )}
 
           {bookingLocked && (
-          <div className="admin-section">
-            <h2>{t.bookingSectionTitle}</h2>
-            <div className="admin-locked-message">
-              <p>{t.configuredViaEnv}</p>
+            <div className="admin-section">
+              <h2>{t.bookingSectionTitle}</h2>
+              <div className="admin-locked-message">
+                <p>{t.configuredViaEnv}</p>
+              </div>
             </div>
-          </div>
           )}
+          </div>
+
+          {/* Colors Configuration Tab */}
+          <div className={`admin-tab-content ${activeTab === 'colors' ? 'active' : ''}`}>
+            <div className="admin-section">
+              <h2>{t.colorsSectionTitle}</h2>
+              
+              <div className="admin-current-config">
+                <h3>{t.currentConfigTitle}</h3>
+                <div className="config-grid">
+                  <div className="config-item">
+                    <span className="config-label">{t.bookingButtonColorLabel}</span>
+                    <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ 
+                        display: 'inline-block', 
+                        width: '20px', 
+                        height: '20px', 
+                        backgroundColor: currentBookingButtonColor,
+                        border: '1px solid #ddd',
+                        borderRadius: '4px'
+                      }}></span>
+                      {currentBookingButtonColor}
+                    </span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.statusAvailableColorLabel}</span>
+                    <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ 
+                        display: 'inline-block', 
+                        width: '20px', 
+                        height: '20px', 
+                        backgroundColor: currentStatusAvailableColor,
+                        border: '1px solid #ddd',
+                        borderRadius: '4px'
+                      }}></span>
+                      {currentStatusAvailableColor}
+                    </span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.statusBusyColorLabel}</span>
+                    <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ 
+                        display: 'inline-block', 
+                        width: '20px', 
+                        height: '20px', 
+                        backgroundColor: currentStatusBusyColor,
+                        border: '1px solid #ddd',
+                        borderRadius: '4px'
+                      }}></span>
+                      {currentStatusBusyColor}
+                    </span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.statusUpcomingColorLabel}</span>
+                    <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ 
+                        display: 'inline-block', 
+                        width: '20px', 
+                        height: '20px', 
+                        backgroundColor: currentStatusUpcomingColor,
+                        border: '1px solid #ddd',
+                        borderRadius: '4px'
+                      }}></span>
+                      {currentStatusUpcomingColor}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <form onSubmit={this.handleColorsSubmit}>
+                <div className="admin-form-group">
+                  <label>{t.bookingButtonColorLabel}</label>
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
+                    <input
+                      type="color"
+                      value={bookingButtonColor}
+                      onChange={(e) => this.setState({ bookingButtonColor: e.target.value })}
+                      style={{ width: '60px', height: '40px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '4px', flexShrink: 0 }}
+                    />
+                    <input
+                      type="text"
+                      value={bookingButtonColor}
+                      onChange={(e) => this.setState({ bookingButtonColor: e.target.value })}
+                      placeholder="#334155"
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => this.setState({ bookingButtonColor: '#334155' })}
+                      className="admin-secondary-button"
+                    >
+                      {t.resetToDefaultButton}
+                    </button>
+                  </div>
+                  <small>{t.bookingButtonColorHelp}</small>
+                </div>
+
+                <div className="admin-form-group">
+                  <label>{t.statusAvailableColorLabel}</label>
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
+                    <input
+                      type="color"
+                      value={statusAvailableColor}
+                      onChange={(e) => this.setState({ statusAvailableColor: e.target.value })}
+                      style={{ width: '60px', height: '40px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '4px', flexShrink: 0 }}
+                    />
+                    <input
+                      type="text"
+                      value={statusAvailableColor}
+                      onChange={(e) => this.setState({ statusAvailableColor: e.target.value })}
+                      placeholder="#22c55e"
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => this.setState({ statusAvailableColor: '#22c55e' })}
+                      className="admin-secondary-button"
+                    >
+                      {t.resetToDefaultButton}
+                    </button>
+                  </div>
+                  <small>{t.statusAvailableColorHelp}</small>
+                </div>
+
+                <div className="admin-form-group">
+                  <label>{t.statusBusyColorLabel}</label>
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
+                    <input
+                      type="color"
+                      value={statusBusyColor}
+                      onChange={(e) => this.setState({ statusBusyColor: e.target.value })}
+                      style={{ width: '60px', height: '40px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '4px', flexShrink: 0 }}
+                    />
+                    <input
+                      type="text"
+                      value={statusBusyColor}
+                      onChange={(e) => this.setState({ statusBusyColor: e.target.value })}
+                      placeholder="#ef4444"
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => this.setState({ statusBusyColor: '#ef4444' })}
+                      className="admin-secondary-button"
+                    >
+                      {t.resetToDefaultButton}
+                    </button>
+                  </div>
+                  <small>{t.statusBusyColorHelp}</small>
+                </div>
+
+                <div className="admin-form-group">
+                  <label>{t.statusUpcomingColorLabel}</label>
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
+                    <input
+                      type="color"
+                      value={statusUpcomingColor}
+                      onChange={(e) => this.setState({ statusUpcomingColor: e.target.value })}
+                      style={{ width: '60px', height: '40px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '4px', flexShrink: 0 }}
+                    />
+                    <input
+                      type="text"
+                      value={statusUpcomingColor}
+                      onChange={(e) => this.setState({ statusUpcomingColor: e.target.value })}
+                      placeholder="#f59e0b"
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => this.setState({ statusUpcomingColor: '#f59e0b' })}
+                      className="admin-secondary-button"
+                    >
+                      {t.resetToDefaultButton}
+                    </button>
+                  </div>
+                  <small>{t.statusUpcomingColorHelp}</small>
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="admin-submit-button"
+                >
+                  {t.submitColorsButton}
+                </button>
+              </form>
+
+              {colorMessage && (
+                <div className={`admin-message admin-message-${colorMessageType}`}>
+                  {colorMessage}
+                </div>
+              )}
+            </div>
           </div>
 
         </div>

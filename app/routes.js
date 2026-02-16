@@ -539,6 +539,17 @@ module.exports = function(app) {
 		}
 	});
 
+	// Get colors configuration
+	app.get('/api/colors', async function(req, res) {
+		try {
+			const colorsConfig = configManager.getColorsConfig();
+			res.json(colorsConfig);
+		} catch (err) {
+			console.error('Error retrieving colors config:', err);
+			res.status(500).json({ error: 'Failed to retrieve colors configuration' });
+		}
+	});
+
 	// Update booking configuration (protected - requires token)
 	app.post('/api/booking-config', checkApiToken, async function(req, res) {
 		try {
@@ -567,6 +578,29 @@ module.exports = function(app) {
 		} catch (err) {
 			console.error('Error updating booking config:', err);
 			res.status(500).json({ error: 'Failed to update booking configuration' });
+		}
+	});
+
+	// Color Configuration Endpoint
+	app.post('/api/colors', checkApiToken, async function(req, res) {
+		try {
+			const { bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor } = req.body;
+			
+			const config = await configManager.updateColorsConfig(
+				bookingButtonColor,
+				statusAvailableColor,
+				statusBusyColor,
+				statusUpcomingColor
+			);
+			
+			res.json({ 
+				success: true, 
+				config,
+				message: 'Colors configuration updated'
+			});
+		} catch (err) {
+			console.error('Error updating colors config:', err);
+			res.status(500).json({ error: 'Failed to update colors configuration' });
 		}
 	});
 
