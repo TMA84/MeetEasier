@@ -401,7 +401,7 @@
   
   .minimal-sidebar-book-btn {
     width: 100%;
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    background: linear-gradient(135deg, var(--booking-button-color, #334155) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 80%, black) 100%);
     color: white;
     border: none;
     padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
@@ -410,14 +410,14 @@
     border-radius: $radius-lg;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(100, 116, 139, 0.4);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(100, 116, 139, 0.5);
-      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #334155) 50%, transparent);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #334155) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 60%, black) 100%);
     }
     
     &:active {

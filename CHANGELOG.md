@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved visual consistency between booking modal, single-room, and room-minimal displays
   - Enhanced button hover effects and shadows for better user feedback
   - Increased border radius for softer, more modern appearance
+  - Added customizable booking button colors via admin panel
+  - Administrators can now select custom button colors with real-time preview
+  - Colors are applied dynamically across all booking buttons using CSS custom properties
+  - Color settings persist and sync in real-time via Socket.IO to all connected displays
 
 ### Technical
 - **SCSS Organization**

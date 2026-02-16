@@ -84,7 +84,7 @@ function getSidebarConfig() {
 
 /**
  * Read Booking configuration from file or return defaults
- * @returns {Object} Booking configuration with enableBooking and lastUpdated
+ * @returns {Object} Booking configuration with enableBooking, buttonColor, and lastUpdated
  */
 function getBookingConfig() {
 	try {
@@ -94,6 +94,7 @@ function getBookingConfig() {
 		// Return default config from environment variables if file doesn't exist
 		return {
 			enableBooking: config.bookingDefaults.enableBooking,
+			buttonColor: '#334155',
 			lastUpdated: null
 		};
 	}
@@ -161,12 +162,13 @@ function saveSidebarConfig(config) {
 
 /**
  * Save Booking configuration to file
- * @param {Object} config - Booking configuration with enableBooking
+ * @param {Object} config - Booking configuration with enableBooking and buttonColor
  * @returns {Object} Saved configuration with timestamp
  */
 function saveBookingConfig(config) {
 	const configData = {
 		enableBooking: config.enableBooking !== undefined ? config.enableBooking : true,
+		buttonColor: config.buttonColor || '#334155',
 		lastUpdated: new Date().toISOString()
 	};
 	
@@ -266,10 +268,11 @@ async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTi
  * Update Booking configuration
  * Broadcasts update to all connected clients via Socket.IO
  * @param {boolean} enableBooking - Whether to enable booking feature
+ * @param {string} buttonColor - Hex color for booking buttons
  * @returns {Promise<Object>} Updated configuration
  */
-async function updateBookingConfig(enableBooking) {
-	const config = saveBookingConfig({ enableBooking });
+async function updateBookingConfig(enableBooking, buttonColor) {
+	const config = saveBookingConfig({ enableBooking, buttonColor });
 	
 	// Emit Socket.IO event to notify all connected clients
 	if (io) {

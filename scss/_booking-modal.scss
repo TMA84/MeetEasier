@@ -166,24 +166,15 @@
       width: 24px;
       height: 24px;
       border-radius: 50%;
-      background: #334155;
+      background: var(--booking-button-color, #334155);
       cursor: pointer;
-      box-shadow: 0 2px 6px rgba(51, 65, 85, 0.4);
+      box-shadow: 0 2px 6px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
       transition: all 0.2s;
       margin-top: -8px;
 
-      .minimal-display & {
-        background: #64748b;
-        box-shadow: 0 2px 6px rgba(100, 116, 139, 0.5);
-      }
-
       &:hover {
         transform: scale(1.2);
-        box-shadow: 0 3px 10px rgba(51, 65, 85, 0.6);
-
-        .minimal-display & {
-          box-shadow: 0 3px 10px rgba(100, 116, 139, 0.7);
-        }
+        box-shadow: 0 3px 10px color-mix(in srgb, var(--booking-button-color, #334155) 60%, transparent);
       }
 
       &:active {
@@ -195,24 +186,15 @@
       width: 24px;
       height: 24px;
       border-radius: 50%;
-      background: #334155;
+      background: var(--booking-button-color, #334155);
       cursor: pointer;
       border: none;
-      box-shadow: 0 2px 6px rgba(51, 65, 85, 0.4);
+      box-shadow: 0 2px 6px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
       transition: all 0.2s;
-
-      .minimal-display & {
-        background: #64748b;
-        box-shadow: 0 2px 6px rgba(100, 116, 139, 0.5);
-      }
 
       &:hover {
         transform: scale(1.2);
-        box-shadow: 0 3px 10px rgba(51, 65, 85, 0.6);
-
-        .minimal-display & {
-          box-shadow: 0 3px 10px rgba(100, 116, 139, 0.7);
-        }
+        box-shadow: 0 3px 10px color-mix(in srgb, var(--booking-button-color, #334155) 60%, transparent);
       }
 
       &:active {
@@ -258,9 +240,9 @@
 
 .quick-book-btn {
   padding: 16px 20px;
-  border: 2px solid #334155;
+  border: 2px solid var(--booking-button-color, #334155);
   background-color: white;
-  color: #334155;
+  color: var(--booking-button-color, #334155);
   border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
@@ -270,20 +252,20 @@
 
   .minimal-display & {
     background-color: #1e1e1e;
-    border-color: #64748b;
+    border-color: var(--booking-button-color, #334155);
     color: #cbd5e1;
   }
 
   &:hover {
-    background-color: #334155;
+    background-color: var(--booking-button-color, #334155);
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(51, 65, 85, 0.4);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
 
     .minimal-display & {
-      background-color: #64748b;
+      background-color: var(--booking-button-color, #334155);
       color: white;
-      box-shadow: 0 4px 12px rgba(100, 116, 139, 0.4);
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
     }
   }
 
@@ -292,12 +274,12 @@
   }
 
   &.active {
-    background-color: #334155;
-    border-color: #334155;
+    background-color: var(--booking-button-color, #334155);
+    border-color: var(--booking-button-color, #334155);
     color: white;
 
     .minimal-display & {
-      background-color: #64748b;
+      background-color: var(--booking-button-color, #334155);
       border-color: #64748b;
       color: white;
     }
@@ -500,23 +482,13 @@
 }
 
 .btn-book {
-  background-color: #334155;
+  background-color: var(--booking-button-color, #334155);
   color: white;
 
-  .minimal-display & {
-    background-color: #64748b;
-    color: white;
-  }
-
   &:hover:not(:disabled) {
-    background-color: #1e293b;
+    background-color: color-mix(in srgb, var(--booking-button-color, #334155) 80%, black);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(51, 65, 85, 0.4);
-
-    .minimal-display & {
-      background-color: #475569;
-      box-shadow: 0 4px 12px rgba(100, 116, 139, 0.4);
-    }
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
   }
 
   &:active:not(:disabled) {
