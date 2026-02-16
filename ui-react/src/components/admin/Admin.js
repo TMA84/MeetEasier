@@ -99,6 +99,55 @@ class Admin extends Component {
       });
   }
 
+  // Helper function to convert hex to HSL and get hue
+  hexToHue = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!result) return null;
+    
+    const r = parseInt(result[1], 16) / 255;
+    const g = parseInt(result[2], 16) / 255;
+    const b = parseInt(result[3], 16) / 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0;
+    
+    if (max === min) {
+      h = 0;
+    } else if (max === r) {
+      h = ((g - b) / (max - min)) * 60;
+      if (h < 0) h += 360;
+    } else if (max === g) {
+      h = ((b - r) / (max - min)) * 60 + 120;
+    } else if (max === b) {
+      h = ((r - g) / (max - min)) * 60 + 240;
+    }
+    
+    return h;
+  }
+
+  // Validate if color is within allowed hue range
+  isValidColorForRange = (hex, rangeType) => {
+    const hue = this.hexToHue(hex);
+    if (hue === null) return false;
+    
+    // Define allowed hue ranges (with some tolerance)
+    const ranges = {
+      green: { min: 80, max: 150 },      // Green hues
+      red: { min: 350, max: 20 },        // Red hues (wraps around 360)
+      yellow: { min: 20, max: 60 }       // Yellow/Orange hues
+    };
+    
+    const range = ranges[rangeType];
+    if (!range) return true;
+    
+    if (rangeType === 'red') {
+      return hue >= range.min || hue <= range.max;
+    }
+    
+    return hue >= range.min && hue <= range.max;
+  }
+
   getTranslations() {
     const browserLang = navigator.language || navigator.userLanguage;
     const lang = browserLang.split('-')[0];
@@ -1323,6 +1372,27 @@ class Admin extends Component {
                         {statusAvailableColor === color ? '✓' : ''}
                       </button>
                     ))}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
+                    <input
+                      type="text"
+                      value={statusAvailableColor}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (this.isValidColorForRange(val, 'green') || val === '') {
+                          this.setState({ statusAvailableColor: val });
+                        }
+                      }}
+                      placeholder="#22c55e"
+                      style={{ 
+                        flex: 1, 
+                        padding: '8px 12px', 
+                        border: !this.isValidColorForRange(statusAvailableColor, 'green') ? '2px solid #ef4444' : '1px solid #ddd', 
+                        borderRadius: '4px', 
+                        fontFamily: 'monospace', 
+                        fontSize: '14px' 
+                      }}
+                    />
                     <button
                       type="button"
                       onClick={() => this.setState({ statusAvailableColor: '#22c55e' })}
@@ -1331,6 +1401,9 @@ class Admin extends Component {
                       {t.resetToDefaultButton}
                     </button>
                   </div>
+                  {!this.isValidColorForRange(statusAvailableColor, 'green') && (
+                    <small style={{ color: '#ef4444' }}>Please enter a green color</small>
+                  )}
                   <small>{t.statusAvailableColorHelp}</small>
                 </div>
 
@@ -1362,6 +1435,27 @@ class Admin extends Component {
                         {statusBusyColor === color ? '✓' : ''}
                       </button>
                     ))}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
+                    <input
+                      type="text"
+                      value={statusBusyColor}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (this.isValidColorForRange(val, 'red') || val === '') {
+                          this.setState({ statusBusyColor: val });
+                        }
+                      }}
+                      placeholder="#ef4444"
+                      style={{ 
+                        flex: 1, 
+                        padding: '8px 12px', 
+                        border: !this.isValidColorForRange(statusBusyColor, 'red') ? '2px solid #ef4444' : '1px solid #ddd', 
+                        borderRadius: '4px', 
+                        fontFamily: 'monospace', 
+                        fontSize: '14px' 
+                      }}
+                    />
                     <button
                       type="button"
                       onClick={() => this.setState({ statusBusyColor: '#ef4444' })}
@@ -1370,6 +1464,9 @@ class Admin extends Component {
                       {t.resetToDefaultButton}
                     </button>
                   </div>
+                  {!this.isValidColorForRange(statusBusyColor, 'red') && (
+                    <small style={{ color: '#ef4444' }}>Please enter a red color</small>
+                  )}
                   <small>{t.statusBusyColorHelp}</small>
                 </div>
 
@@ -1401,6 +1498,27 @@ class Admin extends Component {
                         {statusUpcomingColor === color ? '✓' : ''}
                       </button>
                     ))}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
+                    <input
+                      type="text"
+                      value={statusUpcomingColor}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (this.isValidColorForRange(val, 'yellow') || val === '') {
+                          this.setState({ statusUpcomingColor: val });
+                        }
+                      }}
+                      placeholder="#f59e0b"
+                      style={{ 
+                        flex: 1, 
+                        padding: '8px 12px', 
+                        border: !this.isValidColorForRange(statusUpcomingColor, 'yellow') ? '2px solid #ef4444' : '1px solid #ddd', 
+                        borderRadius: '4px', 
+                        fontFamily: 'monospace', 
+                        fontSize: '14px' 
+                      }}
+                    />
                     <button
                       type="button"
                       onClick={() => this.setState({ statusUpcomingColor: '#f59e0b' })}
@@ -1409,6 +1527,9 @@ class Admin extends Component {
                       {t.resetToDefaultButton}
                     </button>
                   </div>
+                  {!this.isValidColorForRange(statusUpcomingColor, 'yellow') && (
+                    <small style={{ color: '#ef4444' }}>Please enter a yellow/orange color</small>
+                  )}
                   <small>{t.statusUpcomingColorHelp}</small>
                 </div>
 
