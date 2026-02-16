@@ -99,10 +99,10 @@ class Admin extends Component {
       });
   }
 
-  // Helper function to convert hex to HSL and get hue
-  hexToHue = (hex) => {
+  // Convert hex to HSL
+  hexToHSL = (hex) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!result) return null;
+    if (!result) return { h: 0, s: 0, l: 50 };
     
     const r = parseInt(result[1], 16) / 255;
     const g = parseInt(result[2], 16) / 255;
@@ -110,42 +110,67 @@ class Admin extends Component {
     
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
-    let h = 0;
+    const l = (max + min) / 2;
     
+    let h, s;
     if (max === min) {
-      h = 0;
-    } else if (max === r) {
-      h = ((g - b) / (max - min)) * 60;
-      if (h < 0) h += 360;
-    } else if (max === g) {
-      h = ((b - r) / (max - min)) * 60 + 120;
-    } else if (max === b) {
-      h = ((r - g) / (max - min)) * 60 + 240;
+      h = s = 0;
+    } else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      
+      switch (max) {
+        case r:
+          h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+          break;
+        case g:
+          h = ((b - r) / d + 2) / 6;
+          break;
+        case b:
+          h = ((r - g) / d + 4) / 6;
+          break;
+        default:
+          h = 0;
+      }
     }
     
-    return h;
+    return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
   }
 
-  // Validate if color is within allowed hue range
-  isValidColorForRange = (hex, rangeType) => {
-    const hue = this.hexToHue(hex);
-    if (hue === null) return false;
+  // Convert HSL to hex
+  hslToHex = (h, s, l) => {
+    h = h / 360;
+    s = s / 100;
+    l = l / 100;
     
-    // Define allowed hue ranges (with some tolerance)
-    const ranges = {
-      green: { min: 80, max: 150 },      // Green hues
-      red: { min: 350, max: 20 },        // Red hues (wraps around 360)
-      yellow: { min: 20, max: 60 }       // Yellow/Orange hues
-    };
+    let r, g, b;
     
-    const range = ranges[rangeType];
-    if (!range) return true;
-    
-    if (rangeType === 'red') {
-      return hue >= range.min || hue <= range.max;
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
     }
     
-    return hue >= range.min && hue <= range.max;
+    const toHex = (x) => {
+      const hex = Math.round(x * 255).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    };
+    
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   }
 
   getTranslations() {
@@ -1346,7 +1371,7 @@ class Admin extends Component {
 
                 <div className="admin-form-group">
                   <label>{t.statusAvailableColorLabel} - {t.colorPickerGreenVariations}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', marginBottom: '12px' }}>
                     {['#dcfce7', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d'].map(color => (
                       <button
                         key={color}
@@ -1359,12 +1384,6 @@ class Admin extends Component {
                           border: statusAvailableColor === color ? '3px solid #000' : '2px solid #999',
                           borderRadius: '4px',
                           cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          color: ['#dcfce7', '#bbf7d0', '#86efac'].includes(color) ? '#000' : '#fff',
                           padding: '0'
                         }}
                         title={color}
@@ -1373,43 +1392,86 @@ class Admin extends Component {
                       </button>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
-                    <input
-                      type="text"
-                      value={statusAvailableColor}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (this.isValidColorForRange(val, 'green') || val === '') {
-                          this.setState({ statusAvailableColor: val });
-                        }
-                      }}
-                      placeholder="#22c55e"
-                      style={{ 
-                        flex: 1, 
-                        padding: '8px 12px', 
-                        border: !this.isValidColorForRange(statusAvailableColor, 'green') ? '2px solid #ef4444' : '1px solid #ddd', 
-                        borderRadius: '4px', 
-                        fontFamily: 'monospace', 
-                        fontSize: '14px' 
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => this.setState({ statusAvailableColor: '#22c55e' })}
-                      className="admin-secondary-button"
-                    >
-                      {t.resetToDefaultButton}
-                    </button>
-                  </div>
-                  {!this.isValidColorForRange(statusAvailableColor, 'green') && (
-                    <small style={{ color: '#ef4444' }}>Please enter a green color</small>
-                  )}
+
+                  {(() => {
+                    const hsl = this.hexToHSL(statusAvailableColor);
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              Hue: {hsl.h}°
+                            </label>
+                            <input
+                              type="range"
+                              min="80"
+                              max="150"
+                              value={hsl.h}
+                              onChange={(e) => {
+                                const newHsl = { h: parseInt(e.target.value), s: hsl.s, l: hsl.l };
+                                this.setState({ statusAvailableColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                          <div style={{ width: '60px', height: '50px', backgroundColor: statusAvailableColor, border: '2px solid #ddd', borderRadius: '4px' }}></div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              Saturation: {hsl.s}%
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={hsl.s}
+                              onChange={(e) => {
+                                const newHsl = { h: hsl.h, s: parseInt(e.target.value), l: hsl.l };
+                                this.setState({ statusAvailableColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              Lightness: {hsl.l}%
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={hsl.l}
+                              onChange={(e) => {
+                                const newHsl = { h: hsl.h, s: hsl.s, l: parseInt(e.target.value) };
+                                this.setState({ statusAvailableColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <button
+                    type="button"
+                    onClick={() => this.setState({ statusAvailableColor: '#22c55e' })}
+                    className="admin-secondary-button"
+                    style={{ marginTop: '8px' }}
+                  >
+                    {t.resetToDefaultButton}
+                  </button>
                   <small>{t.statusAvailableColorHelp}</small>
                 </div>
 
                 <div className="admin-form-group">
                   <label>{t.statusBusyColorLabel} - {t.colorPickerRedVariations}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', marginBottom: '12px' }}>
                     {['#fee2e2', '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d'].map(color => (
                       <button
                         key={color}
@@ -1422,12 +1484,6 @@ class Admin extends Component {
                           border: statusBusyColor === color ? '3px solid #000' : '2px solid #999',
                           borderRadius: '4px',
                           cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          color: ['#fee2e2', '#fecaca', '#fca5a5'].includes(color) ? '#000' : '#fff',
                           padding: '0'
                         }}
                         title={color}
@@ -1436,43 +1492,86 @@ class Admin extends Component {
                       </button>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
-                    <input
-                      type="text"
-                      value={statusBusyColor}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (this.isValidColorForRange(val, 'red') || val === '') {
-                          this.setState({ statusBusyColor: val });
-                        }
-                      }}
-                      placeholder="#ef4444"
-                      style={{ 
-                        flex: 1, 
-                        padding: '8px 12px', 
-                        border: !this.isValidColorForRange(statusBusyColor, 'red') ? '2px solid #ef4444' : '1px solid #ddd', 
-                        borderRadius: '4px', 
-                        fontFamily: 'monospace', 
-                        fontSize: '14px' 
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => this.setState({ statusBusyColor: '#ef4444' })}
-                      className="admin-secondary-button"
-                    >
-                      {t.resetToDefaultButton}
-                    </button>
-                  </div>
-                  {!this.isValidColorForRange(statusBusyColor, 'red') && (
-                    <small style={{ color: '#ef4444' }}>Please enter a red color</small>
-                  )}
+
+                  {(() => {
+                    const hsl = this.hexToHSL(statusBusyColor);
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              Hue: {hsl.h}°
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="20"
+                              value={hsl.h <= 20 ? hsl.h : 0}
+                              onChange={(e) => {
+                                const newHsl = { h: parseInt(e.target.value), s: hsl.s, l: hsl.l };
+                                this.setState({ statusBusyColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                          <div style={{ width: '60px', height: '50px', backgroundColor: statusBusyColor, border: '2px solid #ddd', borderRadius: '4px' }}></div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              Saturation: {hsl.s}%
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={hsl.s}
+                              onChange={(e) => {
+                                const newHsl = { h: hsl.h, s: parseInt(e.target.value), l: hsl.l };
+                                this.setState({ statusBusyColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              Lightness: {hsl.l}%
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={hsl.l}
+                              onChange={(e) => {
+                                const newHsl = { h: hsl.h, s: hsl.s, l: parseInt(e.target.value) };
+                                this.setState({ statusBusyColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <button
+                    type="button"
+                    onClick={() => this.setState({ statusBusyColor: '#ef4444' })}
+                    className="admin-secondary-button"
+                    style={{ marginTop: '8px' }}
+                  >
+                    {t.resetToDefaultButton}
+                  </button>
                   <small>{t.statusBusyColorHelp}</small>
                 </div>
 
                 <div className="admin-form-group">
                   <label>{t.statusUpcomingColorLabel} - {t.colorPickerYellowVariations}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', marginBottom: '12px' }}>
                     {['#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#a16207', '#854d0e'].map(color => (
                       <button
                         key={color}
@@ -1485,12 +1584,6 @@ class Admin extends Component {
                           border: statusUpcomingColor === color ? '3px solid #000' : '2px solid #999',
                           borderRadius: '4px',
                           cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          color: ['#fef3c7', '#fde68a', '#fcd34d', '#fbbf24'].includes(color) ? '#000' : '#fff',
                           padding: '0'
                         }}
                         title={color}
@@ -1499,37 +1592,80 @@ class Admin extends Component {
                       </button>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
-                    <input
-                      type="text"
-                      value={statusUpcomingColor}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (this.isValidColorForRange(val, 'yellow') || val === '') {
-                          this.setState({ statusUpcomingColor: val });
-                        }
-                      }}
-                      placeholder="#f59e0b"
-                      style={{ 
-                        flex: 1, 
-                        padding: '8px 12px', 
-                        border: !this.isValidColorForRange(statusUpcomingColor, 'yellow') ? '2px solid #ef4444' : '1px solid #ddd', 
-                        borderRadius: '4px', 
-                        fontFamily: 'monospace', 
-                        fontSize: '14px' 
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => this.setState({ statusUpcomingColor: '#f59e0b' })}
-                      className="admin-secondary-button"
-                    >
-                      {t.resetToDefaultButton}
-                    </button>
-                  </div>
-                  {!this.isValidColorForRange(statusUpcomingColor, 'yellow') && (
-                    <small style={{ color: '#ef4444' }}>Please enter a yellow/orange color</small>
-                  )}
+
+                  {(() => {
+                    const hsl = this.hexToHSL(statusUpcomingColor);
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              Hue: {hsl.h}°
+                            </label>
+                            <input
+                              type="range"
+                              min="20"
+                              max="60"
+                              value={hsl.h}
+                              onChange={(e) => {
+                                const newHsl = { h: parseInt(e.target.value), s: hsl.s, l: hsl.l };
+                                this.setState({ statusUpcomingColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                          <div style={{ width: '60px', height: '50px', backgroundColor: statusUpcomingColor, border: '2px solid #ddd', borderRadius: '4px' }}></div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              Saturation: {hsl.s}%
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={hsl.s}
+                              onChange={(e) => {
+                                const newHsl = { h: hsl.h, s: parseInt(e.target.value), l: hsl.l };
+                                this.setState({ statusUpcomingColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              Lightness: {hsl.l}%
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={hsl.l}
+                              onChange={(e) => {
+                                const newHsl = { h: hsl.h, s: hsl.s, l: parseInt(e.target.value) };
+                                this.setState({ statusUpcomingColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <button
+                    type="button"
+                    onClick={() => this.setState({ statusUpcomingColor: '#f59e0b' })}
+                    className="admin-secondary-button"
+                    style={{ marginTop: '8px' }}
+                  >
+                    {t.resetToDefaultButton}
+                  </button>
                   <small>{t.statusUpcomingColorHelp}</small>
                 </div>
 
