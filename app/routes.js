@@ -3,6 +3,7 @@ const config = require('../config/config');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const roomlistAliasHelper = require('./roomlist-alias-helper');
 
 const msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
 
@@ -207,7 +208,7 @@ module.exports = function(app) {
 		}, msalClient);
 	});
 
-	// returns an array of roomlist objects
+	// returns an array of roomlist objects with aliases for filtering
 	app.get('/api/roomlists', function(req, res) {
 		let api;
 		if (config.calendarSearch.useGraphAPI === 'true') {
@@ -229,7 +230,11 @@ module.exports = function(app) {
 					});
 				}
 			} else {
-				res.json(roomlists);
+				// Add aliases to each room list
+				const roomlistsWithAliases = roomlists.map(name => {
+					return roomlistAliasHelper.getRoomlistWithAlias(name);
+				});
+				res.json(roomlistsWithAliases);
 			}
 		}, msalClient);
 	});

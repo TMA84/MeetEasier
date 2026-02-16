@@ -3,6 +3,7 @@ module.exports = function(callback) {
 	var ews = require('ews-javascript-api');
 	var config = require('../../config/config');
 	var blacklist = require('../../config/room-blacklist.js');
+	var roomlistAliasHelper = require('../roomlist-alias-helper');
 
 	// ews -----------------------------------------------------------------------
 	// - TODO: Make the exchangeserver-version configurable
@@ -51,6 +52,7 @@ module.exports = function(callback) {
 							let roomAlias = roomItem.Name.toLowerCase().replace(/\s+/g, '-');
 
 							room.Roomlist = item.Name;
+							room.RoomlistAlias = roomlistAliasHelper.getAlias(item.Name);
 							room.Name = roomItem.Name;
 							room.RoomAlias = roomAlias;
 							room.Email = email;
