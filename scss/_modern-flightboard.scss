@@ -126,6 +126,12 @@
     background: linear-gradient(90deg, rgba($error-500, 0.15) 0%, $neutral-800 10%);
   }
   
+  // Upcoming state
+  &.meeting-room-upcoming {
+    border-left-color: $warning-500;
+    background: linear-gradient(90deg, rgba($warning-500, 0.15) 0%, $neutral-800 10%);
+  }
+  
   // Error state
   &.meeting-room-error {
     border-left-color: $warning-500;

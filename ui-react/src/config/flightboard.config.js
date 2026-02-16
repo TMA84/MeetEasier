@@ -11,6 +11,7 @@ const translations = {
       nextUp: 'Als nächstes',
       statusAvailable: 'Frei',
       statusBusy: 'Belegt',
+      statusUpcoming: 'Gleich',
       statusError: 'Fehler',
       seats: 'Plätze',
       noMeeting: 'Keine Termine in den nächsten 7 Tagen'
@@ -29,6 +30,7 @@ const translations = {
       nextUp: 'Next up',
       statusAvailable: 'Available',
       statusBusy: 'Busy',
+      statusUpcoming: 'Upcoming',
       statusError: 'Error',
       seats: 'Seats',
       noMeeting: 'No meetings in the next 7 days'

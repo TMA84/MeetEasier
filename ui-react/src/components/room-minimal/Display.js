@@ -8,6 +8,130 @@ import Socket from '../global/Socket';
 import Spinner from '../global/Spinner';
 import BookingModal from '../booking/BookingModal';
 
+/**
+ * Helper function to convert hex color to RGBA
+ * @param {string} hex - Hex color value (e.g., '#22c55e')
+ * @param {number} alpha - Alpha/opacity value (0-1)
+ * @returns {string} RGBA string (e.g., 'rgba(34, 197, 94, 0.6)')
+ */
+const hexToRgba = (hex, alpha = 1) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+/**
+ * Apply custom color styles to CSS for room-minimal display
+ * Creates CSS rules that override the default hardcoded colors with configured colors
+ */
+const applyColorsToCSS = (colors) => {
+  const styleId = 'room-minimal-colors-style';
+  let styleElement = document.getElementById(styleId);
+  
+  if (!styleElement) {
+    styleElement = document.createElement('style');
+    styleElement.id = styleId;
+    document.head.appendChild(styleElement);
+  }
+  
+  const availColor = colors.statusAvailableColor || '#22c55e';
+  const busyColor = colors.statusBusyColor || '#ef4444';
+  const upcomColor = colors.statusUpcomingColor || '#f59e0b';
+  
+  const css = `
+    .room-minimal--available::before {
+      background: radial-gradient(circle, ${hexToRgba(availColor, 0.4)} 0%, transparent 70%) !important;
+    }
+    .room-minimal--busy::before {
+      background: radial-gradient(circle, ${hexToRgba(busyColor, 0.4)} 0%, transparent 70%) !important;
+    }
+    .room-minimal--upcoming::before {
+      background: radial-gradient(circle, ${hexToRgba(upcomColor, 0.4)} 0%, transparent 70%) !important;
+    }
+    .room-minimal--available .minimal-glow-container {
+      box-shadow: inset 0 0 100px ${hexToRgba(availColor, 0.3)} !important;
+    }
+    .room-minimal--busy .minimal-glow-container {
+      box-shadow: inset 0 0 100px ${hexToRgba(busyColor, 0.3)} !important;
+    }
+    .room-minimal--upcoming .minimal-glow-container {
+      box-shadow: inset 0 0 100px ${hexToRgba(upcomColor, 0.3)} !important;
+    }
+    .room-minimal--available .minimal-room-header--filled {
+      background: ${availColor} !important;
+      border-color: ${hexToRgba(availColor, 0.1)} !important;
+      box-shadow: 
+        0 0 40px ${hexToRgba(availColor, 0.5)},
+        0 0 80px ${hexToRgba(availColor, 0.3)},
+        0 0 120px ${hexToRgba(availColor, 0.2)},
+        inset 0 0 10px ${hexToRgba(availColor, 0.2)} !important;
+    }
+    .room-minimal--busy .minimal-room-header--filled {
+      background: ${busyColor} !important;
+      border-color: ${hexToRgba(busyColor, 0.1)} !important;
+      box-shadow: 
+        0 0 40px ${hexToRgba(busyColor, 0.5)},
+        0 0 80px ${hexToRgba(busyColor, 0.3)},
+        0 0 120px ${hexToRgba(busyColor, 0.2)},
+        inset 0 0 10px ${hexToRgba(busyColor, 0.2)} !important;
+    }
+    .room-minimal--upcoming .minimal-room-header--filled {
+      background: ${upcomColor} !important;
+      border-color: ${hexToRgba(upcomColor, 0.1)} !important;
+      box-shadow: 
+        0 0 40px ${hexToRgba(upcomColor, 0.5)},
+        0 0 80px ${hexToRgba(upcomColor, 0.3)},
+        0 0 120px ${hexToRgba(upcomColor, 0.2)},
+        inset 0 0 10px ${hexToRgba(upcomColor, 0.2)} !important;
+    }
+    .room-minimal--available .minimal-room-header--transparent {
+      background: transparent !important;
+      border-color: ${hexToRgba(availColor, 0.3)} !important;
+      box-shadow: 
+        0 0 40px ${hexToRgba(availColor, 0.5)},
+        0 0 80px ${hexToRgba(availColor, 0.3)},
+        0 0 120px ${hexToRgba(availColor, 0.2)} !important;
+    }
+    .room-minimal--busy .minimal-room-header--transparent {
+      background: transparent !important;
+      border-color: ${hexToRgba(busyColor, 0.3)} !important;
+      box-shadow: 
+        0 0 40px ${hexToRgba(busyColor, 0.5)},
+        0 0 80px ${hexToRgba(busyColor, 0.3)},
+        0 0 120px ${hexToRgba(busyColor, 0.2)} !important;
+    }
+    .room-minimal--upcoming .minimal-room-header--transparent {
+      background: transparent !important;
+      border-color: ${hexToRgba(upcomColor, 0.3)} !important;
+      box-shadow: 
+        0 0 40px ${hexToRgba(upcomColor, 0.5)},
+        0 0 80px ${hexToRgba(upcomColor, 0.3)},
+        0 0 120px ${hexToRgba(upcomColor, 0.2)} !important;
+    }
+    .room-minimal--available .minimal-room-header--transparent .minimal-room-status {
+      color: ${availColor} !important;
+    }
+    .room-minimal--busy .minimal-room-header--transparent .minimal-room-status {
+      color: ${busyColor} !important;
+    }
+    .room-minimal--upcoming .minimal-room-header--transparent .minimal-room-status {
+      color: ${upcomColor} !important;
+    }
+    .room-minimal--available .minimal-room-header--filled .minimal-room-status {
+      color: #ffffff !important;
+    }
+    .room-minimal--busy .minimal-room-header--filled .minimal-room-status {
+      color: #ffffff !important;
+    }
+    .room-minimal--upcoming .minimal-room-header--filled .minimal-room-status {
+      color: #ffffff !important;
+    }
+  `;
+  
+  styleElement.innerHTML = css;
+};
+
 class Display extends Component {
 
   componentDidCatch(error, info) {
@@ -174,19 +298,31 @@ class Display extends Component {
 
       this.socket.on('colorsConfigUpdated', (config) => {
         console.log('Colors config updated via Socket.IO:', config);
-        this.setState({ 
-          colorsConfig: {
-            bookingButtonColor: config.bookingButtonColor || '#334155',
-            statusAvailableColor: config.statusAvailableColor || '#22c55e',
-            statusBusyColor: config.statusBusyColor || '#ef4444',
-            statusUpcomingColor: config.statusUpcomingColor || '#f59e0b'
-          }
-        });
+        const colorsConfig = {
+          bookingButtonColor: config.bookingButtonColor || '#334155',
+          statusAvailableColor: config.statusAvailableColor || '#22c55e',
+          statusBusyColor: config.statusBusyColor || '#ef4444',
+          statusUpcomingColor: config.statusUpcomingColor || '#f59e0b'
+        };
+        this.setState({ colorsConfig });
+        
         // Apply all colors as CSS custom properties
+        const availableColor = config.statusAvailableColor || '#22c55e';
+        const busyColor = config.statusBusyColor || '#ef4444';
+        const upcomingColor = config.statusUpcomingColor || '#f59e0b';
+        
         document.documentElement.style.setProperty('--booking-button-color', config.bookingButtonColor || '#334155');
-        document.documentElement.style.setProperty('--status-available-color', config.statusAvailableColor || '#22c55e');
-        document.documentElement.style.setProperty('--status-busy-color', config.statusBusyColor || '#ef4444');
-        document.documentElement.style.setProperty('--status-upcoming-color', config.statusUpcomingColor || '#f59e0b');
+        document.documentElement.style.setProperty('--status-available-color', availableColor);
+        document.documentElement.style.setProperty('--status-busy-color', busyColor);
+        document.documentElement.style.setProperty('--status-upcoming-color', upcomingColor);
+        
+        // Also set short names used in SCSS
+        document.documentElement.style.setProperty('--available-color', availableColor);
+        document.documentElement.style.setProperty('--busy-color', busyColor);
+        document.documentElement.style.setProperty('--upcoming-color', upcomingColor);
+        
+        // Apply custom colors to CSS rules
+        applyColorsToCSS(colorsConfig);
       });
     }
   }
@@ -263,19 +399,31 @@ class Display extends Component {
     fetch('/api/colors')
       .then(response => response.json())
       .then(data => {
-        this.setState({ 
-          colorsConfig: {
-            bookingButtonColor: data.bookingButtonColor || '#334155',
-            statusAvailableColor: data.statusAvailableColor || '#22c55e',
-            statusBusyColor: data.statusBusyColor || '#ef4444',
-            statusUpcomingColor: data.statusUpcomingColor || '#f59e0b'
-          }
-        });
+        const colorsConfig = {
+          bookingButtonColor: data.bookingButtonColor || '#334155',
+          statusAvailableColor: data.statusAvailableColor || '#22c55e',
+          statusBusyColor: data.statusBusyColor || '#ef4444',
+          statusUpcomingColor: data.statusUpcomingColor || '#f59e0b'
+        };
+        this.setState({ colorsConfig });
+        
         // Apply all colors as CSS custom properties
+        const availableColor = data.statusAvailableColor || '#22c55e';
+        const busyColor = data.statusBusyColor || '#ef4444';
+        const upcomingColor = data.statusUpcomingColor || '#f59e0b';
+        
         document.documentElement.style.setProperty('--booking-button-color', data.bookingButtonColor || '#334155');
-        document.documentElement.style.setProperty('--status-available-color', data.statusAvailableColor || '#22c55e');
-        document.documentElement.style.setProperty('--status-busy-color', data.statusBusyColor || '#ef4444');
-        document.documentElement.style.setProperty('--status-upcoming-color', data.statusUpcomingColor || '#f59e0b');
+        document.documentElement.style.setProperty('--status-available-color', availableColor);
+        document.documentElement.style.setProperty('--status-busy-color', busyColor);
+        document.documentElement.style.setProperty('--status-upcoming-color', upcomingColor);
+        
+        // Also set short names used in SCSS
+        document.documentElement.style.setProperty('--available-color', availableColor);
+        document.documentElement.style.setProperty('--busy-color', busyColor);
+        document.documentElement.style.setProperty('--upcoming-color', upcomingColor);
+        
+        // Apply custom colors to CSS rules
+        applyColorsToCSS(colorsConfig);
       })
       .catch(err => {
         console.error('Error fetching colors config:', err);
