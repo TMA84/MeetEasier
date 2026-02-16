@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Microsoft Graph Booking**
+  - Added conflict detection to prevent double-booking of rooms
+  - Room calendar is now checked for overlapping events before creating new bookings
+  - Requires `Calendars.Read` or `Calendars.Read.Shared` permission for conflict checking
+  - Improved error messages for permission-related failures
+
 ## [1.2.0] - 2026-02-10
 
 ### Added
