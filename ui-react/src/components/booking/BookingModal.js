@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import './BookingModal.scss';
+// Styles are loaded from /css/styles.css (compiled.scss from backend)
 
 /**
  * BookingModal - Modal dialog for booking a room
@@ -14,6 +14,7 @@ class BookingModal extends Component {
     this.state = {
       subject: this.getDefaultSubject(),
       selectedDuration: 30, // default 30 minutes
+      customDuration: 30, // for dropdown selection
       isSubmitting: false,
       error: null
     };
@@ -132,6 +133,17 @@ class BookingModal extends Component {
   handleQuickBook = (durationMinutes) => {
     this.setState({
       selectedDuration: durationMinutes,
+      customDuration: durationMinutes,
+      error: null
+    });
+  };
+
+  // Handle custom duration slider change
+  handleCustomDurationChange = (e) => {
+    const duration = parseInt(e.target.value, 10);
+    this.setState({
+      selectedDuration: duration,
+      customDuration: duration,
       error: null
     });
   };
@@ -190,10 +202,16 @@ class BookingModal extends Component {
 
   render() {
     const { room, onClose, theme } = this.props;
-    const { selectedDuration, isSubmitting, error } = this.state;
+    const { selectedDuration, customDuration, isSubmitting, error } = this.state;
     
     const isDark = theme === 'dark';
     const t = this.getTranslations();
+
+    // Generate duration options in 5-minute intervals (5 to 240 minutes / 4 hours)
+    const durationOptions = [];
+    for (let i = 5; i <= 240; i += 5) {
+      durationOptions.push(i);
+    }
 
     return (
       <div className={`booking-modal-overlay ${isDark ? 'minimal-display' : ''}`} onClick={onClose}>
@@ -237,6 +255,27 @@ class BookingModal extends Component {
                   >
                     120 {t.minutes}
                   </button>
+                </div>
+              </div>
+
+              {/* Custom Duration Slider */}
+              <div className="custom-duration-section">
+                <label htmlFor="custom-duration">
+                  {t.duration}: <span className="duration-value">{customDuration} {t.minutes}</span>
+                </label>
+                <input
+                  type="range"
+                  id="custom-duration"
+                  className="duration-slider"
+                  min="5"
+                  max="240"
+                  step="5"
+                  value={customDuration}
+                  onChange={this.handleCustomDurationChange}
+                />
+                <div className="slider-labels">
+                  <span>5 {t.minutes}</span>
+                  <span>240 {t.minutes}</span>
                 </div>
               </div>
 

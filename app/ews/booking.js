@@ -9,6 +9,14 @@ module.exports = function(roomEmail, bookingDetails, callback) {
 		return callback(new Error('Subject, start time, and end time are required'), null);
 	}
 
+	// Security: Prevent adding attendees or resources to room bookings
+	const disallowedFields = ['attendees', 'requiredAttendees', 'optionalAttendees', 'resources', 'locations'];
+	for (const field of disallowedFields) {
+		if (bookingDetails[field] !== undefined) {
+			return callback(new Error('Cannot add attendees or additional resources to room bookings'), null);
+		}
+	}
+
 	// Validate time range
 	const start = new Date(startTime);
 	const end = new Date(endTime);

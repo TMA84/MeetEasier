@@ -257,6 +257,18 @@ module.exports = function(app) {
 			});
 		}
 
+		// Security: Prevent booking with attendees or additional resources
+		// Only allow the specific fields we need
+		const disallowedFields = ['attendees', 'requiredAttendees', 'optionalAttendees', 'resources', 'locations'];
+		for (const field of disallowedFields) {
+			if (req.body[field] !== undefined) {
+				return res.status(400).json({
+					error: 'Invalid fields',
+					message: 'Cannot add attendees or additional resources to room bookings'
+				});
+			}
+		}
+
 		const bookingDetails = { subject, startTime, endTime, description };
 		const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
 
