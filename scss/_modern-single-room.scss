@@ -44,17 +44,17 @@
   
   // Available state
   &--available {
-    background: linear-gradient(135deg, $success-600 0%, $success-700 100%);
+    background: linear-gradient(135deg, var(--status-available-color, $success-600) 0%, var(--status-available-color, $success-700) 100%);
   }
   
   // Busy state
   &--busy {
-    background: linear-gradient(135deg, $error-600 0%, $error-700 100%);
+    background: linear-gradient(135deg, var(--status-busy-color, $error-600) 0%, var(--status-busy-color, $error-700) 100%);
   }
   
   // Upcoming soon state
   &--upcoming {
-    background: linear-gradient(135deg, $warning-500 0%, $warning-600 100%);
+    background: linear-gradient(135deg, var(--status-upcoming-color, $warning-500) 0%, var(--status-upcoming-color, $warning-600) 100%);
   }
   
   // Content wrapper with fixed positioning

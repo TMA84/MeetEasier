@@ -5,21 +5,44 @@ import seats from '../../config/flightboard.seats.js';
 import { formatTimeRange } from '../../utils/timeFormat.js';
 
 /**
+ * Determine if a room has an upcoming meeting (within next 15 minutes and not currently busy)
+ * @param {Object} room - Room object with Appointments array
+ * @returns {boolean} True if room has an upcoming meeting
+ */
+const isUpcomingMeeting = (room) => {
+  if (room.Busy || room.Appointments.length === 0) {
+    return false;
+  }
+
+  const now = new Date().getTime();
+  const upcomingThreshold = 15 * 60 * 1000; // 15 minutes in milliseconds
+  const nextAppointmentStart = parseInt(room.Appointments[0].Start, 10);
+
+  return nextAppointmentStart - now > 0 && nextAppointmentStart - now <= upcomingThreshold;
+};
+
+/**
  * Status indicator component showing room availability
- * Displays Available, Busy, or Error status based on room state
+ * Displays Available, Busy, Upcoming, or Error status based on room state
  */
 const Status = ({ room }) => {
+  const isUpcoming = isUpcomingMeeting(room);
+  
   const statusClass = room.ErrorMessage
     ? 'meeting-error'
     : room.Busy
       ? 'meeting-busy'
-      : 'meeting-open';
+      : isUpcoming
+        ? 'meeting-upcoming'
+        : 'meeting-open';
 
   const statusText = room.ErrorMessage
     ? config.board.statusError
     : room.Busy
       ? config.board.statusBusy
-      : config.board.statusAvailable;
+      : isUpcoming
+        ? config.board.statusUpcoming || 'Upcoming'
+        : config.board.statusAvailable;
 
   return (
     <div 
@@ -183,11 +206,15 @@ const FlightboardRow = ({ room, filter = '' }) => {
   // Determine if this row should be visible based on filter
   const isVisible = filter === roomlist || filter === 'roomlist-all' || filter === '';
 
+  // Determine upcoming status
+  const isUpcoming = isUpcomingMeeting(room);
+
   // Build room status class names
   const roomStatusClass = [
     room.RoomAlias,
     'meeting-room',
     room.Busy && 'meeting-room-busy',
+    isUpcoming && 'meeting-room-upcoming',
     room.ErrorMessage && 'meeting-room-error'
   ].filter(Boolean).join(' ');
 

@@ -1,5 +1,12 @@
 @use 'modern-variables' as *;
 
+// Define CSS custom properties with fallbacks for different status states
+:root {
+  --available-color: #22c55e;
+  --busy-color: #ef4444;
+  --upcoming-color: #f59e0b;
+}
+
 .room-minimal {
   font-family: 'Titillium Web', sans-serif;
   background: #1a1d29;
@@ -24,15 +31,15 @@
   }
 
   &.room-minimal--available::before {
-    background: radial-gradient(circle, rgba(34, 197, 94, 0.4) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--available-color, rgba(34, 197, 94, 0.4)) 0%, transparent 70%);
   }
 
   &.room-minimal--busy::before {
-    background: radial-gradient(circle, rgba(239, 68, 68, 0.4) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--busy-color, rgba(239, 68, 68, 0.4)) 0%, transparent 70%);
   }
 
   &.room-minimal--upcoming::before {
-    background: radial-gradient(circle, rgba(245, 158, 11, 0.4) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--upcoming-color, rgba(245, 158, 11, 0.4)) 0%, transparent 70%);
   }
 }
 
@@ -261,22 +268,22 @@
 }
 
 .minimal-logo {
-  margin-bottom: clamp(0.5rem, 1.5vh, 1.5rem);
+  margin-bottom: clamp(0.75rem, 1.5vh, 1.5rem);
   text-align: center;
   
   img {
-    max-height: clamp(50px, 8vh, 120px);
-    max-width: clamp(100px, 18vw, 240px);
+    max-height: clamp(80px, 10vh, 120px);
+    max-width: clamp(160px, 20vw, 240px);
     width: auto;
     height: auto;
   }
   
   @media (max-width: 900px) {
-    margin-bottom: clamp(0.25rem, 0.75vh, 0.75rem);
+    margin-bottom: clamp(0.5rem, 1vh, 1rem);
     
     img {
-      max-height: clamp(40px, 6vh, 80px);
-      max-width: clamp(80px, 15vw, 160px);
+      max-height: clamp(60px, 8vh, 100px);
+      max-width: clamp(120px, 18vw, 200px);
     }
   }
 }
@@ -286,25 +293,25 @@
 }
 
 .minimal-time {
-  font-size: clamp(1.5rem, 3vw, 3rem);
+  font-size: clamp(2.25rem, 4.5vw, 3.5rem);
   font-weight: 700;
   color: #ffffff;
   line-height: 1;
-  margin-bottom: clamp(0.25rem, 0.75vh, 0.75rem);
+  margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
   font-variant-numeric: tabular-nums;
   
   @media (max-width: 900px) {
-    font-size: clamp(1.25rem, 2.5vw, 2rem);
+    font-size: clamp(1.75rem, 3.5vw, 2.75rem);
   }
 }
 
 .minimal-date {
-  font-size: clamp(0.75rem, 1.25vw, 1.25rem);
+  font-size: clamp(0.875rem, 1.5vw, 1.25rem);
   color: rgba(255, 255, 255, 0.7);
   font-weight: 500;
   
   @media (max-width: 900px) {
-    font-size: clamp(0.65rem, 1vw, 0.85rem);
+    font-size: clamp(0.75rem, 1.25vw, 1rem);
   }
 }
 
