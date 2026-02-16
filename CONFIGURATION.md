@@ -554,6 +554,68 @@ module.exports = [
 
 ---
 
+### Room List Aliases
+
+Configure custom aliases for room lists containing special characters.
+
+**Problem:** Room list names with special characters (like `"Building A & B"`, `"Mötzing"`, or `"Floor 3 (North Wing)"`) don't work well with the URL-based filtering system.
+
+**Solution:** The system automatically transliterates special characters and generates clean aliases. You can also define custom aliases for more control.
+
+**File:** `config/roomlist-aliases.js`
+
+```javascript
+module.exports = {
+  aliases: {
+    // Optional: Define custom aliases for specific room lists
+    "Building A & B": "building-ab",
+    "Meeting Rooms - HQ": "meeting-rooms-hq"
+    
+    // Room lists not configured here use auto-generated aliases
+  }
+};
+```
+
+**How it works:**
+
+1. **Auto-generated aliases** (for room lists not in configuration):
+   - Transliterates special characters:
+     - German umlauts: Ä→A, ö→o, ü→u, ß→ss
+     - Accents: é→e, ñ→n, ç→c, etc.
+   - Converts to lowercase
+   - Replaces spaces with dashes
+   - Removes any remaining special characters
+
+2. **Custom aliases** (defined in configuration):
+   - Takes priority over auto-generated aliases
+   - Useful when you want specific control
+
+**Examples:**
+
+| Room List Name | Auto-Generated Alias | Notes |
+|---|---|---|
+| `Mötzing` | `motzing` | Umlaut ö converted to o |
+| `Café Munich` | `cafe-munich` | Accent é converted to e |
+| `Building A & B` | `building-ab` | Special character removed |
+| `Floor 3 (North Wing)` | `floor-3-north-wing` | Parentheses removed |
+
+**Usage in URL:**
+
+```
+http://your-server:8080/?roomlist=motzing
+http://your-server:8080/?roomlist=building-ab
+```
+
+**Benefits:**
+
+- Handles room list names with umlauts, accents, and special characters automatically
+- Creates clean, predictable filter IDs
+- Works seamlessly with URL parameters
+- No additional configuration needed for common characters
+- Optional custom aliases for full control
+
+---
+
 ### Localization
 
 #### Supported Languages

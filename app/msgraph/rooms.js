@@ -1,5 +1,6 @@
 const graph = require('./graph');
 const blacklist = require('../../config/room-blacklist.js');
+const roomlistAliasHelper = require('../roomlist-alias-helper');
 
 module.exports = function(callback, msalClient) {
 	// promise: get all room lists
@@ -47,6 +48,7 @@ module.exports = function(callback, msalClient) {
 							let roomAlias = roomItem.displayName.toLowerCase().replace(/\s+/g, '-');
 
 							room.Roomlist = item.displayName;
+							room.RoomlistAlias = roomlistAliasHelper.getAlias(item.displayName);
 							room.Name = roomItem.displayName;
 							room.RoomAlias = roomAlias;
 							room.Email = email;

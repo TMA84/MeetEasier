@@ -23,16 +23,16 @@ function RoomFilter({ filter, error, response, roomlists, currentFilter }) {
       if (currentFilter === 'roomlist-all' || currentFilter === '') {
         setSelectedFilter(config.roomFilter.filterAllTitle);
       } else {
-        // Extract roomlist name from filter ID (e.g., "roomlist-frankfurt" -> "Frankfurt")
-        const roomlistName = currentFilter.replace('roomlist-', '').replace(/-/g, ' ');
+        // Extract alias from filter ID (e.g., "roomlist-building-ab" -> "building-ab")
+        const filterAlias = currentFilter.replace('roomlist-', '');
         
-        // Find matching roomlist (case-insensitive)
+        // Find matching roomlist by alias
         const matchingRoomlist = roomlists.find(
-          item => item.toLowerCase().replace(/\s+/g, '-') === roomlistName.toLowerCase().replace(/\s+/g, '-')
+          item => item.alias === filterAlias
         );
         
         if (matchingRoomlist) {
-          setSelectedFilter(matchingRoomlist);
+          setSelectedFilter(matchingRoomlist.name);
         }
       }
     }
@@ -99,13 +99,13 @@ function RoomFilter({ filter, error, response, roomlists, currentFilter }) {
             roomlists.map((item, key) => (
               <li 
                 onClick={() => handleFilterClick(
-                  `roomlist-${item.toLowerCase().replace(/\s+/g, '-')}`, 
-                  item
+                  `roomlist-${item.alias}`, 
+                  item.name
                 )}
                 key={key}
                 className="dropdown-item"
               >
-                {item}
+                {item.name}
               </li>
             ))
           ) : (

@@ -176,8 +176,9 @@ Seats.propTypes = {
  * Shows room availability, current meeting, and next meeting in a responsive row layout
  */
 const FlightboardRow = ({ room, filter = '' }) => {
-  // Normalize roomlist for filtering
-  const roomlist = `roomlist-${room.Roomlist.toLowerCase().replace(/\s+/g, '-')}`;
+  // Use the RoomlistAlias from the room object, or generate a default one
+  const roomlistAlias = room.RoomlistAlias || `${room.Roomlist.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
+  const roomlist = `roomlist-${roomlistAlias}`;
 
   // Determine if this row should be visible based on filter
   const isVisible = filter === roomlist || filter === 'roomlist-all' || filter === '';
