@@ -33,6 +33,26 @@ module.exports = async function(msalClient, roomEmail, bookingDetails) {
 	// Get authenticated Graph client
 	const client = getAuthenticatedClient(msalClient);
 
+	// Check for existing events that overlap the requested time range
+	// Use calendarView to expand recurring events and get occurrences
+	try {
+		const conflicts = await client
+			.api(`/users/${roomEmail}/calendarView`)
+			.query({ startDateTime: start.toISOString(), endDateTime: end.toISOString() })
+			.get();
+
+		if (conflicts && conflicts.value && conflicts.value.length > 0) {
+			throw new Error('Room is already booked during the requested time range');
+		}
+	} catch (err) {
+		// If the conflict-check itself fails due to auth/perms, surface helpful message
+		console.error('Graph API conflict check error:', err);
+		if (err.statusCode === 403 || err.statusCode === 401) {
+			throw new Error('Insufficient permissions to check room calendar. Ensure the application has Calendars.Read or Calendars.Read.Shared permission.');
+		}
+		throw err;
+	}
+
 	// Create event object
 	// Since we're creating this directly in the room's calendar,
 	// the room is automatically the organizer
