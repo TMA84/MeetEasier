@@ -22,7 +22,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -37,8 +37,8 @@
 
 .booking-modal {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   max-width: 500px;
   width: 100%;
   max-height: calc(100vh - 32px);
@@ -46,7 +46,7 @@
   animation: slideUp 0.3s ease-out;
 
   .minimal-display & {
-    background: #1a1a1a;
+    background: #1e1e1e;
     color: #e0e0e0;
   }
 }
@@ -124,12 +124,144 @@
   gap: 12px;
 }
 
+.custom-duration-section {
+  margin-bottom: 24px;
+
+  label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #333;
+    font-size: 15px;
+
+    .minimal-display & {
+      color: #e0e0e0;
+    }
+
+    .duration-value {
+      font-size: 18px;
+      color: #334155;
+      font-weight: 700;
+
+      .minimal-display & {
+        color: #94a3b8;
+      }
+    }
+  }
+
+  .duration-slider {
+    width: 100%;
+    height: 24px;
+    border-radius: 4px;
+    outline: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+    margin-bottom: 8px;
+
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #334155;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(51, 65, 85, 0.4);
+      transition: all 0.2s;
+      margin-top: -8px;
+
+      .minimal-display & {
+        background: #64748b;
+        box-shadow: 0 2px 6px rgba(100, 116, 139, 0.5);
+      }
+
+      &:hover {
+        transform: scale(1.2);
+        box-shadow: 0 3px 10px rgba(51, 65, 85, 0.6);
+
+        .minimal-display & {
+          box-shadow: 0 3px 10px rgba(100, 116, 139, 0.7);
+        }
+      }
+
+      &:active {
+        transform: scale(1.1);
+      }
+    }
+
+    &::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #334155;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 6px rgba(51, 65, 85, 0.4);
+      transition: all 0.2s;
+
+      .minimal-display & {
+        background: #64748b;
+        box-shadow: 0 2px 6px rgba(100, 116, 139, 0.5);
+      }
+
+      &:hover {
+        transform: scale(1.2);
+        box-shadow: 0 3px 10px rgba(51, 65, 85, 0.6);
+
+        .minimal-display & {
+          box-shadow: 0 3px 10px rgba(100, 116, 139, 0.7);
+        }
+      }
+
+      &:active {
+        transform: scale(1.1);
+      }
+    }
+
+    &::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: #e5e7eb;
+
+      .minimal-display & {
+        background: #374151;
+      }
+    }
+
+    &::-moz-range-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: #e5e7eb;
+
+      .minimal-display & {
+        background: #374151;
+      }
+    }
+  }
+
+  .slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #888;
+
+    .minimal-display & {
+      color: #888;
+    }
+  }
+}
+
+
 .quick-book-btn {
   padding: 16px 20px;
-  border: 2px solid #007bff;
+  border: 2px solid #334155;
   background-color: white;
-  color: #007bff;
-  border-radius: 8px;
+  color: #334155;
+  border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -137,20 +269,21 @@
   white-space: nowrap;
 
   .minimal-display & {
-    background-color: #1a1a1a;
-    border-color: #4a9eff;
-    color: #4a9eff;
+    background-color: #1e1e1e;
+    border-color: #64748b;
+    color: #cbd5e1;
   }
 
   &:hover {
-    background-color: #007bff;
+    background-color: #334155;
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    box-shadow: 0 4px 12px rgba(51, 65, 85, 0.4);
 
     .minimal-display & {
-      background-color: #4a9eff;
-      color: #1a1a1a;
+      background-color: #64748b;
+      color: white;
+      box-shadow: 0 4px 12px rgba(100, 116, 139, 0.4);
     }
   }
 
@@ -159,14 +292,14 @@
   }
 
   &.active {
-    background-color: #007bff;
-    border-color: #007bff;
+    background-color: #334155;
+    border-color: #334155;
     color: white;
 
     .minimal-display & {
-      background-color: #4a9eff;
-      border-color: #4a9eff;
-      color: #1a1a1a;
+      background-color: #64748b;
+      border-color: #64748b;
+      color: white;
     }
   }
 }
@@ -349,40 +482,40 @@
 }
 
 .btn-cancel {
-  background-color: #f5f5f5;
-  color: #666;
+  background-color: #f3f4f6;
+  color: #6b7280;
 
   .minimal-display & {
-    background-color: #2a2a2a;
-    color: #b0b0b0;
+    background-color: #374151;
+    color: #9ca3af;
   }
 
   &:hover:not(:disabled) {
-    background-color: #e0e0e0;
+    background-color: #e5e7eb;
 
     .minimal-display & {
-      background-color: #3a3a3a;
+      background-color: #4b5563;
     }
   }
 }
 
 .btn-book {
-  background-color: #28a745;
+  background-color: #334155;
   color: white;
 
   .minimal-display & {
-    background-color: #2ecc71;
-    color: #1a1a1a;
+    background-color: #64748b;
+    color: white;
   }
 
   &:hover:not(:disabled) {
-    background-color: #218838;
+    background-color: #1e293b;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 4px 12px rgba(51, 65, 85, 0.4);
 
     .minimal-display & {
-      background-color: #27ae60;
-      box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+      background-color: #475569;
+      box-shadow: 0 4px 12px rgba(100, 116, 139, 0.4);
     }
   }
 

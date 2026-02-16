@@ -14,6 +14,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Requires `Calendars.Read` or `Calendars.Read.Shared` permission for conflict checking
   - Improved error messages for permission-related failures
 
+### Security
+- **Room Booking Security**
+  - Added validation to prevent adding attendees or additional resources to room bookings
+  - Requests attempting to add `attendees`, `requiredAttendees`, `optionalAttendees`, `resources`, or `locations` fields are now rejected
+  - Applied to both Microsoft Graph and EWS booking methods
+  - Protects against unauthorized booking on behalf of other users
+
+### Changed
+- **Booking Modal UI Improvements**
+  - Replaced duration dropdown with intuitive slider control (5-minute intervals, 5-240 minutes)
+  - Updated to professional charcoal/slate color scheme across all booking interfaces
+  - Improved visual consistency between booking modal, single-room, and room-minimal displays
+  - Enhanced button hover effects and shadows for better user feedback
+  - Increased border radius for softer, more modern appearance
+
+### Technical
+- **SCSS Organization**
+  - Moved BookingModal.scss and WiFi.scss to centralized `/scss` folder
+  - Integrated component styles into compiled.scss for consistent delivery
+  - Removed direct SCSS imports from React components (now served via backend compiled styles.css)
+
 ## [1.2.0] - 2026-02-10
 
 ### Added

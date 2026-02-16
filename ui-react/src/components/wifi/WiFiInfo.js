@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import io from 'socket.io-client';
-import './WiFi.scss';
+// Styles are loaded from /css/styles.css (compiled.scss from backend)
 
 class WiFiInfo extends Component {
   constructor(props) {

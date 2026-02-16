@@ -16,6 +16,14 @@ module.exports = async function(msalClient, roomEmail, bookingDetails) {
 		throw new Error('Subject, start time, and end time are required');
 	}
 
+	// Security: Prevent adding attendees or resources to room bookings
+	const disallowedFields = ['attendees', 'requiredAttendees', 'optionalAttendees', 'resources', 'locations'];
+	for (const field of disallowedFields) {
+		if (bookingDetails[field] !== undefined) {
+			throw new Error('Cannot add attendees or additional resources to room bookings');
+		}
+	}
+
 	// Validate time range
 	const start = new Date(startTime);
 	const end = new Date(endTime);
