@@ -33,6 +33,12 @@ class Display extends Component {
       bookingConfig: {
         enableBooking: true
       },
+      colorsConfig: {
+        bookingButtonColor: '#334155',
+        statusAvailableColor: '#22c55e',
+        statusBusyColor: '#ef4444',
+        statusUpcomingColor: '#f59e0b'
+      },
       roomDetails: {
         appointmentExists: false,
         timesPresent: false,
@@ -124,6 +130,7 @@ class Display extends Component {
     this.fetchLogoConfig();
     this.fetchSidebarConfig();
     this.fetchBookingConfig();
+    this.fetchColorsConfig();
     
     // Update time every second
     this.timeInterval = setInterval(() => {
@@ -163,6 +170,23 @@ class Display extends Component {
         });
         // Apply button color as CSS custom property
         document.documentElement.style.setProperty('--booking-button-color', buttonColor);
+      });
+
+      this.socket.on('colorsConfigUpdated', (config) => {
+        console.log('Colors config updated via Socket.IO:', config);
+        this.setState({ 
+          colorsConfig: {
+            bookingButtonColor: config.bookingButtonColor || '#334155',
+            statusAvailableColor: config.statusAvailableColor || '#22c55e',
+            statusBusyColor: config.statusBusyColor || '#ef4444',
+            statusUpcomingColor: config.statusUpcomingColor || '#f59e0b'
+          }
+        });
+        // Apply all colors as CSS custom properties
+        document.documentElement.style.setProperty('--booking-button-color', config.bookingButtonColor || '#334155');
+        document.documentElement.style.setProperty('--status-available-color', config.statusAvailableColor || '#22c55e');
+        document.documentElement.style.setProperty('--status-busy-color', config.statusBusyColor || '#ef4444');
+        document.documentElement.style.setProperty('--status-upcoming-color', config.statusUpcomingColor || '#f59e0b');
       });
     }
   }
@@ -232,6 +256,29 @@ class Display extends Component {
       })
       .catch(err => {
         console.error('Error fetching booking config:', err);
+      });
+  }
+
+  fetchColorsConfig = () => {
+    fetch('/api/colors')
+      .then(response => response.json())
+      .then(data => {
+        this.setState({ 
+          colorsConfig: {
+            bookingButtonColor: data.bookingButtonColor || '#334155',
+            statusAvailableColor: data.statusAvailableColor || '#22c55e',
+            statusBusyColor: data.statusBusyColor || '#ef4444',
+            statusUpcomingColor: data.statusUpcomingColor || '#f59e0b'
+          }
+        });
+        // Apply all colors as CSS custom properties
+        document.documentElement.style.setProperty('--booking-button-color', data.bookingButtonColor || '#334155');
+        document.documentElement.style.setProperty('--status-available-color', data.statusAvailableColor || '#22c55e');
+        document.documentElement.style.setProperty('--status-busy-color', data.statusBusyColor || '#ef4444');
+        document.documentElement.style.setProperty('--status-upcoming-color', data.statusUpcomingColor || '#f59e0b');
+      })
+      .catch(err => {
+        console.error('Error fetching colors config:', err);
       });
   }
 
