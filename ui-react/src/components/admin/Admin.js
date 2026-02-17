@@ -73,6 +73,7 @@ class Admin extends Component {
       // Sync status
       syncStatus: null,
       syncStatusLoading: true,
+      syncStatusTick: Date.now(),
       
       // UI state
       activeTab: 'display'
@@ -92,11 +93,19 @@ class Admin extends Component {
     this.syncStatusInterval = setInterval(() => {
       this.loadSyncStatus();
     }, 30000);
+
+    // Update sync status timer every second for real-time display
+    this.syncStatusClockInterval = setInterval(() => {
+      this.setState({ syncStatusTick: Date.now() });
+    }, 1000);
   }
 
   componentWillUnmount() {
     if (this.syncStatusInterval) {
       clearInterval(this.syncStatusInterval);
+    }
+    if (this.syncStatusClockInterval) {
+      clearInterval(this.syncStatusClockInterval);
     }
   }
 
@@ -219,6 +228,11 @@ class Admin extends Component {
         logoSectionTitle: 'Logo Konfiguration',
         sidebarSectionTitle: 'Informationen Konfiguration',
         bookingSectionTitle: 'Buchungs Konfiguration',
+        displayTabLabel: 'Anzeige',
+        wifiTabLabel: 'WiFi',
+        logoTabLabel: 'Logo',
+        colorsTabLabel: 'Farben',
+        bookingTabLabel: 'Buchung',
         currentConfigTitle: 'Aktuelle Konfiguration',
         ssidLabel: 'SSID:',
         passwordLabel: 'Passwort:',
@@ -260,7 +274,7 @@ class Admin extends Component {
         enableBookingHelp: 'Ermöglicht Benutzern, Räume direkt über die Anzeige zu buchen',
         enableExtendMeetingLabel: 'Meeting-Verlängerung aktivieren',
         enableExtendMeetingHelp: 'Ermöglicht die Verlängerung laufender Meetings über die Anzeige',
-        colorsSectionTitle: 'Farb-Konfiguration',
+        colorsSectionTitle: 'Farben-Konfiguration',
         bookingButtonColorLabel: 'Buchungs-Button-Farbe',
         bookingButtonColorHelp: 'Wählen Sie die Farbe für Buchungs-Buttons',
         statusAvailableColorLabel: 'Verfügbar Status-Farbe',
@@ -301,6 +315,11 @@ class Admin extends Component {
         logoSectionTitle: 'Logo Configuration',
         sidebarSectionTitle: 'Information Configuration',
         bookingSectionTitle: 'Booking Configuration',
+        displayTabLabel: 'Display',
+        wifiTabLabel: 'WiFi',
+        logoTabLabel: 'Logo',
+        colorsTabLabel: 'Colors',
+        bookingTabLabel: 'Booking',
         currentConfigTitle: 'Current Configuration',
         ssidLabel: 'SSID:',
         passwordLabel: 'Password:',
@@ -823,7 +842,8 @@ class Admin extends Component {
       bookingPermissionMissing,
       activeTab,
       syncStatus,
-      syncStatusLoading
+      syncStatusLoading,
+      syncStatusTick
     } = this.state;
     const t = this.getTranslations();
     
@@ -864,7 +884,12 @@ class Admin extends Component {
 
           {/* Sync Status Banner */}
           {syncStatus && !syncStatusLoading && (
-            <div className={`admin-message ${syncStatus.isStale || !syncStatus.lastSyncSuccess ? 'admin-message-warning' : 'admin-message-success'}`}
+            <div className={`admin-message ${(() => {
+              const lastSyncTime = syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime) : null;
+              const secondsSinceSync = lastSyncTime ? Math.floor((syncStatusTick - lastSyncTime.getTime()) / 1000) : null;
+              const isStale = secondsSinceSync !== null && secondsSinceSync > 180;
+              return isStale || !syncStatus.lastSyncSuccess ? 'admin-message-warning' : 'admin-message-success';
+            })()}`}
                  style={{ marginBottom: '2rem' }}>
               <strong>{t.syncStatusTitle}:</strong> {' '}
               {syncStatus.hasNeverSynced ? (
@@ -872,22 +897,29 @@ class Admin extends Component {
               ) : (
                 <>
                   {t.syncStatusLastSync} {' '}
-                  {syncStatus.secondsSinceSync !== null && (
+                  {(() => {
+                    const lastSyncTime = syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime) : null;
+                    const secondsSinceSync = lastSyncTime ? Math.floor((syncStatusTick - lastSyncTime.getTime()) / 1000) : syncStatus.secondsSinceSync;
+                    return secondsSinceSync !== null ? (
                     <span>
                       {lang === 'de' 
-                        ? `${t.syncStatusMinutesAgo} ${syncStatus.secondsSinceSync} ${t.syncStatusMinutes}`
-                        : `${syncStatus.secondsSinceSync} ${t.syncStatusMinutes} ${t.syncStatusMinutesAgo}`
+                        ? `${t.syncStatusMinutesAgo} ${secondsSinceSync} ${t.syncStatusMinutes}`
+                        : `${secondsSinceSync} ${t.syncStatusMinutes} ${t.syncStatusMinutesAgo}`
                       }
                     </span>
-                  )} {' - '}
+                    ) : null;
+                  })()} {' - '}
                   {syncStatus.lastSyncSuccess ? (
                     <span>{t.syncStatusSuccess}</span>
                   ) : (
                     <span>{t.syncStatusFailed}</span>
                   )}
-                  {syncStatus.isStale && (
-                    <span> - {t.syncStatusStale}</span>
-                  )}
+                  {(() => {
+                    const lastSyncTime = syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime) : null;
+                    const secondsSinceSync = lastSyncTime ? Math.floor((syncStatusTick - lastSyncTime.getTime()) / 1000) : null;
+                    const isStale = secondsSinceSync !== null && secondsSinceSync > 180;
+                    return isStale ? <span> - {t.syncStatusStale}</span> : null;
+                  })()}
                   {syncStatus.syncErrorMessage && (
                     <div style={{ marginTop: '0.5rem' }}>
                       {t.syncStatusError} {syncStatus.syncErrorMessage}
@@ -904,31 +936,31 @@ class Admin extends Component {
               className={`admin-tab ${activeTab === 'display' ? 'active' : ''}`}
               onClick={() => this.switchTab('display')}
             >
-              {t.sidebarSectionTitle || 'Display'}
+              {t.displayTabLabel || 'Display'}
             </button>
             <button 
               className={`admin-tab ${activeTab === 'wifi' ? 'active' : ''}`}
               onClick={() => this.switchTab('wifi')}
             >
-              {t.wifiSectionTitle || 'WiFi'}
+              {t.wifiTabLabel || 'WiFi'}
             </button>
             <button 
               className={`admin-tab ${activeTab === 'logo' ? 'active' : ''}`}
               onClick={() => this.switchTab('logo')}
             >
-              {t.logoSectionTitle || 'Logo'}
+              {t.logoTabLabel || 'Logo'}
             </button>
             <button 
               className={`admin-tab ${activeTab === 'colors' ? 'active' : ''}`}
               onClick={() => this.switchTab('colors')}
             >
-              {t.colorsSectionTitle || 'Colors'}
+              {t.colorsTabLabel || 'Colors'}
             </button>
             <button 
               className={`admin-tab ${activeTab === 'booking' ? 'active' : ''}`}
               onClick={() => this.switchTab('booking')}
             >
-              {t.bookingSectionTitle || 'Booking'}
+              {t.bookingTabLabel || 'Booking'}
             </button>
           </div>
 
