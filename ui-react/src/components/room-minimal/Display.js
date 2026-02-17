@@ -7,6 +7,7 @@ import { formatTimeRange } from '../../utils/timeFormat.js';
 import Socket from '../global/Socket';
 import Spinner from '../global/Spinner';
 import BookingModal from '../booking/BookingModal';
+import ExtendMeetingModal from '../booking/ExtendMeetingModal';
 
 /**
  * Helper function to convert hex color to RGBA
@@ -155,7 +156,9 @@ class Display extends Component {
         minimalHeaderStyle: 'filled'
       },
       bookingConfig: {
-        enableBooking: true
+        enableBooking: true,
+        enableExtendMeeting: false,
+        extendMeetingUrlAllowlist: []
       },
       colorsConfig: {
         bookingButtonColor: '#334155',
@@ -169,7 +172,8 @@ class Display extends Component {
         upcomingAppointments: false,
         nextUp: ''
       },
-      showBookingModal: false
+      showBookingModal: false,
+      showExtendModal: false
     };
     this.socket = null;
     this.timeInterval = null;
@@ -289,7 +293,9 @@ class Display extends Component {
         this.setState({ 
           bookingConfig: {
             enableBooking: config.enableBooking !== undefined ? config.enableBooking : true,
-            buttonColor: buttonColor
+            buttonColor: buttonColor,
+            enableExtendMeeting: config.enableExtendMeeting !== undefined ? config.enableExtendMeeting : false,
+            extendMeetingUrlAllowlist: Array.isArray(config.extendMeetingUrlAllowlist) ? config.extendMeetingUrlAllowlist : []
           }
         });
         // Apply button color as CSS custom property
@@ -384,7 +390,9 @@ class Display extends Component {
         this.setState({ 
           bookingConfig: {
             enableBooking: data.enableBooking !== undefined ? data.enableBooking : true,
-            buttonColor: buttonColor
+            buttonColor: buttonColor,
+            enableExtendMeeting: data.enableExtendMeeting !== undefined ? data.enableExtendMeeting : false,
+            extendMeetingUrlAllowlist: Array.isArray(data.extendMeetingUrlAllowlist) ? data.extendMeetingUrlAllowlist : []
           }
         });
         // Apply button color as CSS custom property
@@ -435,6 +443,11 @@ class Display extends Component {
    * @param {number} minutes - Number of minutes to extend (15 or 30)
    */
   handleExtendMeeting = (minutes) => {
+    if (!this.isExtendMeetingAllowed()) {
+      console.warn('Extend meeting is disabled for this display');
+      return;
+    }
+
     const { room } = this.state;
     
     if (!room || !room.Appointments || room.Appointments.length === 0 || !room.Busy) {
@@ -481,13 +494,50 @@ class Display extends Component {
       });
   }
 
+  isExtendMeetingAllowed = () => {
+    const { bookingConfig } = this.state;
+    const allowlist = bookingConfig.extendMeetingUrlAllowlist;
+
+    if (!bookingConfig.enableExtendMeeting) {
+      return false;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const enabledByParam = params.get('extendbooking') === 'true';
+    if (!enabledByParam) {
+      return false;
+    }
+
+    if (!Array.isArray(allowlist) || allowlist.length === 0) {
+      return true;
+    }
+
+    const currentUrl = window.location.href;
+    const currentPath = window.location.pathname;
+
+    return allowlist.some((entry) => {
+      if (!entry) return false;
+      if (entry.startsWith('/') && entry.endsWith('/') && entry.length > 2) {
+        try {
+          const regex = new RegExp(entry.slice(1, -1));
+          return regex.test(currentUrl) || regex.test(currentPath);
+        } catch (err) {
+          console.warn('Invalid extendMeetingUrlAllowlist regex:', entry);
+          return false;
+        }
+      }
+      return currentUrl.includes(entry) || currentPath.includes(entry);
+    });
+  }
+
   getLanguage = () => {
     const browserLang = navigator.language || navigator.userLanguage;
     return browserLang.split('-')[0];
   }
 
   render() {
-    const { response, room, roomDetails, currentTime, wifiConfig, logoConfig, sidebarConfig, bookingConfig, showBookingModal, showErrorModal, errorMessage } = this.state;
+    const { response, room, roomDetails, currentTime, wifiConfig, logoConfig, sidebarConfig, bookingConfig, showBookingModal, showExtendModal, showErrorModal, errorMessage } = this.state;
+    const canExtendMeeting = this.isExtendMeetingAllowed();
     const lang = this.getLanguage();
     const errorText = lang === 'de' ? 'Fehler' : 'Error';
 
@@ -559,26 +609,6 @@ class Display extends Component {
                           new Date(parseInt(room.Appointments[0].End, 10)),
                           true
                         )}
-                      </div>
-                    )}
-                    
-                    {/* Extend meeting buttons - only when room is busy */}
-                    {room.Busy && (
-                      <div className="minimal-extend-buttons">
-                        <button 
-                          className="minimal-extend-button" 
-                          onClick={() => this.handleExtendMeeting(15)}
-                          title={lang === 'de' ? 'Um 15 Minuten verlängern' : 'Extend by 15 minutes'}
-                        >
-                          +15 min
-                        </button>
-                        <button 
-                          className="minimal-extend-button" 
-                          onClick={() => this.handleExtendMeeting(30)}
-                          title={lang === 'de' ? 'Um 30 Minuten verlängern' : 'Extend by 30 minutes'}
-                        >
-                          +30 min
-                        </button>
                       </div>
                     )}
                   </div>
@@ -737,8 +767,17 @@ class Display extends Component {
                   </div>
                 )}
 
-                {/* Book Room Button - Only show when room is available */}
-                {!room.Busy && bookingConfig.enableBooking ? (
+                {/* Action Button - Extend when busy, Book when available */}
+                {room.Busy && canExtendMeeting ? (
+                  <div className="minimal-sidebar-booking">
+                    <button 
+                      className="minimal-sidebar-book-btn" 
+                      onClick={() => this.setState({ showExtendModal: true })}
+                    >
+                      {lang === 'de' ? 'Meeting verlängern' : 'Extend Meeting'}
+                    </button>
+                  </div>
+                ) : !room.Busy && bookingConfig.enableBooking ? (
                   <div className="minimal-sidebar-booking">
                     <button 
                       className="minimal-sidebar-book-btn" 
@@ -773,6 +812,17 @@ class Display extends Component {
             onClose={() => this.setState({ showBookingModal: false })}
             onSuccess={() => {
               // Refresh room data after successful booking
+              this.getRoomsData();
+            }}
+          />
+        )}
+
+        {showExtendModal && canExtendMeeting && (
+          <ExtendMeetingModal
+            room={room}
+            theme="dark"
+            onClose={() => this.setState({ showExtendModal: false })}
+            onSuccess={() => {
               this.getRoomsData();
             }}
           />

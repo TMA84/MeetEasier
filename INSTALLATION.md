@@ -356,12 +356,14 @@ Control what information is displayed in room display sidebars:
 Enable or disable the room booking feature:
 
 - **Enable Booking Feature**: Toggle room booking on/off
+- **Enable Extend Meeting**: Toggle meeting extensions on/off (disabled by default)
 
 **Features:**
 - Automatic permission detection
 - Disabled automatically if `Calendars.ReadWrite` permission is missing
 - Real-time updates across all displays
 - Warning message if permission is missing
+- Extend meeting requires `?extendbooking=true` in display URL
 
 ### Configuration Locks
 
@@ -416,6 +418,7 @@ http://your-server:8080/room/conference-room-a
 - Next meeting preview (when room is busy)
 - Sidebar with clock, logo, WiFi/upcoming meetings
 - Room booking button (when available and enabled)
+- Extend meeting button (when busy, enabled in admin, and URL has `?extendbooking=true`)
 - Real-time updates
 
 **How to find room alias:**
@@ -437,6 +440,9 @@ http://your-server:8080/room-minimal/:roomAlias
 ```
 http://your-server:8080/room-minimal/conference-room-a
 ```
+
+**Extend meeting:**
+- Available when busy, enabled in admin, and URL has `?extendbooking=true`
 
 **Features:**
 - Compact design optimized for small screens

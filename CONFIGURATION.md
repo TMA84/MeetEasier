@@ -221,6 +221,12 @@ ENABLE_BOOKING=true
 - Admin consent must be granted
 - Room mailboxes must allow direct booking
 
+**Extend Meeting:**
+- Disabled by default
+- Can be enabled in the admin panel (Booking Configuration)
+- Requires `?extendbooking=true` in the display URL
+- Optional URL allowlist in `booking-config.json`
+
 **Valid values:** `true`, `false`
 
 ---
@@ -436,6 +442,9 @@ data/
 ```json
 {
   "enableBooking": true,
+  "buttonColor": "#334155",
+  "enableExtendMeeting": false,
+  "extendMeetingUrlAllowlist": [],
   "lastUpdated": "2026-02-08T14:30:00.000Z"
 }
 ```
@@ -522,7 +531,7 @@ socket.on('wifiConfigUpdated', (config) => {
 - Returns: Updated configuration
 
 **POST /api/booking-config**
-- Body: `{ "enableBooking": boolean }`
+- Body: `{ "enableBooking": boolean, "buttonColor"?: string, "enableExtendMeeting"?: boolean, "extendMeetingUrlAllowlist"?: string[] }`
 - Returns: Updated configuration
 - Validates permission before enabling
 
@@ -916,7 +925,10 @@ curl -X POST http://localhost:8080/api/sidebar \
 **Response:**
 ```json
 {
-  "enableBooking": true
+  "enableBooking": true,
+  "buttonColor": "#334155",
+  "enableExtendMeeting": false,
+  "extendMeetingUrlAllowlist": []
 }
 ```
 
@@ -934,7 +946,9 @@ curl http://localhost:8080/api/booking-config
 **Request Body:**
 ```json
 {
-  "enableBooking": true
+  "enableBooking": true,
+  "enableExtendMeeting": true,
+  "extendMeetingUrlAllowlist": ["/single-room/"]
 }
 ```
 
@@ -943,7 +957,9 @@ curl http://localhost:8080/api/booking-config
 {
   "success": true,
   "config": {
-    "enableBooking": true
+    "enableBooking": true,
+    "enableExtendMeeting": true,
+    "extendMeetingUrlAllowlist": ["/single-room/"]
   },
   "message": "Booking configuration updated"
 }
@@ -954,7 +970,7 @@ curl http://localhost:8080/api/booking-config
 curl -X POST http://localhost:8080/api/booking-config \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer ${API_TOKEN}" \
-  -d '{"enableBooking": true}'
+  -d '{"enableBooking": true, "enableExtendMeeting": true, "extendMeetingUrlAllowlist": ["/single-room/"]}'
 ```
 
 ---

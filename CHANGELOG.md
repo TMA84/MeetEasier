@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-02-17
+
+### Added
+- **Extend Meeting Admin Control**
+  - New admin toggle to enable/disable meeting extensions globally
+  - Extend meeting requires `?extendbooking=true` in display URL
+  - Optional URL allowlist via booking configuration
+
+### Changed
+- **Extend Meeting UX**
+  - Extend action moved to the sidebar button location
+  - Extend modal now uses the same duration options as booking (5–240 minutes)
+
+- **Booking Conflict Handling**
+  - Removed redundant pre-check to avoid false conflicts; rely on booking implementation
+
+### Technical
+- **Configuration**
+  - `booking-config.json` now includes `enableExtendMeeting` and `extendMeetingUrlAllowlist`
+
+## [1.2.4] - 2026-02-17
+
+### Added
+- **Extend Meeting Controls**
+  - Admin toggle to enable/disable extend meeting (disabled by default)
+  - Extend meeting uses booking-style modal with quick buttons and custom slider (5–240 minutes)
+  - Sidebar action button swaps between Book/Extend based on room state
+
+### Changed
+- **Extend Meeting Access**
+  - Requires `?extendbooking=true` in display URL
+  - Optional URL allowlist support via booking config
+  - Buttons removed from meeting cards for a cleaner UI
+
+### Fixed
+- **Booking Availability**
+  - Removed pre-check that could incorrectly block short bookings
+
+### Documentation
+- Updated booking configuration docs and API examples
+
 ## [1.2.3] - 2026-02-16
 
 ### Added

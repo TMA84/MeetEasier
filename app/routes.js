@@ -294,44 +294,7 @@ module.exports = function(app) {
 		const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
 
 		try {
-			// First, check if the room is available during the requested time
-			const requestedStart = new Date(startTime);
-			const requestedEnd = new Date(endTime);
-
-			// Get the room's calendar to check for conflicts
-			let calendarEvents;
-			if (useGraphAPI) {
-				const graphApi = require('./msgraph/graph.js');
-				const calendarView = await graphApi.getCalendarView(msalClient, roomEmail);
-				calendarEvents = calendarView.value || [];
-			} else {
-				// For EWS, we need to get calendar events
-				const ewsApi = require('./ews/rooms.js');
-				// EWS rooms.js returns all rooms with their appointments
-				// We need a different approach for EWS - check in the booking function itself
-				calendarEvents = null; // Will be checked in EWS booking function
-			}
-
-			// Check for conflicts (only for Graph API, EWS will check internally)
-			if (calendarEvents) {
-				const hasConflict = calendarEvents.some(event => {
-					const eventStart = new Date(event.start.dateTime);
-					const eventEnd = new Date(event.end.dateTime);
-					
-					// Check if there's any overlap
-					// Overlap occurs if: (requestedStart < eventEnd) AND (requestedEnd > eventStart)
-					return requestedStart < eventEnd && requestedEnd > eventStart;
-				});
-
-				if (hasConflict) {
-					return res.status(409).json({
-						error: 'Room not available',
-						message: 'The room is already booked during the requested time'
-					});
-				}
-			}
-
-			// Room is available, proceed with booking
+			// Proceed with booking (conflict checks are handled in booking implementations)
 			if (useGraphAPI) {
 				const bookRoom = require('./msgraph/booking.js');
 				const result = await bookRoom(msalClient, roomEmail, bookingDetails);
@@ -353,9 +316,16 @@ module.exports = function(app) {
 			}
 		} catch (error) {
 			console.error('Booking error:', error);
+			const errorMessage = error.message || 'Failed to book room';
+			if (errorMessage.toLowerCase().includes('already booked')) {
+				return res.status(409).json({
+					error: 'Room not available',
+					message: errorMessage
+				});
+			}
 			res.status(500).json({ 
 				error: 'Booking failed',
-				message: error.message || 'Failed to book room'
+				message: errorMessage
 			});
 		}
 	});
@@ -375,10 +345,14 @@ module.exports = function(app) {
 			missingFieldsDetails: isGerman 
 				? 'Raum-E-Mail, Termin-ID und Minuten sind erforderlich' 
 				: 'Room email, appointment ID, and minutes are required',
+			extendDisabled: isGerman ? 'Meeting-Verlängerung deaktiviert' : 'Extend meeting disabled',
+			extendDisabledDetails: isGerman
+				? 'Die Meeting-Verlängerung ist in der Admin-Konfiguration deaktiviert'
+				: 'Extend meeting is disabled in the admin configuration',
 			invalidMinutes: isGerman ? 'Ungültiger Minutenwert' : 'Invalid minutes value',
 			invalidMinutesDetails: isGerman 
-				? 'Minuten müssen entweder 15 oder 30 sein' 
-				: 'Minutes must be either 15 or 30',
+				? 'Minuten müssen zwischen 5 und 240 liegen (Schritte von 5)' 
+				: 'Minutes must be between 5 and 240 (steps of 5)',
 			conflictError: isGerman
 				? 'Meeting kann nicht verlängert werden - ein weiterer Termin ist zu bald geplant. Bitte überprüfen Sie den Raumkalender.'
 				: 'Cannot extend meeting - another meeting is scheduled too soon. Please check the room calendar.',
@@ -398,8 +372,19 @@ module.exports = function(app) {
 			});
 		}
 
-		// Validate minutes value
-		if (![15, 30].includes(minutes)) {
+		// Check admin config for extend meeting
+		const bookingConfig = require('./config-manager').getBookingConfig();
+		if (!bookingConfig.enableExtendMeeting) {
+			return res.status(403).json({
+				success: false,
+				error: t.extendDisabled,
+				message: t.extendDisabledDetails
+			});
+		}
+
+		// Validate minutes value (5..240, step 5)
+		const minutesValue = Number(minutes);
+		if (!Number.isFinite(minutesValue) || minutesValue < 5 || minutesValue > 240 || minutesValue % 5 !== 0) {
 			return res.status(400).json({ 
 				error: t.invalidMinutes,
 				message: t.invalidMinutesDetails
@@ -739,23 +724,23 @@ module.exports = function(app) {
 	// Update booking configuration (protected - requires token)
 	app.post('/api/booking-config', checkApiToken, async function(req, res) {
 		try {
-			const { enableBooking, buttonColor } = req.body;
+			const { enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist } = req.body;
 			
-			if (enableBooking === undefined) {
-				return res.status(400).json({ error: 'enableBooking field is required' });
+			if (enableBooking === undefined && buttonColor === undefined && enableExtendMeeting === undefined && extendMeetingUrlAllowlist === undefined) {
+				return res.status(400).json({ error: 'At least one booking configuration option is required' });
 			}
 
 			// Check if Calendars.ReadWrite permission is available
 			const hasPermission = await checkCalendarWritePermission();
 			
-			if (enableBooking && !hasPermission) {
+			if (enableBooking === true && !hasPermission) {
 				return res.status(403).json({ 
 					error: 'Cannot enable booking: Calendars.ReadWrite permission is missing',
 					message: 'Please grant Calendars.ReadWrite permission in Azure AD to enable the booking feature'
 				});
 			}
 
-			const config = await configManager.updateBookingConfig(enableBooking, buttonColor);
+			const config = await configManager.updateBookingConfig(enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist);
 			res.json({ 
 				success: true, 
 				config,

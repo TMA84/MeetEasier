@@ -96,6 +96,8 @@ function getBookingConfig() {
 		return {
 			enableBooking: config.bookingDefaults.enableBooking,
 			buttonColor: '#334155',
+			enableExtendMeeting: config.bookingDefaults.enableExtendMeeting,
+			extendMeetingUrlAllowlist: config.bookingDefaults.extendMeetingUrlAllowlist,
 			lastUpdated: null
 		};
 	}
@@ -187,9 +189,26 @@ function saveSidebarConfig(config) {
  * @returns {Object} Saved configuration with timestamp
  */
 function saveBookingConfig(config) {
+	// Read existing config first to preserve fields not being updated
+	let existingConfig = {};
+	try {
+		const data = fs.readFileSync(bookingConfigPath, 'utf8');
+		existingConfig = JSON.parse(data);
+	} catch (err) {
+		// File doesn't exist or is invalid, use defaults
+	}
+	
 	const configData = {
-		enableBooking: config.enableBooking !== undefined ? config.enableBooking : true,
-		buttonColor: config.buttonColor || '#334155',
+		enableBooking: config.enableBooking !== undefined
+			? config.enableBooking
+			: (existingConfig.enableBooking !== undefined ? existingConfig.enableBooking : true),
+		buttonColor: config.buttonColor || existingConfig.buttonColor || '#334155',
+		enableExtendMeeting: config.enableExtendMeeting !== undefined
+			? config.enableExtendMeeting
+			: (existingConfig.enableExtendMeeting !== undefined ? existingConfig.enableExtendMeeting : false),
+		extendMeetingUrlAllowlist: Array.isArray(config.extendMeetingUrlAllowlist)
+			? config.extendMeetingUrlAllowlist
+			: (Array.isArray(existingConfig.extendMeetingUrlAllowlist) ? existingConfig.extendMeetingUrlAllowlist : []),
 		lastUpdated: new Date().toISOString()
 	};
 	
@@ -310,8 +329,8 @@ async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTi
  * @param {string} buttonColor - Hex color for booking buttons
  * @returns {Promise<Object>} Updated configuration
  */
-async function updateBookingConfig(enableBooking, buttonColor) {
-	const config = saveBookingConfig({ enableBooking, buttonColor });
+async function updateBookingConfig(enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist) {
+	const config = saveBookingConfig({ enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist });
 	
 	// Emit Socket.IO event to notify all connected clients
 	if (io) {

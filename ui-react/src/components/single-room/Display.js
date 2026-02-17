@@ -8,6 +8,7 @@ import Sidebar from './Sidebar';
 import Socket from '../global/Socket';
 import Spinner from '../global/Spinner';
 import BookingModal from '../booking/BookingModal';
+import ExtendMeetingModal from '../booking/ExtendMeetingModal';
 
 /**
  * Display component for single room view
@@ -42,7 +43,9 @@ class Display extends Component {
         showMeetingTitles: false
       },
       bookingConfig: {
-        enableBooking: true
+        enableBooking: true,
+        enableExtendMeeting: false,
+        extendMeetingUrlAllowlist: []
       },
       colorsConfig: {
         bookingButtonColor: '#334155',
@@ -51,6 +54,7 @@ class Display extends Component {
         statusUpcomingColor: '#f59e0b'
       },
       showBookingModal: false,
+      showExtendModal: false,
       showErrorModal: false,
       errorMessage: ''
     };
@@ -172,7 +176,9 @@ class Display extends Component {
         this.setState({ 
           bookingConfig: {
             enableBooking: config.enableBooking !== undefined ? config.enableBooking : true,
-            buttonColor: buttonColor
+            buttonColor: buttonColor,
+            enableExtendMeeting: config.enableExtendMeeting !== undefined ? config.enableExtendMeeting : false,
+            extendMeetingUrlAllowlist: Array.isArray(config.extendMeetingUrlAllowlist) ? config.extendMeetingUrlAllowlist : []
           }
         });
         // Apply button color as CSS custom property
@@ -236,7 +242,9 @@ class Display extends Component {
         this.setState({ 
           bookingConfig: {
             enableBooking: data.enableBooking !== undefined ? data.enableBooking : true,
-            buttonColor: buttonColor
+            buttonColor: buttonColor,
+            enableExtendMeeting: data.enableExtendMeeting !== undefined ? data.enableExtendMeeting : false,
+            extendMeetingUrlAllowlist: Array.isArray(data.extendMeetingUrlAllowlist) ? data.extendMeetingUrlAllowlist : []
           }
         });
         // Apply button color as CSS custom property
@@ -275,6 +283,11 @@ class Display extends Component {
    * @param {number} minutes - Number of minutes to extend (15 or 30)
    */
   handleExtendMeeting = (minutes) => {
+    if (!this.isExtendMeetingAllowed()) {
+      console.warn('Extend meeting is disabled for this display');
+      return;
+    }
+
     const { room } = this.state;
     
     if (!room || !room.Appointments || room.Appointments.length === 0 || !room.Busy) {
@@ -324,8 +337,45 @@ class Display extends Component {
       });
   }
 
+  isExtendMeetingAllowed = () => {
+    const { bookingConfig } = this.state;
+    const allowlist = bookingConfig.extendMeetingUrlAllowlist;
+
+    if (!bookingConfig.enableExtendMeeting) {
+      return false;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const enabledByParam = params.get('extendbooking') === 'true';
+    if (!enabledByParam) {
+      return false;
+    }
+
+    if (!Array.isArray(allowlist) || allowlist.length === 0) {
+      return true;
+    }
+
+    const currentUrl = window.location.href;
+    const currentPath = window.location.pathname;
+
+    return allowlist.some((entry) => {
+      if (!entry) return false;
+      if (entry.startsWith('/') && entry.endsWith('/') && entry.length > 2) {
+        try {
+          const regex = new RegExp(entry.slice(1, -1));
+          return regex.test(currentUrl) || regex.test(currentPath);
+        } catch (err) {
+          console.warn('Invalid extendMeetingUrlAllowlist regex:', entry);
+          return false;
+        }
+      }
+      return currentUrl.includes(entry) || currentPath.includes(entry);
+    });
+  }
+
   render() {
-    const { response, room, roomDetails, sidebarConfig, bookingConfig, showBookingModal, showErrorModal, errorMessage } = this.state;
+    const { response, room, roomDetails, sidebarConfig, bookingConfig, showBookingModal, showExtendModal, showErrorModal, errorMessage } = this.state;
+    const canExtendMeeting = this.isExtendMeetingAllowed();
     
     console.log('Render - showErrorModal:', showErrorModal, 'errorMessage:', errorMessage);
     
@@ -333,6 +383,7 @@ class Display extends Component {
     const browserLang = navigator.language || navigator.userLanguage;
     const lang = browserLang.split('-')[0];
     const bookButtonText = lang === 'de' ? 'Raum buchen' : 'Book This Room';
+    const extendButtonText = lang === 'de' ? 'Meeting verlängern' : 'Extend Meeting';
     const errorText = lang === 'de' ? 'Fehler' : 'Error';
 
     return (
@@ -347,7 +398,6 @@ class Display extends Component {
               details={roomDetails} 
               config={config} 
               sidebarConfig={sidebarConfig}
-              onExtendMeeting={this.handleExtendMeeting}
             />
             <Sidebar 
               room={room} 
@@ -355,7 +405,9 @@ class Display extends Component {
               config={config}
               bookingConfig={bookingConfig}
               onBookRoom={() => this.setState({ showBookingModal: true })}
+              onExtendMeeting={canExtendMeeting ? () => this.setState({ showExtendModal: true }) : null}
               bookButtonText={bookButtonText}
+              extendButtonText={extendButtonText}
             />
           </div>
         ) : (
@@ -369,6 +421,16 @@ class Display extends Component {
             onClose={() => this.setState({ showBookingModal: false })}
             onSuccess={() => {
               // Refresh room data after successful booking
+              this.getRoomsData();
+            }}
+          />
+        )}
+
+        {showExtendModal && canExtendMeeting && (
+          <ExtendMeetingModal
+            room={room}
+            onClose={() => this.setState({ showExtendModal: false })}
+            onSuccess={() => {
               this.getRoomsData();
             }}
           />
