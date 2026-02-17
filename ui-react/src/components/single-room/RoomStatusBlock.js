@@ -19,8 +19,7 @@ const RoomStatusBlock = ({
   room, 
   sidebarConfig = {
     showMeetingTitles: false
-  },
-  onExtendMeeting
+  }
 }) => {
   const currentTime = new Date();
   let nextAppointmentStartTime = null;
@@ -88,25 +87,6 @@ const RoomStatusBlock = ({
                   )}
                 </div>
                 
-                {/* Extend meeting buttons - only shown when room is busy */}
-                {room.Busy && onExtendMeeting && (
-                  <div className="meeting-extend-buttons">
-                    <button 
-                      className="extend-button" 
-                      onClick={() => onExtendMeeting(15)}
-                      title="Extend by 15 minutes"
-                    >
-                      +15 min
-                    </button>
-                    <button 
-                      className="extend-button" 
-                      onClick={() => onExtendMeeting(30)}
-                      title="Extend by 30 minutes"
-                    >
-                      +30 min
-                    </button>
-                  </div>
-                )}
               </div>
             )}
 
@@ -170,8 +150,7 @@ RoomStatusBlock.propTypes = {
   config: PropTypes.object.isRequired,
   sidebarConfig: PropTypes.shape({
     showMeetingTitles: PropTypes.bool
-  }),
-  onExtendMeeting: PropTypes.func
+  })
 };
 
 export default RoomStatusBlock;

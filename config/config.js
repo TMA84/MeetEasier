@@ -76,6 +76,8 @@ module.exports = {
 
 	// Booking feature configuration
 	bookingDefaults: {
-		enableBooking: process.env.ENABLE_BOOKING === 'true' || process.env.ENABLE_BOOKING === undefined
+		enableBooking: process.env.ENABLE_BOOKING === 'true' || process.env.ENABLE_BOOKING === undefined,
+		enableExtendMeeting: false,
+		extendMeetingUrlAllowlist: []
 	}
 };

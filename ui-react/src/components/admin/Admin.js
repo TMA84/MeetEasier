@@ -51,6 +51,8 @@ class Admin extends Component {
       bookingMessage: null,
       bookingMessageType: null,
       bookingPermissionMissing: false,
+      currentEnableExtendMeeting: false,
+      enableExtendMeeting: false,
       
       // Color state
       bookingButtonColor: '#334155',
@@ -256,6 +258,8 @@ class Admin extends Component {
         sidebarHelp: 'Wählen Sie aus, was in der Sidebar der Raumanzeigen angezeigt werden soll',
         enableBookingLabel: 'Buchungsfunktion aktivieren',
         enableBookingHelp: 'Ermöglicht Benutzern, Räume direkt über die Anzeige zu buchen',
+        enableExtendMeetingLabel: 'Meeting-Verlängerung aktivieren',
+        enableExtendMeetingHelp: 'Ermöglicht die Verlängerung laufender Meetings über die Anzeige',
         colorsSectionTitle: 'Farb-Konfiguration',
         bookingButtonColorLabel: 'Buchungs-Button-Farbe',
         bookingButtonColorHelp: 'Wählen Sie die Farbe für Buchungs-Buttons',
@@ -336,6 +340,8 @@ class Admin extends Component {
         sidebarHelp: 'Choose what to display in the sidebar of room displays',
         enableBookingLabel: 'Enable Booking Feature',
         enableBookingHelp: 'Allows users to book rooms directly from the display',
+        enableExtendMeetingLabel: 'Enable Extend Meeting',
+        enableExtendMeetingHelp: 'Allows extending ongoing meetings from the display',
         colorsSectionTitle: 'Color Configuration',
         bookingButtonColorLabel: 'Booking Button Color',
         bookingButtonColorHelp: 'Choose the color for booking buttons',
@@ -445,6 +451,8 @@ class Admin extends Component {
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
             : '-',
           enableBooking: data.enableBooking !== undefined ? data.enableBooking : true,
+          currentEnableExtendMeeting: data.enableExtendMeeting !== undefined ? data.enableExtendMeeting : false,
+          enableExtendMeeting: data.enableExtendMeeting !== undefined ? data.enableExtendMeeting : false,
           bookingPermissionMissing: data.permissionMissing || false,
           bookingButtonColor: data.buttonColor || '#334155',
           currentBookingButtonColor: data.buttonColor || '#334155'
@@ -697,7 +705,7 @@ class Admin extends Component {
   handleBookingSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
-    const { apiToken, enableBooking, bookingButtonColor } = this.state;
+    const { apiToken, enableBooking, enableExtendMeeting, bookingButtonColor } = this.state;
     
     const headers = {
       'Content-Type': 'application/json',
@@ -710,7 +718,7 @@ class Admin extends Component {
     fetch('/api/booking-config', {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify({ enableBooking, buttonColor: bookingButtonColor })
+      body: JSON.stringify({ enableBooking, enableExtendMeeting, buttonColor: bookingButtonColor })
     })
     .then(response => {
       if (response.status === 401) {
@@ -801,10 +809,10 @@ class Admin extends Component {
       currentSsid, currentPassword, wifiLastUpdated, 
       currentLogoDarkUrl, currentLogoLightUrl, logoLastUpdated,
       currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, currentMinimalHeaderStyle, informationLastUpdated,
-      currentEnableBooking, bookingLastUpdated,
+      currentEnableBooking, currentEnableExtendMeeting, bookingLastUpdated,
       apiToken, ssid, password, logoDarkUrl, logoLightUrl, logoDarkFile, logoLightFile, uploadMode,
       showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle,
-      enableBooking,
+      enableBooking, enableExtendMeeting,
       bookingButtonColor, currentBookingButtonColor,
       statusAvailableColor, currentStatusAvailableColor,
       statusBusyColor, currentStatusBusyColor,
@@ -1301,6 +1309,10 @@ class Admin extends Component {
                   <span className="config-value">{currentEnableBooking ? 'Yes' : 'No'}</span>
                 </div>
                 <div className="config-item">
+                  <span className="config-label">{t.enableExtendMeetingLabel}</span>
+                  <span className="config-value">{currentEnableExtendMeeting ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="config-item">
                   <span className="config-label">{t.bookingButtonColorLabel}</span>
                   <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ 
@@ -1344,6 +1356,18 @@ class Admin extends Component {
                     : t.enableBookingHelp
                   }
                 </small>
+              </div>
+
+              <div className="admin-form-group">
+                <label className="inline-label">
+                  <span className="label-text">{t.enableExtendMeetingLabel}</span>
+                  <input
+                    type="checkbox"
+                    checked={enableExtendMeeting}
+                    onChange={(e) => this.setState({ enableExtendMeeting: e.target.checked })}
+                  />
+                </label>
+                <small>{t.enableExtendMeetingHelp}</small>
               </div>
 
               <button 

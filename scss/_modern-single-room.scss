@@ -383,6 +383,39 @@
       }
     }
   }
+
+  // Extend meeting button section
+  .sidebar-extend {
+    flex-shrink: 0;
+    margin-top: clamp(1rem, 2vh, 1.5rem);
+    margin-bottom: clamp(0.5rem, 1vh, 1rem);
+    
+    .sidebar-extend-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--booking-button-color, #334155) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 70%, black) 100%);
+      color: $text-on-color;
+      border: none;
+      padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
+      font-size: clamp(0.85rem, 1.2vw, 1.25rem);
+      font-weight: $font-weight-bold;
+      border-radius: $radius-lg;
+      cursor: pointer;
+      transition: all $transition-base;
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 30%, transparent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
+        background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #334155) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 60%, black) 100%);
+      }
+      
+      &:active {
+        transform: translateY(0);
+      }
+    }
+  }
   
   // WiFi section
   .sidebar-wifi {
