@@ -3,18 +3,85 @@ const config = require('../config/config');
 
 const msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
 
+let isRunning = false;
+let lastSyncTime = null;
+let lastSyncSuccess = null;
+let syncErrorMessage = null;
+let socketIO = null;
+
+function fetchAndBroadcastRooms() {
+  return new Promise((resolve) => {
+    if (!socketIO) {
+      resolve(false);
+      return;
+    }
+
+    let api;
+    if (config.calendarSearch.useGraphAPI === 'true') {
+      api = require('./msgraph/rooms.js');
+    } else {
+      api = require('./ews/rooms.js');
+    }
+
+    api(function(err, result) {
+      lastSyncTime = new Date().toISOString();
+
+      if (result) {
+        if (err) {
+          console.error('Error fetching room data:', err);
+          lastSyncSuccess = false;
+          syncErrorMessage = err.message || 'Unknown error';
+          socketIO.of('/').emit('controllerDone', 'done');
+          resolve(false);
+          return;
+        }
+
+        lastSyncSuccess = true;
+        syncErrorMessage = null;
+        socketIO.of('/').emit('updatedRooms', result);
+      } else {
+        lastSyncSuccess = false;
+        syncErrorMessage = 'No data returned from API';
+      }
+
+      socketIO.of('/').emit('controllerDone', 'done');
+      resolve(true);
+    }, msalClient);
+  });
+}
+
+function getSyncStatus() {
+  const now = new Date();
+  const lastSync = lastSyncTime ? new Date(lastSyncTime) : null;
+  const secondsSinceSync = lastSync ? Math.floor((now - lastSync) / 1000) : null;
+
+  return {
+    lastSyncTime: lastSyncTime,
+    lastSyncSuccess: lastSyncSuccess,
+    syncErrorMessage: syncErrorMessage,
+    secondsSinceSync: secondsSinceSync,
+    isStale: secondsSinceSync !== null && secondsSinceSync > 180,
+    hasNeverSynced: lastSyncTime === null
+  };
+}
+
+async function triggerImmediateRefresh() {
+  if (!socketIO) {
+    return false;
+  }
+
+  return fetchAndBroadcastRooms();
+}
+
 /**
  * Socket Controller - Manages Socket.IO connections and room data updates
- * Polls the calendar API every 60 seconds and broadcasts updates to all connected clients
+ * Polls the calendar API at a configurable interval and broadcasts updates to all connected clients
  * Supports both Microsoft Graph API and Exchange Web Services (EWS)
  * 
  * @param {Object} io - Socket.IO server instance
  */
 module.exports = function(io) {
-  let isRunning = false;
-  let lastSyncTime = null;
-  let lastSyncSuccess = null;
-  let syncErrorMessage = null;
+  socketIO = io;
 
   // Pass Socket.IO instance to config-manager for real-time configuration updates
   const configManager = require('./config-manager');
@@ -32,46 +99,13 @@ module.exports = function(io) {
       /**
        * Recursive function to poll calendar API
        * Fetches room data and broadcasts to all connected clients
-       * Runs every 60 seconds
+        * Runs based on SEARCH_POLL_INTERVAL_MS (default: 15000 ms)
        */
       (function callAPI() {
-        // Select API based on configuration
-        let api;
-        if (config.calendarSearch.useGraphAPI === 'true') {
-          api = require('./msgraph/rooms.js');
-        } else {
-          api = require('./ews/rooms.js');
-        }
+        fetchAndBroadcastRooms();
 
-        // Call the API and broadcast results
-        api(function(err, result) {
-          // Update sync status
-          lastSyncTime = new Date().toISOString();
-          
-          if (result) {
-            if (err) {
-              console.error('Error fetching room data:', err);
-              lastSyncSuccess = false;
-              syncErrorMessage = err.message || 'Unknown error';
-              return;
-            }
-            
-            lastSyncSuccess = true;
-            syncErrorMessage = null;
-            
-            // Broadcast updated room data to all connected clients
-            io.of('/').emit('updatedRooms', result);
-          } else {
-            lastSyncSuccess = false;
-            syncErrorMessage = 'No data returned from API';
-          }
-
-          // Notify that controller cycle is complete
-          io.of('/').emit('controllerDone', 'done');
-        }, msalClient);
-
-        // Schedule next API call in 60 seconds
-        setTimeout(callAPI, 60000);
+        // Schedule next API call based on configured polling interval
+        setTimeout(callAPI, config.calendarSearch.pollIntervalMs);
       })();
     }
 
@@ -83,25 +117,10 @@ module.exports = function(io) {
     });
   });
 
-  /**
-   * Get current sync status
-   * Returns information about the last calendar sync
-   */
-  function getSyncStatus() {
-    const now = new Date();
-    const lastSync = lastSyncTime ? new Date(lastSyncTime) : null;
-    const secondsSinceSync = lastSync ? Math.floor((now - lastSync) / 1000) : null;
-    
-    return {
-      lastSyncTime: lastSyncTime,
-      lastSyncSuccess: lastSyncSuccess,
-      syncErrorMessage: syncErrorMessage,
-      secondsSinceSync: secondsSinceSync,
-      isStale: secondsSinceSync !== null && secondsSinceSync > 180, // Stale if > 3 minutes (180 seconds)
-      hasNeverSynced: lastSyncTime === null
-    };
-  }
-
   // Export sync status getter for routes to use
   module.exports.getSyncStatus = getSyncStatus;
+  module.exports.triggerImmediateRefresh = triggerImmediateRefresh;
 };
+
+module.exports.getSyncStatus = getSyncStatus;
+module.exports.triggerImmediateRefresh = triggerImmediateRefresh;

@@ -41,6 +41,24 @@ async function checkCalendarWritePermission() {
 	return hasCalendarWritePermission;
 }
 
+function triggerImmediateRoomRefresh() {
+	try {
+		const socketController = require('./socket-controller');
+		if (typeof socketController.triggerImmediateRefresh === 'function') {
+			socketController.triggerImmediateRefresh();
+		}
+	} catch (error) {
+		console.warn('Unable to trigger immediate room refresh:', error.message);
+	}
+}
+
+function triggerRoomRefreshWithFollowUp() {
+	triggerImmediateRoomRefresh();
+	setTimeout(() => {
+		triggerImmediateRoomRefresh();
+	}, 4000);
+}
+
 // Test data generator for when credentials are not configured
 function getTestRoomData() {
 	const now = Date.now();
@@ -298,6 +316,7 @@ module.exports = function(app) {
 			if (useGraphAPI) {
 				const bookRoom = require('./msgraph/booking.js');
 				const result = await bookRoom(msalClient, roomEmail, bookingDetails);
+				triggerRoomRefreshWithFollowUp();
 				res.json(result);
 			} else {
 				// Use EWS
@@ -310,6 +329,7 @@ module.exports = function(app) {
 							message: err.message || 'Failed to book room'
 						});
 					} else {
+						triggerRoomRefreshWithFollowUp();
 						res.json(result);
 					}
 				});
@@ -494,6 +514,7 @@ module.exports = function(app) {
 					message: `Meeting extended by ${minutes} minutes`,
 					newEndTime: newEnd.toISOString()
 				});
+				triggerRoomRefreshWithFollowUp();
 			} else {
 				// EWS not yet implemented for extend meeting
 				res.status(501).json({ 
