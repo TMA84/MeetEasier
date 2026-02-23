@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added a follow-up refresh 4 seconds later to catch delayed calendar backend propagation
   - Applied to both room booking and extend meeting flows for consistent updates
 
+- **Extend Meeting Availability UX**
+  - Extend button is now disabled and visually greyed out when extension would overbook the room
+  - Added front-end pre-check for minimum 5-minute extension window before the next meeting
+  - Applied to both single-room and room-minimal displays
+
 ## [1.2.4] - 2026-02-17
 
 ### Added

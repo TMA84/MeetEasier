@@ -247,9 +247,14 @@ class Sidebar extends Component {
           )}
           
           {/* Action Button - Extend when busy, Book when available */}
-          {room && room.Busy && this.props.onExtendMeeting ? (
+          {room && room.Busy && (this.props.onExtendMeeting || this.props.onExtendMeetingDisabled) ? (
             <div className="sidebar-booking">
-              <button className="sidebar-book-btn" onClick={this.props.onExtendMeeting}>
+              <button
+                className="sidebar-book-btn"
+                onClick={this.props.onExtendMeeting}
+                disabled={!!this.props.onExtendMeetingDisabled}
+                title={this.props.onExtendMeetingDisabled ? this.props.extendDisabledTitle : undefined}
+              >
                 {this.props.extendButtonText || 'Extend Meeting'}
               </button>
             </div>
@@ -291,7 +296,9 @@ Sidebar.propTypes = {
   onBookRoom: PropTypes.func,
   bookButtonText: PropTypes.string,
   onExtendMeeting: PropTypes.func,
-  extendButtonText: PropTypes.string
+  onExtendMeetingDisabled: PropTypes.bool,
+  extendButtonText: PropTypes.string,
+  extendDisabledTitle: PropTypes.string
 };
 
 Sidebar.defaultProps = {

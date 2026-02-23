@@ -530,6 +530,24 @@ class Display extends Component {
     });
   }
 
+  isExtendBlockedByOverbooking = () => {
+    const { room } = this.state;
+
+    if (!room || !room.Busy || !Array.isArray(room.Appointments) || room.Appointments.length < 2) {
+      return false;
+    }
+
+    const currentAppointmentEnd = Number(room.Appointments[0]?.End);
+    const nextAppointmentStart = Number(room.Appointments[1]?.Start);
+
+    if (!Number.isFinite(currentAppointmentEnd) || !Number.isFinite(nextAppointmentStart)) {
+      return false;
+    }
+
+    const minimumExtendWindowMs = 5 * 60 * 1000;
+    return (nextAppointmentStart - currentAppointmentEnd) < minimumExtendWindowMs;
+  }
+
   getLanguage = () => {
     const browserLang = navigator.language || navigator.userLanguage;
     return browserLang.split('-')[0];
@@ -538,7 +556,11 @@ class Display extends Component {
   render() {
     const { response, room, roomDetails, currentTime, wifiConfig, logoConfig, sidebarConfig, bookingConfig, showBookingModal, showExtendModal, showErrorModal, errorMessage } = this.state;
     const canExtendMeeting = this.isExtendMeetingAllowed();
+    const extendBlockedByOverbooking = canExtendMeeting && this.isExtendBlockedByOverbooking();
     const lang = this.getLanguage();
+    const extendDisabledTitle = lang === 'de'
+      ? 'Meeting kann nicht verlängert werden: Folgetermin beginnt zu früh.'
+      : 'Meeting cannot be extended: next meeting starts too soon.';
     const errorText = lang === 'de' ? 'Fehler' : 'Error';
 
     if (!response) {
@@ -772,6 +794,8 @@ class Display extends Component {
                   <div className="minimal-sidebar-booking">
                     <button 
                       className="minimal-sidebar-book-btn" 
+                      disabled={extendBlockedByOverbooking}
+                      title={extendBlockedByOverbooking ? extendDisabledTitle : undefined}
                       onClick={() => this.setState({ showExtendModal: true })}
                     >
                       {lang === 'de' ? 'Meeting verlängern' : 'Extend Meeting'}
