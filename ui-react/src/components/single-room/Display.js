@@ -373,9 +373,28 @@ class Display extends Component {
     });
   }
 
+  isExtendBlockedByOverbooking = () => {
+    const { room } = this.state;
+
+    if (!room || !room.Busy || !Array.isArray(room.Appointments) || room.Appointments.length < 2) {
+      return false;
+    }
+
+    const currentAppointmentEnd = Number(room.Appointments[0]?.End);
+    const nextAppointmentStart = Number(room.Appointments[1]?.Start);
+
+    if (!Number.isFinite(currentAppointmentEnd) || !Number.isFinite(nextAppointmentStart)) {
+      return false;
+    }
+
+    const minimumExtendWindowMs = 5 * 60 * 1000;
+    return (nextAppointmentStart - currentAppointmentEnd) < minimumExtendWindowMs;
+  }
+
   render() {
     const { response, room, roomDetails, sidebarConfig, bookingConfig, showBookingModal, showExtendModal, showErrorModal, errorMessage } = this.state;
     const canExtendMeeting = this.isExtendMeetingAllowed();
+    const extendBlockedByOverbooking = canExtendMeeting && this.isExtendBlockedByOverbooking();
     
     console.log('Render - showErrorModal:', showErrorModal, 'errorMessage:', errorMessage);
     
@@ -384,6 +403,9 @@ class Display extends Component {
     const lang = browserLang.split('-')[0];
     const bookButtonText = lang === 'de' ? 'Raum buchen' : 'Book This Room';
     const extendButtonText = lang === 'de' ? 'Meeting verlängern' : 'Extend Meeting';
+    const extendDisabledTitle = lang === 'de'
+      ? 'Meeting kann nicht verlängert werden: Folgetermin beginnt zu früh.'
+      : 'Meeting cannot be extended: next meeting starts too soon.';
     const errorText = lang === 'de' ? 'Fehler' : 'Error';
 
     return (
@@ -405,9 +427,11 @@ class Display extends Component {
               config={config}
               bookingConfig={bookingConfig}
               onBookRoom={() => this.setState({ showBookingModal: true })}
-              onExtendMeeting={canExtendMeeting ? () => this.setState({ showExtendModal: true }) : null}
+              onExtendMeeting={canExtendMeeting && !extendBlockedByOverbooking ? () => this.setState({ showExtendModal: true }) : null}
+              onExtendMeetingDisabled={extendBlockedByOverbooking}
               bookButtonText={bookButtonText}
               extendButtonText={extendButtonText}
+              extendDisabledTitle={extendDisabledTitle}
             />
           </div>
         ) : (
