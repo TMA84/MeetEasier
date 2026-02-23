@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.5] - 2026-02-23
+
+### Fixed
+- **Cross-Display Booking Sync**
+  - Room state is now pushed to all connected displays immediately after successful booking
+  - Added a follow-up refresh 4 seconds later to catch delayed calendar backend propagation
+  - Applied to both room booking and extend meeting flows for consistent updates
+
 ## [1.2.4] - 2026-02-17
 
 ### Added
