@@ -53,6 +53,9 @@ _OLD_TODO.md
 /data/sidebar-config.json
 /data/booking-config.json
 
+# Generated runtime assets
+/static/img/wifi-qr.png
+
 # Infrastructure as Code (contains sensitive deployment info)
 /gitlab-ci.yml
 /.gitlab-ci.yml
