@@ -57,6 +57,16 @@
   &--upcoming {
     background: linear-gradient(135deg, var(--status-upcoming-color, $warning-500) 0%, var(--status-upcoming-color, $warning-600) 100%);
   }
+
+  // Not found state
+  &--not-found {
+    background: linear-gradient(135deg, var(--status-not-found-color, #6b7280) 0%, var(--status-not-found-color, #4b5563) 100%);
+
+    &::before {
+      opacity: 0.1;
+      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.2), transparent 70%);
+    }
+  }
   
   // Content wrapper with fixed positioning
   .status-content {
@@ -110,6 +120,14 @@
       border-radius: $radius-full;
       background: $text-on-color;
       animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .modern-room-status--not-found & {
+      color: var(--status-not-found-color, #6b7280);
+
+      &::before {
+        background: var(--status-not-found-color, #6b7280);
+      }
     }
   }
   

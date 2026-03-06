@@ -63,6 +63,8 @@ class Admin extends Component {
       currentStatusBusyColor: '#ef4444',
       statusUpcomingColor: '#f59e0b',
       currentStatusUpcomingColor: '#f59e0b',
+      statusNotFoundColor: '#6b7280',
+      currentStatusNotFoundColor: '#6b7280',
       colorMessage: null,
       colorMessageType: null,
       colorsLastUpdated: '',
@@ -283,12 +285,15 @@ class Admin extends Component {
         statusBusyColorHelp: 'Farbe für belegte Räume',
         statusUpcomingColorLabel: 'Anstehend Status-Farbe',
         statusUpcomingColorHelp: 'Farbe für Räume mit anstehendem Termin',
+        statusNotFoundColorLabel: 'Nicht verfügbar Status-Farbe',
+        statusNotFoundColorHelp: 'Farbe für nicht verfügbare Räume',
         resetToDefaultButton: 'Standard wiederherstellen',
         submitColorsButton: 'Farben aktualisieren',
         colorsSuccessMessage: 'Farb-Konfiguration erfolgreich aktualisiert!',
         colorPickerGreenVariations: 'Grün-Variationen',
         colorPickerRedVariations: 'Rot-Variationen',
         colorPickerYellowVariations: 'Gelb/Orange-Variationen',
+        colorPickerGrayVariations: 'Grau-Variationen',
         colorPickerHue: 'Farbton',
         colorPickerSaturation: 'Sättigung',
         colorPickerLightness: 'Helligkeit',
@@ -370,12 +375,15 @@ class Admin extends Component {
         statusBusyColorHelp: 'Color for busy rooms',
         statusUpcomingColorLabel: 'Upcoming Status Color',
         statusUpcomingColorHelp: 'Color for rooms with upcoming bookings',
+        statusNotFoundColorLabel: 'Unavailable Status Color',
+        statusNotFoundColorHelp: 'Color for unavailable rooms',
         resetToDefaultButton: 'Reset to Default',
         submitColorsButton: 'Update Colors',
         colorsSuccessMessage: 'Color configuration updated successfully!',
         colorPickerGreenVariations: 'Green Variations',
         colorPickerRedVariations: 'Red Variations',
         colorPickerYellowVariations: 'Yellow/Orange Variations',
+        colorPickerGrayVariations: 'Gray Variations',
         colorPickerHue: 'Hue',
         colorPickerSaturation: 'Saturation',
         colorPickerLightness: 'Lightness',
@@ -494,6 +502,8 @@ class Admin extends Component {
           currentStatusBusyColor: data.statusBusyColor || '#ef4444',
           statusUpcomingColor: data.statusUpcomingColor || '#f59e0b',
           currentStatusUpcomingColor: data.statusUpcomingColor || '#f59e0b',
+          statusNotFoundColor: data.statusNotFoundColor || '#6b7280',
+          currentStatusNotFoundColor: data.statusNotFoundColor || '#6b7280',
           colorsLastUpdated: data.lastUpdated 
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
             : '-'
@@ -778,7 +788,7 @@ class Admin extends Component {
   handleColorsSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
-    const { apiToken, bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor } = this.state;
+    const { apiToken, bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor, statusNotFoundColor } = this.state;
     
     const headers = {
       'Content-Type': 'application/json',
@@ -795,7 +805,8 @@ class Admin extends Component {
         bookingButtonColor, 
         statusAvailableColor, 
         statusBusyColor, 
-        statusUpcomingColor 
+        statusUpcomingColor,
+        statusNotFoundColor
       })
     })
     .then(response => {
@@ -811,7 +822,8 @@ class Admin extends Component {
         currentBookingButtonColor: bookingButtonColor,
         currentStatusAvailableColor: statusAvailableColor,
         currentStatusBusyColor: statusBusyColor,
-        currentStatusUpcomingColor: statusUpcomingColor
+        currentStatusUpcomingColor: statusUpcomingColor,
+        currentStatusNotFoundColor: statusNotFoundColor
       });
       setTimeout(() => this.setState({ colorMessage: null }), 3000);
     })
@@ -836,6 +848,7 @@ class Admin extends Component {
       statusAvailableColor, currentStatusAvailableColor,
       statusBusyColor, currentStatusBusyColor,
       statusUpcomingColor, currentStatusUpcomingColor,
+      statusNotFoundColor, currentStatusNotFoundColor,
       wifiMessage, wifiMessageType, logoMessage, logoMessageType, informationMessage, informationMessageType,
       bookingMessage, bookingMessageType, colorMessage, colorMessageType,
       wifiLocked, logoLocked, informationLocked, bookingLocked,
@@ -1493,6 +1506,20 @@ class Admin extends Component {
                       {currentStatusUpcomingColor}
                     </span>
                   </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.statusNotFoundColorLabel}</span>
+                    <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ 
+                        display: 'inline-block', 
+                        width: '20px', 
+                        height: '20px', 
+                        backgroundColor: currentStatusNotFoundColor,
+                        border: '1px solid #ddd',
+                        borderRadius: '4px'
+                      }}></span>
+                      {currentStatusNotFoundColor}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1822,6 +1849,106 @@ class Admin extends Component {
                     {t.resetToDefaultButton}
                   </button>
                   <small>{t.statusUpcomingColorHelp}</small>
+                </div>
+
+                <div className="admin-form-group">
+                  <label>{t.statusNotFoundColorLabel} - {t.colorPickerGrayVariations}</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', marginBottom: '12px' }}>
+                    {['#f3f4f6', '#e5e7eb', '#d1d5db', '#9ca3af', '#6b7280', '#4b5563', '#374151', '#1f2937', '#111827'].map(color => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => this.setState({ statusNotFoundColor: color })}
+                        style={{
+                          width: '45px',
+                          height: '45px',
+                          backgroundColor: color,
+                          border: statusNotFoundColor === color ? '3px solid #000' : '2px solid #999',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          padding: '0'
+                        }}
+                        title={color}
+                      >
+                        {statusNotFoundColor === color ? '✓' : ''}
+                      </button>
+                    ))}
+                  </div>
+
+                  {(() => {
+                    const hsl = this.hexToHSL(statusNotFoundColor);
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              {t.colorPickerHue}: {hsl.h}°
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="360"
+                              value={hsl.h}
+                              onChange={(e) => {
+                                const newHsl = { h: parseInt(e.target.value), s: hsl.s, l: hsl.l };
+                                this.setState({ statusNotFoundColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                          <div style={{ width: '60px', height: '50px', backgroundColor: statusNotFoundColor, border: '2px solid #ddd', borderRadius: '4px' }}></div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              {t.colorPickerSaturation}: {hsl.s}%
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={hsl.s}
+                              onChange={(e) => {
+                                const newHsl = { h: hsl.h, s: parseInt(e.target.value), l: hsl.l };
+                                this.setState({ statusNotFoundColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                              {t.colorPickerLightness}: {hsl.l}%
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={hsl.l}
+                              onChange={(e) => {
+                                const newHsl = { h: hsl.h, s: hsl.s, l: parseInt(e.target.value) };
+                                this.setState({ statusNotFoundColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <button
+                    type="button"
+                    onClick={() => this.setState({ statusNotFoundColor: '#6b7280' })}
+                    className="admin-secondary-button"
+                    style={{ marginTop: '8px' }}
+                  >
+                    {t.resetToDefaultButton}
+                  </button>
+                  <small>{t.statusNotFoundColorHelp}</small>
                 </div>
 
                 <button 

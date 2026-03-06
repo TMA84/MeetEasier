@@ -3,5 +3,6 @@
   "statusAvailableColor": "#16a34a",
   "statusBusyColor": "#dc2626",
   "statusUpcomingColor": "#f59e0b",
+  "statusNotFoundColor": "#6b7280",
   "lastUpdated": "2026-02-16T20:30:10.250Z"
 }

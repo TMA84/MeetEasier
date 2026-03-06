@@ -206,7 +206,8 @@ describe('Single Room Display Component', () => {
       render(<Display alias="nonexistent" />);
 
       await waitFor(() => {
-        expect(screen.getByText('Room not found')).toBeInTheDocument();
+        expect(screen.queryByText('Room not found')).not.toBeInTheDocument();
+        expect(screen.getByTestId('room-status-block')).toBeInTheDocument();
       });
     });
   });

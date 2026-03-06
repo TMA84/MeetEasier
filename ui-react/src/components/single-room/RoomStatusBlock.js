@@ -33,7 +33,9 @@ const RoomStatusBlock = ({
 
   // Determine status class based on room state
   let statusClass = 'modern-room-status';
-  if (room.Busy) { 
+  if (room.NotFound) {
+    statusClass += ' modern-room-status--not-found';
+  } else if (room.Busy) { 
     statusClass += ' modern-room-status--busy';
   } else if (minutesDiff < 15 && minutesDiff > 0 && room.Appointments !== null && room.Appointments.length > 0) {
     // Show "upcoming" status if meeting starts within 15 minutes
@@ -51,7 +53,7 @@ const RoomStatusBlock = ({
           <div className="status-header">
             <div className="room-name">{room.Name}</div>
             <div className="room-status">
-              {room.Busy ? config.statusBusy : config.statusAvailable}
+              {room.NotFound ? (config.statusNotFound || 'Not Found') : (room.Busy ? config.statusBusy : config.statusAvailable)}
             </div>
           </div>
 
@@ -132,6 +134,7 @@ RoomStatusBlock.propTypes = {
   room: PropTypes.shape({
     Name: PropTypes.string.isRequired,
     Busy: PropTypes.bool.isRequired,
+    NotFound: PropTypes.bool,
     Appointments: PropTypes.arrayOf(PropTypes.shape({
       Subject: PropTypes.string,
       Organizer: PropTypes.string,

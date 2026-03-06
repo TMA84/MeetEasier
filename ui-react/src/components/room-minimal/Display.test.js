@@ -205,10 +205,12 @@ describe('Room Minimal Display Component', () => {
         .mockResolvedValueOnce({ json: async () => ({ showWiFi: true, showUpcomingMeetings: false, showMeetingTitles: false }) })
         .mockResolvedValueOnce({ json: async () => ({ enableBooking: true }) });
 
-      render(<Display alias="nonexistent" />);
+      const { container } = render(<Display alias="nonexistent" />);
 
       await waitFor(() => {
-        expect(screen.getByText('Room not found')).toBeInTheDocument();
+        expect(screen.queryByText('Room not found')).not.toBeInTheDocument();
+        expect(container.querySelector('.room-minimal--not-found')).toBeInTheDocument();
+        expect(container.querySelector('.room-minimal--available')).not.toBeInTheDocument();
       });
     });
   });

@@ -776,13 +776,14 @@ module.exports = function(app) {
 	// Color Configuration Endpoint
 	app.post('/api/colors', checkApiToken, async function(req, res) {
 		try {
-			const { bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor } = req.body;
+			const { bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor, statusNotFoundColor } = req.body;
 			
 			const config = await configManager.updateColorsConfig(
 				bookingButtonColor,
 				statusAvailableColor,
 				statusBusyColor,
-				statusUpcomingColor
+				statusUpcomingColor,
+				statusNotFoundColor
 			);
 			
 			res.json({ 
