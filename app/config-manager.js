@@ -118,6 +118,7 @@ function getColorsConfig() {
 			statusAvailableColor: '#22c55e',
 			statusBusyColor: '#ef4444',
 			statusUpcomingColor: '#f59e0b',
+			statusNotFoundColor: '#6b7280',
 			lastUpdated: null
 		};
 	}
@@ -227,6 +228,7 @@ function saveColorsConfig(config) {
 		statusAvailableColor: config.statusAvailableColor || '#22c55e',
 		statusBusyColor: config.statusBusyColor || '#ef4444',
 		statusUpcomingColor: config.statusUpcomingColor || '#f59e0b',
+		statusNotFoundColor: config.statusNotFoundColor || '#6b7280',
 		lastUpdated: new Date().toISOString()
 	};
 	
@@ -350,12 +352,13 @@ async function updateBookingConfig(enableBooking, buttonColor, enableExtendMeeti
  * @param {string} statusUpcomingColor - Hex color for upcoming status
  * @returns {Promise<Object>} Updated configuration
  */
-async function updateColorsConfig(bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor) {
+async function updateColorsConfig(bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor, statusNotFoundColor) {
 	const config = saveColorsConfig({ 
 		bookingButtonColor, 
 		statusAvailableColor, 
 		statusBusyColor, 
-		statusUpcomingColor 
+		statusUpcomingColor,
+		statusNotFoundColor
 	});
 	
 	// Emit Socket.IO event to notify all connected clients

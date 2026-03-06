@@ -5,6 +5,7 @@
   --available-color: #22c55e;
   --busy-color: #ef4444;
   --upcoming-color: #f59e0b;
+  --not-found-color: #6b7280;
 }
 
 .room-minimal {
@@ -43,6 +44,11 @@
   &.room-minimal--upcoming::before {
     background: radial-gradient(circle, var(--upcoming-color, rgba(245, 158, 11, 0.4)) 0%, transparent 70%);
   }
+
+  &.room-minimal--not-found::before {
+    background: transparent;
+    opacity: 0;
+  }
 }
 
 .minimal-glow-container {
@@ -63,6 +69,10 @@
 
   .room-minimal--upcoming & {
     box-shadow: inset 0 0 100px rgba(245, 158, 11, 0.3);
+  }
+
+  .room-minimal--not-found & {
+    box-shadow: none;
   }
 }
 
@@ -115,6 +125,12 @@
         0 0 120px rgba(245, 158, 11, 0.2),
         inset 0 0 10px rgba(245, 158, 11, 0.2);
     }
+
+    .room-minimal--not-found & {
+      background: transparent;
+      border-color: rgba(107, 114, 128, 0.35);
+      box-shadow: none;
+    }
   }
   
   // Transparent style
@@ -144,6 +160,12 @@
         0 0 40px rgba(245, 158, 11, 0.5),
         0 0 80px rgba(245, 158, 11, 0.3),
         0 0 120px rgba(245, 158, 11, 0.2);
+    }
+
+    .room-minimal--not-found & {
+      background: transparent;
+      border-color: rgba(107, 114, 128, 0.3);
+      box-shadow: none;
     }
   }
 }
@@ -180,6 +202,10 @@
 
     .room-minimal--upcoming & {
       color: #f59e0b;
+    }
+
+    .room-minimal--not-found & {
+      color: #6b7280;
     }
   }
 }

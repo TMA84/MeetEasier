@@ -51,7 +51,8 @@ class Display extends Component {
         bookingButtonColor: '#334155',
         statusAvailableColor: '#22c55e',
         statusBusyColor: '#ef4444',
-        statusUpcomingColor: '#f59e0b'
+        statusUpcomingColor: '#f59e0b',
+        statusNotFoundColor: '#6b7280'
       },
       showBookingModal: false,
       showExtendModal: false,
@@ -97,7 +98,7 @@ class Display extends Component {
     if (!room) {
       this.setState({
         response: true,
-        room: { Name: 'Room not found', Appointments: [] }
+        room: { Name: '', Busy: true, NotFound: true, Appointments: [] }
       });
       return;
     }
@@ -192,7 +193,8 @@ class Display extends Component {
             bookingButtonColor: config.bookingButtonColor || '#334155',
             statusAvailableColor: config.statusAvailableColor || '#22c55e',
             statusBusyColor: config.statusBusyColor || '#ef4444',
-            statusUpcomingColor: config.statusUpcomingColor || '#f59e0b'
+            statusUpcomingColor: config.statusUpcomingColor || '#f59e0b',
+            statusNotFoundColor: config.statusNotFoundColor || '#6b7280'
           }
         });
         // Apply all colors as CSS custom properties
@@ -200,6 +202,7 @@ class Display extends Component {
         document.documentElement.style.setProperty('--status-available-color', config.statusAvailableColor || '#22c55e');
         document.documentElement.style.setProperty('--status-busy-color', config.statusBusyColor || '#ef4444');
         document.documentElement.style.setProperty('--status-upcoming-color', config.statusUpcomingColor || '#f59e0b');
+        document.documentElement.style.setProperty('--status-not-found-color', config.statusNotFoundColor || '#6b7280');
       });
     }
   }
@@ -264,7 +267,8 @@ class Display extends Component {
             bookingButtonColor: data.bookingButtonColor || '#334155',
             statusAvailableColor: data.statusAvailableColor || '#22c55e',
             statusBusyColor: data.statusBusyColor || '#ef4444',
-            statusUpcomingColor: data.statusUpcomingColor || '#f59e0b'
+            statusUpcomingColor: data.statusUpcomingColor || '#f59e0b',
+            statusNotFoundColor: data.statusNotFoundColor || '#6b7280'
           }
         });
         // Apply all colors as CSS custom properties
@@ -272,6 +276,7 @@ class Display extends Component {
         document.documentElement.style.setProperty('--status-available-color', data.statusAvailableColor || '#22c55e');
         document.documentElement.style.setProperty('--status-busy-color', data.statusBusyColor || '#ef4444');
         document.documentElement.style.setProperty('--status-upcoming-color', data.statusUpcomingColor || '#f59e0b');
+        document.documentElement.style.setProperty('--status-not-found-color', data.statusNotFoundColor || '#6b7280');
       })
       .catch(err => {
         console.error('Error fetching colors config:', err);

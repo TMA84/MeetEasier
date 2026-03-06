@@ -39,6 +39,7 @@ const applyColorsToCSS = (colors) => {
   const availColor = colors.statusAvailableColor || '#22c55e';
   const busyColor = colors.statusBusyColor || '#ef4444';
   const upcomColor = colors.statusUpcomingColor || '#f59e0b';
+  const notFoundColor = colors.statusNotFoundColor || '#6b7280';
   
   const css = `
     .room-minimal--available::before {
@@ -50,6 +51,10 @@ const applyColorsToCSS = (colors) => {
     .room-minimal--upcoming::before {
       background: radial-gradient(circle, ${hexToRgba(upcomColor, 0.4)} 0%, transparent 70%) !important;
     }
+    .room-minimal--not-found::before {
+      background: transparent !important;
+      opacity: 0 !important;
+    }
     .room-minimal--available .minimal-glow-container {
       box-shadow: inset 0 0 100px ${hexToRgba(availColor, 0.3)} !important;
     }
@@ -58,6 +63,9 @@ const applyColorsToCSS = (colors) => {
     }
     .room-minimal--upcoming .minimal-glow-container {
       box-shadow: inset 0 0 100px ${hexToRgba(upcomColor, 0.3)} !important;
+    }
+    .room-minimal--not-found .minimal-glow-container {
+      box-shadow: none !important;
     }
     .room-minimal--available .minimal-room-header--filled {
       background: ${availColor} !important;
@@ -86,6 +94,11 @@ const applyColorsToCSS = (colors) => {
         0 0 120px ${hexToRgba(upcomColor, 0.2)},
         inset 0 0 10px ${hexToRgba(upcomColor, 0.2)} !important;
     }
+    .room-minimal--not-found .minimal-room-header--filled {
+      background: transparent !important;
+      border-color: ${hexToRgba(notFoundColor, 0.35)} !important;
+      box-shadow: none !important;
+    }
     .room-minimal--available .minimal-room-header--transparent {
       background: transparent !important;
       border-color: ${hexToRgba(availColor, 0.3)} !important;
@@ -110,6 +123,11 @@ const applyColorsToCSS = (colors) => {
         0 0 80px ${hexToRgba(upcomColor, 0.3)},
         0 0 120px ${hexToRgba(upcomColor, 0.2)} !important;
     }
+    .room-minimal--not-found .minimal-room-header--transparent {
+      background: transparent !important;
+      border-color: ${hexToRgba(notFoundColor, 0.3)} !important;
+      box-shadow: none !important;
+    }
     .room-minimal--available .minimal-room-header--transparent .minimal-room-status {
       color: ${availColor} !important;
     }
@@ -119,6 +137,9 @@ const applyColorsToCSS = (colors) => {
     .room-minimal--upcoming .minimal-room-header--transparent .minimal-room-status {
       color: ${upcomColor} !important;
     }
+    .room-minimal--not-found .minimal-room-header--transparent .minimal-room-status {
+      color: ${notFoundColor} !important;
+    }
     .room-minimal--available .minimal-room-header--filled .minimal-room-status {
       color: #ffffff !important;
     }
@@ -126,6 +147,9 @@ const applyColorsToCSS = (colors) => {
       color: #ffffff !important;
     }
     .room-minimal--upcoming .minimal-room-header--filled .minimal-room-status {
+      color: #ffffff !important;
+    }
+    .room-minimal--not-found .minimal-room-header--filled .minimal-room-status {
       color: #ffffff !important;
     }
   `;
@@ -164,7 +188,8 @@ class Display extends Component {
         bookingButtonColor: '#334155',
         statusAvailableColor: '#22c55e',
         statusBusyColor: '#ef4444',
-        statusUpcomingColor: '#f59e0b'
+        statusUpcomingColor: '#f59e0b',
+        statusNotFoundColor: '#6b7280'
       },
       roomDetails: {
         appointmentExists: false,
@@ -198,7 +223,7 @@ class Display extends Component {
     if (!room) {
       this.setState({
         response: true,
-        room: { Name: 'Room not found', Appointments: [] }
+        room: { Name: '', Busy: true, NotFound: true, Appointments: [] }
       });
       return;
     }
@@ -308,7 +333,8 @@ class Display extends Component {
           bookingButtonColor: config.bookingButtonColor || '#334155',
           statusAvailableColor: config.statusAvailableColor || '#22c55e',
           statusBusyColor: config.statusBusyColor || '#ef4444',
-          statusUpcomingColor: config.statusUpcomingColor || '#f59e0b'
+          statusUpcomingColor: config.statusUpcomingColor || '#f59e0b',
+          statusNotFoundColor: config.statusNotFoundColor || '#6b7280'
         };
         this.setState({ colorsConfig });
         
@@ -316,16 +342,19 @@ class Display extends Component {
         const availableColor = config.statusAvailableColor || '#22c55e';
         const busyColor = config.statusBusyColor || '#ef4444';
         const upcomingColor = config.statusUpcomingColor || '#f59e0b';
+        const notFoundColor = config.statusNotFoundColor || '#6b7280';
         
         document.documentElement.style.setProperty('--booking-button-color', config.bookingButtonColor || '#334155');
         document.documentElement.style.setProperty('--status-available-color', availableColor);
         document.documentElement.style.setProperty('--status-busy-color', busyColor);
         document.documentElement.style.setProperty('--status-upcoming-color', upcomingColor);
+        document.documentElement.style.setProperty('--status-not-found-color', notFoundColor);
         
         // Also set short names used in SCSS
         document.documentElement.style.setProperty('--available-color', availableColor);
         document.documentElement.style.setProperty('--busy-color', busyColor);
         document.documentElement.style.setProperty('--upcoming-color', upcomingColor);
+        document.documentElement.style.setProperty('--not-found-color', notFoundColor);
         
         // Apply custom colors to CSS rules
         applyColorsToCSS(colorsConfig);
@@ -411,7 +440,8 @@ class Display extends Component {
           bookingButtonColor: data.bookingButtonColor || '#334155',
           statusAvailableColor: data.statusAvailableColor || '#22c55e',
           statusBusyColor: data.statusBusyColor || '#ef4444',
-          statusUpcomingColor: data.statusUpcomingColor || '#f59e0b'
+          statusUpcomingColor: data.statusUpcomingColor || '#f59e0b',
+          statusNotFoundColor: data.statusNotFoundColor || '#6b7280'
         };
         this.setState({ colorsConfig });
         
@@ -419,16 +449,19 @@ class Display extends Component {
         const availableColor = data.statusAvailableColor || '#22c55e';
         const busyColor = data.statusBusyColor || '#ef4444';
         const upcomingColor = data.statusUpcomingColor || '#f59e0b';
+        const notFoundColor = data.statusNotFoundColor || '#6b7280';
         
         document.documentElement.style.setProperty('--booking-button-color', data.bookingButtonColor || '#334155');
         document.documentElement.style.setProperty('--status-available-color', availableColor);
         document.documentElement.style.setProperty('--status-busy-color', busyColor);
         document.documentElement.style.setProperty('--status-upcoming-color', upcomingColor);
+        document.documentElement.style.setProperty('--status-not-found-color', notFoundColor);
         
         // Also set short names used in SCSS
         document.documentElement.style.setProperty('--available-color', availableColor);
         document.documentElement.style.setProperty('--busy-color', busyColor);
         document.documentElement.style.setProperty('--upcoming-color', upcomingColor);
+        document.documentElement.style.setProperty('--not-found-color', notFoundColor);
         
         // Apply custom colors to CSS rules
         applyColorsToCSS(colorsConfig);
@@ -578,7 +611,9 @@ class Display extends Component {
 
     // Determine status class
     let statusClass = 'room-minimal';
-    if(room.Busy) { 
+    if (room.NotFound) {
+      statusClass += ' room-minimal--not-found';
+    } else if(room.Busy) { 
       statusClass += ' room-minimal--busy';
     } else if (minutesDiff < 15 && minutesDiff > 0 && room.Appointments !== null && (room.Appointments.length > 0)) {
       statusClass += ' room-minimal--upcoming';
@@ -597,10 +632,10 @@ class Display extends Component {
             <div className="minimal-main-content">
               
               {/* Room Name and Status */}
-              <div className={`minimal-room-header minimal-room-header--${sidebarConfig.minimalHeaderStyle}`}>
+              <div className={`minimal-room-header minimal-room-header--${room.NotFound ? 'transparent' : sidebarConfig.minimalHeaderStyle}`}>
                 <div className="minimal-room-name">{room.Name}</div>
                 <div className="minimal-room-status">
-                  {room.Busy ? config.statusBusy : config.statusAvailable}
+                  {room.NotFound ? (config.statusNotFound || 'Not Found') : (room.Busy ? config.statusBusy : config.statusAvailable)}
                 </div>
               </div>
 
