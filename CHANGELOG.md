@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.6] - 2026-03-06
+
+### Added
+- **Dedicated Unavailable Room Status**
+  - Added a dedicated room status for missing/unlisted rooms instead of reusing available/busy states
+  - Added configurable `statusNotFoundColor` in color configuration and admin UI
+  - Added a dedicated status class for single-room and room-minimal displays
+
+### Changed
+- **Unavailable Status UX**
+  - Updated unavailable status label to compact display-friendly text (`N/A` in English, `N/V` in German)
+  - Replaced "Not Found" wording in admin color settings with "Unavailable"
+
+- **Room Not Found Rendering**
+  - Missing rooms are no longer shown as available/green
+  - Missing rooms no longer render "Room not found" as room name fallback
+
+### Fixed
+- **Single-Room Unavailable Styling**
+  - Fixed unavailable status panel to use the dedicated unavailable background color
+  - Fixed unavailable status text/dot color mapping to the dedicated status color
+
+- **Room-Minimal Unavailable Styling**
+  - Adjusted unavailable state to transparent presentation for minimal display mode
+  - Kept dedicated unavailable status class and color mapping for consistent behavior
+
 ## [1.2.5] - 2026-02-23
 
 ### Fixed
