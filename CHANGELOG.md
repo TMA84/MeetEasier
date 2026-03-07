@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.8] - 2026-03-07
+
+### Added
+- **Admin Runtime Configuration (Operations Tab)**
+  - Added editable Search settings in admin (`useGraphAPI`, limits, poll interval)
+  - Added editable Rate Limit settings in admin (API/Write/Auth windows and request caps)
+  - Added dedicated backend endpoints for both config domains (`/api/search-config`, `/api/rate-limit-config`)
+
+### Changed
+- **Persistent Search/Rate Config Model**
+  - Search and rate-limit values are now persisted in dedicated runtime config files under `data/`
+  - Runtime configuration is applied on startup so admin-defined values survive restarts
+  - Backup/restore now includes Search and Rate Limit configuration blocks
+
+- **Live Runtime Application**
+  - Rate limiter middleware now supports runtime reconfiguration without server restart
+  - Search polling schedule is refreshed immediately after admin updates or config restore
+
+### Fixed
+- **Admin Lock Enforcement for Environment Overrides**
+  - Admin sections are now locked as soon as any related environment variable is defined
+  - Lock detection now treats defined-but-empty env variables as configured
+  - Booking lock also covers all `CHECKIN_*` environment overrides
+
 ## [1.2.7] - 2026-03-07
 
 ### Added

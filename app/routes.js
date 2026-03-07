@@ -389,25 +389,35 @@ const upload = multer({
 module.exports = function(app) {
 	var path = require('path');
 
-	const apiRateLimiter = createRateLimiter({
-		windowMs: config.rateLimit.apiWindowMs,
-		max: config.rateLimit.apiMax,
-		keyGenerator: req => `${getClientIp(req)}:${req.path}`
-	});
+	let apiRateLimiter = null;
+	let writeRateLimiter = null;
+	let authRateLimiter = null;
 
-	const writeRateLimiter = createRateLimiter({
-		windowMs: config.rateLimit.writeWindowMs,
-		max: config.rateLimit.writeMax,
-		keyGenerator: req => `${getClientIp(req)}:${req.path}:${req.method}`
-	});
+	const rebuildRateLimiters = () => {
+		apiRateLimiter = createRateLimiter({
+			windowMs: config.rateLimit.apiWindowMs,
+			max: config.rateLimit.apiMax,
+			keyGenerator: req => `${getClientIp(req)}:${req.path}`
+		});
 
-	const authRateLimiter = createRateLimiter({
-		windowMs: config.rateLimit.authWindowMs,
-		max: config.rateLimit.authMax,
-		keyGenerator: req => `${getClientIp(req)}:auth`
-	});
+		writeRateLimiter = createRateLimiter({
+			windowMs: config.rateLimit.writeWindowMs,
+			max: config.rateLimit.writeMax,
+			keyGenerator: req => `${getClientIp(req)}:${req.path}:${req.method}`
+		});
 
-	app.use('/api', apiRateLimiter);
+		authRateLimiter = createRateLimiter({
+			windowMs: config.rateLimit.authWindowMs,
+			max: config.rateLimit.authMax,
+			keyGenerator: req => `${getClientIp(req)}:auth`
+		});
+	};
+
+	rebuildRateLimiters();
+
+	app.use('/api', function(req, res, next) {
+		return apiRateLimiter(req, res, next);
+	});
 	app.use('/api', function(req, res, next) {
 		if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
 			return writeRateLimiter(req, res, next);
@@ -1249,15 +1259,169 @@ module.exports = function(app) {
 	// Get configuration lock status (which settings are configured via .env)
 	app.get('/api/config-locks', function(req, res) {
 		try {
+			const isEnvConfigured = (name) => process.env[name] !== undefined;
+
 			const locks = {
-				wifiLocked: !!(process.env.WIFI_SSID),
-				logoLocked: !!(process.env.LOGO_DARK_URL || process.env.LOGO_LIGHT_URL),
-				sidebarLocked: !!(process.env.SIDEBAR_SHOW_WIFI || process.env.SIDEBAR_SHOW_UPCOMING || process.env.SIDEBAR_SHOW_TITLES),
-				bookingLocked: !!(process.env.ENABLE_BOOKING)
+				wifiLocked: isEnvConfigured('WIFI_SSID') || isEnvConfigured('WIFI_PASSWORD'),
+				logoLocked: isEnvConfigured('LOGO_DARK_URL') || isEnvConfigured('LOGO_LIGHT_URL'),
+				sidebarLocked: isEnvConfigured('SIDEBAR_SHOW_WIFI') || isEnvConfigured('SIDEBAR_SHOW_UPCOMING') || isEnvConfigured('SIDEBAR_SHOW_TITLES'),
+				bookingLocked: isEnvConfigured('ENABLE_BOOKING')
+					|| isEnvConfigured('CHECKIN_ENABLED')
+					|| isEnvConfigured('CHECKIN_REQUIRED_FOR_EXTERNAL')
+					|| isEnvConfigured('CHECKIN_EARLY_MINUTES')
+					|| isEnvConfigured('CHECKIN_WINDOW_MINUTES')
+					|| isEnvConfigured('CHECKIN_AUTO_RELEASE_NO_SHOW'),
+				searchLocked: !!(
+					isEnvConfigured('SEARCH_USE_GRAPHAPI')
+					|| isEnvConfigured('SEARCH_MAXDAYS')
+					|| isEnvConfigured('SEARCH_MAXROOMLISTS')
+					|| isEnvConfigured('SEARCH_MAXROOMS')
+					|| isEnvConfigured('SEARCH_MAXITEMS')
+					|| isEnvConfigured('SEARCH_POLL_INTERVAL_MS')
+				),
+				rateLimitLocked: !!(
+					isEnvConfigured('RATE_LIMIT_API_WINDOW_MS')
+					|| isEnvConfigured('RATE_LIMIT_API_MAX')
+					|| isEnvConfigured('RATE_LIMIT_WRITE_WINDOW_MS')
+					|| isEnvConfigured('RATE_LIMIT_WRITE_MAX')
+					|| isEnvConfigured('RATE_LIMIT_AUTH_WINDOW_MS')
+					|| isEnvConfigured('RATE_LIMIT_AUTH_MAX')
+				)
 			};
 			res.json(locks);
 		} catch (err) {
 			res.status(500).json({ error: 'Failed to retrieve configuration locks' });
+		}
+	});
+
+	app.get('/api/search-config', function(req, res) {
+		try {
+			const searchConfig = configManager.getSearchConfig();
+			res.json(searchConfig);
+		} catch (err) {
+			console.error('Error retrieving search config:', err);
+			res.status(500).json({ error: 'Failed to retrieve search configuration' });
+		}
+	});
+
+	app.post('/api/search-config', checkApiToken, async function(req, res) {
+		try {
+			const {
+				useGraphAPI,
+				maxDays,
+				maxRoomLists,
+				maxRooms,
+				maxItems,
+				pollIntervalMs
+			} = req.body || {};
+
+			if (
+				useGraphAPI === undefined
+				&& maxDays === undefined
+				&& maxRoomLists === undefined
+				&& maxRooms === undefined
+				&& maxItems === undefined
+				&& pollIntervalMs === undefined
+			) {
+				return res.status(400).json({ error: 'At least one search configuration option is required' });
+			}
+
+			const beforeConfig = configManager.getSearchConfig();
+			const updatedConfig = await configManager.updateSearchConfig({
+				useGraphAPI,
+				maxDays,
+				maxRoomLists,
+				maxRooms,
+				maxItems,
+				pollIntervalMs
+			});
+
+			require('./socket-controller').refreshPollingSchedule();
+			triggerRoomRefreshWithFollowUp();
+
+			appendAuditLog({
+				event: 'config.search.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: updatedConfig
+			});
+
+			res.json({
+				success: true,
+				config: updatedConfig,
+				message: 'Search configuration updated'
+			});
+		} catch (err) {
+			console.error('Error updating search config:', err);
+			res.status(500).json({ error: 'Failed to update search configuration' });
+		}
+	});
+
+	app.get('/api/rate-limit-config', function(req, res) {
+		try {
+			const rateLimitConfig = configManager.getRateLimitConfig();
+			res.json(rateLimitConfig);
+		} catch (err) {
+			console.error('Error retrieving rate limit config:', err);
+			res.status(500).json({ error: 'Failed to retrieve rate limit configuration' });
+		}
+	});
+
+	app.post('/api/rate-limit-config', checkApiToken, async function(req, res) {
+		try {
+			const {
+				apiWindowMs,
+				apiMax,
+				writeWindowMs,
+				writeMax,
+				authWindowMs,
+				authMax
+			} = req.body || {};
+
+			if (
+				apiWindowMs === undefined
+				&& apiMax === undefined
+				&& writeWindowMs === undefined
+				&& writeMax === undefined
+				&& authWindowMs === undefined
+				&& authMax === undefined
+			) {
+				return res.status(400).json({ error: 'At least one rate limit configuration option is required' });
+			}
+
+			const beforeConfig = configManager.getRateLimitConfig();
+			const updatedConfig = await configManager.updateRateLimitConfig({
+				apiWindowMs,
+				apiMax,
+				writeWindowMs,
+				writeMax,
+				authWindowMs,
+				authMax
+			});
+
+			rebuildRateLimiters();
+
+			appendAuditLog({
+				event: 'config.rate_limit.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: updatedConfig
+			});
+
+			res.json({
+				success: true,
+				config: updatedConfig,
+				message: 'Rate limit configuration updated'
+			});
+		} catch (err) {
+			console.error('Error updating rate limit config:', err);
+			res.status(500).json({ error: 'Failed to update rate limit configuration' });
 		}
 	});
 
@@ -1501,6 +1665,8 @@ module.exports = function(app) {
 			logo: configManager.getLogoConfig(),
 			sidebar: configManager.getSidebarConfig(),
 			booking: configManager.getBookingConfig(),
+			search: configManager.getSearchConfig(),
+			rateLimit: configManager.getRateLimitConfig(),
 			colors: configManager.getColorsConfig(),
 			maintenance: configManager.getMaintenanceConfig(),
 			i18n: configManager.getI18nConfig()
@@ -1529,6 +1695,8 @@ module.exports = function(app) {
 				logo: configManager.getLogoConfig(),
 				sidebar: configManager.getSidebarConfig(),
 				booking: configManager.getBookingConfig(),
+				search: configManager.getSearchConfig(),
+				rateLimit: configManager.getRateLimitConfig(),
 				colors: configManager.getColorsConfig(),
 				maintenance: configManager.getMaintenanceConfig(),
 				i18n: configManager.getI18nConfig()
@@ -1563,6 +1731,30 @@ module.exports = function(app) {
 				);
 			}
 
+			if (payload.search) {
+				await configManager.updateSearchConfig({
+					useGraphAPI: payload.search.useGraphAPI,
+					maxDays: payload.search.maxDays,
+					maxRoomLists: payload.search.maxRoomLists,
+					maxRooms: payload.search.maxRooms,
+					maxItems: payload.search.maxItems,
+					pollIntervalMs: payload.search.pollIntervalMs
+				});
+				require('./socket-controller').refreshPollingSchedule();
+			}
+
+			if (payload.rateLimit) {
+				await configManager.updateRateLimitConfig({
+					apiWindowMs: payload.rateLimit.apiWindowMs,
+					apiMax: payload.rateLimit.apiMax,
+					writeWindowMs: payload.rateLimit.writeWindowMs,
+					writeMax: payload.rateLimit.writeMax,
+					authWindowMs: payload.rateLimit.authWindowMs,
+					authMax: payload.rateLimit.authMax
+				});
+				rebuildRateLimiters();
+			}
+
 			if (payload.colors) {
 				await configManager.updateColorsConfig(
 					payload.colors.bookingButtonColor,
@@ -1589,6 +1781,8 @@ module.exports = function(app) {
 				logo: configManager.getLogoConfig(),
 				sidebar: configManager.getSidebarConfig(),
 				booking: configManager.getBookingConfig(),
+				search: configManager.getSearchConfig(),
+				rateLimit: configManager.getRateLimitConfig(),
 				colors: configManager.getColorsConfig(),
 				maintenance: configManager.getMaintenanceConfig(),
 				i18n: configManager.getI18nConfig()

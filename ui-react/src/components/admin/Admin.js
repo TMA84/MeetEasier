@@ -169,6 +169,8 @@ class Admin extends Component {
       logoLocked: false,
       informationLocked: false,
       bookingLocked: false,
+      searchLocked: false,
+      rateLimitLocked: false,
       
       // Booking state
       currentEnableBooking: true,
@@ -224,6 +226,36 @@ class Admin extends Component {
       auditLogs: [],
       auditMessage: null,
       auditMessageType: null,
+      searchMessage: null,
+      searchMessageType: null,
+      rateLimitMessage: null,
+      rateLimitMessageType: null,
+      currentSearchUseGraphAPI: true,
+      searchUseGraphAPI: true,
+      currentSearchMaxDays: 7,
+      searchMaxDays: 7,
+      currentSearchMaxRoomLists: 5,
+      searchMaxRoomLists: 5,
+      currentSearchMaxRooms: 50,
+      searchMaxRooms: 50,
+      currentSearchMaxItems: 100,
+      searchMaxItems: 100,
+      currentSearchPollIntervalMs: 15000,
+      searchPollIntervalMs: 15000,
+      searchLastUpdated: '',
+      currentRateLimitApiWindowMs: 60000,
+      rateLimitApiWindowMs: 60000,
+      currentRateLimitApiMax: 300,
+      rateLimitApiMax: 300,
+      currentRateLimitWriteWindowMs: 60000,
+      rateLimitWriteWindowMs: 60000,
+      currentRateLimitWriteMax: 60,
+      rateLimitWriteMax: 60,
+      currentRateLimitAuthWindowMs: 60000,
+      rateLimitAuthWindowMs: 60000,
+      currentRateLimitAuthMax: 30,
+      rateLimitAuthMax: 30,
+      rateLimitLastUpdated: '',
       
       // Color state
       bookingButtonColor: '#334155',
@@ -308,7 +340,9 @@ class Admin extends Component {
           wifiLocked: data.wifiLocked || false,
           logoLocked: data.logoLocked || false,
           informationLocked: data.sidebarLocked || false,
-          bookingLocked: data.bookingLocked || false
+          bookingLocked: data.bookingLocked || false,
+          searchLocked: data.searchLocked || false,
+          rateLimitLocked: data.rateLimitLocked || false
         });
       })
       .catch(err => {
@@ -618,6 +652,70 @@ class Admin extends Component {
       })
       .catch(err => {
         console.error('Error loading booking config:', err);
+      });
+
+    fetch('/api/search-config')
+      .then(response => response.json())
+      .then(data => {
+        const useGraphAPI = data.useGraphAPI !== undefined ? !!data.useGraphAPI : true;
+        const maxDays = Number.isFinite(Number(data.maxDays)) ? Math.max(parseInt(data.maxDays, 10), 1) : 7;
+        const maxRoomLists = Number.isFinite(Number(data.maxRoomLists)) ? Math.max(parseInt(data.maxRoomLists, 10), 1) : 5;
+        const maxRooms = Number.isFinite(Number(data.maxRooms)) ? Math.max(parseInt(data.maxRooms, 10), 1) : 50;
+        const maxItems = Number.isFinite(Number(data.maxItems)) ? Math.max(parseInt(data.maxItems, 10), 1) : 100;
+        const pollIntervalMs = Number.isFinite(Number(data.pollIntervalMs)) ? Math.max(parseInt(data.pollIntervalMs, 10), 5000) : 15000;
+
+        this.setState({
+          currentSearchUseGraphAPI: useGraphAPI,
+          searchUseGraphAPI: useGraphAPI,
+          currentSearchMaxDays: maxDays,
+          searchMaxDays: maxDays,
+          currentSearchMaxRoomLists: maxRoomLists,
+          searchMaxRoomLists: maxRoomLists,
+          currentSearchMaxRooms: maxRooms,
+          searchMaxRooms: maxRooms,
+          currentSearchMaxItems: maxItems,
+          searchMaxItems: maxItems,
+          currentSearchPollIntervalMs: pollIntervalMs,
+          searchPollIntervalMs: pollIntervalMs,
+          searchLastUpdated: data.lastUpdated
+            ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
+            : '-'
+        });
+      })
+      .catch(err => {
+        console.error('Error loading search config:', err);
+      });
+
+    fetch('/api/rate-limit-config')
+      .then(response => response.json())
+      .then(data => {
+        const apiWindowMs = Number.isFinite(Number(data.apiWindowMs)) ? Math.max(parseInt(data.apiWindowMs, 10), 1000) : 60000;
+        const apiMax = Number.isFinite(Number(data.apiMax)) ? Math.max(parseInt(data.apiMax, 10), 1) : 300;
+        const writeWindowMs = Number.isFinite(Number(data.writeWindowMs)) ? Math.max(parseInt(data.writeWindowMs, 10), 1000) : 60000;
+        const writeMax = Number.isFinite(Number(data.writeMax)) ? Math.max(parseInt(data.writeMax, 10), 1) : 60;
+        const authWindowMs = Number.isFinite(Number(data.authWindowMs)) ? Math.max(parseInt(data.authWindowMs, 10), 1000) : 60000;
+        const authMax = Number.isFinite(Number(data.authMax)) ? Math.max(parseInt(data.authMax, 10), 1) : 30;
+
+        this.setState({
+          currentRateLimitApiWindowMs: apiWindowMs,
+          rateLimitApiWindowMs: apiWindowMs,
+          currentRateLimitApiMax: apiMax,
+          rateLimitApiMax: apiMax,
+          currentRateLimitWriteWindowMs: writeWindowMs,
+          rateLimitWriteWindowMs: writeWindowMs,
+          currentRateLimitWriteMax: writeMax,
+          rateLimitWriteMax: writeMax,
+          currentRateLimitAuthWindowMs: authWindowMs,
+          rateLimitAuthWindowMs: authWindowMs,
+          currentRateLimitAuthMax: authMax,
+          rateLimitAuthMax: authMax,
+          rateLimitLastUpdated: data.lastUpdated
+            ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
+            : '-'
+        });
+      })
+      .catch(err => {
+        console.error('Error loading rate-limit config:', err);
       });
 
     fetch('/api/roomlists')
@@ -1159,6 +1257,130 @@ class Admin extends Component {
       });
   }
 
+  handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const {
+      apiToken,
+      searchUseGraphAPI,
+      searchMaxDays,
+      searchMaxRoomLists,
+      searchMaxRooms,
+      searchMaxItems,
+      searchPollIntervalMs
+    } = this.state;
+
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    fetch('/api/search-config', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        useGraphAPI: !!searchUseGraphAPI,
+        maxDays: Math.max(parseInt(searchMaxDays, 10) || 1, 1),
+        maxRoomLists: Math.max(parseInt(searchMaxRoomLists, 10) || 1, 1),
+        maxRooms: Math.max(parseInt(searchMaxRooms, 10) || 1, 1),
+        maxItems: Math.max(parseInt(searchMaxItems, 10) || 1, 1),
+        pollIntervalMs: Math.max(parseInt(searchPollIntervalMs, 10) || 5000, 5000)
+      })
+    })
+      .then(response => {
+        if (response.status === 401) {
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        this.setState({
+          searchMessage: 'Search configuration updated successfully.',
+          searchMessageType: 'success'
+        });
+        this.loadCurrentConfig();
+
+        setTimeout(() => {
+          this.setState({ searchMessage: null, searchMessageType: null });
+        }, 5000);
+      })
+      .catch(err => {
+        this.setState({
+          searchMessage: `${t.errorPrefix} ${err.message}`,
+          searchMessageType: 'error'
+        });
+      });
+  }
+
+  handleRateLimitSubmit = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const {
+      apiToken,
+      rateLimitApiWindowMs,
+      rateLimitApiMax,
+      rateLimitWriteWindowMs,
+      rateLimitWriteMax,
+      rateLimitAuthWindowMs,
+      rateLimitAuthMax
+    } = this.state;
+
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    fetch('/api/rate-limit-config', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        apiWindowMs: Math.max(parseInt(rateLimitApiWindowMs, 10) || 1000, 1000),
+        apiMax: Math.max(parseInt(rateLimitApiMax, 10) || 1, 1),
+        writeWindowMs: Math.max(parseInt(rateLimitWriteWindowMs, 10) || 1000, 1000),
+        writeMax: Math.max(parseInt(rateLimitWriteMax, 10) || 1, 1),
+        authWindowMs: Math.max(parseInt(rateLimitAuthWindowMs, 10) || 1000, 1000),
+        authMax: Math.max(parseInt(rateLimitAuthMax, 10) || 1, 1)
+      })
+    })
+      .then(response => {
+        if (response.status === 401) {
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        this.setState({
+          rateLimitMessage: 'Rate limit configuration updated successfully.',
+          rateLimitMessageType: 'success'
+        });
+        this.loadCurrentConfig();
+
+        setTimeout(() => {
+          this.setState({ rateLimitMessage: null, rateLimitMessageType: null });
+        }, 5000);
+      })
+      .catch(err => {
+        this.setState({
+          rateLimitMessage: `${t.errorPrefix} ${err.message}`,
+          rateLimitMessageType: 'error'
+        });
+      });
+  }
+
   handleExportBackup = () => {
     const t = this.getTranslations();
     const { apiToken } = this.state;
@@ -1430,6 +1652,10 @@ class Admin extends Component {
       availableRoomOptions, availableRoomGroupOptions,
       currentMaintenanceEnabled, currentMaintenanceMessage, maintenanceLastUpdated,
       maintenanceEnabled, maintenanceMessage,
+      currentSearchUseGraphAPI, currentSearchMaxDays, currentSearchMaxRoomLists, currentSearchMaxRooms, currentSearchMaxItems, currentSearchPollIntervalMs, searchLastUpdated,
+      searchUseGraphAPI, searchMaxDays, searchMaxRoomLists, searchMaxRooms, searchMaxItems, searchPollIntervalMs,
+      currentRateLimitApiWindowMs, currentRateLimitApiMax, currentRateLimitWriteWindowMs, currentRateLimitWriteMax, currentRateLimitAuthWindowMs, currentRateLimitAuthMax, rateLimitLastUpdated,
+      rateLimitApiWindowMs, rateLimitApiMax, rateLimitWriteWindowMs, rateLimitWriteMax, rateLimitAuthWindowMs, rateLimitAuthMax,
       maintenanceMessageBanner, maintenanceMessageType,
       i18nLastUpdated, currentMaintenanceTranslations, maintenanceTranslationsText, currentAdminTranslations, adminTranslationsText, translationLanguage, newTranslationLanguageCode, translationLanguageDraftError, collapsedTranslationGroups, showAdvancedTranslationsEditor, i18nMessage, i18nMessageType,
       backupPayloadText, backupMessage, backupMessageType,
@@ -1441,7 +1667,8 @@ class Admin extends Component {
       statusNotFoundColor, currentStatusNotFoundColor,
       wifiMessage, wifiMessageType, logoMessage, logoMessageType, informationMessage, informationMessageType,
       bookingMessage, bookingMessageType, colorMessage, colorMessageType,
-      wifiLocked, logoLocked, informationLocked, bookingLocked,
+      searchMessage, searchMessageType, rateLimitMessage, rateLimitMessageType,
+      wifiLocked, logoLocked, informationLocked, bookingLocked, searchLocked, rateLimitLocked,
       bookingPermissionMissing,
       activeTab,
       syncStatus,
@@ -2535,6 +2762,269 @@ class Admin extends Component {
               )}
 
               <div className="admin-form-divider"></div>
+
+              {!searchLocked && (
+                <>
+                  <h3>Search Configuration</h3>
+                  <div className="admin-current-config">
+                    <h3>{t.currentConfigTitle}</h3>
+                    <div className="config-grid">
+                      <div className="config-item">
+                        <span className="config-label">Use Microsoft Graph API</span>
+                        <span className="config-value">{currentSearchUseGraphAPI ? 'Yes' : 'No'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Max days</span>
+                        <span className="config-value">{currentSearchMaxDays}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Max room lists</span>
+                        <span className="config-value">{currentSearchMaxRoomLists}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Max rooms</span>
+                        <span className="config-value">{currentSearchMaxRooms}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Max items</span>
+                        <span className="config-value">{currentSearchMaxItems}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Poll interval (ms)</span>
+                        <span className="config-value">{currentSearchPollIntervalMs}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.lastUpdatedLabel}</span>
+                        <span className="config-value">{searchLastUpdated || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form onSubmit={this.handleSearchSubmit}>
+                    <div className="admin-form-group">
+                      <label className="inline-label">
+                        <span className="label-text">Use Microsoft Graph API</span>
+                        <input
+                          type="checkbox"
+                          checked={searchUseGraphAPI}
+                          onChange={(e) => this.setState({ searchUseGraphAPI: e.target.checked })}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="searchMaxDays">Max days</label>
+                      <input
+                        id="searchMaxDays"
+                        type="number"
+                        min="1"
+                        value={searchMaxDays}
+                        onChange={(e) => this.setState({ searchMaxDays: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="searchMaxRoomLists">Max room lists</label>
+                      <input
+                        id="searchMaxRoomLists"
+                        type="number"
+                        min="1"
+                        value={searchMaxRoomLists}
+                        onChange={(e) => this.setState({ searchMaxRoomLists: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="searchMaxRooms">Max rooms</label>
+                      <input
+                        id="searchMaxRooms"
+                        type="number"
+                        min="1"
+                        value={searchMaxRooms}
+                        onChange={(e) => this.setState({ searchMaxRooms: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="searchMaxItems">Max items</label>
+                      <input
+                        id="searchMaxItems"
+                        type="number"
+                        min="1"
+                        value={searchMaxItems}
+                        onChange={(e) => this.setState({ searchMaxItems: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="searchPollIntervalMs">Poll interval (ms)</label>
+                      <input
+                        id="searchPollIntervalMs"
+                        type="number"
+                        min="5000"
+                        step="1000"
+                        value={searchPollIntervalMs}
+                        onChange={(e) => this.setState({ searchPollIntervalMs: Math.max(parseInt(e.target.value, 10) || 5000, 5000) })}
+                      />
+                      <small>Minimum: 5000 ms</small>
+                    </div>
+
+                    <button type="submit" className="admin-submit-button">
+                      Save Search Configuration
+                    </button>
+                  </form>
+
+                  {searchMessage && (
+                    <div className={`admin-message admin-message-${searchMessageType}`}>
+                      {searchMessage}
+                    </div>
+                  )}
+
+                  <div className="admin-form-divider"></div>
+                </>
+              )}
+
+              {searchLocked && (
+                <>
+                  <h3>Search Configuration</h3>
+                  <div className="admin-locked-message">
+                    <p>{t.configuredViaEnv}</p>
+                  </div>
+                  <div className="admin-form-divider"></div>
+                </>
+              )}
+
+              {!rateLimitLocked && (
+                <>
+                  <h3>Rate Limit Configuration</h3>
+                  <div className="admin-current-config">
+                    <h3>{t.currentConfigTitle}</h3>
+                    <div className="config-grid">
+                      <div className="config-item">
+                        <span className="config-label">API window (ms)</span>
+                        <span className="config-value">{currentRateLimitApiWindowMs}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">API max</span>
+                        <span className="config-value">{currentRateLimitApiMax}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Write window (ms)</span>
+                        <span className="config-value">{currentRateLimitWriteWindowMs}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Write max</span>
+                        <span className="config-value">{currentRateLimitWriteMax}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Auth window (ms)</span>
+                        <span className="config-value">{currentRateLimitAuthWindowMs}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Auth max</span>
+                        <span className="config-value">{currentRateLimitAuthMax}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.lastUpdatedLabel}</span>
+                        <span className="config-value">{rateLimitLastUpdated || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form onSubmit={this.handleRateLimitSubmit}>
+                    <div className="admin-form-group">
+                      <label htmlFor="rateLimitApiWindowMs">API window (ms)</label>
+                      <input
+                        id="rateLimitApiWindowMs"
+                        type="number"
+                        min="1000"
+                        step="1000"
+                        value={rateLimitApiWindowMs}
+                        onChange={(e) => this.setState({ rateLimitApiWindowMs: Math.max(parseInt(e.target.value, 10) || 1000, 1000) })}
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="rateLimitApiMax">API max requests</label>
+                      <input
+                        id="rateLimitApiMax"
+                        type="number"
+                        min="1"
+                        value={rateLimitApiMax}
+                        onChange={(e) => this.setState({ rateLimitApiMax: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="rateLimitWriteWindowMs">Write window (ms)</label>
+                      <input
+                        id="rateLimitWriteWindowMs"
+                        type="number"
+                        min="1000"
+                        step="1000"
+                        value={rateLimitWriteWindowMs}
+                        onChange={(e) => this.setState({ rateLimitWriteWindowMs: Math.max(parseInt(e.target.value, 10) || 1000, 1000) })}
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="rateLimitWriteMax">Write max requests</label>
+                      <input
+                        id="rateLimitWriteMax"
+                        type="number"
+                        min="1"
+                        value={rateLimitWriteMax}
+                        onChange={(e) => this.setState({ rateLimitWriteMax: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="rateLimitAuthWindowMs">Auth window (ms)</label>
+                      <input
+                        id="rateLimitAuthWindowMs"
+                        type="number"
+                        min="1000"
+                        step="1000"
+                        value={rateLimitAuthWindowMs}
+                        onChange={(e) => this.setState({ rateLimitAuthWindowMs: Math.max(parseInt(e.target.value, 10) || 1000, 1000) })}
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="rateLimitAuthMax">Auth max requests</label>
+                      <input
+                        id="rateLimitAuthMax"
+                        type="number"
+                        min="1"
+                        value={rateLimitAuthMax}
+                        onChange={(e) => this.setState({ rateLimitAuthMax: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
+                      />
+                    </div>
+
+                    <button type="submit" className="admin-submit-button">
+                      Save Rate Limit Configuration
+                    </button>
+                  </form>
+
+                  {rateLimitMessage && (
+                    <div className={`admin-message admin-message-${rateLimitMessageType}`}>
+                      {rateLimitMessage}
+                    </div>
+                  )}
+
+                  <div className="admin-form-divider"></div>
+                </>
+              )}
+
+              {rateLimitLocked && (
+                <>
+                  <h3>Rate Limit Configuration</h3>
+                  <div className="admin-locked-message">
+                    <p>{t.configuredViaEnv}</p>
+                  </div>
+                  <div className="admin-form-divider"></div>
+                </>
+              )}
 
               <div className="admin-form-group">
                 <label htmlFor="backupPayloadText">{t.backupPayloadLabel}</label>
