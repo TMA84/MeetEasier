@@ -239,6 +239,40 @@ function getSyncStatus() {
   };
 }
 
+function getEffectivePollIntervalMs() {
+  const webhookModeEnabled = !!config.graphWebhook?.enabled;
+  return webhookModeEnabled
+    ? Math.max(config.calendarSearch.pollIntervalMs, 300000)
+    : config.calendarSearch.pollIntervalMs;
+}
+
+function startPollingLoop() {
+  const pollInterval = getEffectivePollIntervalMs();
+
+  fetchAndBroadcastRooms();
+
+  if (pollTimerHandle) {
+    clearInterval(pollTimerHandle);
+  }
+
+  pollTimerHandle = setInterval(() => {
+    fetchAndBroadcastRooms();
+  }, pollInterval);
+
+  if (config.graphWebhook?.enabled) {
+    console.log(`Graph webhook mode enabled. Polling fallback active every ${pollInterval} ms.`);
+  }
+}
+
+function refreshPollingSchedule() {
+  if (!isRunning) {
+    return false;
+  }
+
+  startPollingLoop();
+  return true;
+}
+
 async function triggerImmediateRefresh() {
   if (!socketIO) {
     return false;
@@ -269,19 +303,7 @@ module.exports = function(io) {
 
     // Start API polling loop only once
     if (!isRunning) {
-      const webhookModeEnabled = !!config.graphWebhook?.enabled;
-      const pollInterval = webhookModeEnabled
-        ? Math.max(config.calendarSearch.pollIntervalMs, 300000)
-        : config.calendarSearch.pollIntervalMs;
-
-      fetchAndBroadcastRooms();
-      pollTimerHandle = setInterval(() => {
-        fetchAndBroadcastRooms();
-      }, pollInterval);
-
-      if (webhookModeEnabled) {
-        console.log(`Graph webhook mode enabled. Polling fallback active every ${pollInterval} ms.`);
-      }
+    startPollingLoop();
     }
 
     isRunning = true;
@@ -295,7 +317,9 @@ module.exports = function(io) {
   // Export sync status getter for routes to use
   module.exports.getSyncStatus = getSyncStatus;
   module.exports.triggerImmediateRefresh = triggerImmediateRefresh;
+  module.exports.refreshPollingSchedule = refreshPollingSchedule;
 };
 
 module.exports.getSyncStatus = getSyncStatus;
 module.exports.triggerImmediateRefresh = triggerImmediateRefresh;
+module.exports.refreshPollingSchedule = refreshPollingSchedule;

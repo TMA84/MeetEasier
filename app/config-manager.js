@@ -17,6 +17,8 @@ const bookingConfigPath = path.join(__dirname, '../data/booking-config.json');
 const colorsConfigPath = path.join(__dirname, '../data/colors-config.json');
 const maintenanceConfigPath = path.join(__dirname, '../data/maintenance-config.json');
 const i18nConfigPath = path.join(__dirname, '../data/i18n-config.json');
+const searchConfigPath = path.join(__dirname, '../data/search-config.json');
+const rateLimitConfigPath = path.join(__dirname, '../data/rate-limit-config.json');
 const qrPath = path.join(__dirname, '../static/img/wifi-qr.png');
 
 let io = null;
@@ -204,6 +206,114 @@ function normalizeCheckInConfig(checkInConfig) {
 		windowMinutes: toPositiveInt(source.windowMinutes, Number.isFinite(defaults.windowMinutes) ? defaults.windowMinutes : 10),
 		autoReleaseNoShow: source.autoReleaseNoShow === undefined ? defaults.autoReleaseNoShow !== false : !!source.autoReleaseNoShow
 	};
+}
+
+function toBoolean(value, fallback) {
+	if (value === undefined || value === null) {
+		return fallback;
+	}
+
+	if (typeof value === 'boolean') {
+		return value;
+	}
+
+	if (typeof value === 'string') {
+		const normalized = value.trim().toLowerCase();
+		if (normalized === 'true') {
+			return true;
+		}
+		if (normalized === 'false') {
+			return false;
+		}
+	}
+
+	return !!value;
+}
+
+function toMinInt(value, fallback, min) {
+	const parsed = Number.parseInt(value, 10);
+	if (!Number.isFinite(parsed)) {
+		return fallback;
+	}
+	return Math.max(parsed, min);
+}
+
+function normalizeSearchConfig(searchConfig) {
+	const defaults = config.calendarSearch || {};
+	const source = searchConfig && typeof searchConfig === 'object' && !Array.isArray(searchConfig)
+		? searchConfig
+		: {};
+
+	const fallbackUseGraphAPI = toBoolean(defaults.useGraphAPI, true);
+	const fallbackMaxDays = toMinInt(defaults.maxDays, 7, 1);
+	const fallbackMaxRoomLists = toMinInt(defaults.maxRoomLists, 5, 1);
+	const fallbackMaxRooms = toMinInt(defaults.maxRooms, 50, 1);
+	const fallbackMaxItems = toMinInt(defaults.maxItems, 100, 1);
+	const fallbackPollInterval = toMinInt(defaults.pollIntervalMs, 15000, 5000);
+
+	return {
+		useGraphAPI: toBoolean(source.useGraphAPI, fallbackUseGraphAPI),
+		maxDays: toMinInt(source.maxDays, fallbackMaxDays, 1),
+		maxRoomLists: toMinInt(source.maxRoomLists, fallbackMaxRoomLists, 1),
+		maxRooms: toMinInt(source.maxRooms, fallbackMaxRooms, 1),
+		maxItems: toMinInt(source.maxItems, fallbackMaxItems, 1),
+		pollIntervalMs: toMinInt(source.pollIntervalMs, fallbackPollInterval, 5000)
+	};
+}
+
+function normalizeRateLimitConfig(rateLimitConfig) {
+	const defaults = config.rateLimit || {};
+	const source = rateLimitConfig && typeof rateLimitConfig === 'object' && !Array.isArray(rateLimitConfig)
+		? rateLimitConfig
+		: {};
+
+	const fallbackApiWindowMs = toMinInt(defaults.apiWindowMs, 60000, 1000);
+	const fallbackApiMax = toMinInt(defaults.apiMax, 300, 1);
+	const fallbackWriteWindowMs = toMinInt(defaults.writeWindowMs, 60000, 1000);
+	const fallbackWriteMax = toMinInt(defaults.writeMax, 60, 1);
+	const fallbackAuthWindowMs = toMinInt(defaults.authWindowMs, 60000, 1000);
+	const fallbackAuthMax = toMinInt(defaults.authMax, 30, 1);
+
+	return {
+		apiWindowMs: toMinInt(source.apiWindowMs, fallbackApiWindowMs, 1000),
+		apiMax: toMinInt(source.apiMax, fallbackApiMax, 1),
+		writeWindowMs: toMinInt(source.writeWindowMs, fallbackWriteWindowMs, 1000),
+		writeMax: toMinInt(source.writeMax, fallbackWriteMax, 1),
+		authWindowMs: toMinInt(source.authWindowMs, fallbackAuthWindowMs, 1000),
+		authMax: toMinInt(source.authMax, fallbackAuthMax, 1)
+	};
+}
+
+function getSearchConfig() {
+	try {
+		const data = fs.readFileSync(searchConfigPath, 'utf8');
+		const parsed = JSON.parse(data);
+		return {
+			...normalizeSearchConfig(parsed),
+			lastUpdated: parsed.lastUpdated || null
+		};
+	} catch (err) {
+		return {
+			...normalizeSearchConfig(config.calendarSearch),
+			lastUpdated: null
+		};
+	}
+}
+
+function getRateLimitConfig() {
+	try {
+		const data = fs.readFileSync(rateLimitConfigPath, 'utf8');
+		const parsed = JSON.parse(data);
+		return {
+			...normalizeRateLimitConfig(parsed),
+			lastUpdated: parsed.lastUpdated || null
+		};
+	} catch (err) {
+		return {
+			...normalizeRateLimitConfig(config.rateLimit),
+			lastUpdated: null
+		};
+	}
 }
 
 function getDefaultI18nConfig() {
@@ -531,6 +641,48 @@ function saveColorsConfig(config) {
 	return configData;
 }
 
+function saveSearchConfig(searchConfig) {
+	let existingConfig = {};
+	try {
+		const data = fs.readFileSync(searchConfigPath, 'utf8');
+		existingConfig = JSON.parse(data);
+	} catch (err) {
+		// File doesn't exist or is invalid, use defaults
+	}
+
+	const configData = {
+		...normalizeSearchConfig({
+			...existingConfig,
+			...searchConfig
+		}),
+		lastUpdated: new Date().toISOString()
+	};
+
+	fs.writeFileSync(searchConfigPath, JSON.stringify(configData, null, 2));
+	return configData;
+}
+
+function saveRateLimitConfig(rateLimitConfig) {
+	let existingConfig = {};
+	try {
+		const data = fs.readFileSync(rateLimitConfigPath, 'utf8');
+		existingConfig = JSON.parse(data);
+	} catch (err) {
+		// File doesn't exist or is invalid, use defaults
+	}
+
+	const configData = {
+		...normalizeRateLimitConfig({
+			...existingConfig,
+			...rateLimitConfig
+		}),
+		lastUpdated: new Date().toISOString()
+	};
+
+	fs.writeFileSync(rateLimitConfigPath, JSON.stringify(configData, null, 2));
+	return configData;
+}
+
 /**
  * Generate WiFi QR code image
  * Creates a QR code in standard WiFi format: WIFI:T:WPA;S:<SSID>;P:<PASSWORD>;H:false;;
@@ -708,12 +860,70 @@ async function updateColorsConfig(bookingButtonColor, statusAvailableColor, stat
 	return config;
 }
 
+async function updateSearchConfig(searchConfig) {
+	const updatedConfig = saveSearchConfig(searchConfig || {});
+
+	config.calendarSearch.useGraphAPI = updatedConfig.useGraphAPI;
+	config.calendarSearch.maxDays = updatedConfig.maxDays;
+	config.calendarSearch.maxRoomLists = updatedConfig.maxRoomLists;
+	config.calendarSearch.maxRooms = updatedConfig.maxRooms;
+	config.calendarSearch.maxItems = updatedConfig.maxItems;
+	config.calendarSearch.pollIntervalMs = updatedConfig.pollIntervalMs;
+
+	if (io) {
+		io.of('/').emit('searchConfigUpdated', updatedConfig);
+		console.log('Search config updated, notified all clients via Socket.IO');
+	}
+
+	return updatedConfig;
+}
+
+async function updateRateLimitConfig(rateLimitConfig) {
+	const updatedConfig = saveRateLimitConfig(rateLimitConfig || {});
+
+	config.rateLimit.apiWindowMs = updatedConfig.apiWindowMs;
+	config.rateLimit.apiMax = updatedConfig.apiMax;
+	config.rateLimit.writeWindowMs = updatedConfig.writeWindowMs;
+	config.rateLimit.writeMax = updatedConfig.writeMax;
+	config.rateLimit.authWindowMs = updatedConfig.authWindowMs;
+	config.rateLimit.authMax = updatedConfig.authMax;
+
+	if (io) {
+		io.of('/').emit('rateLimitConfigUpdated', updatedConfig);
+		console.log('Rate limit config updated, notified all clients via Socket.IO');
+	}
+
+	return updatedConfig;
+}
+
+function applyRuntimeConfigOverrides() {
+	const persistedSearchConfig = getSearchConfig();
+	config.calendarSearch.useGraphAPI = persistedSearchConfig.useGraphAPI;
+	config.calendarSearch.maxDays = persistedSearchConfig.maxDays;
+	config.calendarSearch.maxRoomLists = persistedSearchConfig.maxRoomLists;
+	config.calendarSearch.maxRooms = persistedSearchConfig.maxRooms;
+	config.calendarSearch.maxItems = persistedSearchConfig.maxItems;
+	config.calendarSearch.pollIntervalMs = persistedSearchConfig.pollIntervalMs;
+
+	const persistedRateLimitConfig = getRateLimitConfig();
+	config.rateLimit.apiWindowMs = persistedRateLimitConfig.apiWindowMs;
+	config.rateLimit.apiMax = persistedRateLimitConfig.apiMax;
+	config.rateLimit.writeWindowMs = persistedRateLimitConfig.writeWindowMs;
+	config.rateLimit.writeMax = persistedRateLimitConfig.writeMax;
+	config.rateLimit.authWindowMs = persistedRateLimitConfig.authWindowMs;
+	config.rateLimit.authMax = persistedRateLimitConfig.authMax;
+}
+
+applyRuntimeConfigOverrides();
+
 module.exports = {
 	setSocketIO,
 	getWiFiConfig,
 	getLogoConfig,
 	getSidebarConfig,
 	getBookingConfig,
+	getSearchConfig,
+	getRateLimitConfig,
 	getColorsConfig,
 	getMaintenanceConfig,
 	getI18nConfig,
@@ -721,6 +931,8 @@ module.exports = {
 	updateLogoConfig,
 	updateSidebarConfig,
 	updateBookingConfig,
+	updateSearchConfig,
+	updateRateLimitConfig,
 	updateColorsConfig,
 	updateMaintenanceConfig,
 	updateI18nConfig,
