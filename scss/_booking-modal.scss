@@ -466,6 +466,7 @@
 }
 
 .btn-cancel,
+.btn-end-meeting,
 .btn-book {
   flex: 1;
   padding: 12px 24px;
@@ -508,6 +509,21 @@
     background-color: color-mix(in srgb, var(--booking-button-color, #334155) 80%, black);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+}
+
+.btn-end-meeting {
+  background-color: #dc2626;
+  color: #ffffff;
+
+  &:hover:not(:disabled) {
+    background-color: #b91c1c;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
   }
 
   &:active:not(:disabled) {
@@ -574,6 +590,7 @@
   }
 
   .btn-cancel,
+  .btn-end-meeting,
   .btn-book {
     width: 100%;
     padding: 14px 24px;

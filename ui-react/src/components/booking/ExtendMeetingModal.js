@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { getMeetingActionModalTranslations } from '../../config/displayTranslations.js';
 
 /**
  * ExtendMeetingModal - Modal dialog for extending the current meeting
@@ -13,6 +14,7 @@ class ExtendMeetingModal extends Component {
       selectedDuration: 30,
       customDuration: 30,
       isSubmitting: false,
+      isEnding: false,
       error: null
     };
   }
@@ -37,35 +39,7 @@ class ExtendMeetingModal extends Component {
   }
 
   getTranslations() {
-    const lang = navigator.language || navigator.userLanguage || 'en';
-    const langCode = lang.split('-')[0].toLowerCase();
-
-    const translations = {
-      en: {
-        title: 'Extend Meeting',
-        extendBy: 'Extend by:',
-        custom: 'Custom',
-        minutes: 'min',
-        cancel: 'Cancel',
-        extend: 'Extend Meeting',
-        extending: 'Extending...',
-        noActiveMeeting: 'No active meeting to extend.',
-        genericError: 'Failed to extend meeting. Please try again.'
-      },
-      de: {
-        title: 'Meeting verlängern',
-        extendBy: 'Verlängern um:',
-        custom: 'Benutzerdefiniert',
-        minutes: 'Min',
-        cancel: 'Abbrechen',
-        extend: 'Meeting verlängern',
-        extending: 'Wird verlängert...',
-        noActiveMeeting: 'Kein aktives Meeting zum Verlängern.',
-        genericError: 'Meeting konnte nicht verlängert werden. Bitte erneut versuchen.'
-      }
-    };
-
-    return translations[langCode] || translations.en;
+    return getMeetingActionModalTranslations();
   }
 
   handleQuickExtend = (durationMinutes) => {
@@ -118,7 +92,7 @@ class ExtendMeetingModal extends Component {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || data.message || t.genericError);
+  		throw new Error(data.error || data.message || t.endGenericError);
       }
 
       if (onSuccess) {
@@ -134,9 +108,54 @@ class ExtendMeetingModal extends Component {
     }
   };
 
+  handleEndMeeting = async () => {
+    const { room, onClose, onSuccess } = this.props;
+    const t = this.getTranslations();
+
+    if (!room || !room.Busy || !room.Appointments || room.Appointments.length === 0) {
+      this.setState({ error: t.noActiveMeetingEnd });
+      return;
+    }
+
+    const currentAppointment = room.Appointments[0];
+
+    this.setState({ isEnding: true, error: null });
+
+    try {
+      const response = await fetch('/api/end-meeting', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          roomEmail: room.Email,
+          roomGroup: room.RoomlistAlias,
+          appointmentId: currentAppointment.Id
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || data.message || t.genericError);
+      }
+
+      if (onSuccess) {
+        onSuccess(data);
+      }
+      onClose();
+    } catch (error) {
+      console.error('End meeting error:', error);
+      this.setState({
+		error: error.message || t.endGenericError,
+        isEnding: false
+      });
+    }
+  };
+
   render() {
     const { onClose, theme } = this.props;
-    const { selectedDuration, customDuration, isSubmitting, error } = this.state;
+    const { selectedDuration, customDuration, isSubmitting, isEnding, error } = this.state;
     const isDark = theme === 'dark';
     const t = this.getTranslations();
 
@@ -215,14 +234,22 @@ class ExtendMeetingModal extends Component {
                   type="button"
                   className="btn-cancel"
                   onClick={onClose}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isEnding}
                 >
                   {t.cancel}
                 </button>
                 <button
+                  type="button"
+                  className="btn-end-meeting"
+                  onClick={this.handleEndMeeting}
+                  disabled={isSubmitting || isEnding}
+                >
+                  {isEnding ? t.ending : t.endNow}
+                </button>
+                <button
                   type="submit"
                   className="btn-book"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isEnding}
                 >
                   {isSubmitting ? t.extending : t.extend}
                 </button>

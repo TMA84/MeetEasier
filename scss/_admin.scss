@@ -352,6 +352,7 @@
   
   input[type="text"],
   input[type="password"],
+  input[type="number"],
   select,
   textarea {
     width: 100%;
@@ -431,6 +432,24 @@
     background: #353849;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
+}
+
+#checkInEarlyMinutes,
+#checkInWindowMinutes {
+  appearance: textfield;
+  -moz-appearance: textfield;
+  -webkit-appearance: none;
+  background: #2d3142;
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+#checkInEarlyMinutes::-webkit-outer-spin-button,
+#checkInEarlyMinutes::-webkit-inner-spin-button,
+#checkInWindowMinutes::-webkit-outer-spin-button,
+#checkInWindowMinutes::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 #translationLanguage {

@@ -96,7 +96,8 @@ function getBookingConfig() {
 		return {
 			...parsed,
 			roomFeatureFlags: normalizeRoomFeatureFlags(parsed.roomFeatureFlags),
-			roomGroupFeatureFlags: normalizeRoomGroupFeatureFlags(parsed.roomGroupFeatureFlags)
+			roomGroupFeatureFlags: normalizeRoomGroupFeatureFlags(parsed.roomGroupFeatureFlags),
+			checkIn: normalizeCheckInConfig(parsed.checkIn)
 		};
 	} catch (err) {
 		// Return default config from environment variables if file doesn't exist
@@ -107,6 +108,7 @@ function getBookingConfig() {
 			extendMeetingUrlAllowlist: config.bookingDefaults.extendMeetingUrlAllowlist,
 			roomFeatureFlags: config.bookingDefaults.roomFeatureFlags,
 			roomGroupFeatureFlags: config.bookingDefaults.roomGroupFeatureFlags,
+			checkIn: normalizeCheckInConfig(config.bookingDefaults.checkIn),
 			lastUpdated: null
 		};
 	}
@@ -169,6 +171,39 @@ function normalizeRoomGroupFeatureFlags(flags) {
 	}
 
 	return normalized;
+}
+
+function normalizeCheckInConfig(checkInConfig) {
+	const defaults = config.checkIn || {};
+	const source = checkInConfig && typeof checkInConfig === 'object' && !Array.isArray(checkInConfig)
+		? checkInConfig
+		: {};
+
+	const toPositiveInt = (value, fallback) => {
+		const parsed = Number.parseInt(value, 10);
+		if (!Number.isFinite(parsed)) {
+			return fallback;
+		}
+		return Math.max(parsed, 1);
+	};
+
+	const toNonNegativeInt = (value, fallback) => {
+		const parsed = Number.parseInt(value, 10);
+		if (!Number.isFinite(parsed)) {
+			return fallback;
+		}
+		return Math.max(parsed, 0);
+	};
+
+	return {
+		enabled: source.enabled === undefined ? defaults.enabled !== false : !!source.enabled,
+		requiredForExternalMeetings: source.requiredForExternalMeetings === undefined
+			? defaults.requiredForExternalMeetings !== false
+			: !!source.requiredForExternalMeetings,
+		earlyCheckInMinutes: toNonNegativeInt(source.earlyCheckInMinutes, Number.isFinite(defaults.earlyCheckInMinutes) ? defaults.earlyCheckInMinutes : 5),
+		windowMinutes: toPositiveInt(source.windowMinutes, Number.isFinite(defaults.windowMinutes) ? defaults.windowMinutes : 10),
+		autoReleaseNoShow: source.autoReleaseNoShow === undefined ? defaults.autoReleaseNoShow !== false : !!source.autoReleaseNoShow
+	};
 }
 
 function getDefaultI18nConfig() {
@@ -364,7 +399,7 @@ function saveSidebarConfig(config) {
 	} catch (err) {
 		// File doesn't exist or is invalid, use defaults
 	}
-	
+
 	const configData = {
 		showWiFi: config.showWiFi !== undefined ? config.showWiFi : (existingConfig.showWiFi !== undefined ? existingConfig.showWiFi : true),
 		showUpcomingMeetings: config.showUpcomingMeetings !== undefined ? config.showUpcomingMeetings : (existingConfig.showUpcomingMeetings !== undefined ? existingConfig.showUpcomingMeetings : false),
@@ -409,6 +444,9 @@ function saveBookingConfig(config) {
 		roomGroupFeatureFlags: config.roomGroupFeatureFlags !== undefined
 			? normalizeRoomGroupFeatureFlags(config.roomGroupFeatureFlags)
 			: normalizeRoomGroupFeatureFlags(existingConfig.roomGroupFeatureFlags),
+		checkIn: config.checkIn !== undefined
+			? normalizeCheckInConfig(config.checkIn)
+			: normalizeCheckInConfig(existingConfig.checkIn),
 		lastUpdated: new Date().toISOString()
 	};
 	
@@ -588,14 +626,15 @@ async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTi
  * @param {string} buttonColor - Hex color for booking buttons
  * @returns {Promise<Object>} Updated configuration
  */
-async function updateBookingConfig(enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist, roomFeatureFlags, roomGroupFeatureFlags) {
+async function updateBookingConfig(enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist, roomFeatureFlags, roomGroupFeatureFlags, checkIn) {
 	const config = saveBookingConfig({
 		enableBooking,
 		buttonColor,
 		enableExtendMeeting,
 		extendMeetingUrlAllowlist,
 		roomFeatureFlags,
-		roomGroupFeatureFlags
+		roomGroupFeatureFlags,
+		checkIn
 	});
 	
 	// Emit Socket.IO event to notify all connected clients

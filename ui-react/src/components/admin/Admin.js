@@ -42,7 +42,20 @@ const QUICK_ADMIN_TRANSLATION_GROUPS = [
       'displayUpcomingMeetingsTitleLabel',
       'displayNoUpcomingMeetingsLabel',
       'displayBookRoomButtonLabel',
-      'displayExtendMeetingButtonLabel'
+      'displayExtendMeetingButtonLabel',
+      'displayMeetingModalTitleLabel',
+      'displayMeetingModalExtendByLabel',
+      'displayMeetingModalCustomLabel',
+      'displayMeetingModalMinutesLabel',
+      'displayMeetingModalCancelLabel',
+      'displayMeetingModalExtendButtonLabel',
+      'displayMeetingModalExtendingLabel',
+      'displayMeetingModalEndButtonLabel',
+      'displayMeetingModalEndingLabel',
+      'displayMeetingModalNoActiveExtendLabel',
+      'displayMeetingModalNoActiveEndLabel',
+      'displayMeetingModalExtendErrorLabel',
+      'displayMeetingModalEndErrorLabel'
     ]
   }
 ];
@@ -166,6 +179,16 @@ class Admin extends Component {
       bookingPermissionMissing: false,
       currentEnableExtendMeeting: false,
       enableExtendMeeting: false,
+      currentCheckInEnabled: true,
+      checkInEnabled: true,
+      currentCheckInRequiredForExternalMeetings: true,
+      checkInRequiredForExternalMeetings: true,
+      currentCheckInEarlyMinutes: 5,
+      checkInEarlyMinutes: 5,
+      currentCheckInWindowMinutes: 10,
+      checkInWindowMinutes: 10,
+      currentCheckInAutoReleaseNoShow: true,
+      checkInAutoReleaseNoShow: true,
       currentRoomFeatureFlags: {},
       roomFeatureFlags: {},
       currentRoomGroupFeatureFlags: {},
@@ -548,6 +571,24 @@ class Admin extends Component {
         const roomGroupFeatureFlags = data.roomGroupFeatureFlags && typeof data.roomGroupFeatureFlags === 'object'
           ? data.roomGroupFeatureFlags
           : {};
+        const checkIn = data.checkIn && typeof data.checkIn === 'object'
+          ? data.checkIn
+          : {};
+
+        const checkInEnabled = checkIn.enabled !== undefined ? !!checkIn.enabled : true;
+        const checkInRequiredForExternalMeetings = checkIn.requiredForExternalMeetings !== undefined
+          ? !!checkIn.requiredForExternalMeetings
+          : true;
+        const checkInEarlyMinutes = Number.isFinite(Number(checkIn.earlyCheckInMinutes))
+          ? Math.max(parseInt(checkIn.earlyCheckInMinutes, 10), 0)
+          : 5;
+        const checkInWindowMinutes = Number.isFinite(Number(checkIn.windowMinutes))
+          ? Math.max(parseInt(checkIn.windowMinutes, 10), 1)
+          : 10;
+        const checkInAutoReleaseNoShow = checkIn.autoReleaseNoShow !== undefined
+          ? !!checkIn.autoReleaseNoShow
+          : true;
+
         this.setState({
           currentEnableBooking: data.enableBooking !== undefined ? data.enableBooking : true,
           bookingLastUpdated: data.lastUpdated 
@@ -559,6 +600,16 @@ class Admin extends Component {
           bookingPermissionMissing: data.permissionMissing || false,
           bookingButtonColor: data.buttonColor || '#334155',
           currentBookingButtonColor: data.buttonColor || '#334155',
+          currentCheckInEnabled: checkInEnabled,
+          checkInEnabled,
+          currentCheckInRequiredForExternalMeetings: checkInRequiredForExternalMeetings,
+          checkInRequiredForExternalMeetings,
+          currentCheckInEarlyMinutes: checkInEarlyMinutes,
+          checkInEarlyMinutes,
+          currentCheckInWindowMinutes: checkInWindowMinutes,
+          checkInWindowMinutes,
+          currentCheckInAutoReleaseNoShow: checkInAutoReleaseNoShow,
+          checkInAutoReleaseNoShow,
           currentRoomFeatureFlags: roomFeatureFlags,
           roomFeatureFlags,
           currentRoomGroupFeatureFlags: roomGroupFeatureFlags,
@@ -928,6 +979,11 @@ class Admin extends Component {
       enableBooking,
       enableExtendMeeting,
       bookingButtonColor,
+      checkInEnabled,
+      checkInRequiredForExternalMeetings,
+      checkInEarlyMinutes,
+      checkInWindowMinutes,
+      checkInAutoReleaseNoShow,
       roomFeatureFlags,
       roomGroupFeatureFlags
     } = this.state;
@@ -947,6 +1003,13 @@ class Admin extends Component {
         enableBooking,
         enableExtendMeeting,
         buttonColor: bookingButtonColor,
+        checkIn: {
+          enabled: !!checkInEnabled,
+          requiredForExternalMeetings: !!checkInRequiredForExternalMeetings,
+          earlyCheckInMinutes: Math.max(parseInt(checkInEarlyMinutes, 10) || 0, 0),
+          windowMinutes: Math.max(parseInt(checkInWindowMinutes, 10) || 1, 1),
+          autoReleaseNoShow: !!checkInAutoReleaseNoShow
+        },
         roomFeatureFlags,
         roomGroupFeatureFlags
       })
@@ -1354,9 +1417,13 @@ class Admin extends Component {
       currentLogoDarkUrl, currentLogoLightUrl, logoLastUpdated,
       currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, currentMinimalHeaderStyle, informationLastUpdated,
       currentEnableBooking, currentEnableExtendMeeting, bookingLastUpdated,
+      currentCheckInEnabled, currentCheckInRequiredForExternalMeetings,
+      currentCheckInEarlyMinutes, currentCheckInWindowMinutes, currentCheckInAutoReleaseNoShow,
       apiToken, ssid, password, logoDarkUrl, logoLightUrl, logoDarkFile, logoLightFile, uploadMode,
       showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle,
       enableBooking, enableExtendMeeting,
+      checkInEnabled, checkInRequiredForExternalMeetings,
+      checkInEarlyMinutes, checkInWindowMinutes, checkInAutoReleaseNoShow,
       currentRoomFeatureFlags, roomFeatureFlags,
       currentRoomGroupFeatureFlags, roomGroupFeatureFlags,
       newRoomOverrideKey, newRoomGroupOverrideKey,
@@ -1906,6 +1973,26 @@ class Admin extends Component {
                   <span className="config-value">{currentEnableExtendMeeting ? 'Yes' : 'No'}</span>
                 </div>
                 <div className="config-item">
+                  <span className="config-label">Check-in enabled</span>
+                  <span className="config-value">{currentCheckInEnabled ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="config-item">
+                  <span className="config-label">Check-in external only</span>
+                  <span className="config-value">{currentCheckInRequiredForExternalMeetings ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="config-item">
+                  <span className="config-label">Check-in starts before meeting</span>
+                  <span className="config-value">{currentCheckInEarlyMinutes} min</span>
+                </div>
+                <div className="config-item">
+                  <span className="config-label">Check-in window after start</span>
+                  <span className="config-value">{currentCheckInWindowMinutes} min</span>
+                </div>
+                <div className="config-item">
+                  <span className="config-label">Auto-release on no-show</span>
+                  <span className="config-value">{currentCheckInAutoReleaseNoShow ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="config-item">
                   <span className="config-label">{t.bookingButtonColorLabel}</span>
                   <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ 
@@ -1961,6 +2048,72 @@ class Admin extends Component {
                   />
                 </label>
                 <small>{t.enableExtendMeetingHelp}</small>
+              </div>
+
+              <div className="admin-form-divider"></div>
+
+              <div className="admin-form-group">
+                <label className="inline-label">
+                  <span className="label-text">Check-in aktivieren</span>
+                  <input
+                    type="checkbox"
+                    checked={checkInEnabled}
+                    onChange={(e) => this.setState({ checkInEnabled: e.target.checked })}
+                  />
+                </label>
+                <small>Aktiviert den Check-in-Button für relevante Meetings.</small>
+              </div>
+
+              <div className="admin-form-group">
+                <label className="inline-label">
+                  <span className="label-text">Nur externe Meetings benötigen Check-in</span>
+                  <input
+                    type="checkbox"
+                    checked={checkInRequiredForExternalMeetings}
+                    onChange={(e) => this.setState({ checkInRequiredForExternalMeetings: e.target.checked })}
+                    disabled={!checkInEnabled}
+                  />
+                </label>
+                <small>Empfohlen: Display-erstellte Buchungen bleiben ohne Check-in/no-show.</small>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="checkInEarlyMinutes">Check-in ab Minuten vor Start</label>
+                <input
+                  id="checkInEarlyMinutes"
+                  type="number"
+                  min="0"
+                  value={checkInEarlyMinutes}
+                  onChange={(e) => this.setState({ checkInEarlyMinutes: Math.max(parseInt(e.target.value, 10) || 0, 0) })}
+                  disabled={!checkInEnabled}
+                />
+                <small>Standard: 5 Minuten vor Terminbeginn.</small>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="checkInWindowMinutes">Check-in-Fenster nach Start (Minuten)</label>
+                <input
+                  id="checkInWindowMinutes"
+                  type="number"
+                  min="1"
+                  value={checkInWindowMinutes}
+                  onChange={(e) => this.setState({ checkInWindowMinutes: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
+                  disabled={!checkInEnabled}
+                />
+                <small>Nach Ablauf gilt das Meeting als No-Show (wenn aktiviert).</small>
+              </div>
+
+              <div className="admin-form-group">
+                <label className="inline-label">
+                  <span className="label-text">No-Show automatisch freigeben</span>
+                  <input
+                    type="checkbox"
+                    checked={checkInAutoReleaseNoShow}
+                    onChange={(e) => this.setState({ checkInAutoReleaseNoShow: e.target.checked })}
+                    disabled={!checkInEnabled}
+                  />
+                </label>
+                <small>Löscht nicht bestätigte externe Meetings automatisch nach Ablauf des Fensters.</small>
               </div>
 
               <div className="admin-form-group">

@@ -63,7 +63,14 @@ class Display extends Component {
       showBookingModal: false,
       showExtendModal: false,
       showErrorModal: false,
-      errorMessage: ''
+      errorMessage: '',
+      checkInStatus: {
+        required: false,
+        checkedIn: false,
+        expired: false,
+        loading: false,
+        windowMinutes: 10
+      }
     };
     this.socket = null;
   }
@@ -148,6 +155,7 @@ class Display extends Component {
       roomDetails: roomDetails
     }, () => {
       this.fetchBookingConfig(room.Email, room.RoomlistAlias);
+      this.fetchCheckInStatus(room);
     });
   }
 
@@ -330,6 +338,103 @@ class Display extends Component {
       });
   }
 
+  fetchCheckInStatus = (room) => {
+    if (!room || !Array.isArray(room.Appointments) || room.Appointments.length === 0) {
+      this.setState({
+        checkInStatus: {
+          required: false,
+          checkedIn: false,
+          expired: false,
+          tooEarly: false,
+          canCheckInNow: false,
+          loading: false,
+          earlyCheckInMinutes: 5,
+          windowMinutes: 10
+        }
+      });
+      return;
+    }
+
+    const currentAppointment = room.Appointments[0];
+    const query = new URLSearchParams({
+      roomEmail: room.Email || '',
+      appointmentId: currentAppointment.Id || '',
+      organizer: currentAppointment.Organizer || '',
+      roomName: room.Name || '',
+      startTimestamp: String(currentAppointment.Start || '')
+    }).toString();
+
+    this.setState((prevState) => ({
+      checkInStatus: {
+        ...prevState.checkInStatus,
+        loading: true
+      }
+    }));
+
+    fetch(`/api/check-in-status?${query}`)
+      .then((response) => response.json())
+      .then((status) => {
+        this.setState({
+          checkInStatus: {
+            required: !!status.required,
+            checkedIn: !!status.checkedIn,
+            expired: !!status.expired,
+            tooEarly: !!status.tooEarly,
+            canCheckInNow: !!status.canCheckInNow,
+            loading: false,
+            earlyCheckInMinutes: Number.isFinite(status.earlyCheckInMinutes) ? status.earlyCheckInMinutes : 5,
+            windowMinutes: Number.isFinite(status.windowMinutes) ? status.windowMinutes : 10
+          }
+        });
+      })
+      .catch((err) => {
+        console.error('Error loading check-in status:', err);
+        this.setState((prevState) => ({
+          checkInStatus: {
+            ...prevState.checkInStatus,
+            loading: false
+          }
+        }));
+      });
+  }
+
+  handleCheckIn = () => {
+    const { room } = this.state;
+    const currentAppointment = room?.Appointments?.[0];
+
+    if (!room || !currentAppointment || !currentAppointment.Id) {
+      return;
+    }
+
+    fetch('/api/check-in', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        roomEmail: room.Email,
+        appointmentId: currentAppointment.Id,
+        organizer: currentAppointment.Organizer || '',
+        roomName: room.Name || '',
+        startTimestamp: currentAppointment.Start
+      })
+    })
+      .then((response) => response.json().then((data) => ({ ok: response.ok, status: response.status, data })))
+      .then(({ ok, data }) => {
+        if (!ok || !data?.success) {
+          throw new Error(data?.message || data?.error || 'Check-in failed');
+        }
+
+        this.fetchCheckInStatus(room);
+      })
+      .catch((err) => {
+        this.setState({
+          showErrorModal: true,
+          errorMessage: err.message || 'Check-in failed'
+        });
+      });
+  }
+
   /**
    * Handle extending current meeting
    * @param {number} minutes - Number of minutes to extend (15 or 30)
@@ -444,7 +549,7 @@ class Display extends Component {
   }
 
   render() {
-    const { response, room, roomDetails, sidebarConfig, bookingConfig, showBookingModal, showExtendModal, showErrorModal, errorMessage, maintenanceConfig } = this.state;
+    const { response, room, roomDetails, sidebarConfig, bookingConfig, showBookingModal, showExtendModal, showErrorModal, errorMessage, maintenanceConfig, checkInStatus } = this.state;
     const canExtendMeeting = this.isExtendMeetingAllowed();
     const extendBlockedByOverbooking = canExtendMeeting && this.isExtendBlockedByOverbooking();
     const displayTranslations = getSingleRoomDisplayTranslations();
@@ -453,6 +558,7 @@ class Display extends Component {
     
     const bookButtonText = displayTranslations.bookButtonText;
     const extendButtonText = displayTranslations.extendButtonText;
+    const checkInButtonText = 'Check-in';
     const extendDisabledTitle = displayTranslations.extendDisabledTitle;
     const errorText = displayTranslations.errorTitle;
     const maintenanceCopy = getMaintenanceCopy();
@@ -491,8 +597,15 @@ class Display extends Component {
               onBookRoom={() => this.setState({ showBookingModal: true })}
               onExtendMeeting={canExtendMeeting && !extendBlockedByOverbooking ? () => this.setState({ showExtendModal: true }) : null}
               onExtendMeetingDisabled={extendBlockedByOverbooking}
+              onCheckIn={checkInStatus.canCheckInNow ? this.handleCheckIn : null}
+              checkInRequired={checkInStatus.required}
+              checkInCompleted={checkInStatus.checkedIn}
+              checkInExpired={checkInStatus.expired}
+              checkInTooEarly={checkInStatus.tooEarly}
+              checkInEarlyMinutes={checkInStatus.earlyCheckInMinutes}
               bookButtonText={bookButtonText}
               extendButtonText={extendButtonText}
+              checkInButtonText={checkInButtonText}
               extendDisabledTitle={extendDisabledTitle}
             />
           </div>

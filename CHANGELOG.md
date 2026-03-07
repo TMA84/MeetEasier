@@ -38,6 +38,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Effective booking/extend resolution now follows global → room group → room precedence
   - Booking/extend API paths and modal requests now pass room context (room email + room group alias)
 
+- **Meeting Management & Check-in Flow**
+  - Added integrated “Manage Meeting” flow in display sidebar and modal (extend + end actions)
+  - End meeting now shortens the current appointment instead of deleting it from the calendar
+  - Check-in flow now updates meeting start to current time when check-in happens before scheduled start
+  - Book action remains visible until check-in is actually actionable (prevents premature button switching)
+
+- **Admin Booking Controls**
+  - Booking config now persists runtime check-in settings (enabled, external-only, early window, timeout, auto-release)
+  - Admin booking tab now exposes full check-in/no-show controls and includes these values in config updates
+
 - **Admin Booking UX**
   - Replaced JSON-only override workflow with structured override controls in Admin booking tab
   - Added direct selection for room groups and rooms (dropdowns) with manual input fallback
@@ -63,6 +73,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Startup Safety**
   - Replaced silent calendar credential fallback behavior with explicit startup/configuration errors
   - `/api/rooms` now returns clear configuration errors instead of test data fallback when backend credentials are missing
+
+- **Calendar Update Reliability**
+  - Hardened Graph event update calls with encoded identifiers and consistent UTC timestamp formatting
+
+- **Meeting Action Localization**
+  - Added meeting action modal translation keys for all shipped languages and made them editable in admin translations
+  - Aligned modal button/loading labels to consistent “End Meeting” wording across display variants
 
 - **Translation Language Selector**
   - Fixed selected language persistence and normalization in admin translations

@@ -58,8 +58,25 @@ export const getFlightboardDisplayTranslations = () => ({
   }
 });
 
+export const getMeetingActionModalTranslations = () => ({
+  title: getText('displayMeetingModalTitleLabel', 'Manage Meeting'),
+  extendBy: getText('displayMeetingModalExtendByLabel', 'Extend by:'),
+  custom: getText('displayMeetingModalCustomLabel', 'Custom'),
+  minutes: getText('displayMeetingModalMinutesLabel', 'min'),
+  cancel: getText('displayMeetingModalCancelLabel', 'Cancel'),
+  extend: getText('displayMeetingModalExtendButtonLabel', 'Extend Meeting'),
+  extending: getText('displayMeetingModalExtendingLabel', 'Extending...'),
+  endNow: getText('displayMeetingModalEndButtonLabel', 'End Meeting'),
+  ending: getText('displayMeetingModalEndingLabel', 'Ending...'),
+  noActiveMeeting: getText('displayMeetingModalNoActiveExtendLabel', 'No active meeting to extend.'),
+  noActiveMeetingEnd: getText('displayMeetingModalNoActiveEndLabel', 'No active meeting to end.'),
+  genericError: getText('displayMeetingModalExtendErrorLabel', 'Failed to extend meeting. Please try again.'),
+  endGenericError: getText('displayMeetingModalEndErrorLabel', 'Failed to end meeting. Please try again.')
+});
+
 export default {
   applyDisplayI18nConfig,
   getSingleRoomDisplayTranslations,
-  getFlightboardDisplayTranslations
+  getFlightboardDisplayTranslations,
+  getMeetingActionModalTranslations
 };

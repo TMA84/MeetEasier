@@ -105,6 +105,14 @@ module.exports = {
 		roomGroupFeatureFlags: {}
 	},
 
+	checkIn: {
+		enabled: process.env.CHECKIN_ENABLED !== 'false',
+		requiredForExternalMeetings: process.env.CHECKIN_REQUIRED_FOR_EXTERNAL !== 'false',
+		earlyCheckInMinutes: process.env.CHECKIN_EARLY_MINUTES ? Math.max(parseInt(process.env.CHECKIN_EARLY_MINUTES, 10), 0) : 5,
+		windowMinutes: process.env.CHECKIN_WINDOW_MINUTES ? Math.max(parseInt(process.env.CHECKIN_WINDOW_MINUTES, 10), 1) : 10,
+		autoReleaseNoShow: process.env.CHECKIN_AUTO_RELEASE_NO_SHOW !== 'false'
+	},
+
 	maintenanceDefaults: {
 		enabled: process.env.MAINTENANCE_MODE === 'true',
 		message: process.env.MAINTENANCE_MESSAGE || 'System is in maintenance mode. Please try again later.'
