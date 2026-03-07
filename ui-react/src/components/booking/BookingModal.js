@@ -22,7 +22,13 @@ class BookingModal extends Component {
 
   componentDidMount() {
     // Fetch and apply booking button color when modal opens
-    fetch('/api/booking-config')
+    const roomEmail = this.props.room?.Email;
+    const roomGroup = this.props.room?.RoomlistAlias;
+    const endpoint = roomEmail
+      ? `/api/booking-config?roomEmail=${encodeURIComponent(roomEmail)}${roomGroup ? `&roomGroup=${encodeURIComponent(roomGroup)}` : ''}`
+      : '/api/booking-config';
+
+    fetch(endpoint)
       .then(response => response.json())
       .then(data => {
         const buttonColor = data.buttonColor || '#334155';
@@ -183,7 +189,8 @@ class BookingModal extends Component {
         body: JSON.stringify({
           subject: subject.trim(),
           startTime: start.toISOString(),
-          endTime: end.toISOString()
+          endTime: end.toISOString(),
+          roomGroup: room.RoomlistAlias
         })
       });
 

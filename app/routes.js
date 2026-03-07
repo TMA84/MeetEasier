@@ -4,11 +4,137 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const roomlistAliasHelper = require('./roomlist-alias-helper');
+const configManager = require('./config-manager');
+const { createRateLimiter } = require('./rate-limiter');
+const { appendAuditLog, getAuditLogs } = require('./audit-logger');
 
 const msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
 
 // Check if Calendars.ReadWrite permission is available
 let hasCalendarWritePermission = null;
+let graphAuthHealthCache = {
+	checkedAt: 0,
+	result: null
+};
+
+function getClientIp(req) {
+	const forwardedFor = req.headers['x-forwarded-for'];
+	if (forwardedFor) {
+		return String(forwardedFor).split(',')[0].trim();
+	}
+	return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+function isWebhookIpAllowed(req) {
+	if (!Array.isArray(config.graphWebhook.allowedIps) || config.graphWebhook.allowedIps.length === 0) {
+		return true;
+	}
+
+	const ip = getClientIp(req);
+	return config.graphWebhook.allowedIps.includes(ip);
+}
+
+function normalizeRoomKey(roomEmail) {
+	return String(roomEmail || '').trim().toLowerCase();
+}
+
+function normalizeRoomGroupKey(roomGroup) {
+	return String(roomGroup || '').trim().toLowerCase();
+}
+
+function getEffectiveBookingConfig(bookingConfig, roomEmail, roomGroup, hasPermission) {
+	const roomKey = normalizeRoomKey(roomEmail);
+	const roomGroupKey = normalizeRoomGroupKey(roomGroup);
+	const roomFeatureFlags = bookingConfig.roomFeatureFlags || {};
+	const roomGroupFeatureFlags = bookingConfig.roomGroupFeatureFlags || {};
+	const groupOverride = roomGroupKey ? roomGroupFeatureFlags[roomGroupKey] : undefined;
+	const roomOverride = roomKey ? roomFeatureFlags[roomKey] : undefined;
+
+	const scopedEnableBooking = roomOverride?.enableBooking !== undefined
+		? roomOverride.enableBooking
+		: (groupOverride?.enableBooking !== undefined ? groupOverride.enableBooking : true);
+
+	const scopedEnableExtendMeeting = roomOverride?.enableExtendMeeting !== undefined
+		? roomOverride.enableExtendMeeting
+		: (groupOverride?.enableExtendMeeting !== undefined ? groupOverride.enableExtendMeeting : true);
+
+	const enableBooking = !!(bookingConfig.enableBooking && hasPermission && scopedEnableBooking);
+	const enableExtendMeeting = !!(bookingConfig.enableExtendMeeting && enableBooking && scopedEnableExtendMeeting);
+
+	return {
+		enableBooking,
+		enableExtendMeeting,
+		groupOverrideApplied: !!groupOverride,
+		roomOverrideApplied: !!roomOverride
+	};
+}
+
+async function getGraphAuthHealth(forceRefresh = false) {
+	const ttlMs = 60000;
+	const now = Date.now();
+
+	if (!forceRefresh && graphAuthHealthCache.result && now - graphAuthHealthCache.checkedAt < ttlMs) {
+		return graphAuthHealthCache.result;
+	}
+
+	const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
+	if (!useGraphAPI) {
+		const result = {
+			status: 'skipped',
+			message: 'Graph auth check skipped because SEARCH_USE_GRAPHAPI is disabled.'
+		};
+		graphAuthHealthCache = { checkedAt: now, result };
+		return result;
+	}
+
+	try {
+		const tokenRequest = {
+			scopes: ['https://graph.microsoft.com/.default']
+		};
+		const response = await msalClient.acquireTokenByClientCredential(tokenRequest);
+		const result = {
+			status: response?.accessToken ? 'ok' : 'error',
+			message: response?.accessToken ? 'Graph token acquisition successful.' : 'Graph token acquisition failed.'
+		};
+		graphAuthHealthCache = { checkedAt: now, result };
+		return result;
+	} catch (error) {
+		const result = {
+			status: 'error',
+			message: error.message || 'Graph token acquisition failed.'
+		};
+		graphAuthHealthCache = { checkedAt: now, result };
+		return result;
+	}
+}
+
+function getCacheHealth() {
+	const cachePath = path.join(__dirname, '../data/cache.json');
+	if (!fs.existsSync(cachePath)) {
+		return {
+			exists: false,
+			readable: false,
+			lastModified: null
+		};
+	}
+
+	try {
+		const stats = fs.statSync(cachePath);
+		return {
+			exists: true,
+			readable: true,
+			lastModified: stats.mtime.toISOString(),
+			sizeBytes: stats.size
+		};
+	} catch (error) {
+		return {
+			exists: true,
+			readable: false,
+			lastModified: null,
+			error: error.message
+		};
+	}
+}
 
 async function checkCalendarWritePermission() {
 	if (hasCalendarWritePermission !== null) {
@@ -59,82 +185,6 @@ function triggerRoomRefreshWithFollowUp() {
 	}, 4000);
 }
 
-// Test data generator for when credentials are not configured
-function getTestRoomData() {
-	const now = Date.now();
-	const oneHour = 60 * 60 * 1000;
-	const thirtyMin = 30 * 60 * 1000;
-	
-	return [
-		{
-			Name: 'Conference Room A',
-			RoomAlias: 'conference-a',
-			Roomlist: 'Building 1',
-			Busy: false,
-			Appointments: [
-				{
-					Subject: 'Team Standup',
-					Organizer: 'John Doe',
-					Start: now + oneHour,
-					End: now + oneHour + thirtyMin,
-					Private: false
-				},
-				{
-					Subject: 'Project Review',
-					Organizer: 'Jane Smith',
-					Start: now + (oneHour * 3),
-					End: now + (oneHour * 4),
-					Private: false
-				}
-			]
-		},
-		{
-			Name: 'Meeting Room B',
-			RoomAlias: 'meeting-b',
-			Roomlist: 'Building 1',
-			Busy: true,
-			Appointments: [
-				{
-					Subject: 'Client Presentation',
-					Organizer: 'Bob Johnson',
-					Start: now - thirtyMin,
-					End: now + thirtyMin,
-					Private: false
-				},
-				{
-					Subject: 'Design Workshop',
-					Organizer: 'Alice Williams',
-					Start: now + (oneHour * 2),
-					End: now + (oneHour * 3),
-					Private: false
-				}
-			]
-		},
-		{
-			Name: 'Board Room',
-			RoomAlias: 'board-room',
-			Roomlist: 'Building 2',
-			Busy: false,
-			Appointments: []
-		},
-		{
-			Name: 'Training Room',
-			RoomAlias: 'training',
-			Roomlist: 'Building 2',
-			Busy: true,
-			Appointments: [
-				{
-					Subject: 'Private Meeting',
-					Organizer: 'Sarah Davis',
-					Start: now - (oneHour / 2),
-					End: now + (oneHour / 2),
-					Private: true
-				}
-			]
-		}
-	];
-}
-
 // Configure multer for logo uploads
 const storage = multer.diskStorage({
 	destination: function (req, file, cb) {
@@ -175,34 +225,186 @@ const upload = multer({
 module.exports = function(app) {
 	var path = require('path');
 
+	const apiRateLimiter = createRateLimiter({
+		windowMs: config.rateLimit.apiWindowMs,
+		max: config.rateLimit.apiMax,
+		keyGenerator: req => `${getClientIp(req)}:${req.path}`
+	});
+
+	const writeRateLimiter = createRateLimiter({
+		windowMs: config.rateLimit.writeWindowMs,
+		max: config.rateLimit.writeMax,
+		keyGenerator: req => `${getClientIp(req)}:${req.path}:${req.method}`
+	});
+
+	const authRateLimiter = createRateLimiter({
+		windowMs: config.rateLimit.authWindowMs,
+		max: config.rateLimit.authMax,
+		keyGenerator: req => `${getClientIp(req)}:auth`
+	});
+
+	app.use('/api', apiRateLimiter);
+	app.use('/api', function(req, res, next) {
+		if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+			return writeRateLimiter(req, res, next);
+		}
+		next();
+	});
+
+	app.use('/api', function(req, res, next) {
+		const maintenanceConfig = configManager.getMaintenanceConfig();
+		if (!maintenanceConfig.enabled) {
+			return next();
+		}
+
+		const isReadonlyRequest = req.method === 'GET';
+		const requestPath = req.path;
+		const allowedPaths = new Set([
+			'/heartbeat',
+			'/health',
+			'/readiness',
+			'/sync-status',
+			'/maintenance-status',
+			'/maintenance',
+			'/graph/webhook'
+		]);
+
+		if (allowedPaths.has(requestPath) || isReadonlyRequest) {
+			return next();
+		}
+
+		res.status(503).json({
+			error: 'Maintenance mode enabled',
+			message: maintenanceConfig.message,
+			maintenance: maintenanceConfig
+		});
+	});
+
+	app.get('/api/graph/webhook', function(req, res) {
+		if (!config.graphWebhook.enabled) {
+			return res.status(503).json({
+				error: 'Webhook disabled',
+				message: 'GRAPH_WEBHOOK_ENABLED is false'
+			});
+		}
+
+		if (!isWebhookIpAllowed(req)) {
+			return res.status(403).json({ error: 'Webhook origin not allowed' });
+		}
+
+		const validationToken = req.query.validationToken;
+		if (validationToken) {
+			res.setHeader('Content-Type', 'text/plain');
+			return res.status(200).send(validationToken);
+		}
+
+		res.status(400).json({ error: 'Missing validationToken query parameter' });
+	});
+
+	app.post('/api/graph/webhook', function(req, res) {
+		if (!config.graphWebhook.enabled) {
+			return res.status(503).json({
+				error: 'Webhook disabled',
+				message: 'GRAPH_WEBHOOK_ENABLED is false'
+			});
+		}
+
+		if (!isWebhookIpAllowed(req)) {
+			return res.status(403).json({ error: 'Webhook origin not allowed' });
+		}
+
+		const payload = req.body;
+		const notifications = Array.isArray(payload?.value) ? payload.value : [];
+
+		const validNotifications = notifications.filter(item => {
+			if (!config.graphWebhook.clientState) {
+				return true;
+			}
+			return item.clientState === config.graphWebhook.clientState;
+		});
+
+		if (validNotifications.length > 0) {
+			triggerRoomRefreshWithFollowUp();
+		}
+
+		res.status(202).json({ accepted: true, processed: validNotifications.length });
+	});
+
+	app.get('/api/maintenance-status', function(req, res) {
+		const maintenanceConfig = configManager.getMaintenanceConfig();
+		res.json(maintenanceConfig);
+	});
+
+	app.get('/api/health', async function(req, res) {
+		const syncStatus = require('./socket-controller').getSyncStatus();
+		const graphAuth = await getGraphAuthHealth();
+		const cacheHealth = getCacheHealth();
+		const maintenance = configManager.getMaintenanceConfig();
+
+		res.json({
+			status: 'ok',
+			timestamp: new Date().toISOString(),
+			graphAuth,
+			syncStatus,
+			cache: cacheHealth,
+			maintenance
+		});
+	});
+
+	app.get('/api/readiness', async function(req, res) {
+		const graphAuth = await getGraphAuthHealth();
+		const syncStatus = require('./socket-controller').getSyncStatus();
+		const maintenance = configManager.getMaintenanceConfig();
+
+		const graphOk = graphAuth.status === 'ok' || graphAuth.status === 'skipped';
+		const syncOk = !syncStatus.hasNeverSynced || syncStatus.lastSyncSuccess === true;
+		const ready = graphOk && syncOk && !maintenance.enabled;
+
+		if (!ready) {
+			return res.status(503).json({
+				status: 'not-ready',
+				reasons: {
+					graphAuth,
+					syncStatus,
+					maintenance
+				}
+			});
+		}
+
+		res.json({ status: 'ready' });
+	});
+
 	// api routes ================================================================
 	// returns an array of room objects
 	app.get('/api/rooms', function(req, res) {
 		const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
 		
-		// Check if credentials for the selected API are not set - return test data
+		// Check if credentials for the selected API are set
 		const hasRequiredCreds = useGraphAPI 
-			? config.msalConfig.auth.clientId !== 'OAUTH_CLIENT_ID_NOT_SET'
-			: config.exchange.username !== 'EWS_USERNAME_NOT_SET';
-		
-		console.log('=== CREDENTIAL CHECK ===');
-		console.log('Use Graph API:', useGraphAPI);
-		console.log('OAuth Client ID:', config.msalConfig.auth.clientId);
-		console.log('EWS Username:', config.exchange.username);
-		console.log('Has Required Creds:', hasRequiredCreds);
+			? (
+				config.msalConfig.auth.clientId !== 'OAUTH_CLIENT_ID_NOT_SET'
+				&& config.msalConfig.auth.authority !== 'OAUTH_AUTHORITY_NOT_SET'
+				&& config.msalConfig.auth.clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET'
+			)
+			: (
+				config.exchange.username !== 'EWS_USERNAME_NOT_SET'
+				&& config.exchange.password !== 'EWS_PASSWORD_NOT_SET'
+				&& config.exchange.uri !== 'EWS_URI_NOT_SET'
+			);
 		
 		if (!hasRequiredCreds) {
-			console.log('>>> RETURNING TEST DATA - No credentials configured for selected API');
-			return res.json(getTestRoomData());
+			return res.status(503).json({
+				error: 'Calendar backend is not configured',
+				message: useGraphAPI
+					? 'Microsoft Graph credentials are missing. Configure OAUTH_CLIENT_ID, OAUTH_AUTHORITY, and OAUTH_CLIENT_SECRET.'
+					: 'EWS credentials are missing. Configure EWS_USERNAME, EWS_PASSWORD, and EWS_URI.'
+			});
 		}
 
-		console.log('>>> CALLING REAL API');
 		let api;
 		if (useGraphAPI) {
-			console.log('Using Microsoft Graph API');
 			api = require('./msgraph/rooms.js');
 		} else {
-			console.log('Using EWS API');
 			api = require('./ews/rooms.js');
 		}
 
@@ -220,7 +422,6 @@ module.exports = function(app) {
 					});
 				}
 			} else {
-				console.log('API Success: Returning', rooms.length, 'rooms');
 				res.json(rooms);
 			}
 		}, msalClient);
@@ -286,7 +487,17 @@ module.exports = function(app) {
 	// Room booking endpoint
 	app.post('/api/rooms/:roomEmail/book', async function(req, res) {
 		const { roomEmail } = req.params;
-		const { subject, startTime, endTime, description } = req.body;
+		const { subject, startTime, endTime, description, roomGroup } = req.body;
+		const bookingConfig = configManager.getBookingConfig();
+		const hasPermission = await checkCalendarWritePermission();
+		const effectiveBooking = getEffectiveBookingConfig(bookingConfig, roomEmail, roomGroup, hasPermission);
+
+		if (!effectiveBooking.enableBooking) {
+			return res.status(403).json({
+				error: 'Booking disabled',
+				message: 'Booking is disabled for this room or globally.'
+			});
+		}
 
 		// Validate input
 		if (!subject || !startTime || !endTime) {
@@ -352,7 +563,7 @@ module.exports = function(app) {
 
 	// Extend existing meeting endpoint
 	app.post('/api/extend-meeting', async function(req, res) {
-		const { roomEmail, appointmentId, minutes } = req.body;
+		const { roomEmail, appointmentId, minutes, roomGroup } = req.body;
 
 		// Detect language from Accept-Language header
 		const acceptLanguage = req.headers['accept-language'] || 'en';
@@ -392,9 +603,11 @@ module.exports = function(app) {
 			});
 		}
 
-		// Check admin config for extend meeting
-		const bookingConfig = require('./config-manager').getBookingConfig();
-		if (!bookingConfig.enableExtendMeeting) {
+		const bookingConfig = configManager.getBookingConfig();
+		const hasPermission = await checkCalendarWritePermission();
+		const effectiveBooking = getEffectiveBookingConfig(bookingConfig, roomEmail, roomGroup, hasPermission);
+
+		if (!effectiveBooking.enableExtendMeeting) {
 			return res.status(403).json({
 				success: false,
 				error: t.extendDisabled,
@@ -531,11 +744,13 @@ module.exports = function(app) {
 		}
 	});
 
-	// Configuration endpoints
-	const configManager = require('./config-manager');
-
 	// Middleware to check API token
 	const checkApiToken = (req, res, next) => {
+		authRateLimiter(req, res, () => {});
+		if (res.headersSent) {
+			return;
+		}
+
 		const token = req.headers['authorization'] || req.headers['x-api-token'];
 		
 		// If no token is configured, allow access (backward compatibility)
@@ -549,6 +764,14 @@ module.exports = function(app) {
 		if (providedToken === config.apiToken) {
 			return next();
 		}
+
+		appendAuditLog({
+			event: 'auth.failure',
+			path: req.path,
+			method: req.method,
+			ip: getClientIp(req),
+			userAgent: req.headers['user-agent'] || null
+		});
 
 		// Unauthorized
 		res.status(401).json({ 
@@ -571,12 +794,22 @@ module.exports = function(app) {
 	app.post('/api/wifi', checkApiToken, async function(req, res) {
 		try {
 			const { ssid, password } = req.body;
+			const beforeConfig = configManager.getWiFiConfig();
 			
 			if (!ssid) {
 				return res.status(400).json({ error: 'SSID is required' });
 			}
 
 			const config = await configManager.updateWiFiConfig(ssid, password || '');
+			appendAuditLog({
+				event: 'config.wifi.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: config
+			});
 			res.json({ 
 				success: true, 
 				config,
@@ -602,12 +835,22 @@ module.exports = function(app) {
 	app.post('/api/logo', checkApiToken, async function(req, res) {
 		try {
 			const { logoDarkUrl, logoLightUrl } = req.body;
+			const beforeConfig = configManager.getLogoConfig();
 			
 			if (!logoDarkUrl && !logoLightUrl) {
 				return res.status(400).json({ error: 'At least one logo URL is required' });
 			}
 
 			const config = await configManager.updateLogoConfig(logoDarkUrl, logoLightUrl);
+			appendAuditLog({
+				event: 'config.logo.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: config
+			});
 			res.json({ 
 				success: true, 
 				config,
@@ -692,12 +935,22 @@ module.exports = function(app) {
 	app.post('/api/sidebar', checkApiToken, async function(req, res) {
 		try {
 			const { showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle } = req.body;
+			const beforeConfig = configManager.getSidebarConfig();
 			
 			if (showWiFi === undefined && showUpcomingMeetings === undefined && showMeetingTitles === undefined && minimalHeaderStyle === undefined) {
 				return res.status(400).json({ error: 'At least one configuration option is required' });
 			}
 
 			const config = await configManager.updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle);
+			appendAuditLog({
+				event: 'config.sidebar.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: config
+			});
 			res.json({ 
 				success: true, 
 				config,
@@ -713,14 +966,20 @@ module.exports = function(app) {
 	app.get('/api/booking-config', async function(req, res) {
 		try {
 			const bookingConfig = configManager.getBookingConfig();
+			const roomEmail = req.query.roomEmail;
+			const roomGroup = req.query.roomGroup;
 			
 			// Check if Calendars.ReadWrite permission is available
 			const hasPermission = await checkCalendarWritePermission();
+			const effectiveBooking = getEffectiveBookingConfig(bookingConfig, roomEmail, roomGroup, hasPermission);
 			
 			// If permission is missing, force disable booking regardless of config
 			const effectiveConfig = {
 				...bookingConfig,
-				enableBooking: hasPermission ? bookingConfig.enableBooking : false,
+				enableBooking: effectiveBooking.enableBooking,
+				enableExtendMeeting: effectiveBooking.enableExtendMeeting,
+				groupOverrideApplied: effectiveBooking.groupOverrideApplied,
+				roomOverrideApplied: effectiveBooking.roomOverrideApplied,
 				permissionMissing: !hasPermission
 			};
 			
@@ -742,12 +1001,24 @@ module.exports = function(app) {
 		}
 	});
 
+	// Get i18n configuration
+	app.get('/api/i18n', function(req, res) {
+		try {
+			const i18nConfig = configManager.getI18nConfig();
+			res.json(i18nConfig);
+		} catch (err) {
+			console.error('Error retrieving i18n config:', err);
+			res.status(500).json({ error: 'Failed to retrieve i18n configuration' });
+		}
+	});
+
 	// Update booking configuration (protected - requires token)
 	app.post('/api/booking-config', checkApiToken, async function(req, res) {
 		try {
-			const { enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist } = req.body;
+			const { enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist, roomFeatureFlags, roomGroupFeatureFlags } = req.body;
+			const beforeConfig = configManager.getBookingConfig();
 			
-			if (enableBooking === undefined && buttonColor === undefined && enableExtendMeeting === undefined && extendMeetingUrlAllowlist === undefined) {
+			if (enableBooking === undefined && buttonColor === undefined && enableExtendMeeting === undefined && extendMeetingUrlAllowlist === undefined && roomFeatureFlags === undefined && roomGroupFeatureFlags === undefined) {
 				return res.status(400).json({ error: 'At least one booking configuration option is required' });
 			}
 
@@ -761,7 +1032,17 @@ module.exports = function(app) {
 				});
 			}
 
-			const config = await configManager.updateBookingConfig(enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist);
+			const config = await configManager.updateBookingConfig(enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist, roomFeatureFlags, roomGroupFeatureFlags);
+
+			appendAuditLog({
+				event: 'config.booking.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: config
+			});
 			res.json({ 
 				success: true, 
 				config,
@@ -777,6 +1058,7 @@ module.exports = function(app) {
 	app.post('/api/colors', checkApiToken, async function(req, res) {
 		try {
 			const { bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor, statusNotFoundColor } = req.body;
+			const beforeConfig = configManager.getColorsConfig();
 			
 			const config = await configManager.updateColorsConfig(
 				bookingButtonColor,
@@ -785,6 +1067,16 @@ module.exports = function(app) {
 				statusUpcomingColor,
 				statusNotFoundColor
 			);
+
+			appendAuditLog({
+				event: 'config.colors.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: config
+			});
 			
 			res.json({ 
 				success: true, 
@@ -794,6 +1086,197 @@ module.exports = function(app) {
 		} catch (err) {
 			console.error('Error updating colors config:', err);
 			res.status(500).json({ error: 'Failed to update colors configuration' });
+		}
+	});
+
+	app.post('/api/maintenance', checkApiToken, async function(req, res) {
+		try {
+			const { enabled, message } = req.body;
+			const beforeConfig = configManager.getMaintenanceConfig();
+			if (enabled === undefined && message === undefined) {
+				return res.status(400).json({ error: 'At least one maintenance configuration option is required' });
+			}
+
+			const maintenanceConfig = await configManager.updateMaintenanceConfig(enabled, message);
+			appendAuditLog({
+				event: 'config.maintenance.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: maintenanceConfig
+			});
+
+			res.json({
+				success: true,
+				config: maintenanceConfig,
+				message: 'Maintenance configuration updated'
+			});
+		} catch (err) {
+			console.error('Error updating maintenance config:', err);
+			res.status(500).json({ error: 'Failed to update maintenance configuration' });
+		}
+	});
+
+	app.post('/api/i18n', checkApiToken, async function(req, res) {
+		try {
+			const { maintenanceMessages, adminTranslations } = req.body || {};
+			const hasMaintenanceMessages = maintenanceMessages && typeof maintenanceMessages === 'object' && !Array.isArray(maintenanceMessages);
+			const hasAdminTranslations = adminTranslations && typeof adminTranslations === 'object' && !Array.isArray(adminTranslations);
+
+			if (!hasMaintenanceMessages && !hasAdminTranslations) {
+				return res.status(400).json({ error: 'At least one of maintenanceMessages or adminTranslations object is required' });
+			}
+
+			const beforeConfig = configManager.getI18nConfig();
+			const i18nConfig = await configManager.updateI18nConfig({
+				maintenanceMessages,
+				adminTranslations
+			});
+
+			appendAuditLog({
+				event: 'config.i18n.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: i18nConfig
+			});
+
+			res.json({
+				success: true,
+				config: i18nConfig,
+				message: 'i18n configuration updated'
+			});
+		} catch (err) {
+			console.error('Error updating i18n config:', err);
+			res.status(500).json({ error: 'Failed to update i18n configuration' });
+		}
+	});
+
+	app.get('/api/audit-logs', checkApiToken, function(req, res) {
+		const limit = req.query.limit ? parseInt(req.query.limit, 10) : 200;
+		res.json({
+			logs: getAuditLogs(limit)
+		});
+	});
+
+	app.get('/api/config/backup', checkApiToken, function(req, res) {
+		const backup = {
+			createdAt: new Date().toISOString(),
+			version: '1.0',
+			wifi: configManager.getWiFiConfig(),
+			logo: configManager.getLogoConfig(),
+			sidebar: configManager.getSidebarConfig(),
+			booking: configManager.getBookingConfig(),
+			colors: configManager.getColorsConfig(),
+			maintenance: configManager.getMaintenanceConfig(),
+			i18n: configManager.getI18nConfig()
+		};
+
+		appendAuditLog({
+			event: 'config.backup.export',
+			path: req.path,
+			method: req.method,
+			ip: getClientIp(req),
+			userAgent: req.headers['user-agent'] || null
+		});
+
+		res.json(backup);
+	});
+
+	app.post('/api/config/restore', checkApiToken, async function(req, res) {
+		try {
+			const payload = req.body;
+			if (!payload || typeof payload !== 'object') {
+				return res.status(400).json({ error: 'Invalid restore payload' });
+			}
+
+			const beforeState = {
+				wifi: configManager.getWiFiConfig(),
+				logo: configManager.getLogoConfig(),
+				sidebar: configManager.getSidebarConfig(),
+				booking: configManager.getBookingConfig(),
+				colors: configManager.getColorsConfig(),
+				maintenance: configManager.getMaintenanceConfig(),
+				i18n: configManager.getI18nConfig()
+			};
+
+			if (payload.wifi && payload.wifi.ssid !== undefined) {
+				await configManager.updateWiFiConfig(payload.wifi.ssid, payload.wifi.password || '');
+			}
+
+			if (payload.logo) {
+				await configManager.updateLogoConfig(payload.logo.logoDarkUrl, payload.logo.logoLightUrl);
+			}
+
+			if (payload.sidebar) {
+				await configManager.updateSidebarConfig(
+					payload.sidebar.showWiFi,
+					payload.sidebar.showUpcomingMeetings,
+					payload.sidebar.showMeetingTitles,
+					payload.sidebar.minimalHeaderStyle
+				);
+			}
+
+			if (payload.booking) {
+				await configManager.updateBookingConfig(
+					payload.booking.enableBooking,
+					payload.booking.buttonColor,
+					payload.booking.enableExtendMeeting,
+					payload.booking.extendMeetingUrlAllowlist,
+					payload.booking.roomFeatureFlags,
+					payload.booking.roomGroupFeatureFlags
+				);
+			}
+
+			if (payload.colors) {
+				await configManager.updateColorsConfig(
+					payload.colors.bookingButtonColor,
+					payload.colors.statusAvailableColor,
+					payload.colors.statusBusyColor,
+					payload.colors.statusUpcomingColor,
+					payload.colors.statusNotFoundColor
+				);
+			}
+
+			if (payload.maintenance) {
+				await configManager.updateMaintenanceConfig(payload.maintenance.enabled, payload.maintenance.message);
+			}
+
+			if (payload.i18n && (payload.i18n.maintenanceMessages || payload.i18n.adminTranslations)) {
+				await configManager.updateI18nConfig({
+					maintenanceMessages: payload.i18n.maintenanceMessages,
+					adminTranslations: payload.i18n.adminTranslations
+				});
+			}
+
+			const afterState = {
+				wifi: configManager.getWiFiConfig(),
+				logo: configManager.getLogoConfig(),
+				sidebar: configManager.getSidebarConfig(),
+				booking: configManager.getBookingConfig(),
+				colors: configManager.getColorsConfig(),
+				maintenance: configManager.getMaintenanceConfig(),
+				i18n: configManager.getI18nConfig()
+			};
+
+			appendAuditLog({
+				event: 'config.restore.import',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeState,
+				after: afterState
+			});
+
+			res.json({ success: true, config: afterState, message: 'Configuration restore applied' });
+		} catch (err) {
+			console.error('Error restoring configuration backup:', err);
+			res.status(500).json({ error: 'Failed to restore configuration backup' });
 		}
 	});
 

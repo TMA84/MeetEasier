@@ -266,6 +266,41 @@
   }
 }
 
+.admin-collapsible-config {
+  .admin-collapsible-header {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.1);
+      border-color: rgba(59, 130, 246, 0.45);
+    }
+  }
+
+  .admin-collapsible-header h3 {
+    margin: 0;
+    color: #3b82f6;
+    font-size: 1rem;
+  }
+
+  .admin-collapsible-chevron {
+    color: #3b82f6;
+    font-size: 1rem;
+    line-height: 1;
+    margin-left: 0.75rem;
+  }
+}
+
 .admin-form-group {
   margin-bottom: 1.5rem;
   
@@ -316,7 +351,9 @@
   }
   
   input[type="text"],
-  input[type="password"] {
+  input[type="password"],
+  select,
+  textarea {
     width: 100%;
     padding: 0.875rem 1rem;
     background: #2d3142;
@@ -338,6 +375,29 @@
       color: rgba(255, 255, 255, 0.4);
     }
   }
+
+  select {
+    appearance: auto;
+    -webkit-appearance: menulist;
+    -moz-appearance: menulist;
+    background-image: none;
+    padding: 0.35rem 0.6rem !important;
+    padding-right: 0.6rem !important;
+    line-height: 1.2;
+    text-indent: 0;
+    color: #ffffff !important;
+  }
+
+  select option {
+    background: #2d3142;
+    color: #ffffff;
+  }
+
+  textarea {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.4;
+  }
   
   small {
     display: block;
@@ -351,6 +411,49 @@
   margin: 2rem 0;
   border: none;
   border-top: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+#translationLanguage,
+#maintenanceBodyInput {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: #2d3142;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  color: #ffffff;
+  font-family: 'Titillium Web', sans-serif;
+  transition: all 0.3s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #353849;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+#translationLanguage {
+  appearance: auto;
+  -webkit-appearance: menulist;
+  -moz-appearance: menulist;
+  background-image: none;
+  padding: 0.25rem 0.5rem !important;
+  padding-right: 0.5rem !important;
+  line-height: 1.2;
+  text-indent: 0;
+  color: #ffffff !important;
+}
+
+#translationLanguage option {
+  background: #2d3142;
+  color: #ffffff;
+}
+
+#maintenanceBodyInput {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.4;
 }
 
 .admin-upload-mode {
@@ -529,6 +632,20 @@
     color: #fcd34d;
     border: 2px solid #f59e0b;
   }
+}
+
+.admin-json-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 420px;
+  overflow: auto;
+  background: #2d3142;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
 }
 
 .admin-qr-preview {

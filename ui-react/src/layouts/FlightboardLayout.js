@@ -3,9 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 
 import Flightboard from '../components/flightboard/Flightboard';
 import Navbar from '../components/flightboard/Navbar';
-import config from '../config/flightboard.config.js';
+import { getFlightboardDisplayTranslations } from '../config/displayTranslations.js';
 
 function FlightboardLayout() {
+  const config = getFlightboardDisplayTranslations();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = React.useState(
     searchParams.get('filter') || config.roomFilter.filterDefault
@@ -32,7 +33,7 @@ function FlightboardLayout() {
   // Set page title
   React.useEffect(() => {
     document.title = config.navbar.title;
-  }, []);
+  }, [config.navbar.title]);
 
   return (
     <div id="page-wrap">

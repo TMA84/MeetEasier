@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import config from '../../config/flightboard.config.js';
+import { getFlightboardDisplayTranslations } from '../../config/displayTranslations.js';
 import './RoomFilter.scss';
 
 /**
@@ -9,6 +9,7 @@ import './RoomFilter.scss';
  * Supports keyboard navigation and click-outside-to-close
  */
 function RoomFilter({ filter, error, response, roomlists, currentFilter }) {
+  const config = getFlightboardDisplayTranslations();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState(config.roomFilter.filterAllTitle);
   const dropdownRef = useRef(null);

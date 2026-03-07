@@ -53,6 +53,27 @@ module.exports = {
 		pollIntervalMs: process.env.SEARCH_POLL_INTERVAL_MS ? Math.max(parseInt(process.env.SEARCH_POLL_INTERVAL_MS, 10), 5000) : 15000
 	},
 
+	startupValidation: {
+		strict: process.env.STARTUP_VALIDATION_STRICT === 'true'
+	},
+
+	rateLimit: {
+		apiWindowMs: process.env.RATE_LIMIT_API_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_API_WINDOW_MS, 10) : 60000,
+		apiMax: process.env.RATE_LIMIT_API_MAX ? parseInt(process.env.RATE_LIMIT_API_MAX, 10) : 300,
+		writeWindowMs: process.env.RATE_LIMIT_WRITE_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_WRITE_WINDOW_MS, 10) : 60000,
+		writeMax: process.env.RATE_LIMIT_WRITE_MAX ? parseInt(process.env.RATE_LIMIT_WRITE_MAX, 10) : 60,
+		authWindowMs: process.env.RATE_LIMIT_AUTH_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_AUTH_WINDOW_MS, 10) : 60000,
+		authMax: process.env.RATE_LIMIT_AUTH_MAX ? parseInt(process.env.RATE_LIMIT_AUTH_MAX, 10) : 30
+	},
+
+	graphWebhook: {
+		enabled: process.env.GRAPH_WEBHOOK_ENABLED === 'true',
+		clientState: process.env.GRAPH_WEBHOOK_CLIENT_STATE || null,
+		allowedIps: process.env.GRAPH_WEBHOOK_ALLOWED_IPS
+			? process.env.GRAPH_WEBHOOK_ALLOWED_IPS.split(',').map(ip => ip.trim()).filter(Boolean)
+			: []
+	},
+
 	// API security token
 	apiToken: process.env.API_TOKEN || null,
 
@@ -79,6 +100,13 @@ module.exports = {
 	bookingDefaults: {
 		enableBooking: process.env.ENABLE_BOOKING === 'true' || process.env.ENABLE_BOOKING === undefined,
 		enableExtendMeeting: false,
-		extendMeetingUrlAllowlist: []
+		extendMeetingUrlAllowlist: [],
+		roomFeatureFlags: {},
+		roomGroupFeatureFlags: {}
+	},
+
+	maintenanceDefaults: {
+		enabled: process.env.MAINTENANCE_MODE === 'true',
+		message: process.env.MAINTENANCE_MESSAGE || 'System is in maintenance mode. Please try again later.'
 	}
 };

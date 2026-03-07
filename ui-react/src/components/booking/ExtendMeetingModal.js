@@ -19,7 +19,13 @@ class ExtendMeetingModal extends Component {
 
   componentDidMount() {
     // Fetch and apply booking button color when modal opens
-    fetch('/api/booking-config')
+    const roomEmail = this.props.room?.Email;
+    const roomGroup = this.props.room?.RoomlistAlias;
+    const endpoint = roomEmail
+      ? `/api/booking-config?roomEmail=${encodeURIComponent(roomEmail)}${roomGroup ? `&roomGroup=${encodeURIComponent(roomGroup)}` : ''}`
+      : '/api/booking-config';
+
+    fetch(endpoint)
       .then(response => response.json())
       .then(data => {
         const buttonColor = data.buttonColor || '#334155';
@@ -103,6 +109,7 @@ class ExtendMeetingModal extends Component {
         },
         body: JSON.stringify({
           roomEmail: room.Email,
+          roomGroup: room.RoomlistAlias,
           appointmentId: currentAppointment.Id,
           minutes: selectedDuration
         })

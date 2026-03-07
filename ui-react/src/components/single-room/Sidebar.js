@@ -187,7 +187,7 @@ class Sidebar extends Component {
                   // Get subject with translation for private meetings
                   const subject = appointment.Private 
                     ? (config && config.privateMeeting ? config.privateMeeting : 'Private')
-                    : (appointment.Subject || 'No Subject');
+                    : (appointment.Subject || (config && config.noSubject ? config.noSubject : 'No Subject'));
                   
                   return (
                     <div key={index} className="upcoming-item">
@@ -201,7 +201,7 @@ class Sidebar extends Component {
                       {/* Organizer and time row */}
                       <div className="upcoming-row">
                         <div className="upcoming-organizer">
-                          {appointment.Organizer || 'No Organizer'}
+                          {appointment.Organizer || (config && config.noOrganizer ? config.noOrganizer : 'No Organizer')}
                         </div>
                         <div className="upcoming-time">
                           {timeDisplay}
@@ -229,7 +229,7 @@ class Sidebar extends Component {
           {sidebarConfig.showWiFi && wifiConfig && wifiConfig.ssid && (
             <div className="sidebar-wifi">
               <div className="wifi-title">
-                WiFi
+                {config && config.wifiTitle ? config.wifiTitle : 'WiFi'}
               </div>
               <div className="wifi-qr">
                 <img 

@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import config from '../../config/singleRoom.config.js';
 import io from 'socket.io-client';
 
 import RoomStatusBlock from './RoomStatusBlock';
@@ -9,6 +8,8 @@ import Socket from '../global/Socket';
 import Spinner from '../global/Spinner';
 import BookingModal from '../booking/BookingModal';
 import ExtendMeetingModal from '../booking/ExtendMeetingModal';
+import { applyI18nConfig, getMaintenanceCopy, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';
+import { getSingleRoomDisplayTranslations } from '../../config/displayTranslations.js';
 
 /**
  * Display component for single room view
@@ -32,6 +33,11 @@ class Display extends Component {
       roomAlias: this.props.alias,
       rooms: [],
       room: {},
+      maintenanceConfig: {
+        enabled: false,
+        message: ''
+      },
+      i18nTick: 0,
       roomDetails: {
         appointmentExists: false,
         timesPresent: false,
@@ -89,6 +95,7 @@ class Display extends Component {
    */
   processRoomDetails = () => {
     const { rooms, roomAlias } = this.state;
+    const displayTranslations = getSingleRoomDisplayTranslations();
 
     // Find the specific room by alias
     const roomArray = rooms.filter(item => item.RoomAlias === roomAlias);
@@ -127,10 +134,10 @@ class Display extends Component {
 
         // Set appropriate labels based on room busy status
         if (!room.Busy) {
-          roomDetails.nextUp = `${config.nextUp}: `;
+          roomDetails.nextUp = `${displayTranslations.nextUp}: `;
         } else {
           roomDetails.nextUp = '';
-          roomDetails.upcomingTitle = `${config.upcomingTitle}: `;
+          roomDetails.upcomingTitle = `${displayTranslations.upcomingTitle}: `;
         }
       }
     }
@@ -139,6 +146,8 @@ class Display extends Component {
       response: true,
       room: room,
       roomDetails: roomDetails
+    }, () => {
+      this.fetchBookingConfig(room.Email, room.RoomlistAlias);
     });
   }
 
@@ -155,6 +164,10 @@ class Display extends Component {
 
   componentDidMount() {
     this.getRoomsData();
+    this.fetchMaintenanceStatus();
+    loadMaintenanceMessages().then(() => {
+      this.setState({ i18nTick: Date.now() });
+    });
     this.fetchSidebarConfig();
     this.fetchBookingConfig();
     this.fetchColorsConfig();
@@ -169,6 +182,20 @@ class Display extends Component {
             showMeetingTitles: config.showMeetingTitles !== undefined ? config.showMeetingTitles : false
           }
         });
+      });
+
+      this.socket.on('maintenanceConfigUpdated', (maintenanceConfig) => {
+        this.setState({
+          maintenanceConfig: {
+            enabled: Boolean(maintenanceConfig?.enabled),
+            message: maintenanceConfig?.message || ''
+          }
+        });
+      });
+
+      this.socket.on('i18nConfigUpdated', (i18nConfig) => {
+        applyI18nConfig(i18nConfig);
+        this.setState({ i18nTick: Date.now() });
       });
       
       this.socket.on('bookingConfigUpdated', (config) => {
@@ -233,12 +260,32 @@ class Display extends Component {
       });
   }
 
+  fetchMaintenanceStatus = () => {
+    fetch('/api/maintenance-status')
+      .then(response => response.json())
+      .then(data => {
+        this.setState({
+          maintenanceConfig: {
+            enabled: Boolean(data?.enabled),
+            message: data?.message || ''
+          }
+        });
+      })
+      .catch(err => {
+        console.error('Error fetching maintenance status:', err);
+      });
+  }
+
   /**
    * Fetch booking configuration from API
    * Gets settings for booking feature enable/disable
    */
-  fetchBookingConfig = () => {
-    fetch('/api/booking-config')
+  fetchBookingConfig = (roomEmail, roomGroup) => {
+    const endpoint = roomEmail
+      ? `/api/booking-config?roomEmail=${encodeURIComponent(roomEmail)}${roomGroup ? `&roomGroup=${encodeURIComponent(roomGroup)}` : ''}`
+      : '/api/booking-config';
+
+    fetch(endpoint)
       .then(response => response.json())
       .then(data => {
         const buttonColor = data.buttonColor || '#334155';
@@ -397,21 +444,31 @@ class Display extends Component {
   }
 
   render() {
-    const { response, room, roomDetails, sidebarConfig, bookingConfig, showBookingModal, showExtendModal, showErrorModal, errorMessage } = this.state;
+    const { response, room, roomDetails, sidebarConfig, bookingConfig, showBookingModal, showExtendModal, showErrorModal, errorMessage, maintenanceConfig } = this.state;
     const canExtendMeeting = this.isExtendMeetingAllowed();
     const extendBlockedByOverbooking = canExtendMeeting && this.isExtendBlockedByOverbooking();
+    const displayTranslations = getSingleRoomDisplayTranslations();
     
     console.log('Render - showErrorModal:', showErrorModal, 'errorMessage:', errorMessage);
     
-    // Detect browser language for button translation
-    const browserLang = navigator.language || navigator.userLanguage;
-    const lang = browserLang.split('-')[0];
-    const bookButtonText = lang === 'de' ? 'Raum buchen' : 'Book This Room';
-    const extendButtonText = lang === 'de' ? 'Meeting verlängern' : 'Extend Meeting';
-    const extendDisabledTitle = lang === 'de'
-      ? 'Meeting kann nicht verlängert werden: Folgetermin beginnt zu früh.'
-      : 'Meeting cannot be extended: next meeting starts too soon.';
-    const errorText = lang === 'de' ? 'Fehler' : 'Error';
+    const bookButtonText = displayTranslations.bookButtonText;
+    const extendButtonText = displayTranslations.extendButtonText;
+    const extendDisabledTitle = displayTranslations.extendDisabledTitle;
+    const errorText = displayTranslations.errorTitle;
+    const maintenanceCopy = getMaintenanceCopy();
+    const maintenanceTitle = maintenanceCopy.title;
+    const maintenanceMessage = maintenanceConfig.message || maintenanceCopy.body;
+
+    if (maintenanceConfig.enabled) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center' }}>
+          <div>
+            <h1>{maintenanceTitle}</h1>
+            <p>{maintenanceMessage}</p>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div style={{ position: 'relative' }}>
@@ -423,13 +480,13 @@ class Display extends Component {
             <RoomStatusBlock 
               room={room} 
               details={roomDetails} 
-              config={config} 
+              config={displayTranslations} 
               sidebarConfig={sidebarConfig}
             />
             <Sidebar 
               room={room} 
               details={roomDetails} 
-              config={config}
+              config={displayTranslations}
               bookingConfig={bookingConfig}
               onBookRoom={() => this.setState({ showBookingModal: true })}
               onExtendMeeting={canExtendMeeting && !extendBlockedByOverbooking ? () => this.setState({ showExtendModal: true }) : null}
@@ -486,7 +543,7 @@ class Display extends Component {
               </div>
               <div className="booking-modal-body">
                 <p className="error-message">
-                  {errorMessage || 'An error occurred'}
+                  {errorMessage || displayTranslations.errorOccurred}
                 </p>
               </div>
             </div>
