@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.7] - 2026-03-07
+
+### Added
+- **Operations & Security Endpoints**
+  - Added API endpoints for maintenance state, health/readiness checks, audit logs, and config backup/restore
+  - Added Graph webhook endpoints (validation + notification receiver) with optional allowlist and client-state checks
+
+- **Admin Translation Management**
+  - Added dedicated translations workflow in admin with grouped editors and quick language creation
+  - Added default translation coverage for FR, ES, IT, NL, PL, PT, and CS
+
+- **Configuration Safety Features**
+  - Added startup configuration validation with optional strict mode
+  - Added lightweight API/write/auth rate limiting middleware
+
+### Changed
+- **Display i18n Architecture**
+  - Migrated display-facing labels to centralized i18n sources shared with admin translations
+  - Updated single-room, room-minimal, and flightboard displays to consume runtime i18n updates
+
+- **Booking Configuration Scope**
+  - Added room-specific booking/extend feature flags and effective config resolution by room
+  - Updated booking modal flows to request room-aware configuration
+
+- **Admin UX for Translations**
+  - Refined translations tab layout to match existing config blocks
+  - Added collapsible category groups (collapsed by default)
+  - Unified language selector labels to consistent `Name (code)` formatting
+
+### Fixed
+- **Translation Language Selector**
+  - Fixed selected language persistence and normalization in admin translations
+  - Fixed selector readability and spacing issues in admin styles
+
+- **Maintenance Text Propagation**
+  - Fixed runtime propagation of maintenance and display translation updates across connected clients
+
 ## [1.2.6] - 2026-03-06
 
 ### Added
