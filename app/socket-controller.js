@@ -1,6 +1,7 @@
 const msal = require('@azure/msal-node');
 const config = require('../config/config');
 const configManager = require('./config-manager');
+const checkinManager = require('./checkin-manager');
 
 const msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
 
@@ -105,6 +106,18 @@ function fetchAndBroadcastRooms() {
         syncErrorMessage = null;
         clearGraphFailureMaintenance();
         socketIO.of('/').emit('updatedRooms', result);
+
+        releaseNoShowAppointments(result)
+          .then((releasedCount) => {
+            if (releasedCount > 0) {
+              setTimeout(() => {
+                fetchAndBroadcastRooms();
+              }, 1000);
+            }
+          })
+          .catch((releaseError) => {
+            console.error('No-show auto-release failed:', releaseError.message || releaseError);
+          });
       } else {
         lastSyncSuccess = false;
         syncErrorMessage = 'No data returned from API';
@@ -115,6 +128,100 @@ function fetchAndBroadcastRooms() {
       resolve(true);
     }, msalClient);
   });
+}
+
+async function deleteGraphEvent(roomEmail, appointmentId) {
+  const tokenRequest = {
+    scopes: ['https://graph.microsoft.com/.default']
+  };
+
+  const authResult = await msalClient.acquireTokenByClientCredential(tokenRequest);
+  const accessToken = authResult.accessToken;
+  const deleteUrl = `https://graph.microsoft.com/v1.0/users/${roomEmail}/events/${appointmentId}`;
+
+  const response = await fetch(deleteUrl, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Graph delete failed (${response.status}): ${errorText}`);
+  }
+}
+
+async function deleteEwsEvent(roomEmail, appointmentId) {
+  const ews = require('ews-javascript-api');
+
+  const exch = new ews.ExchangeService(ews.ExchangeVersion.Exchange2016);
+  exch.Credentials = new ews.ExchangeCredentials(config.exchange.username, config.exchange.password);
+  exch.Url = new ews.Uri(config.exchange.uri);
+  exch.ImpersonatedUserId = new ews.ImpersonatedUserId(
+    ews.ConnectingIdType.SmtpAddress,
+    roomEmail
+  );
+
+  const itemId = new ews.ItemId(appointmentId);
+  const appointment = await ews.Appointment.Bind(exch, itemId);
+  await appointment.Delete(ews.DeleteMode.MoveToDeletedItems, ews.SendCancellationsMode.SendToNone);
+}
+
+async function releaseNoShowAppointments(rooms) {
+  const bookingConfig = configManager.getBookingConfig();
+  const checkInSettings = checkinManager.resolveCheckInSettings(bookingConfig?.checkIn);
+
+  if (!checkInSettings.enabled || !checkInSettings.autoReleaseNoShow) {
+    return 0;
+  }
+
+  if (!Array.isArray(rooms) || rooms.length === 0) {
+    return 0;
+  }
+
+  let releasedCount = 0;
+  const useGraph = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
+
+  for (const room of rooms) {
+    if (!room || !room.Busy || !Array.isArray(room.Appointments) || room.Appointments.length === 0) {
+      continue;
+    }
+
+    const currentAppointment = room.Appointments[0];
+    if (!currentAppointment || !currentAppointment.Id) {
+      continue;
+    }
+
+    const status = checkinManager.getCheckInStatus({
+      roomEmail: room.Email,
+      appointmentId: currentAppointment.Id,
+      organizer: currentAppointment.Organizer,
+      roomName: room.Name,
+      startTimestamp: currentAppointment.Start,
+      checkInConfig: checkInSettings
+    });
+
+    if (!status.required || status.checkedIn || !status.expired) {
+      continue;
+    }
+
+    try {
+      if (useGraph) {
+        await deleteGraphEvent(room.Email, currentAppointment.Id);
+      } else {
+        await deleteEwsEvent(room.Email, currentAppointment.Id);
+      }
+
+      checkinManager.clearCheckedIn({ roomEmail: room.Email, appointmentId: currentAppointment.Id });
+      releasedCount += 1;
+      console.log(`No-show auto-release applied for room ${room.Email}, appointment ${currentAppointment.Id}`);
+    } catch (error) {
+      console.error(`Failed no-show auto-release for room ${room.Email}, appointment ${currentAppointment.Id}:`, error.message || error);
+    }
+  }
+
+  return releasedCount;
 }
 
 function getSyncStatus() {

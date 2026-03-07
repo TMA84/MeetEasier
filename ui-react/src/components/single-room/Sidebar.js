@@ -246,8 +246,19 @@ class Sidebar extends Component {
             </div>
           )}
           
-          {/* Action Button - Extend when busy, Book when available */}
-          {room && room.Busy && (this.props.onExtendMeeting || this.props.onExtendMeetingDisabled) ? (
+           {/* Action Button - Check-in, Extend, or Book */}
+           {room && this.props.checkInRequired && !this.props.checkInCompleted && !!this.props.onCheckIn ? (
+            <div className="sidebar-booking">
+              <button
+                className="sidebar-book-btn"
+                onClick={this.props.onCheckIn}
+            disabled={!!this.props.checkInExpired || !!this.props.checkInTooEarly}
+                title={this.props.checkInExpired ? 'Check-in window expired' : (this.props.checkInTooEarly ? `Check-in available ${this.props.checkInEarlyMinutes || 5} minutes before start` : undefined)}
+              >
+                {this.props.checkInButtonText || 'Check-in'}
+              </button>
+            </div>
+          ) : room && room.Busy && (this.props.onExtendMeeting || this.props.onExtendMeetingDisabled) ? (
             <div className="sidebar-booking">
               <button
                 className="sidebar-book-btn"
@@ -297,7 +308,14 @@ Sidebar.propTypes = {
   bookButtonText: PropTypes.string,
   onExtendMeeting: PropTypes.func,
   onExtendMeetingDisabled: PropTypes.bool,
+  onCheckIn: PropTypes.func,
+  checkInRequired: PropTypes.bool,
+  checkInCompleted: PropTypes.bool,
+  checkInExpired: PropTypes.bool,
+  checkInTooEarly: PropTypes.bool,
+  checkInEarlyMinutes: PropTypes.number,
   extendButtonText: PropTypes.string,
+  checkInButtonText: PropTypes.string,
   extendDisabledTitle: PropTypes.string
 };
 
@@ -307,7 +325,12 @@ Sidebar.defaultProps = {
     Appointments: []
   },
   details: {},
-  config: {}
+  config: {},
+  checkInRequired: false,
+  checkInCompleted: false,
+  checkInExpired: false,
+  checkInTooEarly: false,
+  checkInEarlyMinutes: 5
 };
 
 export default Sidebar;

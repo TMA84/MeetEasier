@@ -7,6 +7,7 @@ const roomlistAliasHelper = require('./roomlist-alias-helper');
 const configManager = require('./config-manager');
 const { createRateLimiter } = require('./rate-limiter');
 const { appendAuditLog, getAuditLogs } = require('./audit-logger');
+const checkinManager = require('./checkin-manager');
 
 const msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
 
@@ -183,6 +184,169 @@ function triggerRoomRefreshWithFollowUp() {
 	setTimeout(() => {
 		triggerImmediateRoomRefresh();
 	}, 4000);
+}
+
+function formatDateForGraphUtc(date) {
+	const year = date.getUTCFullYear();
+	const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+	const day = String(date.getUTCDate()).padStart(2, '0');
+	const hours = String(date.getUTCHours()).padStart(2, '0');
+	const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+	const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+	return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+}
+
+function parseGraphDateTime(dateTimeValue, timeZoneValue) {
+	const dateTimeString = String(dateTimeValue || '').trim();
+	if (!dateTimeString) {
+		return null;
+	}
+
+	const hasExplicitZone = /Z$|[+-]\d{2}:?\d{2}$/.test(dateTimeString);
+	if (hasExplicitZone) {
+		const explicitDate = new Date(dateTimeString);
+		return Number.isNaN(explicitDate.getTime()) ? null : explicitDate;
+	}
+
+	if (String(timeZoneValue || '').toUpperCase() === 'UTC') {
+		const utcDate = new Date(`${dateTimeString}Z`);
+		return Number.isNaN(utcDate.getTime()) ? null : utcDate;
+	}
+
+	const localDate = new Date(dateTimeString);
+	return Number.isNaN(localDate.getTime()) ? null : localDate;
+}
+
+function calculateEarlyEndTime(startDate, nowDate = new Date()) {
+	if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) {
+		return nowDate;
+	}
+
+	if (nowDate <= startDate) {
+		return new Date(startDate.getTime() + 60 * 1000);
+	}
+
+	return nowDate;
+}
+
+async function endGraphEventEarly(roomEmail, appointmentId) {
+	const tokenRequest = {
+		scopes: ['https://graph.microsoft.com/.default']
+	};
+
+	const authResult = await msalClient.acquireTokenByClientCredential(tokenRequest);
+	const accessToken = authResult.accessToken;
+	const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
+
+	const eventResponse = await fetch(eventUrl, {
+		headers: {
+			Authorization: `Bearer ${accessToken}`,
+			'Content-Type': 'application/json'
+		}
+	});
+
+	if (!eventResponse.ok) {
+		const errorText = await eventResponse.text();
+		throw new Error(`Failed to load meeting before ending (${eventResponse.status}): ${errorText}`);
+	}
+
+	const event = await eventResponse.json();
+	const startDate = parseGraphDateTime(event?.start?.dateTime, event?.start?.timeZone);
+	const newEnd = calculateEarlyEndTime(startDate, new Date());
+
+	const response = await fetch(eventUrl, {
+		method: 'PATCH',
+		headers: {
+			Authorization: `Bearer ${accessToken}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			end: {
+				dateTime: formatDateForGraphUtc(newEnd),
+				timeZone: 'UTC'
+			}
+		})
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		throw new Error(`Failed to update meeting end time (${response.status}): ${errorText}`);
+	}
+
+	return newEnd;
+}
+
+async function endEwsEventEarly(roomEmail, appointmentId) {
+	const ews = require('ews-javascript-api');
+
+	const exch = new ews.ExchangeService(ews.ExchangeVersion.Exchange2016);
+	exch.Credentials = new ews.ExchangeCredentials(config.exchange.username, config.exchange.password);
+	exch.Url = new ews.Uri(config.exchange.uri);
+	exch.ImpersonatedUserId = new ews.ImpersonatedUserId(
+		ews.ConnectingIdType.SmtpAddress,
+		roomEmail
+	);
+
+	const itemId = new ews.ItemId(appointmentId);
+	const appointment = await ews.Appointment.Bind(exch, itemId);
+	const startDate = new Date(appointment?.Start?.toISOString ? appointment.Start.toISOString() : appointment?.Start);
+	const newEnd = calculateEarlyEndTime(startDate, new Date());
+	appointment.End = ews.DateTime.Parse(newEnd.toISOString());
+	await appointment.Update(
+		ews.ConflictResolutionMode.AlwaysOverwrite,
+		ews.SendInvitationsOrCancellationsMode.SendToNone
+	);
+
+	return newEnd;
+}
+
+async function moveGraphEventStartToNow(roomEmail, appointmentId, nowDate = new Date()) {
+	const tokenRequest = {
+		scopes: ['https://graph.microsoft.com/.default']
+	};
+
+	const authResult = await msalClient.acquireTokenByClientCredential(tokenRequest);
+	const accessToken = authResult.accessToken;
+	const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
+
+	const response = await fetch(eventUrl, {
+		method: 'PATCH',
+		headers: {
+			Authorization: `Bearer ${accessToken}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			start: {
+				dateTime: formatDateForGraphUtc(nowDate),
+				timeZone: 'UTC'
+			}
+		})
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		throw new Error(`Failed to update meeting start time (${response.status}): ${errorText}`);
+	}
+}
+
+async function moveEwsEventStartToNow(roomEmail, appointmentId, nowDate = new Date()) {
+	const ews = require('ews-javascript-api');
+
+	const exch = new ews.ExchangeService(ews.ExchangeVersion.Exchange2016);
+	exch.Credentials = new ews.ExchangeCredentials(config.exchange.username, config.exchange.password);
+	exch.Url = new ews.Uri(config.exchange.uri);
+	exch.ImpersonatedUserId = new ews.ImpersonatedUserId(
+		ews.ConnectingIdType.SmtpAddress,
+		roomEmail
+	);
+
+	const itemId = new ews.ItemId(appointmentId);
+	const appointment = await ews.Appointment.Bind(exch, itemId);
+	appointment.Start = ews.DateTime.Parse(nowDate.toISOString());
+	await appointment.Update(
+		ews.ConflictResolutionMode.AlwaysOverwrite,
+		ews.SendInvitationsOrCancellationsMode.SendToNone
+	);
 }
 
 // Configure multer for logo uploads
@@ -594,7 +758,6 @@ module.exports = function(app) {
 			updateError: isGerman ? 'Fehler beim Aktualisieren des Termins' : 'Failed to update event',
 			generalError: isGerman ? 'Fehler beim Verlängern des Meetings' : 'Error extending meeting'
 		};
-
 		// Validate input
 		if (!roomEmail || !appointmentId || !minutes) {
 			return res.status(400).json({ 
@@ -638,7 +801,7 @@ module.exports = function(app) {
 				const accessToken = authResult.accessToken;
 
 				// Get the current event
-				const eventUrl = `https://graph.microsoft.com/v1.0/users/${roomEmail}/events/${appointmentId}`;
+				const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
 				const eventResponse = await fetch(eventUrl, {
 					headers: {
 						'Authorization': `Bearer ${accessToken}`,
@@ -702,7 +865,7 @@ module.exports = function(app) {
 				}
 
 				// Update the event end time
-				const updateUrl = `https://graph.microsoft.com/v1.0/users/${roomEmail}/events/${appointmentId}`;
+				const updateUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
 				const updateResponse = await fetch(updateUrl, {
 					method: 'PATCH',
 					headers: {
@@ -711,7 +874,7 @@ module.exports = function(app) {
 					},
 					body: JSON.stringify({
 						end: {
-							dateTime: formatDateForGraph(newEnd),
+							dateTime: formatDateForGraphUtc(newEnd),
 							timeZone: event.end.timeZone || 'UTC'
 						}
 					})
@@ -742,6 +905,173 @@ module.exports = function(app) {
 				error: error.message || t.generalError
 			});
 		}
+	});
+
+	app.post('/api/end-meeting', async function(req, res) {
+		const { roomEmail, appointmentId, roomGroup } = req.body || {};
+
+		const acceptLanguage = req.headers['accept-language'] || 'en';
+		const lang = acceptLanguage.split(',')[0].split('-')[0];
+		const isGerman = lang === 'de';
+
+		const t = {
+			missingFields: isGerman ? 'Fehlende erforderliche Felder' : 'Missing required fields',
+			missingFieldsDetails: isGerman
+				? 'Raum-E-Mail und Termin-ID sind erforderlich'
+				: 'Room email and appointment ID are required',
+			endDisabled: isGerman ? 'Meeting-Beenden deaktiviert' : 'End meeting disabled',
+			endDisabledDetails: isGerman
+				? 'Meeting-Verwaltung ist in der Admin-Konfiguration deaktiviert'
+				: 'Meeting management is disabled in the admin configuration',
+			genericError: isGerman ? 'Fehler beim Beenden des Meetings' : 'Error ending meeting'
+		};
+
+		if (!roomEmail || !appointmentId) {
+			return res.status(400).json({
+				success: false,
+				error: t.missingFields,
+				message: t.missingFieldsDetails
+			});
+		}
+
+		const bookingConfig = configManager.getBookingConfig();
+		const hasPermission = await checkCalendarWritePermission();
+		const effectiveBooking = getEffectiveBookingConfig(bookingConfig, roomEmail, roomGroup, hasPermission);
+
+		if (!effectiveBooking.enableExtendMeeting) {
+			return res.status(403).json({
+				success: false,
+				error: t.endDisabled,
+				message: t.endDisabledDetails
+			});
+		}
+
+		const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
+
+		try {
+			const endedAt = useGraphAPI
+				? await endGraphEventEarly(roomEmail, appointmentId)
+				: await endEwsEventEarly(roomEmail, appointmentId);
+
+			checkinManager.clearCheckedIn({ roomEmail, appointmentId });
+			triggerRoomRefreshWithFollowUp();
+
+			return res.json({
+				success: true,
+				message: isGerman ? 'Meeting wurde vorzeitig beendet.' : 'Meeting was ended early.',
+				newEndTime: endedAt instanceof Date ? endedAt.toISOString() : null
+			});
+		} catch (error) {
+			console.error('End meeting error:', error);
+			return res.status(500).json({
+				success: false,
+				error: error.message || t.genericError
+			});
+		}
+	});
+
+	app.get('/api/check-in-status', function(req, res) {
+		const { roomEmail, appointmentId, organizer, roomName, startTimestamp } = req.query;
+
+		if (!roomEmail || !appointmentId) {
+			return res.status(400).json({
+				error: 'Missing required fields',
+				message: 'roomEmail and appointmentId are required'
+			});
+		}
+
+		const bookingConfig = configManager.getBookingConfig();
+		const status = checkinManager.getCheckInStatus({
+			roomEmail,
+			appointmentId,
+			organizer,
+			roomName,
+			startTimestamp,
+			checkInConfig: bookingConfig.checkIn
+		});
+
+		res.json(status);
+	});
+
+	app.post('/api/check-in', async function(req, res) {
+		const { roomEmail, appointmentId, organizer, roomName, startTimestamp } = req.body || {};
+
+		if (!roomEmail || !appointmentId) {
+			return res.status(400).json({
+				success: false,
+				error: 'Missing required fields',
+				message: 'roomEmail and appointmentId are required'
+			});
+		}
+
+		const bookingConfig = configManager.getBookingConfig();
+		const status = checkinManager.getCheckInStatus({
+			roomEmail,
+			appointmentId,
+			organizer,
+			roomName,
+			startTimestamp,
+			checkInConfig: bookingConfig.checkIn
+		});
+
+		if (!status.required) {
+			return res.status(400).json({
+				success: false,
+				error: 'Check-in not required',
+				message: 'This meeting does not require check-in.'
+			});
+		}
+
+		if (status.tooEarly) {
+			return res.status(409).json({
+				success: false,
+				error: 'Check-in not open yet',
+				message: `Check-in is available ${status.earlyCheckInMinutes} minutes before meeting start.`
+			});
+		}
+
+		if (status.expired) {
+			return res.status(409).json({
+				success: false,
+				error: 'Check-in window expired',
+				message: 'The check-in window has already expired.'
+			});
+		}
+
+		const shouldMoveMeetingStart = Number.isFinite(status.startTimestamp) && Date.now() < status.startTimestamp;
+
+		if (shouldMoveMeetingStart) {
+			const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
+			try {
+				if (useGraphAPI) {
+					await moveGraphEventStartToNow(roomEmail, appointmentId, new Date());
+				} else {
+					await moveEwsEventStartToNow(roomEmail, appointmentId, new Date());
+				}
+				triggerRoomRefreshWithFollowUp();
+			} catch (error) {
+				console.error('Check-in pre-start meeting update error:', error);
+				return res.status(500).json({
+					success: false,
+					error: 'Failed to update meeting start time',
+					message: error.message || 'Could not move meeting start to current time.'
+				});
+			}
+		}
+
+		checkinManager.markCheckedIn({ roomEmail, appointmentId });
+
+		res.json({
+			success: true,
+			status: checkinManager.getCheckInStatus({
+				roomEmail,
+				appointmentId,
+				organizer,
+				roomName,
+				startTimestamp,
+				checkInConfig: bookingConfig.checkIn
+			})
+		});
 	});
 
 	// Middleware to check API token
@@ -1015,10 +1345,10 @@ module.exports = function(app) {
 	// Update booking configuration (protected - requires token)
 	app.post('/api/booking-config', checkApiToken, async function(req, res) {
 		try {
-			const { enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist, roomFeatureFlags, roomGroupFeatureFlags } = req.body;
+			const { enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist, roomFeatureFlags, roomGroupFeatureFlags, checkIn } = req.body;
 			const beforeConfig = configManager.getBookingConfig();
 			
-			if (enableBooking === undefined && buttonColor === undefined && enableExtendMeeting === undefined && extendMeetingUrlAllowlist === undefined && roomFeatureFlags === undefined && roomGroupFeatureFlags === undefined) {
+			if (enableBooking === undefined && buttonColor === undefined && enableExtendMeeting === undefined && extendMeetingUrlAllowlist === undefined && roomFeatureFlags === undefined && roomGroupFeatureFlags === undefined && checkIn === undefined) {
 				return res.status(400).json({ error: 'At least one booking configuration option is required' });
 			}
 
@@ -1032,7 +1362,7 @@ module.exports = function(app) {
 				});
 			}
 
-			const config = await configManager.updateBookingConfig(enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist, roomFeatureFlags, roomGroupFeatureFlags);
+			const config = await configManager.updateBookingConfig(enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist, roomFeatureFlags, roomGroupFeatureFlags, checkIn);
 
 			appendAuditLog({
 				event: 'config.booking.update',
@@ -1228,7 +1558,8 @@ module.exports = function(app) {
 					payload.booking.enableExtendMeeting,
 					payload.booking.extendMeetingUrlAllowlist,
 					payload.booking.roomFeatureFlags,
-					payload.booking.roomGroupFeatureFlags
+					payload.booking.roomGroupFeatureFlags,
+					payload.booking.checkIn
 				);
 			}
 
