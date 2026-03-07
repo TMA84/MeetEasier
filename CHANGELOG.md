@@ -9,35 +9,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Operations & Security Endpoints**
-  - Added API endpoints for maintenance state, health/readiness checks, audit logs, and config backup/restore
-  - Added Graph webhook endpoints (validation + notification receiver) with optional allowlist and client-state checks
+  - Added `/api/health` and `/api/readiness` endpoints with Graph auth, sync and cache diagnostics
+  - Added maintenance endpoints (`/api/maintenance`, `/api/maintenance-status`) and runtime i18n endpoint (`/api/i18n`)
+  - Added configuration backup/restore endpoints (`/api/config/backup`, `/api/config/restore`)
+
+- **Security & Observability**
+  - Added rate-limiting middleware for general API traffic, write operations and auth attempts
+  - Added audit logging with sensitive field redaction and admin endpoint to fetch recent audit entries
+  - Added startup validation module with explicit configuration checks and startup diagnostics
+
+- **Graph Webhook Support**
+  - Added Graph webhook validation and notification receiver endpoints
+  - Added webhook-aware refresh triggering with polling fallback behavior
 
 - **Admin Translation Management**
+  - Added dedicated admin translation defaults/config module
+  - Added centralized display translation bridge and maintenance message runtime config module
+  - Added default maintenance/admin text coverage for additional languages (including FR/ES/IT/NL/PL/PT/CS)
   - Added dedicated translations workflow in admin with grouped editors and quick language creation
-  - Added default translation coverage for FR, ES, IT, NL, PL, PT, and CS
 
 - **Configuration Safety Features**
-  - Added startup configuration validation with optional strict mode
-  - Added lightweight API/write/auth rate limiting middleware
+  - Added startup configuration validation with explicit configuration checks and startup diagnostics
+  - Added rate-limiting middleware for general API traffic, write operations and auth attempts
 
 ### Changed
-- **Display i18n Architecture**
-  - Migrated display-facing labels to centralized i18n sources shared with admin translations
-  - Updated single-room, room-minimal, and flightboard displays to consume runtime i18n updates
+- **Booking Feature Flag Model**
+  - Extended booking configuration to support room-specific and room-group-specific overrides
+  - Effective booking/extend resolution now follows global → room group → room precedence
+  - Booking/extend API paths and modal requests now pass room context (room email + room group alias)
 
-- **Booking Configuration Scope**
-  - Added room-specific booking/extend feature flags and effective config resolution by room
-  - Updated booking modal flows to request room-aware configuration
+- **Admin Booking UX**
+  - Replaced JSON-only override workflow with structured override controls in Admin booking tab
+  - Added direct selection for room groups and rooms (dropdowns) with manual input fallback
+  - Added override preview and improved editing/removal flow for override entries
+
+- **Display Translation Usage**
+  - Migrated single-room, room-minimal and flightboard display texts to centralized translation sources
+  - Updated legacy config adapters (`singleRoom.config.js`, `flightboard.config.js`) to use runtime translation providers
 
 - **Admin UX for Translations**
   - Refined translations tab layout to match existing config blocks
   - Added collapsible category groups (collapsed by default)
   - Unified language selector labels to consistent `Name (code)` formatting
 
+- **Maintenance Behavior**
+  - Added automatic maintenance fallback activation on Graph sync failures and automatic recovery on successful sync
+
+- **Configuration Defaults & Docs**
+  - Extended `.env.template` and server configuration with startup validation, webhook and rate-limit settings
+  - Updated configuration documentation for new endpoints and booking override schema
+
 ### Fixed
+- **Startup Safety**
+  - Replaced silent calendar credential fallback behavior with explicit startup/configuration errors
+  - `/api/rooms` now returns clear configuration errors instead of test data fallback when backend credentials are missing
+
 - **Translation Language Selector**
   - Fixed selected language persistence and normalization in admin translations
-  - Fixed selector readability and spacing issues in admin styles
+
+- **Admin Dropdown Readability**
+  - Fixed select field text readability by tightening select padding and enforcing option foreground/background colors
+  - Aligned new booking override dropdown sizing/spacing with existing admin form controls
 
 - **Maintenance Text Propagation**
   - Fixed runtime propagation of maintenance and display translation updates across connected clients

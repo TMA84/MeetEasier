@@ -4,6 +4,8 @@
 const express = require('express');
 const reload = require('reload');
 const app = express();
+const config = require('./config/config');
+const { validateStartupConfig, printStartupValidation } = require('./app/startup-validation');
 
 
 // configuration ===============================================================
@@ -17,6 +19,10 @@ app.use(express.urlencoded({ extended: true }));
 
 // Read the .env-file
 require('dotenv').config();
+
+// Validate startup configuration and log actionable diagnostics
+const startupReport = validateStartupConfig(config);
+printStartupValidation(startupReport, config.startupValidation.strict);
 
 // Initialize WiFi configuration
 const initWiFi = require('./app/init-wifi');

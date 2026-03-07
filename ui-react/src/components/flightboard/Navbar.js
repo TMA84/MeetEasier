@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';
-import config from '../../config/flightboard.config.js';
+import { applyI18nConfig, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';
+import { getFlightboardDisplayTranslations } from '../../config/displayTranslations.js';
 
 import Clock from './Clock';
 import RoomFilterContainer from './RoomFilterContainer';
@@ -15,13 +16,17 @@ class Navbar extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      logoUrl: '/img/logo.W.png'
+      logoUrl: '/img/logo.W.png',
+      i18nTick: 0
     };
     this.socket = null;
   }
 
   componentDidMount() {
     this.fetchLogoConfig();
+    loadMaintenanceMessages().then(() => {
+      this.setState({ i18nTick: Date.now() });
+    });
     
     // Connect to Socket.IO for real-time logo updates
     this.socket = io();
@@ -29,6 +34,11 @@ class Navbar extends Component {
     this.socket.on('logoConfigUpdated', (config) => {
       console.log('Logo config updated via Socket.IO:', config);
       this.setState({ logoUrl: config.logoLightUrl });
+    });
+
+    this.socket.on('i18nConfigUpdated', (i18nConfig) => {
+      applyI18nConfig(i18nConfig);
+      this.setState({ i18nTick: Date.now() });
     });
   }
 
@@ -64,6 +74,7 @@ class Navbar extends Component {
 
   render() {
     const { logoUrl } = this.state;
+    const config = getFlightboardDisplayTranslations();
     
     return (
       <div id="title-bar-wrap">

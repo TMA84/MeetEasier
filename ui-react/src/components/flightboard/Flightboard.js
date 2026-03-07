@@ -1,9 +1,11 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import io from 'socket.io-client';
 
 import FlightboardRow from './FlightboardRow';
 import Socket from '../global/Socket';
 import Spinner from '../global/Spinner';
+import { applyI18nConfig, getMaintenanceCopy, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';
 
 /**
  * Flightboard component - Main display showing all meeting rooms
@@ -16,9 +18,15 @@ class Flightboard extends Component {
     this.state = {
       response: false,
       error: false,
-      rooms: []
+      rooms: [],
+      maintenanceConfig: {
+        enabled: false,
+        message: ''
+      },
+      i18nTick: 0
     };
 
+    this.socket = null;
     this.handleSocket = this.handleSocket.bind(this);
   }
 
@@ -66,12 +74,68 @@ class Flightboard extends Component {
     });
   }
 
+  fetchMaintenanceStatus() {
+    return fetch('/api/maintenance-status')
+      .then((response) => response.json())
+      .then((data) => {
+        this.setState({
+          maintenanceConfig: {
+            enabled: Boolean(data?.enabled),
+            message: data?.message || ''
+          }
+        });
+      })
+      .catch((err) => {
+        console.error('Error fetching maintenance status:', err);
+      });
+  }
+
   componentDidMount() {
     this.getRoomData();
+    this.fetchMaintenanceStatus();
+    loadMaintenanceMessages().then(() => {
+      this.setState({ i18nTick: Date.now() });
+    });
+
+    this.socket = io();
+    if (this.socket && this.socket.on) {
+      this.socket.on('maintenanceConfigUpdated', (maintenanceConfig) => {
+        this.setState({
+          maintenanceConfig: {
+            enabled: Boolean(maintenanceConfig?.enabled),
+            message: maintenanceConfig?.message || ''
+          }
+        });
+      });
+
+      this.socket.on('i18nConfigUpdated', (i18nConfig) => {
+        applyI18nConfig(i18nConfig);
+        this.setState({ i18nTick: Date.now() });
+      });
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.socket) {
+      this.socket.disconnect();
+    }
   }
 
   render() {
-    const { error, response, rooms } = this.state;
+    const { error, response, rooms, maintenanceConfig } = this.state;
+    const maintenanceCopy = getMaintenanceCopy();
+
+    if (maintenanceConfig.enabled) {
+      return (
+        <div className="tracker-wrap">
+          <div className="container">
+            <div className="credentials-error">
+              {maintenanceConfig.message || `${maintenanceCopy.title}. ${maintenanceCopy.body}`}
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="tracker-wrap">

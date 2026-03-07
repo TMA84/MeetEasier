@@ -1,8 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import config from '../../config/flightboard.config.js';
 import seats from '../../config/flightboard.seats.js';
 import { formatTimeRange } from '../../utils/timeFormat.js';
+import { getFlightboardDisplayTranslations } from '../../config/displayTranslations.js';
 
 /**
  * Determine if a room has an upcoming meeting (within next 15 minutes and not currently busy)
@@ -26,6 +26,7 @@ const isUpcomingMeeting = (room) => {
  * Displays Available, Busy, Upcoming, or Error status based on room state
  */
 const Status = ({ room }) => {
+  const config = getFlightboardDisplayTranslations();
   const isUpcoming = isUpcomingMeeting(room);
   
   const statusClass = room.ErrorMessage
@@ -67,6 +68,7 @@ Status.propTypes = {
  * Shows current meeting organizer or next upcoming meeting
  */
 const Organizer = ({ room }) => {
+  const config = getFlightboardDisplayTranslations();
   if (room.Appointments.length === 0) return null;
 
   return (
@@ -98,6 +100,7 @@ Organizer.propTypes = {
  * Shows the organizer of the second appointment in the list
  */
 const NextOrganizer = ({ room }) => {
+  const config = getFlightboardDisplayTranslations();
   if (room.Appointments.length <= 1) return null;
 
   return (
@@ -199,6 +202,7 @@ Seats.propTypes = {
  * Shows room availability, current meeting, and next meeting in a responsive row layout
  */
 const FlightboardRow = ({ room, filter = '' }) => {
+  const config = getFlightboardDisplayTranslations();
   // Use the RoomlistAlias from the room object, or generate a default one
   const roomlistAlias = room.RoomlistAlias || `${room.Roomlist.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
   const roomlist = `roomlist-${roomlistAlias}`;

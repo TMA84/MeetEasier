@@ -502,12 +502,25 @@ socket.on('wifiConfigUpdated', (config) => {
 **GET /api/booking-config**
 - Returns: Current booking configuration
 - Includes permission status
+- Supports room-specific effective view via query: `?roomEmail=room@domain.com`
 
 **GET /api/config-locks**
 - Returns: Which settings are locked via environment variables
 
 **GET /api/heartbeat**
 - Returns: Server health status
+
+**GET /api/health**
+- Returns: Deep health status (Graph auth, sync status, cache status, maintenance)
+
+**GET /api/readiness**
+- Returns: Service readiness (200 when ready, 503 when not ready)
+
+**GET /api/maintenance-status**
+- Returns: Current maintenance mode state and message
+
+**GET /api/graph/webhook**
+- Graph webhook validation endpoint (`validationToken` echo)
 
 ---
 
@@ -531,9 +544,27 @@ socket.on('wifiConfigUpdated', (config) => {
 - Returns: Updated configuration
 
 **POST /api/booking-config**
-- Body: `{ "enableBooking": boolean, "buttonColor"?: string, "enableExtendMeeting"?: boolean, "extendMeetingUrlAllowlist"?: string[] }`
+- Body: `{ "enableBooking": boolean, "buttonColor"?: string, "enableExtendMeeting"?: boolean, "extendMeetingUrlAllowlist"?: string[], "roomFeatureFlags"?: Record<string, { enableBooking?: boolean, enableExtendMeeting?: boolean }> }`
 - Returns: Updated configuration
 - Validates permission before enabling
+
+**POST /api/maintenance**
+- Body: `{ "enabled"?: boolean, "message"?: string }`
+- Returns: Updated maintenance configuration
+
+**GET /api/audit-logs**
+- Returns: Recent admin audit entries
+
+**GET /api/config/backup**
+- Returns: Runtime configuration snapshot
+
+**POST /api/config/restore**
+- Body: Backup payload from `/api/config/backup`
+- Returns: Applied configuration snapshot
+
+**POST /api/graph/webhook**
+- Microsoft Graph change notification receiver
+- Triggers immediate room refresh on valid notifications
 
 **POST /api/rooms/:roomEmail/book**
 - Body: `{ "subject": "string", "startTime": "ISO8601", "endTime": "ISO8601" }`
@@ -928,7 +959,13 @@ curl -X POST http://localhost:8080/api/sidebar \
   "enableBooking": true,
   "buttonColor": "#334155",
   "enableExtendMeeting": false,
-  "extendMeetingUrlAllowlist": []
+  "extendMeetingUrlAllowlist": [],
+  "roomFeatureFlags": {
+    "conf-room-a@contoso.com": {
+      "enableBooking": false,
+      "enableExtendMeeting": false
+    }
+  }
 }
 ```
 
@@ -948,7 +985,13 @@ curl http://localhost:8080/api/booking-config
 {
   "enableBooking": true,
   "enableExtendMeeting": true,
-  "extendMeetingUrlAllowlist": ["/single-room/"]
+  "extendMeetingUrlAllowlist": ["/single-room/"],
+  "roomFeatureFlags": {
+    "conf-room-a@contoso.com": {
+      "enableBooking": false,
+      "enableExtendMeeting": false
+    }
+  }
 }
 ```
 

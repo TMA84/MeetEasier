@@ -1,4 +1,117 @@
 import React, { Component } from 'react';
+import defaultAdminTranslations, { getAdminTranslations } from '../../config/adminTranslations.js';
+
+const QUICK_ADMIN_TRANSLATION_GROUPS = [
+  {
+    labelKey: 'adminTranslationGroupGeneralLabel',
+    keys: ['title']
+  },
+  {
+    labelKey: 'adminTranslationGroupTabsLabel',
+    keys: [
+      'displayTabLabel',
+      'wifiTabLabel',
+      'logoTabLabel',
+      'colorsTabLabel',
+      'bookingTabLabel',
+      'translationsTabLabel',
+      'operationsTabLabel'
+    ]
+  },
+  {
+    labelKey: 'adminTranslationGroupAuthLabel',
+    keys: ['apiTokenLabel', 'apiTokenPlaceholder']
+  },
+  {
+    labelKey: 'adminTranslationGroupActionsLabel',
+    keys: ['translationsSubmitButton']
+  },
+  {
+    labelKey: 'adminTranslationGroupErrorsLabel',
+    keys: ['errorPrefix', 'errorUnauthorized']
+  },
+  {
+    labelKey: 'adminTranslationGroupDisplaysLabel',
+    keys: [
+      'displayNavbarTitleLabel',
+      'displayFilterAllRoomsLabel',
+      'displayStatusAvailableLabel',
+      'displayStatusBusyLabel',
+      'displayStatusUpcomingLabel',
+      'displayUpcomingTitleLabel',
+      'displayUpcomingMeetingsTitleLabel',
+      'displayNoUpcomingMeetingsLabel',
+      'displayBookRoomButtonLabel',
+      'displayExtendMeetingButtonLabel'
+    ]
+  }
+];
+
+const BASE_TRANSLATION_GROUP_COLLAPSE_STATE = {
+  translationLanguageSection: true,
+  maintenanceTranslationsSection: true,
+  advancedTranslationsSection: true
+};
+
+const DEFAULT_TRANSLATION_GROUP_COLLAPSE_STATE = QUICK_ADMIN_TRANSLATION_GROUPS.reduce((acc, group) => {
+  acc[group.labelKey] = true;
+  return acc;
+}, { ...BASE_TRANSLATION_GROUP_COLLAPSE_STATE });
+
+const LANGUAGE_LABEL_OVERRIDES = {
+  de: 'Deutsch (de)',
+  en: 'English (en)'
+};
+
+const toSentenceCase = (value) => {
+  const text = String(value || '').trim();
+  if (!text) {
+    return '';
+  }
+
+  return text.charAt(0).toLocaleUpperCase() + text.slice(1);
+};
+
+const getLanguageDisplayName = (languageCode) => {
+  const normalizedCode = String(languageCode || '').trim().toLowerCase();
+  if (!normalizedCode) {
+    return '';
+  }
+
+  if (LANGUAGE_LABEL_OVERRIDES[normalizedCode]) {
+    return LANGUAGE_LABEL_OVERRIDES[normalizedCode];
+  }
+
+  try {
+    const displayNames = new Intl.DisplayNames([normalizedCode], { type: 'language' });
+    const label = displayNames.of(normalizedCode);
+    return label ? `${toSentenceCase(label)} (${normalizedCode})` : normalizedCode;
+  } catch (error) {
+    return normalizedCode;
+  }
+};
+
+const normalizeLanguageCode = (value) => String(value || '').trim().toLowerCase();
+
+const toOverrideState = (value) => {
+  if (value === true) {
+    return 'enabled';
+  }
+  if (value === false) {
+    return 'disabled';
+  }
+  return 'inherit';
+};
+
+const fromOverrideState = (value) => {
+  if (value === 'enabled') {
+    return true;
+  }
+  if (value === 'disabled') {
+    return false;
+  }
+  return undefined;
+};
 
 class Admin extends Component {
   constructor(props) {
@@ -53,6 +166,41 @@ class Admin extends Component {
       bookingPermissionMissing: false,
       currentEnableExtendMeeting: false,
       enableExtendMeeting: false,
+      currentRoomFeatureFlags: {},
+      roomFeatureFlags: {},
+      currentRoomGroupFeatureFlags: {},
+      roomGroupFeatureFlags: {},
+      newRoomOverrideKey: '',
+      newRoomGroupOverrideKey: '',
+      availableRoomOptions: [],
+      availableRoomGroupOptions: [],
+
+      // Operations / maintenance state
+      currentMaintenanceEnabled: false,
+      currentMaintenanceMessage: '',
+      maintenanceLastUpdated: '',
+      maintenanceEnabled: false,
+      maintenanceMessage: '',
+      maintenanceMessageBanner: null,
+      maintenanceMessageType: null,
+      i18nLastUpdated: '',
+      currentMaintenanceTranslations: {},
+      maintenanceTranslationsText: '{\n  "en": {\n    "title": "Maintenance mode active",\n    "body": "This display is temporarily unavailable."\n  },\n  "de": {\n    "title": "Wartungsmodus aktiv",\n    "body": "Diese Anzeige ist vorübergehend nicht verfügbar."\n  }\n}',
+      currentAdminTranslations: {},
+      adminTranslationsText: JSON.stringify(defaultAdminTranslations, null, 2),
+      translationLanguage: 'en',
+      newTranslationLanguageCode: '',
+      translationLanguageDraftError: null,
+      collapsedTranslationGroups: { ...DEFAULT_TRANSLATION_GROUP_COLLAPSE_STATE },
+      showAdvancedTranslationsEditor: false,
+      i18nMessage: null,
+      i18nMessageType: null,
+      backupPayloadText: '',
+      backupMessage: null,
+      backupMessageType: null,
+      auditLogs: [],
+      auditMessage: null,
+      auditMessageType: null,
       
       // Color state
       bookingButtonColor: '#334155',
@@ -220,193 +368,115 @@ class Admin extends Component {
   }
 
   getTranslations() {
-    const browserLang = navigator.language || navigator.userLanguage;
-    const lang = browserLang.split('-')[0];
-    
-    const translations = {
-      de: {
-        title: 'Admin Panel',
-        wifiSectionTitle: 'WiFi Konfiguration',
-        logoSectionTitle: 'Logo Konfiguration',
-        sidebarSectionTitle: 'Informationen Konfiguration',
-        bookingSectionTitle: 'Buchungs Konfiguration',
-        displayTabLabel: 'Anzeige',
-        wifiTabLabel: 'WiFi',
-        logoTabLabel: 'Logo',
-        colorsTabLabel: 'Farben',
-        bookingTabLabel: 'Buchung',
-        currentConfigTitle: 'Aktuelle Konfiguration',
-        ssidLabel: 'SSID:',
-        passwordLabel: 'Passwort:',
-        lastUpdatedLabel: 'Zuletzt aktualisiert:',
-        logoUrlLabel: 'Logo URL:',
-        logoDarkUrlLabel: 'Logo URL (Dunkel):',
-        logoLightUrlLabel: 'Logo URL (Hell):',
-        apiTokenLabel: 'API Token:',
-        apiTokenPlaceholder: 'API Token eingeben',
-        apiTokenHelp: 'Erforderlich zum Aktualisieren der Einstellungen',
-        wifiSsidLabel: 'WiFi SSID:',
-        wifiSsidPlaceholder: 'WiFi-Netzwerkname eingeben',
-        wifiPasswordLabel: 'WiFi Passwort:',
-        wifiPasswordPlaceholder: 'WiFi-Passwort eingeben (optional)',
-        logoUrlInputLabel: 'Logo URL:',
-        logoUrlPlaceholder: 'Logo URL eingeben (z.B. /img/logo.B.png)',
-        logoUrlHelp: 'Relativer oder absoluter Pfad zum Logo',
-        logoDarkFileLabel: 'Dunkles Logo hochladen:',
-        logoLightFileLabel: 'Helles Logo hochladen:',
-        logoFileHelp: 'Erlaubte Formate: JPG, PNG, GIF, SVG, WebP (max. 5MB)',
-        uploadModeUrl: 'URL eingeben',
-        uploadModeFile: 'Datei hochladen',
-        submitWifiButton: 'WiFi aktualisieren',
-        submitLogoButton: 'Logo aktualisieren',
-        wifiSuccessMessage: 'WiFi-Konfiguration erfolgreich aktualisiert!',
-        logoSuccessMessage: 'Logo-Konfiguration erfolgreich aktualisiert!',
-        sidebarSuccessMessage: 'Informationen-Konfiguration erfolgreich aktualisiert!',
-        showWiFiLabel: 'WiFi-Informationen anzeigen',
-        showUpcomingMeetingsLabel: 'Anstehende Meetings anzeigen',
-        showMeetingTitlesLabel: 'Meeting-Titel anzeigen',
-        showMeetingTitlesHelp: 'Gilt für Einzelraum-, Raum-Minimal- und Flightboard-Anzeigen',
-        minimalHeaderStyleLabel: 'Raum-Minimal Header-Stil',
-        minimalHeaderStyleFilled: 'Gefüllt (Farbiger Hintergrund)',
-        minimalHeaderStyleTransparent: 'Transparent (Nur Rahmen)',
-        minimalHeaderStyleHelp: 'Wählen Sie den visuellen Stil für den Raumstatus-Header nur für Raum-Minimal-Anzeigen',
-        submitSidebarButton: 'Informationen aktualisieren',
-        sidebarHelp: 'Wählen Sie aus, was in der Sidebar der Raumanzeigen angezeigt werden soll',
-        enableBookingLabel: 'Buchungsfunktion aktivieren',
-        enableBookingHelp: 'Ermöglicht Benutzern, Räume direkt über die Anzeige zu buchen',
-        enableExtendMeetingLabel: 'Meeting-Verlängerung aktivieren',
-        enableExtendMeetingHelp: 'Ermöglicht die Verlängerung laufender Meetings über die Anzeige',
-        colorsSectionTitle: 'Farben-Konfiguration',
-        bookingButtonColorLabel: 'Buchungs-Button-Farbe',
-        bookingButtonColorHelp: 'Wählen Sie die Farbe für Buchungs-Buttons',
-        statusAvailableColorLabel: 'Verfügbar Status-Farbe',
-        statusAvailableColorHelp: 'Farbe für verfügbare Räume',
-        statusBusyColorLabel: 'Besetzt Status-Farbe',
-        statusBusyColorHelp: 'Farbe für belegte Räume',
-        statusUpcomingColorLabel: 'Anstehend Status-Farbe',
-        statusUpcomingColorHelp: 'Farbe für Räume mit anstehendem Termin',
-        statusNotFoundColorLabel: 'Nicht verfügbar Status-Farbe',
-        statusNotFoundColorHelp: 'Farbe für nicht verfügbare Räume',
-        resetToDefaultButton: 'Standard wiederherstellen',
-        submitColorsButton: 'Farben aktualisieren',
-        colorsSuccessMessage: 'Farb-Konfiguration erfolgreich aktualisiert!',
-        colorPickerGreenVariations: 'Grün-Variationen',
-        colorPickerRedVariations: 'Rot-Variationen',
-        colorPickerYellowVariations: 'Gelb/Orange-Variationen',
-        colorPickerGrayVariations: 'Grau-Variationen',
-        colorPickerHue: 'Farbton',
-        colorPickerSaturation: 'Sättigung',
-        colorPickerLightness: 'Helligkeit',
-        submitBookingButton: 'Buchung aktualisieren',
-        bookingSuccessMessage: 'Buchungs-Konfiguration erfolgreich aktualisiert!',
-        errorUnauthorized: 'Nicht autorisiert: Ungültiger oder fehlender API-Token',
-        errorPrefix: 'Fehler:',
-        errorUnknown: 'Unbekannter Fehler',
-        loading: 'Lädt...',
-        configuredViaEnv: 'Diese Einstellungen sind über Umgebungsvariablen konfiguriert und können hier nicht geändert werden.',
-        syncStatusTitle: 'Kalender Synchronisierung',
-        syncStatusLastSync: 'Letzte Synchronisierung:',
-        syncStatusSuccess: 'Erfolgreich',
-        syncStatusFailed: 'Fehlgeschlagen',
-        syncStatusNever: 'Noch nie synchronisiert',
-        syncStatusStale: 'Warnung: Daten könnten veraltet sein',
-        syncStatusMinutesAgo: 'vor',
-        syncStatusMinutes: 'Sekunden',
-        syncStatusError: 'Fehler:'
-      },
-      en: {
-        title: 'Admin Panel',
-        wifiSectionTitle: 'WiFi Configuration',
-        logoSectionTitle: 'Logo Configuration',
-        sidebarSectionTitle: 'Information Configuration',
-        bookingSectionTitle: 'Booking Configuration',
-        displayTabLabel: 'Display',
-        wifiTabLabel: 'WiFi',
-        logoTabLabel: 'Logo',
-        colorsTabLabel: 'Colors',
-        bookingTabLabel: 'Booking',
-        currentConfigTitle: 'Current Configuration',
-        ssidLabel: 'SSID:',
-        passwordLabel: 'Password:',
-        lastUpdatedLabel: 'Last Updated:',
-        logoUrlLabel: 'Logo URL:',
-        logoDarkUrlLabel: 'Logo URL (Dark):',
-        logoLightUrlLabel: 'Logo URL (Light):',
-        apiTokenLabel: 'API Token:',
-        apiTokenPlaceholder: 'Enter API token',
-        apiTokenHelp: 'Required to update settings',
-        wifiSsidLabel: 'WiFi SSID:',
-        wifiSsidPlaceholder: 'Enter WiFi network name',
-        wifiPasswordLabel: 'WiFi Password:',
-        wifiPasswordPlaceholder: 'Enter WiFi password (optional)',
-        logoUrlInputLabel: 'Logo URL:',
-        logoUrlPlaceholder: 'Enter logo URL (e.g. /img/logo.B.png)',
-        logoUrlHelp: 'Relative or absolute path to logo',
-        logoDarkFileLabel: 'Upload Dark Logo:',
-        logoLightFileLabel: 'Upload Light Logo:',
-        logoFileHelp: 'Allowed formats: JPG, PNG, GIF, SVG, WebP (max. 5MB)',
-        uploadModeUrl: 'Enter URL',
-        uploadModeFile: 'Upload File',
-        submitWifiButton: 'Update WiFi',
-        submitLogoButton: 'Update Logo',
-        wifiSuccessMessage: 'WiFi configuration updated successfully!',
-        logoSuccessMessage: 'Logo configuration updated successfully!',
-        sidebarSuccessMessage: 'Information configuration updated successfully!',
-        showWiFiLabel: 'Show WiFi Information',
-        showUpcomingMeetingsLabel: 'Show Upcoming Meetings',
-        showMeetingTitlesLabel: 'Show Meeting Titles',
-        showMeetingTitlesHelp: 'Applies to single-room, room-minimal, and flightboard displays',
-        minimalHeaderStyleLabel: 'Room-Minimal Header Style',
-        minimalHeaderStyleFilled: 'Filled (Colored Background)',
-        minimalHeaderStyleTransparent: 'Transparent (Border Only)',
-        minimalHeaderStyleHelp: 'Choose the visual style for the room status header on room-minimal displays only',
-        submitSidebarButton: 'Update Information',
-        sidebarHelp: 'Choose what to display in the sidebar of room displays',
-        enableBookingLabel: 'Enable Booking Feature',
-        enableBookingHelp: 'Allows users to book rooms directly from the display',
-        enableExtendMeetingLabel: 'Enable Extend Meeting',
-        enableExtendMeetingHelp: 'Allows extending ongoing meetings from the display',
-        colorsSectionTitle: 'Color Configuration',
-        bookingButtonColorLabel: 'Booking Button Color',
-        bookingButtonColorHelp: 'Choose the color for booking buttons',
-        statusAvailableColorLabel: 'Available Status Color',
-        statusAvailableColorHelp: 'Color for available rooms',
-        statusBusyColorLabel: 'Busy Status Color',
-        statusBusyColorHelp: 'Color for busy rooms',
-        statusUpcomingColorLabel: 'Upcoming Status Color',
-        statusUpcomingColorHelp: 'Color for rooms with upcoming bookings',
-        statusNotFoundColorLabel: 'Unavailable Status Color',
-        statusNotFoundColorHelp: 'Color for unavailable rooms',
-        resetToDefaultButton: 'Reset to Default',
-        submitColorsButton: 'Update Colors',
-        colorsSuccessMessage: 'Color configuration updated successfully!',
-        colorPickerGreenVariations: 'Green Variations',
-        colorPickerRedVariations: 'Red Variations',
-        colorPickerYellowVariations: 'Yellow/Orange Variations',
-        colorPickerGrayVariations: 'Gray Variations',
-        colorPickerHue: 'Hue',
-        colorPickerSaturation: 'Saturation',
-        colorPickerLightness: 'Lightness',
-        submitBookingButton: 'Update Booking',
-        bookingSuccessMessage: 'Booking configuration updated successfully!',
-        errorUnauthorized: 'Unauthorized: Invalid or missing API token',
-        errorPrefix: 'Error:',
-        errorUnknown: 'Unknown error',
-        loading: 'Loading...',
-        configuredViaEnv: 'These settings are configured via environment variables and cannot be changed here.',
-        syncStatusTitle: 'Calendar Synchronization',
-        syncStatusLastSync: 'Last Sync:',
-        syncStatusSuccess: 'Successful',
-        syncStatusFailed: 'Failed',
-        syncStatusNever: 'Never synced',
-        syncStatusStale: 'Warning: Data may be outdated',
-        syncStatusMinutesAgo: 'ago',
-        syncStatusMinutes: 'seconds',
-        syncStatusError: 'Error:'
+    return getAdminTranslations(this.state.currentAdminTranslations);
+  }
+
+  getAvailableTranslationLanguages = () => {
+    const maintenanceLanguages = Object.keys(this.state.currentMaintenanceTranslations || {});
+    const adminLanguages = Object.keys(this.state.currentAdminTranslations || {});
+    const defaultLanguages = Object.keys(defaultAdminTranslations || {});
+
+    return Array.from(new Set([...defaultLanguages, ...maintenanceLanguages, ...adminLanguages]))
+      .map((language) => String(language || '').trim().toLowerCase())
+      .filter(Boolean)
+      .sort();
+  }
+
+  handleTranslationLanguageChange = (language) => {
+    this.setState({ translationLanguage: String(language || '').trim().toLowerCase() || 'en' });
+  }
+
+  handleNewTranslationLanguageChange = (value) => {
+    this.setState({
+      newTranslationLanguageCode: value,
+      translationLanguageDraftError: null
+    });
+  }
+
+  handleAddTranslationLanguage = () => {
+    const t = this.getTranslations();
+    const newLanguageCode = normalizeLanguageCode(this.state.newTranslationLanguageCode);
+    const validLanguagePattern = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/;
+
+    if (!newLanguageCode || !validLanguagePattern.test(newLanguageCode)) {
+      this.setState({
+        translationLanguageDraftError: t.invalidLanguageCodeMessage || 'Ungültiger Sprachcode'
+      });
+      return;
+    }
+
+    this.setState((prevState) => {
+      const nextMaintenanceTranslations = {
+        ...(prevState.currentMaintenanceTranslations || {})
+      };
+      const nextAdminTranslations = {
+        ...(prevState.currentAdminTranslations || {})
+      };
+
+      if (!nextMaintenanceTranslations[newLanguageCode]) {
+        nextMaintenanceTranslations[newLanguageCode] = {
+          title: '',
+          body: ''
+        };
       }
-    };
-    
-    return translations[lang] || translations.en;
+
+      if (!nextAdminTranslations[newLanguageCode]) {
+        nextAdminTranslations[newLanguageCode] = {};
+      }
+
+      return {
+        currentMaintenanceTranslations: nextMaintenanceTranslations,
+        maintenanceTranslationsText: JSON.stringify(nextMaintenanceTranslations, null, 2),
+        currentAdminTranslations: nextAdminTranslations,
+        adminTranslationsText: JSON.stringify(nextAdminTranslations, null, 2),
+        translationLanguage: newLanguageCode,
+        newTranslationLanguageCode: '',
+        translationLanguageDraftError: null
+      };
+    });
+  }
+
+  toggleTranslationGroup = (labelKey) => {
+    this.setState((prevState) => ({
+      collapsedTranslationGroups: {
+        ...(prevState.collapsedTranslationGroups || {}),
+        [labelKey]: !prevState.collapsedTranslationGroups?.[labelKey]
+      }
+    }));
+  }
+
+  handleMaintenanceTranslationFieldChange = (language, field, value) => {
+    this.setState((prevState) => {
+      const nextMaintenanceTranslations = {
+        ...prevState.currentMaintenanceTranslations,
+        [language]: {
+          ...(prevState.currentMaintenanceTranslations?.[language] || {}),
+          [field]: value
+        }
+      };
+
+      return {
+        currentMaintenanceTranslations: nextMaintenanceTranslations,
+        maintenanceTranslationsText: JSON.stringify(nextMaintenanceTranslations, null, 2)
+      };
+    });
+  }
+
+  handleAdminTranslationFieldChange = (language, key, value) => {
+    this.setState((prevState) => {
+      const nextAdminTranslations = {
+        ...prevState.currentAdminTranslations,
+        [language]: {
+          ...(prevState.currentAdminTranslations?.[language] || {}),
+          [key]: value
+        }
+      };
+
+      return {
+        currentAdminTranslations: nextAdminTranslations,
+        adminTranslationsText: JSON.stringify(nextAdminTranslations, null, 2)
+      };
+    });
   }
 
   loadCurrentConfig = () => {
@@ -472,6 +542,12 @@ class Admin extends Component {
     fetch('/api/booking-config')
       .then(response => response.json())
       .then(data => {
+        const roomFeatureFlags = data.roomFeatureFlags && typeof data.roomFeatureFlags === 'object'
+          ? data.roomFeatureFlags
+          : {};
+        const roomGroupFeatureFlags = data.roomGroupFeatureFlags && typeof data.roomGroupFeatureFlags === 'object'
+          ? data.roomGroupFeatureFlags
+          : {};
         this.setState({
           currentEnableBooking: data.enableBooking !== undefined ? data.enableBooking : true,
           bookingLastUpdated: data.lastUpdated 
@@ -482,11 +558,124 @@ class Admin extends Component {
           enableExtendMeeting: data.enableExtendMeeting !== undefined ? data.enableExtendMeeting : false,
           bookingPermissionMissing: data.permissionMissing || false,
           bookingButtonColor: data.buttonColor || '#334155',
-          currentBookingButtonColor: data.buttonColor || '#334155'
+          currentBookingButtonColor: data.buttonColor || '#334155',
+          currentRoomFeatureFlags: roomFeatureFlags,
+          roomFeatureFlags,
+          currentRoomGroupFeatureFlags: roomGroupFeatureFlags,
+          roomGroupFeatureFlags
         });
       })
       .catch(err => {
         console.error('Error loading booking config:', err);
+      });
+
+    fetch('/api/roomlists')
+      .then(response => response.json())
+      .then(data => {
+        const options = Array.isArray(data)
+          ? data
+              .filter(item => item && item.alias)
+              .map(item => ({
+                value: String(item.alias).trim().toLowerCase(),
+                label: `${item.name || item.alias} (${String(item.alias).trim().toLowerCase()})`
+              }))
+              .sort((a, b) => a.label.localeCompare(b.label))
+          : [];
+
+        this.setState({ availableRoomGroupOptions: options });
+      })
+      .catch(err => {
+        console.error('Error loading roomlists for booking overrides:', err);
+        this.setState({ availableRoomGroupOptions: [] });
+      });
+
+    fetch('/api/rooms')
+      .then(response => response.json())
+      .then(data => {
+        const dedup = new Map();
+
+        if (Array.isArray(data)) {
+          data.forEach((room) => {
+            const email = String(room?.Email || '').trim().toLowerCase();
+            if (!email) {
+              return;
+            }
+
+            if (!dedup.has(email)) {
+              const roomName = room?.Name ? String(room.Name) : email;
+              const roomAlias = room?.RoomAlias ? String(room.RoomAlias) : '';
+              dedup.set(email, {
+                value: email,
+                label: roomAlias ? `${roomName} (${email}) - ${roomAlias}` : `${roomName} (${email})`
+              });
+            }
+          });
+        }
+
+        const options = Array.from(dedup.values()).sort((a, b) => a.label.localeCompare(b.label));
+        this.setState({ availableRoomOptions: options });
+      })
+      .catch(err => {
+        console.error('Error loading rooms for booking overrides:', err);
+        this.setState({ availableRoomOptions: [] });
+      });
+
+    fetch('/api/maintenance-status')
+      .then(response => response.json())
+      .then(data => {
+        this.setState({
+          currentMaintenanceEnabled: data.enabled === true,
+          currentMaintenanceMessage: data.message || '',
+          maintenanceLastUpdated: data.lastUpdated
+            ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
+            : '-',
+          maintenanceEnabled: data.enabled === true,
+          maintenanceMessage: data.message || ''
+        });
+      })
+      .catch(err => {
+        console.error('Error loading maintenance config:', err);
+      });
+
+    fetch('/api/i18n')
+      .then(response => response.json())
+      .then(data => {
+        const maintenanceMessages = data && data.maintenanceMessages && typeof data.maintenanceMessages === 'object'
+          ? data.maintenanceMessages
+          : {};
+        const adminTranslations = data && data.adminTranslations && typeof data.adminTranslations === 'object'
+          ? data.adminTranslations
+          : {};
+        const languages = Array.from(new Set([
+          ...Object.keys(defaultAdminTranslations || {}),
+          ...Object.keys(maintenanceMessages || {}),
+          ...Object.keys(adminTranslations || {})
+        ])).map((language) => String(language || '').trim().toLowerCase()).filter(Boolean).sort();
+
+        this.setState((prevState) => {
+          const previouslySelectedLanguage = String(prevState.translationLanguage || '').trim().toLowerCase();
+          const nextSelectedLanguage = languages.includes(previouslySelectedLanguage)
+            ? previouslySelectedLanguage
+            : (languages[0] || 'en');
+
+          return {
+            currentMaintenanceTranslations: maintenanceMessages,
+            maintenanceTranslationsText: JSON.stringify(maintenanceMessages, null, 2),
+            currentAdminTranslations: adminTranslations,
+            adminTranslationsText: JSON.stringify(
+              Object.keys(adminTranslations).length > 0 ? adminTranslations : defaultAdminTranslations,
+              null,
+              2
+            ),
+            translationLanguage: nextSelectedLanguage,
+            i18nLastUpdated: data.lastUpdated
+              ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
+              : '-'
+          };
+        });
+      })
+      .catch(err => {
+        console.error('Error loading i18n config:', err);
       });
     
     // Load Colors config
@@ -734,7 +923,14 @@ class Admin extends Component {
   handleBookingSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
-    const { apiToken, enableBooking, enableExtendMeeting, bookingButtonColor } = this.state;
+    const {
+      apiToken,
+      enableBooking,
+      enableExtendMeeting,
+      bookingButtonColor,
+      roomFeatureFlags,
+      roomGroupFeatureFlags
+    } = this.state;
     
     const headers = {
       'Content-Type': 'application/json',
@@ -747,7 +943,13 @@ class Admin extends Component {
     fetch('/api/booking-config', {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify({ enableBooking, enableExtendMeeting, buttonColor: bookingButtonColor })
+      body: JSON.stringify({
+        enableBooking,
+        enableExtendMeeting,
+        buttonColor: bookingButtonColor,
+        roomFeatureFlags,
+        roomGroupFeatureFlags
+      })
     })
     .then(response => {
       if (response.status === 401) {
@@ -779,6 +981,317 @@ class Admin extends Component {
         bookingMessageType: 'error'
       });
     });
+  }
+
+  normalizeOverrideKey = (value) => String(value || '').trim().toLowerCase();
+
+  handleOverrideDraftChange = (scope, value) => {
+    if (scope === 'group') {
+      this.setState({ newRoomGroupOverrideKey: value });
+      return;
+    }
+    this.setState({ newRoomOverrideKey: value });
+  }
+
+  handleAddOverride = (scope) => {
+    const t = this.getTranslations();
+    const draftValue = scope === 'group' ? this.state.newRoomGroupOverrideKey : this.state.newRoomOverrideKey;
+    const normalizedKey = this.normalizeOverrideKey(draftValue);
+
+    if (!normalizedKey) {
+      this.setState({
+        bookingMessage: `${t.errorPrefix} ${t.overrideKeyRequiredLabel || 'Bitte einen Schlüssel eingeben.'}`,
+        bookingMessageType: 'error'
+      });
+      return;
+    }
+
+    this.setState((prevState) => {
+      const targetKey = scope === 'group' ? 'roomGroupFeatureFlags' : 'roomFeatureFlags';
+      const existing = { ...(prevState[targetKey] || {}) };
+      if (!existing[normalizedKey]) {
+        existing[normalizedKey] = {};
+      }
+
+      return {
+        [targetKey]: existing,
+        newRoomOverrideKey: scope === 'room' ? '' : prevState.newRoomOverrideKey,
+        newRoomGroupOverrideKey: scope === 'group' ? '' : prevState.newRoomGroupOverrideKey,
+        bookingMessage: null,
+        bookingMessageType: null
+      };
+    });
+  }
+
+  handleRemoveOverride = (scope, key) => {
+    this.setState((prevState) => {
+      const targetKey = scope === 'group' ? 'roomGroupFeatureFlags' : 'roomFeatureFlags';
+      const next = { ...(prevState[targetKey] || {}) };
+      delete next[key];
+      return { [targetKey]: next };
+    });
+  }
+
+  handleOverrideStateChange = (scope, key, field, stateValue) => {
+    const parsedValue = fromOverrideState(stateValue);
+
+    this.setState((prevState) => {
+      const targetKey = scope === 'group' ? 'roomGroupFeatureFlags' : 'roomFeatureFlags';
+      const next = { ...(prevState[targetKey] || {}) };
+      const nextEntry = {
+        ...(next[key] || {}),
+        [field]: parsedValue
+      };
+
+      if (nextEntry.enableBooking === undefined && nextEntry.enableExtendMeeting === undefined) {
+        delete next[key];
+      } else {
+        next[key] = nextEntry;
+      }
+
+      return { [targetKey]: next };
+    });
+  }
+
+  handleMaintenanceSubmit = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const { apiToken, maintenanceEnabled, maintenanceMessage } = this.state;
+
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    fetch('/api/maintenance', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ enabled: maintenanceEnabled, message: maintenanceMessage })
+    })
+      .then(response => {
+        if (response.status === 401) {
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        this.setState({
+          maintenanceMessageBanner: t.maintenanceSuccessMessage,
+          maintenanceMessageType: 'success'
+        });
+        this.loadCurrentConfig();
+      })
+      .catch(err => {
+        this.setState({
+          maintenanceMessageBanner: `${t.errorPrefix} ${err.message}`,
+          maintenanceMessageType: 'error'
+        });
+      });
+  }
+
+  handleExportBackup = () => {
+    const t = this.getTranslations();
+    const { apiToken } = this.state;
+    const headers = {};
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    fetch('/api/config/backup', {
+      method: 'GET',
+      headers
+    })
+      .then(response => {
+        if (response.status === 401) {
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        this.setState({
+          backupPayloadText: JSON.stringify(data, null, 2),
+          backupMessage: t.backupSuccessExport,
+          backupMessageType: 'success'
+        });
+      })
+      .catch(err => {
+        this.setState({
+          backupMessage: `${t.errorPrefix} ${err.message}`,
+          backupMessageType: 'error'
+        });
+      });
+  }
+
+  handleImportBackup = () => {
+    const t = this.getTranslations();
+    const { apiToken, backupPayloadText } = this.state;
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(backupPayloadText || '{}');
+    } catch (error) {
+      this.setState({
+        backupMessage: `${t.errorPrefix} ${error.message}`,
+        backupMessageType: 'error'
+      });
+      return;
+    }
+
+    fetch('/api/config/restore', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(parsed)
+    })
+      .then(response => {
+        if (response.status === 401) {
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        this.setState({
+          backupMessage: t.backupSuccessImport,
+          backupMessageType: 'success'
+        });
+        this.loadCurrentConfig();
+      })
+      .catch(err => {
+        this.setState({
+          backupMessage: `${t.errorPrefix} ${err.message}`,
+          backupMessageType: 'error'
+        });
+      });
+  }
+
+  handleLoadAuditLogs = () => {
+    const t = this.getTranslations();
+    const { apiToken } = this.state;
+    const headers = {};
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    fetch('/api/audit-logs?limit=200', {
+      method: 'GET',
+      headers
+    })
+      .then(response => {
+        if (response.status === 401) {
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        this.setState({
+          auditLogs: Array.isArray(data.logs) ? data.logs : [],
+          auditMessage: null,
+          auditMessageType: null
+        });
+      })
+      .catch(err => {
+        this.setState({
+          auditMessage: `${t.errorPrefix} ${err.message}`,
+          auditMessageType: 'error'
+        });
+      });
+  }
+
+  handleI18nSubmit = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const {
+      apiToken,
+      maintenanceTranslationsText,
+      adminTranslationsText,
+      currentMaintenanceTranslations,
+      currentAdminTranslations,
+      showAdvancedTranslationsEditor
+    } = this.state;
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    let maintenanceMessages = currentMaintenanceTranslations;
+    let adminTranslations = currentAdminTranslations;
+
+    if (showAdvancedTranslationsEditor) {
+      try {
+        maintenanceMessages = JSON.parse(maintenanceTranslationsText || '{}');
+        if (!maintenanceMessages || typeof maintenanceMessages !== 'object' || Array.isArray(maintenanceMessages)) {
+          throw new Error('maintenanceMessages must be an object');
+        }
+
+        adminTranslations = JSON.parse(adminTranslationsText || '{}');
+        if (!adminTranslations || typeof adminTranslations !== 'object' || Array.isArray(adminTranslations)) {
+          throw new Error('adminTranslations must be an object');
+        }
+      } catch (error) {
+        this.setState({
+          i18nMessage: `${t.errorPrefix} ${error.message}`,
+          i18nMessageType: 'error'
+        });
+        return;
+      }
+    }
+
+    fetch('/api/i18n', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ maintenanceMessages, adminTranslations })
+    })
+      .then(response => {
+        if (response.status === 401) {
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        const savedMessages = data.config && data.config.maintenanceMessages ? data.config.maintenanceMessages : maintenanceMessages;
+        const savedAdminTranslations = data.config && data.config.adminTranslations ? data.config.adminTranslations : adminTranslations;
+        this.setState({
+          i18nMessage: t.translationsSuccessMessage,
+          i18nMessageType: 'success',
+          currentMaintenanceTranslations: savedMessages,
+          maintenanceTranslationsText: JSON.stringify(savedMessages, null, 2),
+          currentAdminTranslations: savedAdminTranslations,
+          adminTranslationsText: JSON.stringify(savedAdminTranslations, null, 2)
+        });
+        this.loadCurrentConfig();
+      })
+      .catch(err => {
+        this.setState({
+          i18nMessage: `${t.errorPrefix} ${err.message}`,
+          i18nMessageType: 'error'
+        });
+      });
   }
 
   switchTab = (tabName) => {
@@ -844,6 +1357,16 @@ class Admin extends Component {
       apiToken, ssid, password, logoDarkUrl, logoLightUrl, logoDarkFile, logoLightFile, uploadMode,
       showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle,
       enableBooking, enableExtendMeeting,
+      currentRoomFeatureFlags, roomFeatureFlags,
+      currentRoomGroupFeatureFlags, roomGroupFeatureFlags,
+      newRoomOverrideKey, newRoomGroupOverrideKey,
+      availableRoomOptions, availableRoomGroupOptions,
+      currentMaintenanceEnabled, currentMaintenanceMessage, maintenanceLastUpdated,
+      maintenanceEnabled, maintenanceMessage,
+      maintenanceMessageBanner, maintenanceMessageType,
+      i18nLastUpdated, currentMaintenanceTranslations, maintenanceTranslationsText, currentAdminTranslations, adminTranslationsText, translationLanguage, newTranslationLanguageCode, translationLanguageDraftError, collapsedTranslationGroups, showAdvancedTranslationsEditor, i18nMessage, i18nMessageType,
+      backupPayloadText, backupMessage, backupMessageType,
+      auditLogs, auditMessage, auditMessageType,
       bookingButtonColor, currentBookingButtonColor,
       statusAvailableColor, currentStatusAvailableColor,
       statusBusyColor, currentStatusBusyColor,
@@ -859,6 +1382,19 @@ class Admin extends Component {
       syncStatusTick
     } = this.state;
     const t = this.getTranslations();
+    const availableTranslationLanguages = this.getAvailableTranslationLanguages();
+    const normalizedSelectedLanguage = String(translationLanguage || '').trim().toLowerCase();
+    const activeTranslationLanguage = availableTranslationLanguages.includes(normalizedSelectedLanguage)
+      ? normalizedSelectedLanguage
+      : (availableTranslationLanguages[0] || 'en');
+    const selectedMaintenanceTranslation = currentMaintenanceTranslations?.[activeTranslationLanguage] || {};
+    const selectedAdminTranslation = {
+      ...(defaultAdminTranslations.en || {}),
+      ...(defaultAdminTranslations[activeTranslationLanguage] || {}),
+      ...(currentAdminTranslations?.[activeTranslationLanguage] || {})
+    };
+    const roomOverrideEntries = Object.entries(roomFeatureFlags || {}).sort(([a], [b]) => a.localeCompare(b));
+    const roomGroupOverrideEntries = Object.entries(roomGroupFeatureFlags || {}).sort(([a], [b]) => a.localeCompare(b));
     
     // Detect browser language for word order
     const browserLang = navigator.language || navigator.userLanguage;
@@ -974,6 +1510,18 @@ class Admin extends Component {
               onClick={() => this.switchTab('booking')}
             >
               {t.bookingTabLabel || 'Booking'}
+            </button>
+            <button 
+              className={`admin-tab ${activeTab === 'translations' ? 'active' : ''}`}
+              onClick={() => this.switchTab('translations')}
+            >
+              {t.translationsTabLabel || 'Translations'}
+            </button>
+            <button 
+              className={`admin-tab ${activeTab === 'operations' ? 'active' : ''}`}
+              onClick={() => this.switchTab('operations')}
+            >
+              {t.operationsTabLabel || 'Operations'}
             </button>
           </div>
 
@@ -1415,6 +1963,135 @@ class Admin extends Component {
                 <small>{t.enableExtendMeetingHelp}</small>
               </div>
 
+              <div className="admin-form-group">
+                <label>{t.roomGroupFeatureFlagsLabel || 'Room Group Overrides'}</label>
+                <small>{t.roomGroupFeatureFlagsHelp || 'Optional: Override booking/extend per room group alias (e.g. roomlist-building-a).'}</small>
+
+                {availableRoomGroupOptions.length > 0 && (
+                  <div style={{ marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+                    <select
+                      value={newRoomGroupOverrideKey}
+                      onChange={(e) => this.handleOverrideDraftChange('group', e.target.value)}
+                      style={{ minHeight: '2.25rem' }}
+                    >
+                      <option value="">{t.selectRoomGroupLabel || 'Select room group'}</option>
+                      {availableRoomGroupOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+                  <input
+                    type="text"
+                    value={newRoomGroupOverrideKey}
+                    onChange={(e) => this.handleOverrideDraftChange('group', e.target.value)}
+                    placeholder={t.roomGroupOverridePlaceholder || 'room group alias'}
+                  />
+                  <button type="button" className="admin-secondary-button" onClick={() => this.handleAddOverride('group')}>
+                    {t.addOverrideButtonLabel || 'Add'}
+                  </button>
+                </div>
+
+                {roomGroupOverrideEntries.length === 0 ? (
+                  <div className="admin-locked-message" style={{ marginBottom: '1rem' }}>
+                    <p>{t.noRoomGroupOverridesLabel || 'No room-group overrides configured.'}</p>
+                  </div>
+                ) : roomGroupOverrideEntries.map(([groupKey, groupValue]) => (
+                  <div key={groupKey} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <input type="text" value={groupKey} readOnly />
+                    <select
+                      value={toOverrideState(groupValue?.enableBooking)}
+                      onChange={(e) => this.handleOverrideStateChange('group', groupKey, 'enableBooking', e.target.value)}
+                    >
+                      <option value="inherit">{t.inheritOverrideLabel || 'Inherit'}</option>
+                      <option value="enabled">{t.enabledOverrideLabel || 'Enabled'}</option>
+                      <option value="disabled">{t.disabledOverrideLabel || 'Disabled'}</option>
+                    </select>
+                    <select
+                      value={toOverrideState(groupValue?.enableExtendMeeting)}
+                      onChange={(e) => this.handleOverrideStateChange('group', groupKey, 'enableExtendMeeting', e.target.value)}
+                    >
+                      <option value="inherit">{t.inheritOverrideLabel || 'Inherit'}</option>
+                      <option value="enabled">{t.enabledOverrideLabel || 'Enabled'}</option>
+                      <option value="disabled">{t.disabledOverrideLabel || 'Disabled'}</option>
+                    </select>
+                    <button type="button" className="admin-secondary-button" onClick={() => this.handleRemoveOverride('group', groupKey)}>
+                      {t.removeOverrideButtonLabel || 'Remove'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="admin-form-group">
+                <label>{t.roomFeatureFlagsLabel || 'Room Overrides'}</label>
+                <small>{t.roomFeatureFlagsHelp || 'Optional: Override booking/extend per room email.'}</small>
+
+                {availableRoomOptions.length > 0 && (
+                  <div style={{ marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+                    <select
+                      value={newRoomOverrideKey}
+                      onChange={(e) => this.handleOverrideDraftChange('room', e.target.value)}
+                      style={{ minHeight: '2.25rem' }}
+                    >
+                      <option value="">{t.selectRoomLabel || 'Select room'}</option>
+                      {availableRoomOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+                  <input
+                    type="text"
+                    value={newRoomOverrideKey}
+                    onChange={(e) => this.handleOverrideDraftChange('room', e.target.value)}
+                    placeholder={t.roomOverridePlaceholder || 'room@domain.com'}
+                  />
+                  <button type="button" className="admin-secondary-button" onClick={() => this.handleAddOverride('room')}>
+                    {t.addOverrideButtonLabel || 'Add'}
+                  </button>
+                </div>
+
+                {roomOverrideEntries.length === 0 ? (
+                  <div className="admin-locked-message" style={{ marginBottom: '1rem' }}>
+                    <p>{t.noRoomOverridesLabel || 'No room overrides configured.'}</p>
+                  </div>
+                ) : roomOverrideEntries.map(([roomKey, roomValue]) => (
+                  <div key={roomKey} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <input type="text" value={roomKey} readOnly />
+                    <select
+                      value={toOverrideState(roomValue?.enableBooking)}
+                      onChange={(e) => this.handleOverrideStateChange('room', roomKey, 'enableBooking', e.target.value)}
+                    >
+                      <option value="inherit">{t.inheritOverrideLabel || 'Inherit'}</option>
+                      <option value="enabled">{t.enabledOverrideLabel || 'Enabled'}</option>
+                      <option value="disabled">{t.disabledOverrideLabel || 'Disabled'}</option>
+                    </select>
+                    <select
+                      value={toOverrideState(roomValue?.enableExtendMeeting)}
+                      onChange={(e) => this.handleOverrideStateChange('room', roomKey, 'enableExtendMeeting', e.target.value)}
+                    >
+                      <option value="inherit">{t.inheritOverrideLabel || 'Inherit'}</option>
+                      <option value="enabled">{t.enabledOverrideLabel || 'Enabled'}</option>
+                      <option value="disabled">{t.disabledOverrideLabel || 'Disabled'}</option>
+                    </select>
+                    <button type="button" className="admin-secondary-button" onClick={() => this.handleRemoveOverride('room', roomKey)}>
+                      {t.removeOverrideButtonLabel || 'Remove'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {(currentRoomFeatureFlags && Object.keys(currentRoomFeatureFlags).length > 0) || (currentRoomGroupFeatureFlags && Object.keys(currentRoomGroupFeatureFlags).length > 0) ? (
+                <div className="admin-current-config" style={{ marginBottom: '1.5rem' }}>
+                  <h3>{t.currentConfigTitle} - {t.overridePreviewLabel || 'Override Preview'}</h3>
+                  <pre className="admin-json-pre">{JSON.stringify({ roomGroupFeatureFlags: currentRoomGroupFeatureFlags, roomFeatureFlags: currentRoomFeatureFlags }, null, 2)}</pre>
+                </div>
+              ) : null}
+
               <button 
                 type="submit" 
                 className="admin-submit-button"
@@ -1440,6 +2117,323 @@ class Admin extends Component {
               </div>
             </div>
           )}
+          </div>
+
+          {/* Translations Tab */}
+          <div className={`admin-tab-content ${activeTab === 'translations' ? 'active' : ''}`}>
+            <div className="admin-section">
+              <h2>{t.translationsSectionTitle}</h2>
+
+              <div className="admin-current-config">
+                <h3>{t.currentConfigTitle}</h3>
+                <div className="config-grid">
+                  <div className="config-item">
+                    <span className="config-label">{t.languagesLabel || 'Languages'}</span>
+                    <span className="config-value">{Object.keys(currentMaintenanceTranslations || {}).join(', ') || '-'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.adminLanguagesLabel || 'Admin Languages'}</span>
+                    <span className="config-value">{Object.keys(currentAdminTranslations || {}).join(', ') || '-'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.lastUpdatedLabel}</span>
+                    <span className="config-value">{i18nLastUpdated || '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <form onSubmit={this.handleI18nSubmit}>
+                <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }}>
+                  <button
+                    type="button"
+                    className="admin-collapsible-header"
+                    onClick={() => this.toggleTranslationGroup('translationLanguageSection')}
+                    aria-expanded={!collapsedTranslationGroups?.translationLanguageSection}
+                  >
+                    <h3>{t.translationLanguageLabel}</h3>
+                    <span className="admin-collapsible-chevron">{collapsedTranslationGroups?.translationLanguageSection ? '▸' : '▾'}</span>
+                  </button>
+                  {!collapsedTranslationGroups?.translationLanguageSection && (
+                    <>
+                      <div className="admin-form-group">
+                        <label htmlFor="translationLanguage">{t.translationLanguageLabel}</label>
+                        <select
+                          id="translationLanguage"
+                          value={activeTranslationLanguage}
+                          onChange={(e) => this.handleTranslationLanguageChange(e.target.value)}
+                        >
+                          {availableTranslationLanguages.map((language) => (
+                            <option key={language} value={language}>{getLanguageDisplayName(language)}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="admin-form-group" style={{ marginBottom: 0 }}>
+                        <label htmlFor="newTranslationLanguageCode">{t.addLanguageButtonLabel}</label>
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            id="newTranslationLanguageCode"
+                            value={newTranslationLanguageCode}
+                            placeholder={t.addLanguagePlaceholder || 'z. B. fr oder en-gb'}
+                            onChange={(e) => this.handleNewTranslationLanguageChange(e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            className="admin-secondary-button"
+                            onClick={this.handleAddTranslationLanguage}
+                          >
+                            {t.addLanguageButtonLabel}
+                          </button>
+                        </div>
+                        <small>{t.addLanguageHelp}</small>
+                        {translationLanguageDraftError && (
+                          <small style={{ color: '#f87171' }}>{translationLanguageDraftError}</small>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }}>
+                  <button
+                    type="button"
+                    className="admin-collapsible-header"
+                    onClick={() => this.toggleTranslationGroup('maintenanceTranslationsSection')}
+                    aria-expanded={!collapsedTranslationGroups?.maintenanceTranslationsSection}
+                  >
+                    <h3>{t.maintenanceTranslationsLabel}</h3>
+                    <span className="admin-collapsible-chevron">{collapsedTranslationGroups?.maintenanceTranslationsSection ? '▸' : '▾'}</span>
+                  </button>
+                  {!collapsedTranslationGroups?.maintenanceTranslationsSection && (
+                    <>
+                      <div className="admin-form-group">
+                        <small>{t.maintenanceTranslationsHelp}</small>
+                      </div>
+                      <div className="admin-form-group">
+                        <label htmlFor="maintenanceTitleInput">{t.maintenanceTitleLabel}</label>
+                        <input
+                          type="text"
+                          id="maintenanceTitleInput"
+                          value={selectedMaintenanceTranslation.title || ''}
+                          onChange={(e) => this.handleMaintenanceTranslationFieldChange(activeTranslationLanguage, 'title', e.target.value)}
+                        />
+                      </div>
+                      <div className="admin-form-group" style={{ marginBottom: 0 }}>
+                        <label htmlFor="maintenanceBodyInput">{t.maintenanceBodyLabel}</label>
+                        <textarea
+                          id="maintenanceBodyInput"
+                          value={selectedMaintenanceTranslation.body || ''}
+                          onChange={(e) => this.handleMaintenanceTranslationFieldChange(activeTranslationLanguage, 'body', e.target.value)}
+                          rows={4}
+                          className="admin-textarea"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {QUICK_ADMIN_TRANSLATION_GROUPS.map((group) => (
+                  <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }} key={group.labelKey}>
+                    <button
+                      type="button"
+                      className="admin-collapsible-header"
+                      onClick={() => this.toggleTranslationGroup(group.labelKey)}
+                      aria-expanded={!collapsedTranslationGroups?.[group.labelKey]}
+                    >
+                      <h3>{t[group.labelKey] || group.labelKey}</h3>
+                      <span className="admin-collapsible-chevron">{collapsedTranslationGroups?.[group.labelKey] ? '▸' : '▾'}</span>
+                    </button>
+                    {!collapsedTranslationGroups?.[group.labelKey] && group.keys.map((key) => (
+                      <div className="admin-form-group" key={key}>
+                        <label htmlFor={`adminTranslation-${key}`}>{key}</label>
+                        <input
+                          type="text"
+                          id={`adminTranslation-${key}`}
+                          value={selectedAdminTranslation[key] || ''}
+                          onChange={(e) => this.handleAdminTranslationFieldChange(activeTranslationLanguage, key, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+
+                <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }}>
+                  <button
+                    type="button"
+                    className="admin-collapsible-header"
+                    onClick={() => this.toggleTranslationGroup('advancedTranslationsSection')}
+                    aria-expanded={!collapsedTranslationGroups?.advancedTranslationsSection}
+                  >
+                    <h3>{t.advancedTranslationsToggleLabel}</h3>
+                    <span className="admin-collapsible-chevron">{collapsedTranslationGroups?.advancedTranslationsSection ? '▸' : '▾'}</span>
+                  </button>
+
+                  {!collapsedTranslationGroups?.advancedTranslationsSection && (
+                    <>
+                      <div className="admin-form-group">
+                        <label className="inline-label">
+                          <span className="label-text">{t.advancedTranslationsToggleLabel}</span>
+                          <input
+                            type="checkbox"
+                            checked={showAdvancedTranslationsEditor}
+                            onChange={(e) => this.setState({ showAdvancedTranslationsEditor: e.target.checked })}
+                          />
+                        </label>
+                        <small>{t.advancedTranslationsHelp}</small>
+                      </div>
+
+                      {showAdvancedTranslationsEditor && (
+                        <>
+                          <div className="admin-form-group">
+                            <label htmlFor="maintenanceTranslationsText">{t.maintenanceJsonLabel}</label>
+                            <textarea
+                              id="maintenanceTranslationsText"
+                              value={maintenanceTranslationsText}
+                              onChange={(e) => this.setState({ maintenanceTranslationsText: e.target.value })}
+                              rows={10}
+                              className="admin-textarea"
+                            />
+                          </div>
+
+                          <div className="admin-form-group" style={{ marginBottom: 0 }}>
+                            <label htmlFor="adminTranslationsText">{t.adminJsonLabel}</label>
+                            <textarea
+                              id="adminTranslationsText"
+                              value={adminTranslationsText}
+                              onChange={(e) => this.setState({ adminTranslationsText: e.target.value })}
+                              rows={12}
+                              className="admin-textarea"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <button type="submit" className="admin-submit-button">
+                  {t.translationsSubmitButton}
+                </button>
+              </form>
+
+              {i18nMessage && (
+                <div className={`admin-message admin-message-${i18nMessageType}`}>
+                  {i18nMessage}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Operations Tab */}
+          <div className={`admin-tab-content ${activeTab === 'operations' ? 'active' : ''}`}>
+            <div className="admin-section">
+              <h2>{t.operationsSectionTitle}</h2>
+
+              <div className="admin-current-config">
+                <h3>{t.currentConfigTitle}</h3>
+                <div className="config-grid">
+                  <div className="config-item">
+                    <span className="config-label">{t.maintenanceEnabledLabel}</span>
+                    <span className="config-value">{currentMaintenanceEnabled ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.maintenanceMessageLabel}</span>
+                    <span className="config-value">{currentMaintenanceMessage || '-'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.lastUpdatedLabel}</span>
+                    <span className="config-value">{maintenanceLastUpdated || '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <form onSubmit={this.handleMaintenanceSubmit}>
+                <div className="admin-form-group">
+                  <label className="inline-label">
+                    <span className="label-text">{t.maintenanceEnabledLabel}</span>
+                    <input
+                      type="checkbox"
+                      checked={maintenanceEnabled}
+                      onChange={(e) => this.setState({ maintenanceEnabled: e.target.checked })}
+                    />
+                  </label>
+                </div>
+
+                <div className="admin-form-group">
+                  <label htmlFor="maintenanceMessage">{t.maintenanceMessageLabel}</label>
+                  <textarea
+                    id="maintenanceMessage"
+                    value={maintenanceMessage}
+                    onChange={(e) => this.setState({ maintenanceMessage: e.target.value })}
+                    rows={4}
+                    className="admin-textarea"
+                  />
+                </div>
+
+                <button type="submit" className="admin-submit-button">
+                  {t.maintenanceSubmitButton}
+                </button>
+              </form>
+
+              {maintenanceMessageBanner && (
+                <div className={`admin-message admin-message-${maintenanceMessageType}`}>
+                  {maintenanceMessageBanner}
+                </div>
+              )}
+
+              <div className="admin-form-divider"></div>
+
+              <div className="admin-form-group">
+                <label htmlFor="backupPayloadText">{t.backupPayloadLabel}</label>
+                <textarea
+                  id="backupPayloadText"
+                  value={backupPayloadText}
+                  onChange={(e) => this.setState({ backupPayloadText: e.target.value })}
+                  rows={12}
+                  className="admin-textarea"
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                <button type="button" className="admin-secondary-button" onClick={this.handleExportBackup}>
+                  {t.backupExportButton}
+                </button>
+                <button type="button" className="admin-secondary-button" onClick={this.handleImportBackup}>
+                  {t.backupImportButton}
+                </button>
+              </div>
+
+              {backupMessage && (
+                <div className={`admin-message admin-message-${backupMessageType}`}>
+                  {backupMessage}
+                </div>
+              )}
+
+              <div className="admin-form-divider"></div>
+
+              <h3>{t.auditSectionTitle}</h3>
+              <div style={{ marginBottom: '1rem' }}>
+                <button type="button" className="admin-secondary-button" onClick={this.handleLoadAuditLogs}>
+                  {t.auditLoadButton}
+                </button>
+              </div>
+
+              {auditMessage && (
+                <div className={`admin-message admin-message-${auditMessageType}`}>
+                  {auditMessage}
+                </div>
+              )}
+
+              {auditLogs.length === 0 ? (
+                <div className="admin-locked-message">
+                  <p>{t.auditEmpty}</p>
+                </div>
+              ) : (
+                <div className="admin-current-config">
+                  <pre className="admin-json-pre">{JSON.stringify(auditLogs, null, 2)}</pre>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Colors Configuration Tab */}

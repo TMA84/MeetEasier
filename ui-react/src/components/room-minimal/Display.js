@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import config from '../../config/singleRoom.config.js';
 import io from 'socket.io-client';
 import { formatTimeRange } from '../../utils/timeFormat.js';
 
@@ -8,6 +7,8 @@ import Socket from '../global/Socket';
 import Spinner from '../global/Spinner';
 import BookingModal from '../booking/BookingModal';
 import ExtendMeetingModal from '../booking/ExtendMeetingModal';
+import { applyI18nConfig, getMaintenanceCopy, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';
+import { getSingleRoomDisplayTranslations } from '../../config/displayTranslations.js';
 
 /**
  * Helper function to convert hex color to RGBA
@@ -170,6 +171,11 @@ class Display extends Component {
       roomAlias: this.props.alias,
       rooms: [],
       room: [],
+      maintenanceConfig: {
+        enabled: false,
+        message: ''
+      },
+      i18nTick: 0,
       currentTime: new Date(),
       wifiConfig: null,
       logoConfig: null,
@@ -216,6 +222,7 @@ class Display extends Component {
 
   processRoomDetails = () => {
     const { rooms, roomAlias } = this.state;
+    const displayTranslations = getSingleRoomDisplayTranslations();
 
     let roomArray = rooms.filter(item => item.RoomAlias === roomAlias);
     let room = roomArray[0];
@@ -258,7 +265,7 @@ class Display extends Component {
           this.setState(prevState => ({
             roomDetails: {
               ...prevState.roomDetails,
-              nextUp: config.nextUp + ': '
+              nextUp: `${displayTranslations.nextUp}: `
             }
           }));
         }
@@ -268,6 +275,8 @@ class Display extends Component {
     this.setState({
       response: true,
       room: room
+    }, () => {
+      this.fetchBookingConfig(room.Email, room.RoomlistAlias);
     });
   }
 
@@ -279,6 +288,10 @@ class Display extends Component {
 
   componentDidMount = () => {
     this.getRoomsData();
+    this.fetchMaintenanceStatus();
+    loadMaintenanceMessages().then(() => {
+      this.setState({ i18nTick: Date.now() });
+    });
     this.fetchWiFiConfig();
     this.fetchLogoConfig();
     this.fetchSidebarConfig();
@@ -311,6 +324,20 @@ class Display extends Component {
 
       this.socket.on('logoConfigUpdated', (config) => {
         this.setState({ logoConfig: config });
+      });
+
+      this.socket.on('maintenanceConfigUpdated', (maintenanceConfig) => {
+        this.setState({
+          maintenanceConfig: {
+            enabled: Boolean(maintenanceConfig?.enabled),
+            message: maintenanceConfig?.message || ''
+          }
+        });
+      });
+
+      this.socket.on('i18nConfigUpdated', (i18nConfig) => {
+        applyI18nConfig(i18nConfig);
+        this.setState({ i18nTick: Date.now() });
       });
 
       this.socket.on('bookingConfigUpdated', (config) => {
@@ -382,6 +409,22 @@ class Display extends Component {
       });
   }
 
+  fetchMaintenanceStatus = () => {
+    fetch('/api/maintenance-status')
+      .then(response => response.json())
+      .then(data => {
+        this.setState({
+          maintenanceConfig: {
+            enabled: Boolean(data?.enabled),
+            message: data?.message || ''
+          }
+        });
+      })
+      .catch(err => {
+        console.error('Error fetching maintenance status:', err);
+      });
+  }
+
   fetchLogoConfig = () => {
     fetch('/api/logo')
       .then(response => response.json())
@@ -411,8 +454,12 @@ class Display extends Component {
       });
   }
 
-  fetchBookingConfig = () => {
-    fetch('/api/booking-config')
+  fetchBookingConfig = (roomEmail, roomGroup) => {
+    const endpoint = roomEmail
+      ? `/api/booking-config?roomEmail=${encodeURIComponent(roomEmail)}${roomGroup ? `&roomGroup=${encodeURIComponent(roomGroup)}` : ''}`
+      : '/api/booking-config';
+
+    fetch(endpoint)
       .then(response => response.json())
       .then(data => {
         const buttonColor = data.buttonColor || '#334155';
@@ -587,14 +634,28 @@ class Display extends Component {
   }
 
   render() {
-    const { response, room, roomDetails, currentTime, wifiConfig, logoConfig, sidebarConfig, bookingConfig, showBookingModal, showExtendModal, showErrorModal, errorMessage } = this.state;
+    const { response, room, roomDetails, currentTime, wifiConfig, logoConfig, sidebarConfig, bookingConfig, showBookingModal, showExtendModal, showErrorModal, errorMessage, maintenanceConfig } = this.state;
     const canExtendMeeting = this.isExtendMeetingAllowed();
     const extendBlockedByOverbooking = canExtendMeeting && this.isExtendBlockedByOverbooking();
+    const displayTranslations = getSingleRoomDisplayTranslations();
     const lang = this.getLanguage();
-    const extendDisabledTitle = lang === 'de'
-      ? 'Meeting kann nicht verlängert werden: Folgetermin beginnt zu früh.'
-      : 'Meeting cannot be extended: next meeting starts too soon.';
-    const errorText = lang === 'de' ? 'Fehler' : 'Error';
+    const extendDisabledTitle = displayTranslations.extendDisabledTitle;
+    const errorText = displayTranslations.errorTitle;
+
+    if (maintenanceConfig.enabled) {
+      const maintenanceCopy = getMaintenanceCopy();
+      const maintenanceTitle = maintenanceCopy.title;
+      const maintenanceMessage = maintenanceConfig.message || maintenanceCopy.body;
+
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center' }}>
+          <div>
+            <h1>{maintenanceTitle}</h1>
+            <p>{maintenanceMessage}</p>
+          </div>
+        </div>
+      );
+    }
 
     if (!response) {
       return <Spinner />;
@@ -635,7 +696,7 @@ class Display extends Component {
               <div className={`minimal-room-header minimal-room-header--${room.NotFound ? 'transparent' : sidebarConfig.minimalHeaderStyle}`}>
                 <div className="minimal-room-name">{room.Name}</div>
                 <div className="minimal-room-status">
-                  {room.NotFound ? (config.statusNotFound || 'Not Found') : (room.Busy ? config.statusBusy : config.statusAvailable)}
+                  {room.NotFound ? (displayTranslations.statusNotFound || 'Not Found') : (room.Busy ? displayTranslations.statusBusy : displayTranslations.statusAvailable)}
                 </div>
               </div>
 
@@ -645,12 +706,12 @@ class Display extends Component {
                 {roomDetails.appointmentExists && room.Appointments && room.Appointments[0] && (
                   <div className="minimal-meeting-card">
                     <div className="minimal-meeting-label">
-                      {room.Busy ? config.currentMeeting : (roomDetails.nextUp || config.nextUp)}
+                      {room.Busy ? displayTranslations.currentMeeting : (roomDetails.nextUp || displayTranslations.nextUp)}
                     </div>
                     {sidebarConfig.showMeetingTitles && room.Appointments[0].Subject && (
                       <div className="minimal-meeting-subject">
                         {room.Appointments[0].Private 
-                          ? (config.privateMeeting || 'Private')
+                          ? (displayTranslations.privateMeeting || 'Private')
                           : room.Appointments[0].Subject}
                       </div>
                     )}
@@ -675,12 +736,12 @@ class Display extends Component {
                 {room.Busy && room.Appointments && room.Appointments.length > 1 && room.Appointments[1] && (
                   <div className="minimal-meeting-card minimal-meeting-card--next">
                     <div className="minimal-meeting-label">
-                      {config.upcomingTitle || lang === 'de' ? 'Nächster Termin' : 'Next Meeting'}
+                      {displayTranslations.upcomingTitle}
                     </div>
                     {sidebarConfig.showMeetingTitles && room.Appointments[1].Subject && (
                       <div className="minimal-meeting-subject">
                         {room.Appointments[1].Private 
-                          ? (config.privateMeeting || 'Private')
+                          ? (displayTranslations.privateMeeting || 'Private')
                           : room.Appointments[1].Subject}
                       </div>
                     )}
@@ -735,7 +796,7 @@ class Display extends Component {
               {sidebarConfig.showUpcomingMeetings && room.Appointments && (
                 <div className="minimal-upcoming">
                   <div className="minimal-upcoming-title">
-                    {lang === 'de' ? 'Anstehende Termine' : 'Upcoming Meetings'}
+                    {displayTranslations.upcomingMeetingsTitle}
                   </div>
                   <div className="minimal-upcoming-list">
                     {(() => {
@@ -745,7 +806,7 @@ class Display extends Component {
                       
                       if (upcomingAppointments.length > 0) {
                         return upcomingAppointments.map((appointment, index) => {
-                          let timeDisplay = 'Time not available';
+                          let timeDisplay = displayTranslations.timeNotAvailable;
                           if (appointment.Start && appointment.End) {
                             try {
                               const startTime = new Date(parseInt(appointment.Start, 10)).toLocaleTimeString([], {
@@ -765,8 +826,8 @@ class Display extends Component {
                           }
                           
                           const subject = appointment.Private 
-                            ? (config.privateMeeting || 'Private')
-                            : (appointment.Subject || 'No Subject');
+                            ? (displayTranslations.privateMeeting || 'Private')
+                            : (appointment.Subject || displayTranslations.noSubject);
                           
                           return (
                             <div key={index} className="minimal-upcoming-item">
@@ -777,7 +838,7 @@ class Display extends Component {
                               )}
                               <div className="minimal-upcoming-row">
                                 <div className="minimal-upcoming-organizer">
-                                  {appointment.Organizer || 'No Organizer'}
+                                  {appointment.Organizer || displayTranslations.noOrganizer}
                                 </div>
                                 <div className="minimal-upcoming-time">
                                   {timeDisplay}
@@ -789,7 +850,7 @@ class Display extends Component {
                       } else {
                         return (
                           <div className="minimal-upcoming-empty">
-                            {lang === 'de' ? 'Keine anstehenden Termine' : 'No upcoming meetings'}
+                            {displayTranslations.noUpcomingMeetings}
                           </div>
                         );
                       }
@@ -807,7 +868,7 @@ class Display extends Component {
                 {sidebarConfig.showWiFi && wifiConfig && wifiConfig.ssid && (
                   <div className="minimal-wifi">
                     <div className="minimal-wifi-title">
-                      {lang === 'de' ? 'WiFi' : 'WiFi'}
+                      {displayTranslations.wifiTitle}
                     </div>
                     <div className="minimal-qr">
                       <img 
@@ -833,7 +894,7 @@ class Display extends Component {
                       title={extendBlockedByOverbooking ? extendDisabledTitle : undefined}
                       onClick={() => this.setState({ showExtendModal: true })}
                     >
-                      {lang === 'de' ? 'Meeting verlängern' : 'Extend Meeting'}
+                      {displayTranslations.extendButtonText}
                     </button>
                   </div>
                 ) : !room.Busy && bookingConfig.enableBooking ? (
@@ -842,7 +903,7 @@ class Display extends Component {
                       className="minimal-sidebar-book-btn" 
                       onClick={() => this.setState({ showBookingModal: true })}
                     >
-                      {lang === 'de' ? 'Raum buchen' : 'Book This Room'}
+                      {displayTranslations.bookButtonText}
                     </button>
                   </div>
                 ) : (
