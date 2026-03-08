@@ -5,6 +5,7 @@ const express = require('express');
 const reload = require('reload');
 const app = express();
 const config = require('./config/config');
+require('./app/config-manager');
 const { validateStartupConfig, printStartupValidation } = require('./app/startup-validation');
 
 

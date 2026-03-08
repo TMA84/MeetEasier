@@ -171,6 +171,10 @@ class Admin extends Component {
       bookingLocked: false,
       searchLocked: false,
       rateLimitLocked: false,
+      apiTokenLocked: false,
+      oauthLocked: false,
+      systemLocked: false,
+      maintenanceLocked: false,
       
       // Booking state
       currentEnableBooking: true,
@@ -226,6 +230,33 @@ class Admin extends Component {
       auditLogs: [],
       auditMessage: null,
       auditMessageType: null,
+      apiTokenConfigMessage: null,
+      apiTokenConfigMessageType: null,
+      currentApiTokenSource: 'default',
+      currentApiTokenIsDefault: true,
+      apiTokenConfigLastUpdated: '',
+      newApiToken: '',
+      newApiTokenConfirm: '',
+      oauthMessage: null,
+      oauthMessageType: null,
+      systemMessage: null,
+      systemMessageType: null,
+      currentSystemStartupValidationStrict: false,
+      systemStartupValidationStrict: false,
+      currentSystemGraphWebhookEnabled: false,
+      systemGraphWebhookEnabled: false,
+      currentSystemGraphWebhookClientState: '',
+      systemGraphWebhookClientState: '',
+      currentSystemGraphWebhookAllowedIps: '',
+      systemGraphWebhookAllowedIps: '',
+      systemLastUpdated: '',
+      currentOauthClientId: '',
+      oauthClientId: '',
+      currentOauthAuthority: '',
+      oauthAuthority: '',
+      currentOauthHasClientSecret: false,
+      oauthClientSecret: '',
+      oauthLastUpdated: '',
       searchMessage: null,
       searchMessageType: null,
       rateLimitMessage: null,
@@ -274,6 +305,10 @@ class Admin extends Component {
       
       // Auth
       apiToken: '',
+      isAuthenticated: false,
+      authChecking: true,
+      authMessage: null,
+      authMessageType: null,
       
       // Sync status
       syncStatus: null,
@@ -286,23 +321,63 @@ class Admin extends Component {
   }
 
   componentDidMount() {
-    this.loadConfigLocks();
-    this.loadCurrentConfig();
-    this.loadSyncStatus();
-    
     // Set page title
     const t = this.getTranslations();
     document.title = t.title;
-    
-    // Refresh sync status every 30 seconds
-    this.syncStatusInterval = setInterval(() => {
-      this.loadSyncStatus();
-    }, 30000);
 
-    // Update sync status timer every second for real-time display
-    this.syncStatusClockInterval = setInterval(() => {
-      this.setState({ syncStatusTick: Date.now() });
-    }, 1000);
+    let storedToken = '';
+    try {
+      storedToken = sessionStorage.getItem('adminApiToken') || '';
+    } catch (err) {
+      storedToken = '';
+    }
+
+    if (storedToken) {
+      this.verifyApiToken(storedToken)
+        .then((valid) => {
+          if (!valid) {
+            try {
+              sessionStorage.removeItem('adminApiToken');
+            } catch (err) {
+              // ignore storage errors
+            }
+
+            this.setState({
+              apiToken: '',
+              isAuthenticated: false,
+              authChecking: false,
+              authMessage: t.errorUnauthorized,
+              authMessageType: 'error'
+            });
+            return;
+          }
+
+          this.setState({
+            apiToken: storedToken,
+            isAuthenticated: true,
+            authChecking: false,
+            authMessage: null,
+            authMessageType: null
+          }, () => {
+            this.loadConfigLocks();
+            this.loadCurrentConfig();
+            this.loadSyncStatus();
+            this.startSyncIntervals();
+          });
+        })
+        .catch(() => {
+          this.setState({
+            apiToken: '',
+            isAuthenticated: false,
+            authChecking: false,
+            authMessage: t.errorUnauthorized,
+            authMessageType: 'error'
+          });
+        });
+      return;
+    }
+
+    this.setState({ authChecking: false });
   }
 
   componentWillUnmount() {
@@ -312,6 +387,126 @@ class Admin extends Component {
     if (this.syncStatusClockInterval) {
       clearInterval(this.syncStatusClockInterval);
     }
+  }
+
+  startSyncIntervals = () => {
+    if (!this.syncStatusInterval) {
+      this.syncStatusInterval = setInterval(() => {
+        this.loadSyncStatus();
+      }, 30000);
+    }
+
+    if (!this.syncStatusClockInterval) {
+      this.syncStatusClockInterval = setInterval(() => {
+        this.setState({ syncStatusTick: Date.now() });
+      }, 1000);
+    }
+  }
+
+  verifyApiToken = (token) => {
+    const normalizedToken = String(token || '').trim();
+    if (!normalizedToken) {
+      return Promise.resolve(false);
+    }
+
+    return fetch('/api/oauth-config', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${normalizedToken}`
+      }
+    }).then((response) => response.status !== 401);
+  }
+
+  handleAdminLogin = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const token = String(this.state.apiToken || '').trim();
+
+    if (!token) {
+      this.setState({
+        authMessage: t.errorUnauthorized,
+        authMessageType: 'error'
+      });
+      return;
+    }
+
+    this.setState({ authChecking: true, authMessage: null, authMessageType: null });
+
+    this.verifyApiToken(token)
+      .then((valid) => {
+        if (!valid) {
+          this.setState({
+            isAuthenticated: false,
+            authChecking: false,
+            authMessage: t.errorUnauthorized,
+            authMessageType: 'error'
+          });
+          return;
+        }
+
+        try {
+          sessionStorage.setItem('adminApiToken', token);
+        } catch (err) {
+          // ignore storage errors
+        }
+
+        this.setState({
+          apiToken: token,
+          isAuthenticated: true,
+          authChecking: false,
+          authMessage: null,
+          authMessageType: null
+        }, () => {
+          this.loadConfigLocks();
+          this.loadCurrentConfig();
+          this.loadSyncStatus();
+          this.startSyncIntervals();
+        });
+      })
+      .catch(() => {
+        this.setState({
+          isAuthenticated: false,
+          authChecking: false,
+          authMessage: t.errorUnauthorized,
+          authMessageType: 'error'
+        });
+      });
+  }
+
+  handleAdminLogout = () => {
+    try {
+      sessionStorage.removeItem('adminApiToken');
+    } catch (err) {
+      // ignore storage errors
+    }
+
+    if (this.syncStatusInterval) {
+      clearInterval(this.syncStatusInterval);
+      this.syncStatusInterval = null;
+    }
+    if (this.syncStatusClockInterval) {
+      clearInterval(this.syncStatusClockInterval);
+      this.syncStatusClockInterval = null;
+    }
+
+    this.setState({
+      apiToken: '',
+      isAuthenticated: false,
+      authChecking: false,
+      authMessage: null,
+      authMessageType: null,
+      syncStatus: null,
+      syncStatusLoading: true
+    });
+  }
+
+  handleUnauthorizedAccess = () => {
+    const t = this.getTranslations();
+    this.handleAdminLogout();
+    this.setState({
+      authMessage: t.errorUnauthorized,
+      authMessageType: 'error'
+    });
   }
 
   loadSyncStatus = () => {
@@ -342,7 +537,11 @@ class Admin extends Component {
           informationLocked: data.sidebarLocked || false,
           bookingLocked: data.bookingLocked || false,
           searchLocked: data.searchLocked || false,
-          rateLimitLocked: data.rateLimitLocked || false
+          rateLimitLocked: data.rateLimitLocked || false,
+          apiTokenLocked: data.apiTokenLocked || false,
+          oauthLocked: data.oauthLocked || false,
+          systemLocked: data.systemLocked || false,
+          maintenanceLocked: data.maintenanceLocked || false
         });
       })
       .catch(err => {
@@ -786,6 +985,121 @@ class Admin extends Component {
         console.error('Error loading maintenance config:', err);
       });
 
+    const systemHeaders = {};
+    if (this.state.apiToken) {
+      systemHeaders.Authorization = `Bearer ${this.state.apiToken}`;
+    }
+
+    fetch('/api/system-config', {
+      method: 'GET',
+      headers: systemHeaders
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          return null;
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data) {
+          return;
+        }
+
+        const webhookIpsText = Array.isArray(data.graphWebhookAllowedIps)
+          ? data.graphWebhookAllowedIps.join(', ')
+          : '';
+
+        this.setState({
+          currentSystemStartupValidationStrict: !!data.startupValidationStrict,
+          systemStartupValidationStrict: !!data.startupValidationStrict,
+          currentSystemGraphWebhookEnabled: !!data.graphWebhookEnabled,
+          systemGraphWebhookEnabled: !!data.graphWebhookEnabled,
+          currentSystemGraphWebhookClientState: data.graphWebhookClientState || '',
+          systemGraphWebhookClientState: data.graphWebhookClientState || '',
+          currentSystemGraphWebhookAllowedIps: webhookIpsText,
+          systemGraphWebhookAllowedIps: webhookIpsText,
+          systemLastUpdated: data.lastUpdated
+            ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
+            : '-'
+        });
+      })
+      .catch(err => {
+        console.error('Error loading system config:', err);
+      });
+
+    const oauthHeaders = {};
+    if (this.state.apiToken) {
+      oauthHeaders.Authorization = `Bearer ${this.state.apiToken}`;
+    }
+
+    fetch('/api/oauth-config', {
+      method: 'GET',
+      headers: oauthHeaders
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          return null;
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data) {
+          return;
+        }
+
+        const tenantId = data.tenantId || '';
+
+        this.setState({
+          currentOauthClientId: data.clientId || '',
+          oauthClientId: data.clientId || '',
+          currentOauthAuthority: tenantId,
+          oauthAuthority: tenantId,
+          currentOauthHasClientSecret: !!data.hasClientSecret,
+          oauthLastUpdated: data.lastUpdated
+            ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
+            : '-',
+          oauthClientSecret: ''
+        });
+      })
+      .catch(err => {
+        console.error('Error loading oauth config:', err);
+      });
+
+    const apiTokenHeaders = {};
+    if (this.state.apiToken) {
+      apiTokenHeaders.Authorization = `Bearer ${this.state.apiToken}`;
+    }
+
+    fetch('/api/api-token-config', {
+      method: 'GET',
+      headers: apiTokenHeaders
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          return null;
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data) {
+          return;
+        }
+
+        this.setState({
+          currentApiTokenSource: data.source || 'default',
+          currentApiTokenIsDefault: !!data.isDefault,
+          apiTokenConfigLastUpdated: data.lastUpdated
+            ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
+            : '-'
+        });
+      })
+      .catch(err => {
+        console.error('Error loading API token config:', err);
+      });
+
     fetch('/api/i18n')
       .then(response => response.json())
       .then(data => {
@@ -872,6 +1186,7 @@ class Admin extends Component {
     })
     .then(response => {
       if (response.status === 401) {
+        this.handleUnauthorizedAccess();
         throw new Error(t.errorUnauthorized);
       }
       return response.json();
@@ -932,6 +1247,7 @@ class Admin extends Component {
           });
           
           if (response.status === 401) {
+            this.handleUnauthorizedAccess();
             throw new Error(t.errorUnauthorized);
           }
           
@@ -956,6 +1272,7 @@ class Admin extends Component {
           });
           
           if (response.status === 401) {
+            this.handleUnauthorizedAccess();
             throw new Error(t.errorUnauthorized);
           }
           
@@ -985,6 +1302,7 @@ class Admin extends Component {
       });
       
       if (response.status === 401) {
+        this.handleUnauthorizedAccess();
         throw new Error(t.errorUnauthorized);
       }
       
@@ -1039,6 +1357,7 @@ class Admin extends Component {
     })
     .then(response => {
       if (response.status === 401) {
+        this.handleUnauthorizedAccess();
         throw new Error(t.errorUnauthorized);
       }
       return response.json();
@@ -1114,6 +1433,7 @@ class Admin extends Component {
     })
     .then(response => {
       if (response.status === 401) {
+        this.handleUnauthorizedAccess();
         throw new Error(t.errorUnauthorized);
       }
       return response.json();
@@ -1234,6 +1554,7 @@ class Admin extends Component {
     })
       .then(response => {
         if (response.status === 401) {
+          this.handleUnauthorizedAccess();
           throw new Error(t.errorUnauthorized);
         }
         return response.json();
@@ -1253,6 +1574,199 @@ class Admin extends Component {
         this.setState({
           maintenanceMessageBanner: `${t.errorPrefix} ${err.message}`,
           maintenanceMessageType: 'error'
+        });
+      });
+  }
+
+  handleSystemSubmit = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const {
+      apiToken,
+      systemStartupValidationStrict,
+      systemGraphWebhookEnabled,
+      systemGraphWebhookClientState,
+      systemGraphWebhookAllowedIps
+    } = this.state;
+
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    if (apiToken) {
+      headers.Authorization = `Bearer ${apiToken}`;
+    }
+
+    const webhookAllowedIps = String(systemGraphWebhookAllowedIps || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    fetch('/api/system-config', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        startupValidationStrict: !!systemStartupValidationStrict,
+        graphWebhookEnabled: !!systemGraphWebhookEnabled,
+        graphWebhookClientState: String(systemGraphWebhookClientState || '').trim(),
+        graphWebhookAllowedIps: webhookAllowedIps
+      })
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        this.setState({
+          systemMessage: 'System configuration updated successfully.',
+          systemMessageType: 'success'
+        });
+        this.loadCurrentConfig();
+
+        setTimeout(() => {
+          this.setState({ systemMessage: null, systemMessageType: null });
+        }, 5000);
+      })
+      .catch(err => {
+        this.setState({
+          systemMessage: `${t.errorPrefix} ${err.message}`,
+          systemMessageType: 'error'
+        });
+      });
+  }
+
+  handleOAuthSubmit = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const { apiToken, oauthClientId, oauthAuthority, oauthClientSecret } = this.state;
+
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    if (apiToken) {
+      headers.Authorization = `Bearer ${apiToken}`;
+    }
+
+    fetch('/api/oauth-config', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        clientId: String(oauthClientId || '').trim(),
+        tenantId: String(oauthAuthority || '').trim(),
+        clientSecret: oauthClientSecret
+      })
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        this.setState({
+          oauthMessage: 'OAuth configuration updated successfully.',
+          oauthMessageType: 'success',
+          oauthClientSecret: ''
+        });
+
+        this.loadCurrentConfig();
+
+        setTimeout(() => {
+          this.setState({ oauthMessage: null, oauthMessageType: null });
+        }, 5000);
+      })
+      .catch(err => {
+        this.setState({
+          oauthMessage: `${t.errorPrefix} ${err.message}`,
+          oauthMessageType: 'error'
+        });
+      });
+  }
+
+  handleApiTokenSubmit = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const { apiToken, newApiToken, newApiTokenConfirm } = this.state;
+    const trimmedNewToken = String(newApiToken || '').trim();
+    const trimmedConfirmToken = String(newApiTokenConfirm || '').trim();
+
+    if (!trimmedNewToken || trimmedNewToken.length < 8) {
+      this.setState({
+        apiTokenConfigMessage: `${t.errorPrefix} ${t.apiTokenConfigMinLengthError || 'API token must have at least 8 characters.'}`,
+        apiTokenConfigMessageType: 'error'
+      });
+      return;
+    }
+
+    if (trimmedNewToken !== trimmedConfirmToken) {
+      this.setState({
+        apiTokenConfigMessage: `${t.errorPrefix} ${t.apiTokenConfigMismatchError || 'New API token and confirmation do not match.'}`,
+        apiTokenConfigMessageType: 'error'
+      });
+      return;
+    }
+
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (apiToken) {
+      headers.Authorization = `Bearer ${apiToken}`;
+    }
+
+    fetch('/api/api-token-config', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        newToken: trimmedNewToken
+      })
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        try {
+          sessionStorage.setItem('adminApiToken', trimmedNewToken);
+        } catch (err) {
+          // ignore storage errors
+        }
+
+        this.setState({
+          apiToken: trimmedNewToken,
+          newApiToken: '',
+          newApiTokenConfirm: '',
+          apiTokenConfigMessage: t.apiTokenConfigUpdateSuccess || 'API token updated successfully.',
+          apiTokenConfigMessageType: 'success'
+        });
+
+        this.loadConfigLocks();
+        this.loadCurrentConfig();
+      })
+      .catch(err => {
+        this.setState({
+          apiTokenConfigMessage: `${t.errorPrefix} ${err.message}`,
+          apiTokenConfigMessageType: 'error'
         });
       });
   }
@@ -1292,6 +1806,7 @@ class Admin extends Component {
     })
       .then(response => {
         if (response.status === 401) {
+          this.handleUnauthorizedAccess();
           throw new Error(t.errorUnauthorized);
         }
         return response.json();
@@ -1354,6 +1869,7 @@ class Admin extends Component {
     })
       .then(response => {
         if (response.status === 401) {
+          this.handleUnauthorizedAccess();
           throw new Error(t.errorUnauthorized);
         }
         return response.json();
@@ -1396,6 +1912,7 @@ class Admin extends Component {
     })
       .then(response => {
         if (response.status === 401) {
+          this.handleUnauthorizedAccess();
           throw new Error(t.errorUnauthorized);
         }
         return response.json();
@@ -1444,6 +1961,7 @@ class Admin extends Component {
     })
       .then(response => {
         if (response.status === 401) {
+          this.handleUnauthorizedAccess();
           throw new Error(t.errorUnauthorized);
         }
         return response.json();
@@ -1482,6 +2000,7 @@ class Admin extends Component {
     })
       .then(response => {
         if (response.status === 401) {
+          this.handleUnauthorizedAccess();
           throw new Error(t.errorUnauthorized);
         }
         return response.json();
@@ -1550,6 +2069,7 @@ class Admin extends Component {
     })
       .then(response => {
         if (response.status === 401) {
+          this.handleUnauthorizedAccess();
           throw new Error(t.errorUnauthorized);
         }
         return response.json();
@@ -1609,6 +2129,7 @@ class Admin extends Component {
     })
     .then(response => {
       if (response.status === 401) {
+        this.handleUnauthorizedAccess();
         throw new Error(t.errorUnauthorized);
       }
       return response.json();
@@ -1652,6 +2173,14 @@ class Admin extends Component {
       availableRoomOptions, availableRoomGroupOptions,
       currentMaintenanceEnabled, currentMaintenanceMessage, maintenanceLastUpdated,
       maintenanceEnabled, maintenanceMessage,
+      currentSystemStartupValidationStrict, systemStartupValidationStrict,
+      currentSystemGraphWebhookEnabled, systemGraphWebhookEnabled,
+      currentSystemGraphWebhookClientState, systemGraphWebhookClientState,
+      currentSystemGraphWebhookAllowedIps, systemGraphWebhookAllowedIps,
+      systemLastUpdated,
+      currentOauthClientId, oauthClientId,
+      currentOauthAuthority, oauthAuthority,
+      currentOauthHasClientSecret, oauthClientSecret, oauthLastUpdated,
       currentSearchUseGraphAPI, currentSearchMaxDays, currentSearchMaxRoomLists, currentSearchMaxRooms, currentSearchMaxItems, currentSearchPollIntervalMs, searchLastUpdated,
       searchUseGraphAPI, searchMaxDays, searchMaxRoomLists, searchMaxRooms, searchMaxItems, searchPollIntervalMs,
       currentRateLimitApiWindowMs, currentRateLimitApiMax, currentRateLimitWriteWindowMs, currentRateLimitWriteMax, currentRateLimitAuthWindowMs, currentRateLimitAuthMax, rateLimitLastUpdated,
@@ -1660,6 +2189,9 @@ class Admin extends Component {
       i18nLastUpdated, currentMaintenanceTranslations, maintenanceTranslationsText, currentAdminTranslations, adminTranslationsText, translationLanguage, newTranslationLanguageCode, translationLanguageDraftError, collapsedTranslationGroups, showAdvancedTranslationsEditor, i18nMessage, i18nMessageType,
       backupPayloadText, backupMessage, backupMessageType,
       auditLogs, auditMessage, auditMessageType,
+      apiTokenConfigMessage, apiTokenConfigMessageType,
+      currentApiTokenSource, currentApiTokenIsDefault, apiTokenConfigLastUpdated,
+      newApiToken, newApiTokenConfirm,
       bookingButtonColor, currentBookingButtonColor,
       statusAvailableColor, currentStatusAvailableColor,
       statusBusyColor, currentStatusBusyColor,
@@ -1667,8 +2199,9 @@ class Admin extends Component {
       statusNotFoundColor, currentStatusNotFoundColor,
       wifiMessage, wifiMessageType, logoMessage, logoMessageType, informationMessage, informationMessageType,
       bookingMessage, bookingMessageType, colorMessage, colorMessageType,
-      searchMessage, searchMessageType, rateLimitMessage, rateLimitMessageType,
-      wifiLocked, logoLocked, informationLocked, bookingLocked, searchLocked, rateLimitLocked,
+      systemMessage, systemMessageType, oauthMessage, oauthMessageType, searchMessage, searchMessageType, rateLimitMessage, rateLimitMessageType,
+      wifiLocked, logoLocked, informationLocked, bookingLocked, searchLocked, rateLimitLocked, apiTokenLocked, oauthLocked, systemLocked, maintenanceLocked,
+      isAuthenticated, authChecking, authMessage, authMessageType,
       bookingPermissionMissing,
       activeTab,
       syncStatus,
@@ -1693,6 +2226,11 @@ class Admin extends Component {
     // Detect browser language for word order
     const browserLang = navigator.language || navigator.userLanguage;
     const lang = browserLang.split('-')[0];
+    const apiTokenSourceLabelMap = {
+      default: t.apiTokenSourceDefault || 'Default',
+      runtime: t.apiTokenSourceRuntime || 'Admin Runtime',
+      env: t.apiTokenSourceEnv || 'Environment (.env)'
+    };
 
     return (
       <div className="admin-page">
@@ -1707,23 +2245,52 @@ class Admin extends Component {
         </div>
 
         <div className="admin-container">
-          {/* API Token Banner */}
-          <div className="admin-token-banner">
-            <div className="admin-token-content">
-              <div className="token-input-wrapper">
-                <label htmlFor="apiToken">{t.apiTokenLabel}</label>
-                <input
-                  type="password"
-                  id="apiToken"
-                  value={apiToken}
-                  onChange={(e) => this.setState({ apiToken: e.target.value })}
-                  placeholder={t.apiTokenPlaceholder}
-                  autoComplete="off"
-                />
-                <small>{t.apiTokenHelp}</small>
+          {!isAuthenticated && (
+            <div className="admin-token-banner" style={{ marginBottom: '2rem' }}>
+              <div className="admin-token-content">
+                <form onSubmit={this.handleAdminLogin} className="token-input-wrapper">
+                  <label htmlFor="apiToken">{t.apiTokenLabel}</label>
+                  <input
+                    type="password"
+                    id="apiToken"
+                    value={apiToken}
+                    onChange={(e) => this.setState({ apiToken: e.target.value })}
+                    placeholder={t.apiTokenPlaceholder}
+                    autoComplete="off"
+                    disabled={authChecking}
+                  />
+                  <small>{t.apiTokenHelp}</small>
+                  <button type="submit" className="admin-submit-button admin-login-button" disabled={authChecking}>
+                    {authChecking ? 'Logging in...' : 'Login'}
+                  </button>
+                </form>
               </div>
             </div>
-          </div>
+          )}
+
+          {!isAuthenticated && authMessage && (
+            <div className={`admin-message admin-message-${authMessageType || 'error'}`} style={{ marginBottom: '2rem' }}>
+              {authMessage}
+            </div>
+          )}
+
+          {!isAuthenticated && (
+            <div className="admin-section">
+              <h2>{t.title}</h2>
+              <p>{t.apiTokenHelp}</p>
+            </div>
+          )}
+
+          {isAuthenticated && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+              <button type="button" className="admin-submit-button" onClick={this.handleAdminLogout}>
+                Logout
+              </button>
+            </div>
+          )}
+
+          {!isAuthenticated ? null : (
+            <>
 
           {/* Sync Status Banner */}
           {syncStatus && !syncStatusLoading && (
@@ -2709,51 +3276,321 @@ class Admin extends Component {
             <div className="admin-section">
               <h2>{t.operationsSectionTitle}</h2>
 
-              <div className="admin-current-config">
-                <h3>{t.currentConfigTitle}</h3>
-                <div className="config-grid">
-                  <div className="config-item">
-                    <span className="config-label">{t.maintenanceEnabledLabel}</span>
-                    <span className="config-value">{currentMaintenanceEnabled ? 'Yes' : 'No'}</span>
+              {!apiTokenLocked && (
+                <>
+                  <h3>{t.apiTokenConfigSectionTitle || 'Admin API Token'}</h3>
+                  <div className="admin-current-config">
+                    <h3>{t.currentConfigTitle}</h3>
+                    <div className="config-grid">
+                      <div className="config-item">
+                        <span className="config-label">{t.apiTokenSourceLabel || 'Token Source'}</span>
+                        <span className="config-value">{apiTokenSourceLabelMap[currentApiTokenSource] || currentApiTokenSource || '-'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.apiTokenDefaultActiveLabel || 'Default Token Active'}</span>
+                        <span className="config-value">{currentApiTokenIsDefault ? 'Yes' : 'No'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.apiTokenDefaultValueLabel || 'Default Token'}</span>
+                        <span className="config-value">{t.apiTokenDefaultValue || 'change-me-admin-token'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.lastUpdatedLabel}</span>
+                        <span className="config-value">{apiTokenConfigLastUpdated || '-'}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.maintenanceMessageLabel}</span>
-                    <span className="config-value">{currentMaintenanceMessage || '-'}</span>
+
+                  <form onSubmit={this.handleApiTokenSubmit}>
+                    <div className="admin-form-group">
+                      <label htmlFor="newApiToken">{t.apiTokenNewLabel || 'New API Token'}</label>
+                      <input
+                        type="password"
+                        id="newApiToken"
+                        value={newApiToken}
+                        onChange={(e) => this.setState({ newApiToken: e.target.value })}
+                        placeholder={t.apiTokenMinLengthPlaceholder || 'At least 8 characters'}
+                        autoComplete="new-password"
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="newApiTokenConfirm">{t.apiTokenNewConfirmLabel || 'Confirm New API Token'}</label>
+                      <input
+                        type="password"
+                        id="newApiTokenConfirm"
+                        value={newApiTokenConfirm}
+                        onChange={(e) => this.setState({ newApiTokenConfirm: e.target.value })}
+                        placeholder={t.apiTokenConfirmPlaceholder || 'Repeat new token'}
+                        autoComplete="new-password"
+                      />
+                      <small>{t.apiTokenConfigHelp || 'After saving, use the new token for future logins.'}</small>
+                    </div>
+
+                    <button type="submit" className="admin-submit-button">
+                      {t.apiTokenConfigSaveButton || 'Save API Token'}
+                    </button>
+                  </form>
+
+                  {apiTokenConfigMessage && (
+                    <div className={`admin-message admin-message-${apiTokenConfigMessageType || 'error'}`}>
+                      {apiTokenConfigMessage}
+                    </div>
+                  )}
+
+                  <div className="admin-form-divider"></div>
+                </>
+              )}
+
+              {apiTokenLocked && (
+                <>
+                  <h3>{t.apiTokenConfigSectionTitle || 'Admin API Token'}</h3>
+                  <div className="admin-locked-message">
+                    <p>{t.configuredViaEnv}</p>
                   </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.lastUpdatedLabel}</span>
-                    <span className="config-value">{maintenanceLastUpdated || '-'}</span>
+                  <div className="admin-form-divider"></div>
+                </>
+              )}
+
+              {!systemLocked && (
+                <>
+                  <h3>System Configuration</h3>
+                  <div className="admin-current-config">
+                    <h3>{t.currentConfigTitle}</h3>
+                    <div className="config-grid">
+                      <div className="config-item">
+                        <span className="config-label">Startup Validation Strict</span>
+                        <span className="config-value">{currentSystemStartupValidationStrict ? 'Yes' : 'No'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Graph Webhook Enabled</span>
+                        <span className="config-value">{currentSystemGraphWebhookEnabled ? 'Yes' : 'No'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Graph Webhook Client State</span>
+                        <span className="config-value">{currentSystemGraphWebhookClientState || '-'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Graph Webhook Allowed IPs</span>
+                        <span className="config-value">{currentSystemGraphWebhookAllowedIps || '-'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.lastUpdatedLabel}</span>
+                        <span className="config-value">{systemLastUpdated || '-'}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              <form onSubmit={this.handleMaintenanceSubmit}>
-                <div className="admin-form-group">
-                  <label className="inline-label">
-                    <span className="label-text">{t.maintenanceEnabledLabel}</span>
-                    <input
-                      type="checkbox"
-                      checked={maintenanceEnabled}
-                      onChange={(e) => this.setState({ maintenanceEnabled: e.target.checked })}
-                    />
-                  </label>
-                </div>
+                  <form onSubmit={this.handleSystemSubmit}>
+                    <div className="admin-form-group">
+                      <label className="inline-label">
+                        <span className="label-text">Startup validation strict</span>
+                        <input
+                          type="checkbox"
+                          checked={systemStartupValidationStrict}
+                          onChange={(e) => this.setState({ systemStartupValidationStrict: e.target.checked })}
+                        />
+                      </label>
+                    </div>
 
-                <div className="admin-form-group">
-                  <label htmlFor="maintenanceMessage">{t.maintenanceMessageLabel}</label>
-                  <textarea
-                    id="maintenanceMessage"
-                    value={maintenanceMessage}
-                    onChange={(e) => this.setState({ maintenanceMessage: e.target.value })}
-                    rows={4}
-                    className="admin-textarea"
-                  />
-                </div>
+                    <div className="admin-form-group">
+                      <label className="inline-label">
+                        <span className="label-text">Graph webhook enabled</span>
+                        <input
+                          type="checkbox"
+                          checked={systemGraphWebhookEnabled}
+                          onChange={(e) => this.setState({ systemGraphWebhookEnabled: e.target.checked })}
+                        />
+                      </label>
+                    </div>
 
-                <button type="submit" className="admin-submit-button">
-                  {t.maintenanceSubmitButton}
-                </button>
-              </form>
+                    <div className="admin-form-group">
+                      <label htmlFor="systemGraphWebhookClientState">Graph webhook client state</label>
+                      <input
+                        type="text"
+                        id="systemGraphWebhookClientState"
+                        value={systemGraphWebhookClientState}
+                        onChange={(e) => this.setState({ systemGraphWebhookClientState: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="systemGraphWebhookAllowedIps">Graph webhook allowed IPs</label>
+                      <input
+                        type="text"
+                        id="systemGraphWebhookAllowedIps"
+                        value={systemGraphWebhookAllowedIps}
+                        onChange={(e) => this.setState({ systemGraphWebhookAllowedIps: e.target.value })}
+                        placeholder="Comma-separated CIDRs or IPs"
+                      />
+                    </div>
+
+                    <button type="submit" className="admin-submit-button">
+                      Save System Configuration
+                    </button>
+                  </form>
+
+                  {systemMessage && (
+                    <div className={`admin-message admin-message-${systemMessageType}`}>
+                      {systemMessage}
+                    </div>
+                  )}
+
+                  <div className="admin-form-divider"></div>
+                </>
+              )}
+
+              {systemLocked && (
+                <>
+                  <h3>System Configuration</h3>
+                  <div className="admin-locked-message">
+                    <p>{t.configuredViaEnv}</p>
+                  </div>
+                  <div className="admin-form-divider"></div>
+                </>
+              )}
+
+              {!oauthLocked && (
+                <>
+                  <h3>OAuth Configuration</h3>
+                  <div className="admin-current-config">
+                    <h3>{t.currentConfigTitle}</h3>
+                    <div className="config-grid">
+                      <div className="config-item">
+                        <span className="config-label">Client ID</span>
+                        <span className="config-value">{currentOauthClientId || '-'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Tenant ID</span>
+                        <span className="config-value">{currentOauthAuthority || '-'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">Client Secret</span>
+                        <span className="config-value">{currentOauthHasClientSecret ? 'Configured' : 'Not configured'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.lastUpdatedLabel}</span>
+                        <span className="config-value">{oauthLastUpdated || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form onSubmit={this.handleOAuthSubmit}>
+                    <div className="admin-form-group">
+                      <label htmlFor="oauthClientId">OAuth Client ID</label>
+                      <input
+                        type="text"
+                        id="oauthClientId"
+                        value={oauthClientId}
+                        onChange={(e) => this.setState({ oauthClientId: e.target.value })}
+                        placeholder="Application (client) ID"
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="oauthAuthority">OAuth Tenant ID</label>
+                      <input
+                        type="text"
+                        id="oauthAuthority"
+                        value={oauthAuthority}
+                        onChange={(e) => this.setState({ oauthAuthority: e.target.value })}
+                        placeholder="Directory (tenant) ID"
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="oauthClientSecret">OAuth Client Secret</label>
+                      <input
+                        type="password"
+                        id="oauthClientSecret"
+                        value={oauthClientSecret}
+                        onChange={(e) => this.setState({ oauthClientSecret: e.target.value })}
+                        placeholder="Leave empty to keep existing secret"
+                        autoComplete="new-password"
+                      />
+                      <small>Secret is encrypted before it is written to disk.</small>
+                    </div>
+
+                    <button type="submit" className="admin-submit-button">
+                      Save OAuth Configuration
+                    </button>
+                  </form>
+
+                  {oauthMessage && (
+                    <div className={`admin-message admin-message-${oauthMessageType}`}>
+                      {oauthMessage}
+                    </div>
+                  )}
+
+                  <div className="admin-form-divider"></div>
+                </>
+              )}
+
+              {oauthLocked && (
+                <>
+                  <h3>OAuth Configuration</h3>
+                  <div className="admin-locked-message">
+                    <p>{t.configuredViaEnv}</p>
+                  </div>
+                  <div className="admin-form-divider"></div>
+                </>
+              )}
+
+              {!maintenanceLocked && (
+                <>
+                  <div className="admin-current-config">
+                    <h3>{t.currentConfigTitle}</h3>
+                    <div className="config-grid">
+                      <div className="config-item">
+                        <span className="config-label">{t.maintenanceEnabledLabel}</span>
+                        <span className="config-value">{currentMaintenanceEnabled ? 'Yes' : 'No'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.maintenanceMessageLabel}</span>
+                        <span className="config-value">{currentMaintenanceMessage || '-'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.lastUpdatedLabel}</span>
+                        <span className="config-value">{maintenanceLastUpdated || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form onSubmit={this.handleMaintenanceSubmit}>
+                    <div className="admin-form-group">
+                      <label className="inline-label">
+                        <span className="label-text">{t.maintenanceEnabledLabel}</span>
+                        <input
+                          type="checkbox"
+                          checked={maintenanceEnabled}
+                          onChange={(e) => this.setState({ maintenanceEnabled: e.target.checked })}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="maintenanceMessage">{t.maintenanceMessageLabel}</label>
+                      <textarea
+                        id="maintenanceMessage"
+                        value={maintenanceMessage}
+                        onChange={(e) => this.setState({ maintenanceMessage: e.target.value })}
+                        rows={4}
+                        className="admin-textarea"
+                      />
+                    </div>
+
+                    <button type="submit" className="admin-submit-button">
+                      {t.maintenanceSubmitButton}
+                    </button>
+                  </form>
+                </>
+              )}
+
+              {maintenanceLocked && (
+                <div className="admin-locked-message">
+                  <p>{t.configuredViaEnv}</p>
+                </div>
+              )}
 
               {maintenanceMessageBanner && (
                 <div className={`admin-message admin-message-${maintenanceMessageType}`}>
@@ -3603,6 +4440,8 @@ class Admin extends Component {
               )}
             </div>
           </div>
+      </>
+      )}
 
         </div>
       </div>

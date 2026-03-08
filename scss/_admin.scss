@@ -593,6 +593,20 @@
   }
 }
 
+.admin-login-button {
+  margin-top: 1rem;
+  background: #ffffff;
+  color: #1d4ed8;
+  border: 2px solid #ffffff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.35);
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.95);
+    color: #1e40af;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.45);
+  }
+}
+
 .admin-secondary-button {
   background: rgba(255, 255, 255, 0.1);
   color: white;

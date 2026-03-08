@@ -106,6 +106,9 @@ SEARCH_MAXITEMS=100
 API_TOKEN=your-secure-random-token-here
 ```
 
+If `API_TOKEN` is not set, MeetEasier uses the default admin token `change-me-admin-token`.
+For production, always set a secure custom token (or rotate it immediately via Admin panel).
+
 **Security recommendations:**
 - Use at least 32 characters
 - Use random alphanumeric characters
@@ -242,6 +245,8 @@ URL: `http://your-server:8080/admin`
 ### Authentication
 
 Enter your `API_TOKEN` in the API Token field at the top of the page.
+
+If no `API_TOKEN` is set in environment/config, use `change-me-admin-token` for first login and change it immediately.
 
 ### Configuration Sections
 

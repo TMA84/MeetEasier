@@ -48,11 +48,7 @@ _OLD_TODO.md
 !/static/img/uploads/.gitkeep
 
 # Runtime configuration files (created via API or environment)
-/data/wifi-config.json
-/data/logo-config.json
-/data/sidebar-config.json
-/data/booking-config.json
-
+/data/*
 # Generated runtime assets
 /static/img/wifi-qr.png
 
