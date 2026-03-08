@@ -1319,11 +1319,6 @@ module.exports = function(app) {
 
 	// Middleware to check API token
 	const checkApiToken = (req, res, next) => {
-		authRateLimiter(req, res, () => {});
-		if (res.headersSent) {
-			return;
-		}
-
 		if (hasValidApiToken(req)) {
 			return next();
 		}
@@ -1344,11 +1339,6 @@ module.exports = function(app) {
 	};
 
 	const checkWiFiApiToken = (req, res, next) => {
-		authRateLimiter(req, res, () => {});
-		if (res.headersSent) {
-			return;
-		}
-
 		if (hasValidWiFiApiToken(req)) {
 			return next();
 		}

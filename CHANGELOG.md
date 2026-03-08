@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Admin Auth Hardening (Hybrid Mode)**
   - Migrated Admin panel session flow from `sessionStorage` to HTTP-only auth cookies (`/api/admin/login`, `/api/admin/logout`, `/api/admin/session`)
   - Kept header-token compatibility for external API clients and WiFi integrations (no breaking changes for `Authorization` / `X-API-Token` usage)
+  - Adjusted auth-rate-limit usage so normal authenticated admin operations no longer trigger premature `429` responses
 
 - **Request Body Size Limits**
   - Added explicit request body limits for JSON and URL-encoded payloads to reduce DoS risk from oversized bodies
