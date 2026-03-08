@@ -155,7 +155,7 @@ const applyColorsToCSS = (colors) => {
     }
   `;
   
-  styleElement.innerHTML = css;
+  styleElement.textContent = css;
 };
 
 class Display extends Component {

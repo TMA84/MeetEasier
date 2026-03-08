@@ -28,6 +28,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Restored full WiFi payload on `GET /api/wifi` (including password) for UI/runtime parity
   - Fixed WiFi info page behavior so password remains visible after page reload
 
+- **HTTP Security Headers**
+  - Added Helmet middleware in backend startup to enable baseline security headers
+  - Added protections for clickjacking, MIME-sniffing and safer default content loading via CSP
+
+- **API CORS Policy**
+  - Added CORS middleware with a restrictive policy for protected API routes
+  - Public read-only endpoints remain cross-origin readable, while protected operations require same-origin or `ALLOWED_ORIGINS` allowlist
+
+- **Booking Abuse Protection**
+  - Added a dedicated booking rate limiter for `/api/rooms/:roomEmail/book`, `/api/extend-meeting` and `/api/end-meeting`
+  - Added runtime-configurable booking limiter settings via `RATE_LIMIT_BOOKING_WINDOW_MS` and `RATE_LIMIT_BOOKING_MAX`
+
+- **Client-Side Style Injection Hardening**
+  - Replaced `innerHTML` with `textContent` when applying dynamic style blocks in room-minimal display
+
 ## [1.2.8] - 2026-03-08
 
 ### Changed
