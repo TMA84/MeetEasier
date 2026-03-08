@@ -509,6 +509,32 @@ function formatDateForGraphUtc(date) {
 	return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
 
+function formatDateForGraphInTimeZone(date, timeZone) {
+	const zone = String(timeZone || '').trim() || 'UTC';
+
+	try {
+		const formatter = new Intl.DateTimeFormat('en-GB', {
+			timeZone: zone,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hourCycle: 'h23'
+		});
+
+		const parts = formatter.formatToParts(date).reduce((acc, part) => {
+			acc[part.type] = part.value;
+			return acc;
+		}, {});
+
+		return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`;
+	} catch (error) {
+		return formatDateForGraphUtc(date);
+	}
+}
+
 function parseGraphDateTime(dateTimeValue, timeZoneValue) {
 	const dateTimeString = String(dateTimeValue || '').trim();
 	if (!dateTimeString) {
@@ -1081,21 +1107,16 @@ module.exports = function(app) {
 			}
 
 			const event = await eventResponse.json();
-			const currentStart = new Date(event.start.dateTime);
-			const currentEnd = new Date(event.end.dateTime);
-			const newEnd = new Date(currentEnd.getTime() + (minutes * 60 * 1000));
+			const eventStartTimeZone = event?.start?.timeZone || 'UTC';
+			const eventEndTimeZone = event?.end?.timeZone || eventStartTimeZone || 'UTC';
+			const currentStart = parseGraphDateTime(event?.start?.dateTime, eventStartTimeZone);
+			const currentEnd = parseGraphDateTime(event?.end?.dateTime, eventEndTimeZone);
 
-			// Format the new end time properly for Graph API
-			// Graph API expects format: "2024-01-15T14:30:00" without the Z
-			const formatDateForGraph = (date) => {
-				const year = date.getFullYear();
-				const month = String(date.getMonth() + 1).padStart(2, '0');
-				const day = String(date.getDate()).padStart(2, '0');
-				const hours = String(date.getHours()).padStart(2, '0');
-				const minutes = String(date.getMinutes()).padStart(2, '0');
-				const seconds = String(date.getSeconds()).padStart(2, '0');
-				return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-			};
+			if (!currentStart || !currentEnd) {
+				throw new Error(t.fetchError);
+			}
+
+			const newEnd = new Date(currentEnd.getTime() + (minutesValue * 60 * 1000));
 
 			// Check for conflicts with the extension
 			// We need to check if extending from currentEnd to newEnd would overlap with any other meeting
@@ -1141,8 +1162,8 @@ module.exports = function(app) {
 				},
 				body: JSON.stringify({
 					end: {
-						dateTime: formatDateForGraphUtc(newEnd),
-						timeZone: event.end.timeZone || 'UTC'
+						dateTime: formatDateForGraphInTimeZone(newEnd, eventEndTimeZone),
+						timeZone: eventEndTimeZone
 					}
 				})
 			});
@@ -1154,7 +1175,7 @@ module.exports = function(app) {
 
 			res.json({ 
 				success: true,
-				message: `Meeting extended by ${minutes} minutes`,
+				message: `Meeting extended by ${minutesValue} minutes`,
 				newEndTime: newEnd.toISOString()
 			});
 			triggerRoomRefreshWithFollowUp();
