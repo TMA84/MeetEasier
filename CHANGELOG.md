@@ -47,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Migrated Admin panel session flow from `sessionStorage` to HTTP-only auth cookies (`/api/admin/login`, `/api/admin/logout`, `/api/admin/session`)
   - Kept header-token compatibility for external API clients and WiFi integrations (no breaking changes for `Authorization` / `X-API-Token` usage)
 
+- **Request Body Size Limits**
+  - Added explicit request body limits for JSON and URL-encoded payloads to reduce DoS risk from oversized bodies
+  - Added configurable server-side guards via `REQUEST_BODY_LIMIT` and `URLENCODED_PARAMETER_LIMIT`
+
 ## [1.2.8] - 2026-03-08
 
 ### Changed

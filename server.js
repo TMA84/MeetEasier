@@ -75,6 +75,19 @@ function parseTrustProxySetting(rawValue) {
 	return rawValue;
 }
 
+function parseBodyLimit(rawValue, fallback = '1mb') {
+	const normalized = String(rawValue || '').trim();
+	return normalized || fallback;
+}
+
+function parseParameterLimit(rawValue, fallback = 1000) {
+	const parsed = Number.parseInt(rawValue, 10);
+	if (!Number.isFinite(parsed) || parsed <= 0) {
+		return fallback;
+	}
+	return parsed;
+}
+
 
 // configuration ===============================================================
 const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
@@ -126,8 +139,15 @@ app.use(express.static(`${__dirname}/ui-react/build`));
 app.set('trust proxy', parseTrustProxySetting(process.env.TRUST_PROXY));
 
 // Parse JSON request bodies
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const requestBodyLimit = parseBodyLimit(process.env.REQUEST_BODY_LIMIT, '1mb');
+const urlencodedParameterLimit = parseParameterLimit(process.env.URLENCODED_PARAMETER_LIMIT, 1000);
+
+app.use(express.json({ limit: requestBodyLimit }));
+app.use(express.urlencoded({
+	extended: true,
+	limit: requestBodyLimit,
+	parameterLimit: urlencodedParameterLimit
+}));
 
 // Read the .env-file
 require('dotenv').config();
