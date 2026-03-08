@@ -841,6 +841,8 @@ function normalizeRateLimitConfig(rateLimitConfig) {
 	const fallbackWriteMax = toMinInt(defaults.writeMax, 60, 1);
 	const fallbackAuthWindowMs = toMinInt(defaults.authWindowMs, 60000, 1000);
 	const fallbackAuthMax = toMinInt(defaults.authMax, 30, 1);
+	const fallbackBookingWindowMs = toMinInt(defaults.bookingWindowMs, 60000, 1000);
+	const fallbackBookingMax = toMinInt(defaults.bookingMax, 10, 1);
 
 	return {
 		apiWindowMs: toMinInt(source.apiWindowMs, fallbackApiWindowMs, 1000),
@@ -848,7 +850,9 @@ function normalizeRateLimitConfig(rateLimitConfig) {
 		writeWindowMs: toMinInt(source.writeWindowMs, fallbackWriteWindowMs, 1000),
 		writeMax: toMinInt(source.writeMax, fallbackWriteMax, 1),
 		authWindowMs: toMinInt(source.authWindowMs, fallbackAuthWindowMs, 1000),
-		authMax: toMinInt(source.authMax, fallbackAuthMax, 1)
+		authMax: toMinInt(source.authMax, fallbackAuthMax, 1),
+		bookingWindowMs: toMinInt(source.bookingWindowMs, fallbackBookingWindowMs, 1000),
+		bookingMax: toMinInt(source.bookingMax, fallbackBookingMax, 1)
 	};
 }
 
@@ -1653,6 +1657,8 @@ async function updateRateLimitConfig(rateLimitConfig) {
 	config.rateLimit.writeMax = updatedConfig.writeMax;
 	config.rateLimit.authWindowMs = updatedConfig.authWindowMs;
 	config.rateLimit.authMax = updatedConfig.authMax;
+	config.rateLimit.bookingWindowMs = updatedConfig.bookingWindowMs;
+	config.rateLimit.bookingMax = updatedConfig.bookingMax;
 
 	if (io) {
 		io.of('/').emit('rateLimitConfigUpdated', updatedConfig);

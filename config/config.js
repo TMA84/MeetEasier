@@ -107,7 +107,9 @@ module.exports = {
 		writeWindowMs: process.env.RATE_LIMIT_WRITE_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_WRITE_WINDOW_MS, 10) : 60000,
 		writeMax: process.env.RATE_LIMIT_WRITE_MAX ? parseInt(process.env.RATE_LIMIT_WRITE_MAX, 10) : 60,
 		authWindowMs: process.env.RATE_LIMIT_AUTH_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_AUTH_WINDOW_MS, 10) : 60000,
-		authMax: process.env.RATE_LIMIT_AUTH_MAX ? parseInt(process.env.RATE_LIMIT_AUTH_MAX, 10) : 30
+		authMax: process.env.RATE_LIMIT_AUTH_MAX ? parseInt(process.env.RATE_LIMIT_AUTH_MAX, 10) : 30,
+		bookingWindowMs: process.env.RATE_LIMIT_BOOKING_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_BOOKING_WINDOW_MS, 10) : 60000,
+		bookingMax: process.env.RATE_LIMIT_BOOKING_MAX ? parseInt(process.env.RATE_LIMIT_BOOKING_MAX, 10) : 10
 	},
 
 	graphWebhook: {

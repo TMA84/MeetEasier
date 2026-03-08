@@ -589,6 +589,7 @@ module.exports = function(app) {
 	let apiRateLimiter = null;
 	let writeRateLimiter = null;
 	let authRateLimiter = null;
+	let bookingRateLimiter = null;
 
 	const rebuildRateLimiters = () => {
 		apiRateLimiter = createRateLimiter({
@@ -607,6 +608,12 @@ module.exports = function(app) {
 			windowMs: config.rateLimit.authWindowMs,
 			max: config.rateLimit.authMax,
 			keyGenerator: req => `${getClientIp(req)}:auth`
+		});
+
+		bookingRateLimiter = createRateLimiter({
+			windowMs: config.rateLimit.bookingWindowMs,
+			max: config.rateLimit.bookingMax,
+			keyGenerator: req => `${getClientIp(req)}:booking`
 		});
 	};
 
@@ -855,7 +862,9 @@ module.exports = function(app) {
 	});
 
 	// Room booking endpoint
-	app.post('/api/rooms/:roomEmail/book', async function(req, res) {
+	app.post('/api/rooms/:roomEmail/book', function(req, res, next) {
+		return bookingRateLimiter(req, res, next);
+	}, async function(req, res) {
 		const { roomEmail } = req.params;
 		const { subject, startTime, endTime, description, roomGroup } = req.body;
 		const bookingConfig = configManager.getBookingConfig();
@@ -913,7 +922,9 @@ module.exports = function(app) {
 	});
 
 	// Extend existing meeting endpoint
-	app.post('/api/extend-meeting', async function(req, res) {
+	app.post('/api/extend-meeting', function(req, res, next) {
+		return bookingRateLimiter(req, res, next);
+	}, async function(req, res) {
 		const { roomEmail, appointmentId, minutes, roomGroup } = req.body;
 
 		// Detect language from Accept-Language header
@@ -1084,7 +1095,9 @@ module.exports = function(app) {
 		}
 	});
 
-	app.post('/api/end-meeting', async function(req, res) {
+	app.post('/api/end-meeting', function(req, res, next) {
+		return bookingRateLimiter(req, res, next);
+	}, async function(req, res) {
 		const { roomEmail, appointmentId, roomGroup } = req.body || {};
 
 		const acceptLanguage = req.headers['accept-language'] || 'en';
@@ -1870,7 +1883,9 @@ module.exports = function(app) {
 				writeWindowMs,
 				writeMax,
 				authWindowMs,
-				authMax
+				authMax,
+				bookingWindowMs,
+				bookingMax
 			} = req.body || {};
 
 			if (
@@ -1880,6 +1895,8 @@ module.exports = function(app) {
 				&& writeMax === undefined
 				&& authWindowMs === undefined
 				&& authMax === undefined
+				&& bookingWindowMs === undefined
+				&& bookingMax === undefined
 			) {
 				return res.status(400).json({ error: 'At least one rate limit configuration option is required' });
 			}
@@ -1891,7 +1908,9 @@ module.exports = function(app) {
 				writeWindowMs,
 				writeMax,
 				authWindowMs,
-				authMax
+				authMax,
+				bookingWindowMs,
+				bookingMax
 			});
 
 			rebuildRateLimiters();
