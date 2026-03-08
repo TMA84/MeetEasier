@@ -52,6 +52,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added explicit request body limits for JSON and URL-encoded payloads to reduce DoS risk from oversized bodies
   - Added configurable server-side guards via `REQUEST_BODY_LIMIT` and `URLENCODED_PARAMETER_LIMIT`
 
+- **Error Response Sanitization**
+  - Standardized server error responses to avoid exposing raw internal exception messages in production
+  - Added centralized client-safe error message handling in API routes while preserving detailed messages in non-production environments
+
 ## [1.2.8] - 2026-03-08
 
 ### Changed

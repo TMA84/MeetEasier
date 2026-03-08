@@ -11,6 +11,16 @@ const { appendAuditLog, getAuditLogs } = require('./audit-logger');
 const checkinManager = require('./checkin-manager');
 
 let msalClient = null;
+const isProductionEnv = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+
+function getClientSafeErrorMessage(error, fallbackMessage) {
+	if (isProductionEnv) {
+		return fallbackMessage;
+	}
+
+	const message = String(error?.message || '').trim();
+	return message || fallbackMessage;
+}
 
 function refreshMsalClient() {
 	msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
@@ -405,7 +415,7 @@ async function getGraphAuthHealth(forceRefresh = false) {
 	} catch (error) {
 		const result = {
 			status: 'error',
-			message: error.message || 'Graph token acquisition failed.'
+			message: getClientSafeErrorMessage(error, 'Graph token acquisition failed.')
 		};
 		graphAuthHealthCache = { checkedAt: now, result };
 		return result;
@@ -435,7 +445,7 @@ function getCacheHealth() {
 			exists: true,
 			readable: false,
 			lastModified: null,
-			error: error.message
+			error: getClientSafeErrorMessage(error, 'Unable to read cache metadata')
 		};
 	}
 }
@@ -620,7 +630,7 @@ const storage = multer.diskStorage({
 	},
 	filename: function (req, file, cb) {
 		// Generate unique filename with timestamp
-		const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+		const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(8).toString('hex');
 		const ext = path.extname(file.originalname);
 		cb(null, 'logo-' + uniqueSuffix + ext);
 	}
@@ -918,7 +928,7 @@ module.exports = function(app) {
 		} catch (err) {
 			res.status(500).json({ 
 				error: 'Failed to retrieve sync status',
-				message: err.message
+				message: getClientSafeErrorMessage(err, 'Unable to retrieve sync status')
 			});
 		}
 	});
@@ -969,16 +979,16 @@ module.exports = function(app) {
 			res.json(result);
 		} catch (error) {
 			console.error('Booking error:', error);
-			const errorMessage = error.message || 'Failed to book room';
-			if (errorMessage.toLowerCase().includes('already booked')) {
+			const rawErrorMessage = String(error?.message || '').toLowerCase();
+			if (rawErrorMessage.includes('already booked')) {
 				return res.status(409).json({
 					error: 'Room not available',
-					message: errorMessage
+					message: getClientSafeErrorMessage(error, 'Room is already booked')
 				});
 			}
 			res.status(500).json({ 
 				error: 'Booking failed',
-				message: errorMessage
+				message: getClientSafeErrorMessage(error, 'Failed to book room')
 			});
 		}
 	});
@@ -1152,7 +1162,7 @@ module.exports = function(app) {
 			console.error('Extend meeting error:', error);
 			res.status(500).json({ 
 				success: false,
-				error: error.message || t.generalError
+				error: getClientSafeErrorMessage(error, t.generalError)
 			});
 		}
 	});
@@ -1213,7 +1223,7 @@ module.exports = function(app) {
 			console.error('End meeting error:', error);
 			return res.status(500).json({
 				success: false,
-				error: error.message || t.genericError
+				error: getClientSafeErrorMessage(error, t.genericError)
 			});
 		}
 	});
@@ -1297,7 +1307,7 @@ module.exports = function(app) {
 				return res.status(500).json({
 					success: false,
 					error: 'Failed to update meeting start time',
-					message: error.message || 'Could not move meeting start to current time.'
+					message: getClientSafeErrorMessage(error, 'Could not move meeting start to current time.')
 				});
 			}
 		}
@@ -1509,7 +1519,7 @@ module.exports = function(app) {
 			});
 		} catch (err) {
 			console.error('Error updating API token:', err);
-			res.status(500).json({ error: err.message || 'Failed to update API token' });
+			res.status(500).json({ error: getClientSafeErrorMessage(err, 'Failed to update API token') });
 		}
 	});
 
@@ -1589,7 +1599,7 @@ module.exports = function(app) {
 			});
 		} catch (err) {
 			console.error('Error updating OAuth config:', err);
-			res.status(500).json({ error: err.message || 'Failed to update OAuth configuration' });
+			res.status(500).json({ error: getClientSafeErrorMessage(err, 'Failed to update OAuth configuration') });
 		}
 	});
 
@@ -1655,7 +1665,7 @@ module.exports = function(app) {
 			});
 		} catch (err) {
 			console.error('Error updating system config:', err);
-			res.status(500).json({ error: err.message || 'Failed to update system configuration' });
+			res.status(500).json({ error: getClientSafeErrorMessage(err, 'Failed to update system configuration') });
 		}
 	});
 
@@ -1771,7 +1781,7 @@ module.exports = function(app) {
 					if (unlinkErr) console.error('Error deleting file:', unlinkErr);
 				});
 			}
-			res.status(500).json({ error: err.message || 'Failed to upload logo' });
+			res.status(500).json({ error: getClientSafeErrorMessage(err, 'Failed to upload logo') });
 		}
 	});
 
@@ -1890,7 +1900,7 @@ module.exports = function(app) {
 			});
 		} catch (err) {
 			console.error('Error updating translation API config:', err);
-			res.status(500).json({ error: err.message || 'Failed to update translation API configuration' });
+			res.status(500).json({ error: getClientSafeErrorMessage(err, 'Failed to update translation API configuration') });
 		}
 	});
 
