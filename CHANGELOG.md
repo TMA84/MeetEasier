@@ -43,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Client-Side Style Injection Hardening**
   - Replaced `innerHTML` with `textContent` when applying dynamic style blocks in room-minimal display
 
+- **Admin Auth Hardening (Hybrid Mode)**
+  - Migrated Admin panel session flow from `sessionStorage` to HTTP-only auth cookies (`/api/admin/login`, `/api/admin/logout`, `/api/admin/session`)
+  - Kept header-token compatibility for external API clients and WiFi integrations (no breaking changes for `Authorization` / `X-API-Token` usage)
+
 ## [1.2.8] - 2026-03-08
 
 ### Changed

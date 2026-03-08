@@ -26,6 +26,8 @@ let graphAuthHealthCache = {
 	result: null
 };
 
+const ADMIN_AUTH_COOKIE_NAME = 'meeteasier_admin_auth';
+
 function isEnvDefined(name) {
 	return process.env[name] !== undefined;
 }
@@ -63,6 +65,59 @@ function normalizeAuthToken(rawToken) {
 	return rawToken.replace(/^Bearer\s+/i, '').trim();
 }
 
+function parseCookies(req) {
+	const rawCookie = String(req?.headers?.cookie || '').trim();
+	if (!rawCookie) {
+		return {};
+	}
+
+	return rawCookie.split(';').reduce((cookies, pair) => {
+		const [namePart, ...valueParts] = pair.split('=');
+		const name = String(namePart || '').trim();
+		if (!name) {
+			return cookies;
+		}
+
+		const value = valueParts.join('=').trim();
+		try {
+			cookies[name] = decodeURIComponent(value);
+		} catch (error) {
+			cookies[name] = value;
+		}
+
+		return cookies;
+	}, {});
+}
+
+function getAdminAuthCookie(req) {
+	const cookies = parseCookies(req);
+	return cookies[ADMIN_AUTH_COOKIE_NAME] || '';
+}
+
+function getAdminCookieOptions() {
+	const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+	return {
+		httpOnly: true,
+		sameSite: 'strict',
+		secure: isProduction,
+		path: '/'
+	};
+}
+
+function setAdminAuthCookie(res, token) {
+	res.cookie(ADMIN_AUTH_COOKIE_NAME, String(token || ''), getAdminCookieOptions());
+}
+
+function clearAdminAuthCookie(res) {
+	res.clearCookie(ADMIN_AUTH_COOKIE_NAME, getAdminCookieOptions());
+}
+
+function hasValidAdminAuthCookie(req) {
+	const providedToken = normalizeAuthToken(getAdminAuthCookie(req));
+	const expectedToken = configManager.getEffectiveApiToken();
+	return secureTokenEquals(providedToken, expectedToken);
+}
+
 function secureTokenEquals(providedToken, expectedToken) {
 	const providedBuffer = Buffer.from(String(providedToken || ''), 'utf8');
 	const expectedBuffer = Buffer.from(String(expectedToken || ''), 'utf8');
@@ -78,11 +133,18 @@ function hasValidApiToken(req) {
 	const token = req.headers['authorization'] || req.headers['x-api-token'];
 	const providedToken = normalizeAuthToken(token);
 	const expectedToken = configManager.getEffectiveApiToken();
+	if (secureTokenEquals(providedToken, expectedToken)) {
+		return true;
+	}
 
-	return secureTokenEquals(providedToken, expectedToken);
+	return hasValidAdminAuthCookie(req);
 }
 
 function hasValidWiFiApiToken(req) {
+	if (hasValidAdminAuthCookie(req)) {
+		return true;
+	}
+
 	const token = req.headers['authorization'] || req.headers['x-api-token'];
 	const providedToken = normalizeAuthToken(token);
 	if (!providedToken) {
@@ -1305,6 +1367,48 @@ module.exports = function(app) {
 		});
 	};
 
+	app.post('/api/admin/login', function(req, res) {
+		authRateLimiter(req, res, () => {});
+		if (res.headersSent) {
+			return;
+		}
+
+		const providedToken = String(req.body?.token || '').trim();
+		if (!providedToken) {
+			return res.status(400).json({
+				error: 'Missing token',
+				message: 'API token is required.'
+			});
+		}
+
+		if (!secureTokenEquals(providedToken, configManager.getEffectiveApiToken())) {
+			appendAuditLog({
+				event: 'auth.failure',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null
+			});
+
+			return res.status(401).json({
+				error: 'Unauthorized',
+				message: 'Invalid API token.'
+			});
+		}
+
+		setAdminAuthCookie(res, providedToken);
+		return res.json({ success: true });
+	});
+
+	app.post('/api/admin/logout', function(req, res) {
+		clearAdminAuthCookie(res);
+		res.json({ success: true });
+	});
+
+	app.get('/api/admin/session', checkApiToken, function(req, res) {
+		res.json({ authenticated: true });
+	});
+
 	// Get current WiFi configuration (public - no auth required)
 	app.get('/api/wifi', function(req, res) {
 		try {
@@ -1385,6 +1489,7 @@ module.exports = function(app) {
 			const beforeConfig = configManager.getApiTokenConfig();
 			if (hasNewAdminToken) {
 				await configManager.updateApiToken(normalizedToken);
+				setAdminAuthCookie(res, normalizedToken);
 			}
 			if (hasNewWiFiToken && configManager.updateWifiApiToken) {
 				await configManager.updateWifiApiToken(normalizedWiFiToken);

@@ -374,60 +374,42 @@ class Admin extends Component {
     const t = this.getTranslations();
     document.title = t.title;
 
-    let storedToken = '';
-    try {
-      storedToken = sessionStorage.getItem('adminApiToken') || '';
-    } catch (err) {
-      storedToken = '';
-    }
-
-    if (storedToken) {
-      this.verifyApiToken(storedToken)
-        .then((valid) => {
-          if (!valid) {
-            try {
-              sessionStorage.removeItem('adminApiToken');
-            } catch (err) {
-              // ignore storage errors
-            }
-
-            this.setState({
-              apiToken: '',
-              isAuthenticated: false,
-              authChecking: false,
-              authMessage: t.errorUnauthorized,
-              authMessageType: 'error'
-            });
-            return;
-          }
-
-          this.setState({
-            apiToken: storedToken,
-            isAuthenticated: true,
-            authChecking: false,
-            authMessage: null,
-            authMessageType: null
-          }, () => {
-            this.loadConfigLocks();
-            this.loadCurrentConfig();
-            this.loadSyncStatus();
-            this.startSyncIntervals();
-            this.startRealtimeConfigUpdates();
-          });
-        })
-        .catch(() => {
+    this.verifyAdminSession()
+      .then((valid) => {
+        if (!valid) {
           this.setState({
             apiToken: '',
             isAuthenticated: false,
             authChecking: false,
-            authMessage: t.errorUnauthorized,
-            authMessageType: 'error'
+            authMessage: null,
+            authMessageType: null
           });
-        });
-      return;
-    }
+          return;
+        }
 
-    this.setState({ authChecking: false });
+        this.setState({
+          apiToken: '',
+          isAuthenticated: true,
+          authChecking: false,
+          authMessage: null,
+          authMessageType: null
+        }, () => {
+          this.loadConfigLocks();
+          this.loadCurrentConfig();
+          this.loadSyncStatus();
+          this.startSyncIntervals();
+          this.startRealtimeConfigUpdates();
+        });
+      })
+      .catch(() => {
+        this.setState({
+          apiToken: '',
+          isAuthenticated: false,
+          authChecking: false,
+          authMessage: null,
+          authMessageType: null
+        });
+      });
   }
 
   componentWillUnmount() {
@@ -498,17 +480,9 @@ class Admin extends Component {
     }
   }
 
-  verifyApiToken = (token) => {
-    const normalizedToken = String(token || '').trim();
-    if (!normalizedToken) {
-      return Promise.resolve(false);
-    }
-
-    return fetch('/api/oauth-config', {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${normalizedToken}`
-      }
+  verifyAdminSession = () => {
+    return fetch('/api/admin/session', {
+      method: 'GET'
     }).then((response) => response.status !== 401);
   }
 
@@ -527,26 +501,23 @@ class Admin extends Component {
 
     this.setState({ authChecking: true, authMessage: null, authMessageType: null });
 
-    this.verifyApiToken(token)
-      .then((valid) => {
-        if (!valid) {
-          this.setState({
-            isAuthenticated: false,
-            authChecking: false,
-            authMessage: t.errorUnauthorized,
-            authMessageType: 'error'
-          });
-          return;
+    fetch('/api/admin/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ token })
+    })
+      .then((response) => {
+        if (response.status === 401) {
+          throw new Error(t.errorUnauthorized);
         }
-
-        try {
-          sessionStorage.setItem('adminApiToken', token);
-        } catch (err) {
-          // ignore storage errors
+        if (!response.ok) {
+          throw new Error(t.errorUnknown || 'Login failed');
         }
 
         this.setState({
-          apiToken: token,
+          apiToken: '',
           isAuthenticated: true,
           authChecking: false,
           authMessage: null,
@@ -570,11 +541,11 @@ class Admin extends Component {
   }
 
   handleAdminLogout = () => {
-    try {
-      sessionStorage.removeItem('adminApiToken');
-    } catch (err) {
-      // ignore storage errors
-    }
+    fetch('/api/admin/logout', {
+      method: 'POST'
+    }).catch(() => {
+      // ignore logout network errors and continue local cleanup
+    });
 
     if (this.syncStatusInterval) {
       clearInterval(this.syncStatusInterval);
@@ -2173,14 +2144,8 @@ class Admin extends Component {
           throw new Error(data.error || t.errorUnknown);
         }
 
-        try {
-          sessionStorage.setItem('adminApiToken', trimmedNewToken);
-        } catch (err) {
-          // ignore storage errors
-        }
-
         this.setState({
-          apiToken: trimmedNewToken,
+          apiToken: '',
           newApiToken: '',
           newApiTokenConfirm: '',
           apiTokenConfigMessage: t.apiTokenConfigUpdateSuccess || 'API token updated successfully.',
