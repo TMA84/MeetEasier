@@ -5,7 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.9] - 2026-03-08
+## [1.2.8] - 2026-03-08
+
+### Changed
+- **Admin Translation Source Split**
+  - Frontend admin default translations are now limited to `de` and `en` in `ui-react/src/config/adminTranslations.js`
+  - Additional admin translation locales are now read from runtime i18n config (`data/i18n-config.json`)
+
+- **Translation Provider Defaults (Google Cloud)**
+  - Auto-translation default endpoint switched to Google Cloud Translation API (`https://translation.googleapis.com/language/translate/v2`)
+  - Admin Translation API form defaults and placeholder were updated to the Google endpoint
+
+- **Auto-Translate Safety Rules**
+  - Auto-translate is now effectively disabled when no Translation API key is configured
+  - Added backend safeguards to enforce the API-key requirement in runtime config and translation execution path
+
+### Added
+- **Translation UX Feedback**
+  - Added explicit warning in the Translations tab when no Translation API key is configured
+  - Added immediate success/error messages in the add/remove language area for language create/delete actions
 
 ### Added
 - **Admin Operations Runtime Controls**
@@ -58,8 +76,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Maintenance
 - Updated `.gitignore` runtime config ignore behavior for generated `data/*` runtime files
-
-## [1.2.8] - 2026-03-07
 
 ### Added
 - **Admin Runtime Configuration (Operations Tab)**

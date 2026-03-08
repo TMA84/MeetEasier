@@ -24,11 +24,26 @@ const QUICK_ADMIN_TRANSLATION_GROUPS = [
   },
   {
     labelKey: 'adminTranslationGroupActionsLabel',
-    keys: ['translationsSubmitButton']
+    keys: [
+      'translationsSubmitButton',
+      'addLanguageButtonLabel',
+      'removeLanguageButtonLabel',
+      'removeLanguageHelp',
+      'languageAddedSuccessMessage',
+      'languageRemovedSuccessMessage',
+      'translationApiSectionTitle',
+      'translationApiEnableToggleLabel',
+      'translationApiUrlLabel',
+      'translationApiKeyLabel',
+      'translationApiTimeoutLabel',
+      'translationApiSaveButton',
+      'translationApiTimeoutHelp',
+      'translationApiSuccessMessage'
+    ]
   },
   {
     labelKey: 'adminTranslationGroupErrorsLabel',
-    keys: ['errorPrefix', 'errorUnauthorized']
+    keys: ['errorPrefix', 'errorUnauthorized', 'removeLanguageDefaultError']
   },
   {
     labelKey: 'adminTranslationGroupDisplaysLabel',
@@ -61,7 +76,6 @@ const QUICK_ADMIN_TRANSLATION_GROUPS = [
 ];
 
 const BASE_TRANSLATION_GROUP_COLLAPSE_STATE = {
-  translationLanguageSection: true,
   maintenanceTranslationsSection: true,
   advancedTranslationsSection: true
 };
@@ -126,6 +140,19 @@ const fromOverrideState = (value) => {
   return undefined;
 };
 
+const ADMIN_TAB_SECTIONS = {
+  displays: ['display', 'wifi', 'logo', 'colors', 'booking'],
+  operations: ['system', 'translationApi', 'oauth', 'maintenance', 'apiToken', 'search', 'ratelimit', 'backup', 'audit'],
+  content: ['translations']
+};
+
+const TAB_TO_SECTION = Object.entries(ADMIN_TAB_SECTIONS).reduce((acc, [section, tabs]) => {
+  tabs.forEach((tab) => {
+    acc[tab] = section;
+  });
+  return acc;
+}, {});
+
 class Admin extends Component {
   constructor(props) {
     super(props);
@@ -175,6 +202,7 @@ class Admin extends Component {
       oauthLocked: false,
       systemLocked: false,
       maintenanceLocked: false,
+      translationApiLocked: false,
       
       // Booking state
       currentEnableBooking: true,
@@ -241,6 +269,8 @@ class Admin extends Component {
       oauthMessageType: null,
       systemMessage: null,
       systemMessageType: null,
+      translationApiMessage: null,
+      translationApiMessageType: null,
       currentSystemStartupValidationStrict: false,
       systemStartupValidationStrict: false,
       currentSystemGraphWebhookEnabled: false,
@@ -250,6 +280,15 @@ class Admin extends Component {
       currentSystemGraphWebhookAllowedIps: '',
       systemGraphWebhookAllowedIps: '',
       systemLastUpdated: '',
+      currentTranslationApiEnabled: true,
+      translationApiEnabled: true,
+      currentTranslationApiUrl: 'https://translation.googleapis.com/language/translate/v2',
+      translationApiUrl: 'https://translation.googleapis.com/language/translate/v2',
+      currentTranslationApiTimeoutMs: 20000,
+      translationApiTimeoutMs: 20000,
+      currentTranslationApiHasApiKey: false,
+      translationApiApiKey: '',
+      translationApiLastUpdated: '',
       currentOauthClientId: '',
       oauthClientId: '',
       currentOauthAuthority: '',
@@ -316,7 +355,8 @@ class Admin extends Component {
       syncStatusTick: Date.now(),
       
       // UI state
-      activeTab: 'display'
+      activeTab: 'display',
+      activeSection: 'displays'
     };
   }
 
@@ -541,7 +581,8 @@ class Admin extends Component {
           apiTokenLocked: data.apiTokenLocked || false,
           oauthLocked: data.oauthLocked || false,
           systemLocked: data.systemLocked || false,
-          maintenanceLocked: data.maintenanceLocked || false
+          maintenanceLocked: data.maintenanceLocked || false,
+          translationApiLocked: data.translationApiLocked || false
         });
       })
       .catch(err => {
@@ -639,7 +680,150 @@ class Admin extends Component {
   }
 
   handleTranslationLanguageChange = (language) => {
-    this.setState({ translationLanguage: String(language || '').trim().toLowerCase() || 'en' });
+    this.setState({
+      translationLanguage: String(language || '').trim().toLowerCase() || 'en',
+      translationLanguageDraftError: null
+    });
+  }
+
+  autoTranslateLanguageFromEnglish = async (targetLanguage) => {
+    const t = this.getTranslations();
+    const {
+      apiToken,
+      currentMaintenanceTranslations,
+      currentAdminTranslations
+    } = this.state;
+
+    const sourceMaintenance = currentMaintenanceTranslations?.en || {
+      title: '',
+      body: ''
+    };
+
+    const sourceAdmin = {
+      ...(defaultAdminTranslations.en || {}),
+      ...(currentAdminTranslations?.en || {})
+    };
+
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    try {
+      const response = await fetch('/api/i18n/auto-translate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          sourceLanguage: 'en',
+          targetLanguage,
+          maintenanceSource: sourceMaintenance,
+          adminSource: sourceAdmin
+        })
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        throw new Error(t.errorUnauthorized);
+      }
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || t.errorUnknown);
+      }
+
+      this.setState((prevState) => {
+        const nextMaintenanceTranslations = {
+          ...(prevState.currentMaintenanceTranslations || {}),
+          [targetLanguage]: {
+            title: String(data.maintenance?.title || sourceMaintenance.title || ''),
+            body: String(data.maintenance?.body || sourceMaintenance.body || '')
+          }
+        };
+
+        const nextAdminTranslations = {
+          ...(prevState.currentAdminTranslations || {}),
+          [targetLanguage]: {
+            ...sourceAdmin,
+            ...(data.admin || {})
+          }
+        };
+
+        return {
+          currentMaintenanceTranslations: nextMaintenanceTranslations,
+          maintenanceTranslationsText: JSON.stringify(nextMaintenanceTranslations, null, 2),
+          currentAdminTranslations: nextAdminTranslations,
+          adminTranslationsText: JSON.stringify(nextAdminTranslations, null, 2)
+        };
+      }, () => {
+        this.saveI18nConfig(
+          this.state.currentMaintenanceTranslations,
+          this.state.currentAdminTranslations,
+          t.languageAddedSuccessMessage || t.translationsSuccessMessage
+        );
+      });
+    } catch (error) {
+      this.setState({
+        i18nMessage: `${t.errorPrefix} ${error.message}`,
+        i18nMessageType: 'error'
+      }, () => {
+        this.saveI18nConfig(
+          this.state.currentMaintenanceTranslations,
+          this.state.currentAdminTranslations,
+          t.languageAddedSuccessMessage || t.translationsSuccessMessage
+        );
+      });
+    }
+  }
+
+  saveI18nConfig = (maintenanceMessages, adminTranslations, successMessage) => {
+    const t = this.getTranslations();
+    const { apiToken } = this.state;
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    return fetch('/api/i18n', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ maintenanceMessages, adminTranslations })
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        const savedMessages = data.config && data.config.maintenanceMessages ? data.config.maintenanceMessages : maintenanceMessages;
+        const savedAdminTranslations = data.config && data.config.adminTranslations ? data.config.adminTranslations : adminTranslations;
+        this.setState({
+          i18nMessage: successMessage || t.translationsSuccessMessage,
+          i18nMessageType: 'success',
+          currentMaintenanceTranslations: savedMessages,
+          maintenanceTranslationsText: JSON.stringify(savedMessages, null, 2),
+          currentAdminTranslations: savedAdminTranslations,
+          adminTranslationsText: JSON.stringify(savedAdminTranslations, null, 2)
+        });
+        this.loadCurrentConfig();
+      })
+      .catch(err => {
+        this.setState({
+          i18nMessage: `${t.errorPrefix} ${err.message}`,
+          i18nMessageType: 'error'
+        });
+      });
   }
 
   handleNewTranslationLanguageChange = (value) => {
@@ -669,16 +853,23 @@ class Admin extends Component {
         ...(prevState.currentAdminTranslations || {})
       };
 
-      if (!nextMaintenanceTranslations[newLanguageCode]) {
-        nextMaintenanceTranslations[newLanguageCode] = {
-          title: '',
-          body: ''
-        };
-      }
+      const maintenanceSource = nextMaintenanceTranslations.en || {};
+      const adminSource = {
+        ...(defaultAdminTranslations.en || {}),
+        ...(nextAdminTranslations.en || {})
+      };
 
-      if (!nextAdminTranslations[newLanguageCode]) {
-        nextAdminTranslations[newLanguageCode] = {};
-      }
+      const existingMaintenance = nextMaintenanceTranslations[newLanguageCode] || {};
+      nextMaintenanceTranslations[newLanguageCode] = {
+        title: String(existingMaintenance.title || maintenanceSource.title || ''),
+        body: String(existingMaintenance.body || maintenanceSource.body || '')
+      };
+
+      const existingAdmin = nextAdminTranslations[newLanguageCode] || {};
+      nextAdminTranslations[newLanguageCode] = {
+        ...adminSource,
+        ...existingAdmin
+      };
 
       return {
         currentMaintenanceTranslations: nextMaintenanceTranslations,
@@ -689,6 +880,73 @@ class Admin extends Component {
         newTranslationLanguageCode: '',
         translationLanguageDraftError: null
       };
+    }, () => {
+      if (newLanguageCode === 'en') {
+        this.saveI18nConfig(
+          this.state.currentMaintenanceTranslations,
+          this.state.currentAdminTranslations,
+          t.languageAddedSuccessMessage || t.translationsSuccessMessage
+        );
+        return;
+      }
+
+      this.autoTranslateLanguageFromEnglish(newLanguageCode);
+    });
+  }
+
+  handleRemoveTranslationLanguage = () => {
+    const t = this.getTranslations();
+
+    this.setState((prevState) => {
+      const languageToRemove = normalizeLanguageCode(prevState.translationLanguage);
+
+      if (!languageToRemove) {
+        return null;
+      }
+
+      if (['en', 'de'].includes(languageToRemove)) {
+        return {
+          translationLanguageDraftError: t.removeLanguageDefaultError || 'English (en) and German (de) cannot be removed'
+        };
+      }
+
+      const nextMaintenanceTranslations = {
+        ...(prevState.currentMaintenanceTranslations || {})
+      };
+      const nextAdminTranslations = {
+        ...(prevState.currentAdminTranslations || {})
+      };
+
+      delete nextMaintenanceTranslations[languageToRemove];
+      delete nextAdminTranslations[languageToRemove];
+
+      const nextAvailableLanguages = Array.from(new Set([
+        ...Object.keys(defaultAdminTranslations || {}),
+        ...Object.keys(nextMaintenanceTranslations || {}),
+        ...Object.keys(nextAdminTranslations || {})
+      ]))
+        .map((language) => String(language || '').trim().toLowerCase())
+        .filter(Boolean)
+        .sort();
+
+      const nextSelectedLanguage = nextAvailableLanguages.includes('en')
+        ? 'en'
+        : (nextAvailableLanguages[0] || 'en');
+
+      return {
+        currentMaintenanceTranslations: nextMaintenanceTranslations,
+        maintenanceTranslationsText: JSON.stringify(nextMaintenanceTranslations, null, 2),
+        currentAdminTranslations: nextAdminTranslations,
+        adminTranslationsText: JSON.stringify(nextAdminTranslations, null, 2),
+        translationLanguage: nextSelectedLanguage,
+        translationLanguageDraftError: null
+      };
+    }, () => {
+      this.saveI18nConfig(
+        this.state.currentMaintenanceTranslations,
+        this.state.currentAdminTranslations,
+        t.languageRemovedSuccessMessage || t.translationsSuccessMessage
+      );
     });
   }
 
@@ -915,6 +1173,32 @@ class Admin extends Component {
       })
       .catch(err => {
         console.error('Error loading rate-limit config:', err);
+      });
+
+    fetch('/api/translation-api-config')
+      .then(response => response.json())
+      .then(data => {
+        const enabled = data.enabled !== undefined ? !!data.enabled : true;
+        const url = String(data.url || '').trim() || 'https://translation.googleapis.com/language/translate/v2';
+        const timeoutMs = Number.isFinite(Number(data.timeoutMs)) ? Math.max(parseInt(data.timeoutMs, 10), 3000) : 20000;
+        const hasApiKey = !!data.hasApiKey;
+
+        this.setState({
+          currentTranslationApiEnabled: enabled,
+          translationApiEnabled: enabled,
+          currentTranslationApiUrl: url,
+          translationApiUrl: url,
+          currentTranslationApiTimeoutMs: timeoutMs,
+          translationApiTimeoutMs: timeoutMs,
+          currentTranslationApiHasApiKey: hasApiKey,
+          translationApiLastUpdated: data.lastUpdated
+            ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
+            : '-',
+          translationApiApiKey: ''
+        });
+      })
+      .catch(err => {
+        console.error('Error loading translation API config:', err);
       });
 
     fetch('/api/roomlists')
@@ -1642,6 +1926,71 @@ class Admin extends Component {
       });
   }
 
+  handleTranslationApiSubmit = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const {
+      apiToken,
+      translationApiEnabled,
+      translationApiUrl,
+      translationApiTimeoutMs,
+      translationApiApiKey
+    } = this.state;
+
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (apiToken) {
+      headers.Authorization = `Bearer ${apiToken}`;
+    }
+
+    const payload = {
+      enabled: !!translationApiEnabled,
+      url: String(translationApiUrl || '').trim(),
+      timeoutMs: Math.max(parseInt(translationApiTimeoutMs, 10) || 3000, 3000)
+    };
+
+    if (String(translationApiApiKey || '').trim()) {
+      payload.apiKey = String(translationApiApiKey || '').trim();
+    }
+
+    fetch('/api/translation-api-config', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        this.setState({
+          translationApiMessage: t.translationApiSuccessMessage || 'Translation API configuration updated successfully.',
+          translationApiMessageType: 'success',
+          translationApiApiKey: ''
+        });
+        this.loadCurrentConfig();
+
+        setTimeout(() => {
+          this.setState({ translationApiMessage: null, translationApiMessageType: null });
+        }, 5000);
+      })
+      .catch(err => {
+        this.setState({
+          translationApiMessage: `${t.errorPrefix} ${err.message}`,
+          translationApiMessageType: 'error'
+        });
+      });
+  }
+
   handleOAuthSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
@@ -2024,20 +2373,12 @@ class Admin extends Component {
     e.preventDefault();
     const t = this.getTranslations();
     const {
-      apiToken,
       maintenanceTranslationsText,
       adminTranslationsText,
       currentMaintenanceTranslations,
       currentAdminTranslations,
       showAdvancedTranslationsEditor
     } = this.state;
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
 
     let maintenanceMessages = currentMaintenanceTranslations;
     let adminTranslations = currentAdminTranslations;
@@ -2062,45 +2403,30 @@ class Admin extends Component {
       }
     }
 
-    fetch('/api/i18n', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ maintenanceMessages, adminTranslations })
-    })
-      .then(response => {
-        if (response.status === 401) {
-          this.handleUnauthorizedAccess();
-          throw new Error(t.errorUnauthorized);
-        }
-        return response.json();
-      })
-      .then(data => {
-        if (!data.success) {
-          throw new Error(data.error || t.errorUnknown);
-        }
-
-        const savedMessages = data.config && data.config.maintenanceMessages ? data.config.maintenanceMessages : maintenanceMessages;
-        const savedAdminTranslations = data.config && data.config.adminTranslations ? data.config.adminTranslations : adminTranslations;
-        this.setState({
-          i18nMessage: t.translationsSuccessMessage,
-          i18nMessageType: 'success',
-          currentMaintenanceTranslations: savedMessages,
-          maintenanceTranslationsText: JSON.stringify(savedMessages, null, 2),
-          currentAdminTranslations: savedAdminTranslations,
-          adminTranslationsText: JSON.stringify(savedAdminTranslations, null, 2)
-        });
-        this.loadCurrentConfig();
-      })
-      .catch(err => {
-        this.setState({
-          i18nMessage: `${t.errorPrefix} ${err.message}`,
-          i18nMessageType: 'error'
-        });
-      });
+    this.saveI18nConfig(maintenanceMessages, adminTranslations, t.translationsSuccessMessage);
   }
 
   switchTab = (tabName) => {
-    this.setState({ activeTab: tabName });
+    this.setState({
+      activeTab: tabName,
+      activeSection: TAB_TO_SECTION[tabName] || 'displays'
+    });
+  }
+
+  switchSection = (sectionName) => {
+    const tabs = ADMIN_TAB_SECTIONS[sectionName] || [];
+    const fallbackTab = tabs[0] || 'display';
+
+    this.setState((prevState) => {
+      const activeTabInSection = tabs.includes(prevState.activeTab)
+        ? prevState.activeTab
+        : fallbackTab;
+
+      return {
+        activeSection: sectionName,
+        activeTab: activeTabInSection
+      };
+    });
   }
 
   handleColorsSubmit = (e) => {
@@ -2178,6 +2504,11 @@ class Admin extends Component {
       currentSystemGraphWebhookClientState, systemGraphWebhookClientState,
       currentSystemGraphWebhookAllowedIps, systemGraphWebhookAllowedIps,
       systemLastUpdated,
+      currentTranslationApiEnabled, translationApiEnabled,
+      currentTranslationApiUrl, translationApiUrl,
+      currentTranslationApiTimeoutMs, translationApiTimeoutMs,
+      currentTranslationApiHasApiKey, translationApiApiKey,
+      translationApiLastUpdated,
       currentOauthClientId, oauthClientId,
       currentOauthAuthority, oauthAuthority,
       currentOauthHasClientSecret, oauthClientSecret, oauthLastUpdated,
@@ -2199,11 +2530,12 @@ class Admin extends Component {
       statusNotFoundColor, currentStatusNotFoundColor,
       wifiMessage, wifiMessageType, logoMessage, logoMessageType, informationMessage, informationMessageType,
       bookingMessage, bookingMessageType, colorMessage, colorMessageType,
-      systemMessage, systemMessageType, oauthMessage, oauthMessageType, searchMessage, searchMessageType, rateLimitMessage, rateLimitMessageType,
-      wifiLocked, logoLocked, informationLocked, bookingLocked, searchLocked, rateLimitLocked, apiTokenLocked, oauthLocked, systemLocked, maintenanceLocked,
+      systemMessage, systemMessageType, translationApiMessage, translationApiMessageType, oauthMessage, oauthMessageType, searchMessage, searchMessageType, rateLimitMessage, rateLimitMessageType,
+      wifiLocked, logoLocked, informationLocked, bookingLocked, searchLocked, rateLimitLocked, apiTokenLocked, oauthLocked, systemLocked, maintenanceLocked, translationApiLocked,
       isAuthenticated, authChecking, authMessage, authMessageType,
       bookingPermissionMissing,
       activeTab,
+      activeSection,
       syncStatus,
       syncStatusLoading,
       syncStatusTick
@@ -2231,6 +2563,44 @@ class Admin extends Component {
       runtime: t.apiTokenSourceRuntime || 'Admin Runtime',
       env: t.apiTokenSourceEnv || 'Environment (.env)'
     };
+    const sectionDefinitions = [
+      {
+        key: 'displays',
+        label: t.displayTabLabel || 'Display',
+        tabs: [
+          { key: 'display', label: t.displaySubTabLabel || 'Allgemein' },
+          { key: 'wifi', label: t.wifiTabLabel || 'WiFi' },
+          { key: 'logo', label: t.logoTabLabel || 'Logo' },
+          { key: 'colors', label: t.colorsTabLabel || 'Colors' },
+          { key: 'booking', label: t.bookingTabLabel || 'Booking' }
+        ]
+      },
+      {
+        key: 'operations',
+        label: t.operationsTabLabel || 'Operations',
+        tabs: [
+          { key: 'system', label: 'System' },
+          { key: 'translationApi', label: t.translationApiTabLabel || 'Translation API' },
+          { key: 'oauth', label: t.oauthTabLabel || 'Kalender' },
+          { key: 'maintenance', label: t.maintenanceTabLabel || 'Wartungsmodus' },
+          { key: 'apiToken', label: t.apiTokenTabLabel || 'API-Token' },
+          { key: 'search', label: t.searchTabLabel || 'Suche' },
+          { key: 'ratelimit', label: t.rateLimitTabLabel || 'Rate-Limits' },
+          { key: 'backup', label: t.backupPayloadLabel || 'Backup' },
+          { key: 'audit', label: t.auditTabLabel || 'Audit-Log' }
+        ]
+      },
+      {
+        key: 'content',
+        label: t.translationsTabLabel || 'Translations',
+        tabs: [
+          { key: 'translations', label: t.translationsTabLabel || 'Translations' }
+        ]
+      }
+    ];
+    const selectedSection = sectionDefinitions.find((section) => section.key === activeSection)
+      || sectionDefinitions[0];
+    const visibleTabs = selectedSection.tabs;
 
     return (
       <div className="admin-page">
@@ -2340,51 +2710,33 @@ class Admin extends Component {
             </div>
           )}
 
-          {/* Tabs */}
-          <div className="admin-tabs">
-            <button 
-              className={`admin-tab ${activeTab === 'display' ? 'active' : ''}`}
-              onClick={() => this.switchTab('display')}
-            >
-              {t.displayTabLabel || 'Display'}
-            </button>
-            <button 
-              className={`admin-tab ${activeTab === 'wifi' ? 'active' : ''}`}
-              onClick={() => this.switchTab('wifi')}
-            >
-              {t.wifiTabLabel || 'WiFi'}
-            </button>
-            <button 
-              className={`admin-tab ${activeTab === 'logo' ? 'active' : ''}`}
-              onClick={() => this.switchTab('logo')}
-            >
-              {t.logoTabLabel || 'Logo'}
-            </button>
-            <button 
-              className={`admin-tab ${activeTab === 'colors' ? 'active' : ''}`}
-              onClick={() => this.switchTab('colors')}
-            >
-              {t.colorsTabLabel || 'Colors'}
-            </button>
-            <button 
-              className={`admin-tab ${activeTab === 'booking' ? 'active' : ''}`}
-              onClick={() => this.switchTab('booking')}
-            >
-              {t.bookingTabLabel || 'Booking'}
-            </button>
-            <button 
-              className={`admin-tab ${activeTab === 'translations' ? 'active' : ''}`}
-              onClick={() => this.switchTab('translations')}
-            >
-              {t.translationsTabLabel || 'Translations'}
-            </button>
-            <button 
-              className={`admin-tab ${activeTab === 'operations' ? 'active' : ''}`}
-              onClick={() => this.switchTab('operations')}
-            >
-              {t.operationsTabLabel || 'Operations'}
-            </button>
+          {/* Section Navigation */}
+          <div className="admin-section-tabs">
+            {sectionDefinitions.map((section) => (
+              <button
+                key={section.key}
+                className={`admin-section-tab ${activeSection === section.key ? 'active' : ''}`}
+                onClick={() => this.switchSection(section.key)}
+              >
+                {section.label}
+              </button>
+            ))}
           </div>
+
+          {/* Tabs */}
+          {visibleTabs.length > 1 && (
+            <div className="admin-tabs admin-submenu-tabs">
+              {visibleTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  className={`admin-tab ${activeTab === tab.key ? 'active' : ''}`}
+                  onClick={() => this.switchTab(tab.key)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Display Configuration Tab */}
           <div className={`admin-tab-content ${activeTab === 'display' ? 'active' : ''}`}>
@@ -3068,6 +3420,75 @@ class Admin extends Component {
 
           {/* Translations Tab */}
           <div className={`admin-tab-content ${activeTab === 'translations' ? 'active' : ''}`}>
+            <div className="admin-tabs admin-submenu-tabs" role="tablist" aria-label={t.translationLanguageLabel}>
+              {availableTranslationLanguages.map((language) => {
+                const isActive = activeTranslationLanguage === language;
+                return (
+                  <button
+                    key={language}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`admin-tab ${isActive ? 'active' : ''}`}
+                    onClick={() => this.handleTranslationLanguageChange(language)}
+                  >
+                    {getLanguageDisplayName(language)}
+                  </button>
+                );
+              })}
+            </div>
+
+            {!currentTranslationApiHasApiKey && (
+              <div className="admin-message admin-message-warning">
+                {t.translationApiKeyLabel || 'Translation API Key'}: {(t.translationApiApiKeyNotConfigured || 'Not configured')}. {t.translationApiTabLabel || 'Translation API'} {(t.errorPrefix || 'Error:').replace(/:$/, '')} - Auto-Translate is disabled until an API key is set.
+              </div>
+            )}
+
+            <div className="admin-section">
+              <h2>{t.addLanguageButtonLabel}</h2>
+              <div className="admin-form-group" style={{ marginBottom: 0 }}>
+                <label htmlFor="newTranslationLanguageCode">{t.addLanguageButtonLabel}</label>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    id="newTranslationLanguageCode"
+                    value={newTranslationLanguageCode}
+                    placeholder={t.addLanguagePlaceholder || 'z. B. fr oder en-gb'}
+                    onChange={(e) => this.handleNewTranslationLanguageChange(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="admin-secondary-button"
+                    onClick={this.handleAddTranslationLanguage}
+                  >
+                    {t.addLanguageButtonLabel}
+                  </button>
+                </div>
+                <small>{t.addLanguageHelp}</small>
+                {translationLanguageDraftError && (
+                  <small style={{ color: '#f87171' }}>{translationLanguageDraftError}</small>
+                )}
+              </div>
+              <div className="admin-form-group" style={{ marginTop: '1rem', marginBottom: 0 }}>
+                <label>{t.removeLanguageButtonLabel || 'Language removal'}</label>
+                <button
+                  type="button"
+                  className="admin-secondary-button"
+                  onClick={this.handleRemoveTranslationLanguage}
+                  disabled={['en', 'de'].includes(activeTranslationLanguage)}
+                >
+                  {t.removeLanguageButtonLabel || 'Remove selected language'}
+                </button>
+                <small>{t.removeLanguageHelp || 'English (en) and German (de) cannot be removed.'}</small>
+              </div>
+
+              {i18nMessage && (
+                <div className={`admin-message admin-message-${i18nMessageType || 'success'}`} style={{ marginTop: '1rem' }}>
+                  {i18nMessage}
+                </div>
+              )}
+            </div>
+
             <div className="admin-section">
               <h2>{t.translationsSectionTitle}</h2>
 
@@ -3090,57 +3511,6 @@ class Admin extends Component {
               </div>
 
               <form onSubmit={this.handleI18nSubmit}>
-                <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }}>
-                  <button
-                    type="button"
-                    className="admin-collapsible-header"
-                    onClick={() => this.toggleTranslationGroup('translationLanguageSection')}
-                    aria-expanded={!collapsedTranslationGroups?.translationLanguageSection}
-                  >
-                    <h3>{t.translationLanguageLabel}</h3>
-                    <span className="admin-collapsible-chevron">{collapsedTranslationGroups?.translationLanguageSection ? '▸' : '▾'}</span>
-                  </button>
-                  {!collapsedTranslationGroups?.translationLanguageSection && (
-                    <>
-                      <div className="admin-form-group">
-                        <label htmlFor="translationLanguage">{t.translationLanguageLabel}</label>
-                        <select
-                          id="translationLanguage"
-                          value={activeTranslationLanguage}
-                          onChange={(e) => this.handleTranslationLanguageChange(e.target.value)}
-                        >
-                          {availableTranslationLanguages.map((language) => (
-                            <option key={language} value={language}>{getLanguageDisplayName(language)}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="admin-form-group" style={{ marginBottom: 0 }}>
-                        <label htmlFor="newTranslationLanguageCode">{t.addLanguageButtonLabel}</label>
-                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                          <input
-                            type="text"
-                            id="newTranslationLanguageCode"
-                            value={newTranslationLanguageCode}
-                            placeholder={t.addLanguagePlaceholder || 'z. B. fr oder en-gb'}
-                            onChange={(e) => this.handleNewTranslationLanguageChange(e.target.value)}
-                          />
-                          <button
-                            type="button"
-                            className="admin-secondary-button"
-                            onClick={this.handleAddTranslationLanguage}
-                          >
-                            {t.addLanguageButtonLabel}
-                          </button>
-                        </div>
-                        <small>{t.addLanguageHelp}</small>
-                        {translationLanguageDraftError && (
-                          <small style={{ color: '#f87171' }}>{translationLanguageDraftError}</small>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-
                 <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }}>
                   <button
                     type="button"
@@ -3263,18 +3633,16 @@ class Admin extends Component {
                 </button>
               </form>
 
-              {i18nMessage && (
-                <div className={`admin-message admin-message-${i18nMessageType}`}>
-                  {i18nMessage}
-                </div>
-              )}
             </div>
           </div>
 
           {/* Operations Tab */}
-          <div className={`admin-tab-content ${activeTab === 'operations' ? 'active' : ''}`}>
+          <div className={`admin-tab-content ${ADMIN_TAB_SECTIONS.operations.includes(activeTab) ? 'active' : ''}`}>
             <div className="admin-section">
               <h2>{t.operationsSectionTitle}</h2>
+
+              {activeTab === 'apiToken' && (
+              <div className="admin-card" id="ops-api-token">
 
               {!apiTokenLocked && (
                 <>
@@ -3351,6 +3719,12 @@ class Admin extends Component {
                   <div className="admin-form-divider"></div>
                 </>
               )}
+
+              </div>
+              )}
+
+              {activeTab === 'system' && (
+              <div className="admin-card" id="ops-system">
 
               {!systemLocked && (
                 <>
@@ -3450,6 +3824,117 @@ class Admin extends Component {
                 </>
               )}
 
+              </div>
+              )}
+
+              {activeTab === 'translationApi' && (
+              <div className="admin-card" id="ops-translation-api">
+
+              {!translationApiLocked && (
+                <>
+                  <h3>{t.translationApiSectionTitle || 'Translation API Configuration'}</h3>
+                  <div className="admin-current-config">
+                    <h3>{t.currentConfigTitle}</h3>
+                    <div className="config-grid">
+                      <div className="config-item">
+                        <span className="config-label">{t.translationApiEnabledLabel || 'Auto Translation Enabled'}</span>
+                        <span className="config-value">{currentTranslationApiEnabled ? 'Yes' : 'No'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.translationApiUrlLabel || 'API URL'}</span>
+                        <span className="config-value">{currentTranslationApiUrl || '-'}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.translationApiKeyLabel || 'API Key'}</span>
+                        <span className="config-value">{currentTranslationApiHasApiKey ? (t.translationApiApiKeyConfigured || 'Configured') : (t.translationApiApiKeyNotConfigured || 'Not configured')}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.translationApiTimeoutLabel || 'Timeout (ms)'}</span>
+                        <span className="config-value">{currentTranslationApiTimeoutMs}</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.lastUpdatedLabel}</span>
+                        <span className="config-value">{translationApiLastUpdated || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form onSubmit={this.handleTranslationApiSubmit}>
+                    <div className="admin-form-group">
+                      <label className="inline-label">
+                        <span className="label-text">{t.translationApiEnableToggleLabel || 'Enable auto translation'}</span>
+                        <input
+                          type="checkbox"
+                          checked={translationApiEnabled}
+                          onChange={(e) => this.setState({ translationApiEnabled: e.target.checked })}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="translationApiUrl">{t.translationApiUrlLabel || 'Translation API URL'}</label>
+                      <input
+                        type="text"
+                        id="translationApiUrl"
+                        value={translationApiUrl}
+                        onChange={(e) => this.setState({ translationApiUrl: e.target.value })}
+                        placeholder="https://translation.googleapis.com/language/translate/v2"
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="translationApiKey">{t.translationApiKeyLabel || 'Translation API Key'}</label>
+                      <input
+                        type="password"
+                        id="translationApiKey"
+                        value={translationApiApiKey}
+                        onChange={(e) => this.setState({ translationApiApiKey: e.target.value })}
+                        placeholder={t.translationApiKeyPlaceholder || 'Leave empty to keep existing API key'}
+                        autoComplete="new-password"
+                      />
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="translationApiTimeoutMs">{t.translationApiTimeoutLabel || 'Request timeout (ms)'}</label>
+                      <input
+                        type="number"
+                        id="translationApiTimeoutMs"
+                        min="3000"
+                        step="1000"
+                        value={translationApiTimeoutMs}
+                        onChange={(e) => this.setState({ translationApiTimeoutMs: Math.max(parseInt(e.target.value, 10) || 3000, 3000) })}
+                      />
+                      <small>{t.translationApiTimeoutHelp || 'Minimum: 3000 ms'}</small>
+                    </div>
+
+                    <button type="submit" className="admin-submit-button">
+                      {t.translationApiSaveButton || 'Save Translation API Configuration'}
+                    </button>
+                  </form>
+
+                  {translationApiMessage && (
+                    <div className={`admin-message admin-message-${translationApiMessageType}`}>
+                      {translationApiMessage}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {translationApiLocked && (
+                <>
+                  <h3>{t.translationApiSectionTitle || 'Translation API Configuration'}</h3>
+                  <div className="admin-locked-message">
+                    <p>{t.configuredViaEnv}</p>
+                  </div>
+                </>
+              )}
+
+              </div>
+              )}
+
+              {activeTab === 'oauth' && (
+              <div className="admin-card" id="ops-oauth">
+
               {!oauthLocked && (
                 <>
                   <h3>OAuth Configuration</h3>
@@ -3536,6 +4021,12 @@ class Admin extends Component {
                 </>
               )}
 
+              </div>
+              )}
+
+              {activeTab === 'maintenance' && (
+              <div className="admin-card" id="ops-maintenance">
+
               {!maintenanceLocked && (
                 <>
                   <div className="admin-current-config">
@@ -3597,6 +4088,12 @@ class Admin extends Component {
                   {maintenanceMessageBanner}
                 </div>
               )}
+
+              </div>
+              )}
+
+              {activeTab === 'search' && (
+              <div className="admin-card" id="ops-search">
 
               <div className="admin-form-divider"></div>
 
@@ -3731,6 +4228,12 @@ class Admin extends Component {
                 </>
               )}
 
+              </div>
+              )}
+
+              {activeTab === 'ratelimit' && (
+              <div className="admin-card" id="ops-ratelimit">
+
               {!rateLimitLocked && (
                 <>
                   <h3>Rate Limit Configuration</h3>
@@ -3863,6 +4366,12 @@ class Admin extends Component {
                 </>
               )}
 
+              </div>
+              )}
+
+              {activeTab === 'backup' && (
+              <div className="admin-card" id="ops-backup">
+
               <div className="admin-form-group">
                 <label htmlFor="backupPayloadText">{t.backupPayloadLabel}</label>
                 <textarea
@@ -3889,6 +4398,12 @@ class Admin extends Component {
                 </div>
               )}
 
+              </div>
+              )}
+
+              {activeTab === 'audit' && (
+              <div className="admin-card" id="ops-audit">
+
               <div className="admin-form-divider"></div>
 
               <h3>{t.auditSectionTitle}</h3>
@@ -3912,6 +4427,9 @@ class Admin extends Component {
                 <div className="admin-current-config">
                   <pre className="admin-json-pre">{JSON.stringify(auditLogs, null, 2)}</pre>
                 </div>
+              )}
+
+              </div>
               )}
             </div>
           </div>

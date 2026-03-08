@@ -48,7 +48,15 @@ _OLD_TODO.md
 !/static/img/uploads/.gitkeep
 
 # Runtime configuration files (created via API or environment)
-/data/*
+/data/wifi-config.json
+/data/logo-config.json
+/data/audit-log.jsonl
+/data/maintenance-config.json
+/data/api-token-config.json
+/data/oauth-config.json
+/data/wifi-config.json
+/data/.api-token-key
+/data/maintenance-config.json
 # Generated runtime assets
 /static/img/wifi-qr.png
 
@@ -72,3 +80,4 @@ docker-compose.override.yml
 
 # Shrinkwrap (optional - some prefer to commit this)
 # npm-shrinkwrap.json
+data/maintenance-config.json

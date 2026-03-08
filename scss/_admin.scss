@@ -27,15 +27,6 @@
       height: auto;
     }
   }
-  
-  h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0;
-    color: #ffffff;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
 }
 
 .admin-container {
@@ -106,9 +97,10 @@
 .admin-tabs {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
   border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-  overflow-x: auto;
+  overflow-x: visible;
   
   &::-webkit-scrollbar {
     height: 4px;
@@ -124,13 +116,66 @@
   }
 }
 
+.admin-section-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  overflow-x: visible;
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
+}
+
+.admin-section-tab {
+  padding: 0.75rem 1rem;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  font-family: 'Titillium Web', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &.active {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+  }
+}
+
 .admin-tab {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1rem;
   background: transparent;
   border: none;
   border-bottom: 3px solid transparent;
   color: rgba(255, 255, 255, 0.6);
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
   text-transform: uppercase;
@@ -161,6 +206,10 @@
   &.active {
     display: block;
   }
+}
+
+.admin-submenu-tabs {
+  margin-bottom: 1.25rem;
 }
 
 @keyframes fadeIn {
@@ -209,6 +258,16 @@
   
   &:last-child {
     margin-bottom: 0;
+  }
+}
+
+.admin-ops-tabs {
+  margin-bottom: 1rem;
+
+  .admin-tab {
+    font-size: 0.85rem;
+    padding: 0.7rem 1rem;
+    letter-spacing: 0.03em;
   }
 }
 
@@ -773,6 +832,15 @@
   
   .admin-tabs {
     gap: 0.25rem;
+  }
+
+  .admin-section-tabs {
+    gap: 0.35rem;
+  }
+
+  .admin-section-tab {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.8rem;
   }
   
   .admin-tab {
