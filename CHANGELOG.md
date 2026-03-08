@@ -56,6 +56,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Standardized server error responses to avoid exposing raw internal exception messages in production
   - Added centralized client-safe error message handling in API routes while preserving detailed messages in non-production environments
 
+- **Graph Date Handling Hardening**
+  - Removed global `Date.prototype` mutation in Graph calendar logic and replaced it with a local date helper in `app/msgraph/graph.js`
+
 ## [1.2.8] - 2026-03-08
 
 ### Changed
