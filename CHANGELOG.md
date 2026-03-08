@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-08
+
+### Added
+- **Dedicated WiFi API Token Flow**
+  - Added support for a separate WiFi API token alongside the existing admin token
+  - WiFi write operations (`POST /api/wifi`) now accept either token via the existing headers (`Authorization` or `X-API-Token`)
+  - Added runtime WiFi token lock detection and reporting in `/api/config-locks`
+
+- **WiFi Token Management in Admin**
+  - Added WiFi API token metadata and rotation controls in the Operations → API-Token section
+  - Added dedicated WiFi token state, validation and success/error handling in admin UI
+  - Added support for updating WiFi token via `/api/api-token-config` using `newWifiToken`
+
+### Changed
+- **Admin Operations UX**
+  - Renamed OAuth fallback tab label from `Kalender` to `Graph-API`
+  - Admin config pages now refresh immediately on socket update events (`wifiConfigUpdated`, `apiTokenUpdated`, etc.)
+  - Added periodic config refresh fallback in admin for additional robustness
+
+- **WiFi API Read Behavior**
+  - Restored full WiFi payload on `GET /api/wifi` (including password) for UI/runtime parity
+  - Fixed WiFi info page behavior so password remains visible after page reload
+
 ## [1.2.8] - 2026-03-08
 
 ### Changed

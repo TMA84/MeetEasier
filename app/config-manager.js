@@ -32,6 +32,7 @@ const API_TOKEN_ENCRYPTION_ALGO = 'aes-256-gcm';
 const API_TOKEN_ENCRYPTION_ENV = 'API_TOKEN_ENCRYPTION_KEY';
 const DEFAULT_API_TOKEN = 'change-me-admin-token';
 const INITIAL_API_TOKEN_ENV_VALUE = String(process.env.API_TOKEN || '').trim();
+const INITIAL_WIFI_API_TOKEN_ENV_VALUE = String(process.env.WIFI_API_TOKEN || '').trim();
 const API_TOKEN_PLACEHOLDERS = new Set([
 	'',
 	'api_token_not_set'
@@ -286,6 +287,10 @@ function isApiTokenEnvLocked() {
 	return !!INITIAL_API_TOKEN_ENV_VALUE;
 }
 
+function isWifiApiTokenEnvLocked() {
+	return !!INITIAL_WIFI_API_TOKEN_ENV_VALUE;
+}
+
 function getApiTokenEncryptionKey() {
 	const envKeyMaterial = String(process.env[API_TOKEN_ENCRYPTION_ENV] || '').trim();
 	if (envKeyMaterial) {
@@ -362,7 +367,11 @@ function readRawApiTokenConfig() {
 			if (legacyToken) {
 				const migratedConfig = {
 					tokenEncrypted: encryptApiToken(legacyToken),
-					lastUpdated: parsed.lastUpdated || new Date().toISOString()
+					lastUpdated: parsed.lastUpdated || new Date().toISOString(),
+					wifiTokenEncrypted: parsed.wifiTokenEncrypted && typeof parsed.wifiTokenEncrypted === 'object'
+						? parsed.wifiTokenEncrypted
+						: null,
+					wifiLastUpdated: parsed.wifiLastUpdated || null
 				};
 				fs.writeFileSync(apiTokenConfigPath, JSON.stringify(migratedConfig, null, 2));
 				return migratedConfig;
@@ -410,12 +419,52 @@ function getEffectiveApiToken() {
 	return getApiTokenRuntimeConfig().token;
 }
 
+function getWifiApiTokenRuntimeConfig() {
+	const envToken = normalizeApiTokenValue(INITIAL_WIFI_API_TOKEN_ENV_VALUE);
+	if (envToken) {
+		return {
+			token: envToken,
+			source: 'env',
+			isDefault: false,
+			lastUpdated: null
+		};
+	}
+
+	const rawConfig = readRawApiTokenConfig();
+	const decryptedRuntimeToken = decryptApiToken(rawConfig?.wifiTokenEncrypted);
+	const runtimeToken = normalizeApiTokenValue(decryptedRuntimeToken);
+	if (runtimeToken) {
+		return {
+			token: runtimeToken,
+			source: 'runtime',
+			isDefault: false,
+			lastUpdated: rawConfig?.wifiLastUpdated || null
+		};
+	}
+
+	return {
+		token: '',
+		source: 'default',
+		isDefault: true,
+		lastUpdated: null
+	};
+}
+
+function getEffectiveWifiApiToken() {
+	return getWifiApiTokenRuntimeConfig().token;
+}
+
 function getApiTokenConfig() {
 	const runtimeConfig = getApiTokenRuntimeConfig();
+	const wifiRuntimeConfig = getWifiApiTokenRuntimeConfig();
 	return {
 		source: runtimeConfig.source,
 		isDefault: runtimeConfig.isDefault,
-		lastUpdated: runtimeConfig.lastUpdated
+		lastUpdated: runtimeConfig.lastUpdated,
+		wifiSource: wifiRuntimeConfig.source,
+		wifiIsDefault: wifiRuntimeConfig.isDefault,
+		wifiLastUpdated: wifiRuntimeConfig.lastUpdated,
+		wifiConfigured: !!wifiRuntimeConfig.token
 	};
 }
 
@@ -425,15 +474,44 @@ function saveApiTokenConfig(apiToken) {
 		throw new Error('API token must not be empty.');
 	}
 
+	const existingRawConfig = readRawApiTokenConfig() || {};
+
 	const configData = {
 		tokenEncrypted: encryptApiToken(normalizedToken),
-		lastUpdated: new Date().toISOString()
+		lastUpdated: new Date().toISOString(),
+		wifiTokenEncrypted: existingRawConfig.wifiTokenEncrypted && typeof existingRawConfig.wifiTokenEncrypted === 'object'
+			? existingRawConfig.wifiTokenEncrypted
+			: null,
+		wifiLastUpdated: existingRawConfig.wifiLastUpdated || null
 	};
 
 	fs.writeFileSync(apiTokenConfigPath, JSON.stringify(configData, null, 2));
 	return {
 		token: normalizedToken,
 		lastUpdated: configData.lastUpdated
+	};
+}
+
+function saveWifiApiTokenConfig(wifiApiToken) {
+	const normalizedToken = normalizeApiTokenValue(wifiApiToken);
+	if (!normalizedToken) {
+		throw new Error('WiFi API token must not be empty.');
+	}
+
+	const existingRawConfig = readRawApiTokenConfig() || {};
+	const configData = {
+		tokenEncrypted: existingRawConfig.tokenEncrypted && typeof existingRawConfig.tokenEncrypted === 'object'
+			? existingRawConfig.tokenEncrypted
+			: null,
+		lastUpdated: existingRawConfig.lastUpdated || null,
+		wifiTokenEncrypted: encryptApiToken(normalizedToken),
+		wifiLastUpdated: new Date().toISOString()
+	};
+
+	fs.writeFileSync(apiTokenConfigPath, JSON.stringify(configData, null, 2));
+	return {
+		token: normalizedToken,
+		lastUpdated: configData.wifiLastUpdated
 	};
 }
 
@@ -1658,6 +1736,27 @@ async function updateApiToken(nextToken) {
 	return getApiTokenConfig();
 }
 
+async function updateWifiApiToken(nextToken) {
+	const normalizedNextToken = normalizeApiTokenValue(nextToken);
+	if (!normalizedNextToken) {
+		throw new Error('WiFi API token must not be empty.');
+	}
+
+	if (isWifiApiTokenEnvLocked()) {
+		throw new Error('WiFi API token is locked by environment variable WIFI_API_TOKEN.');
+	}
+
+	const savedConfig = saveWifiApiTokenConfig(normalizedNextToken);
+	process.env.WIFI_API_TOKEN = normalizedNextToken;
+
+	if (io) {
+		io.of('/').emit('wifiApiTokenUpdated', { lastUpdated: savedConfig.lastUpdated });
+		console.log('WiFi API token updated.');
+	}
+
+	return getApiTokenConfig();
+}
+
 function applyRuntimeConfigOverrides() {
 	const persistedSystemConfig = getSystemRuntimeConfig();
 	config.startupValidation.strict = persistedSystemConfig.startupValidationStrict;
@@ -1691,6 +1790,13 @@ function applyRuntimeConfigOverrides() {
 	const persistedApiTokenConfig = getApiTokenRuntimeConfig();
 	config.apiToken = persistedApiTokenConfig.token;
 	process.env.API_TOKEN = persistedApiTokenConfig.token;
+
+	const persistedWifiApiTokenConfig = getWifiApiTokenRuntimeConfig();
+	if (persistedWifiApiTokenConfig.token) {
+		process.env.WIFI_API_TOKEN = persistedWifiApiTokenConfig.token;
+	} else {
+		delete process.env.WIFI_API_TOKEN;
+	}
 }
 
 applyRuntimeConfigOverrides();
@@ -1705,7 +1811,9 @@ module.exports = {
 	getOAuthConfig,
 	getApiTokenConfig,
 	getEffectiveApiToken,
+	getEffectiveWifiApiToken,
 	isApiTokenEnvLocked,
+	isWifiApiTokenEnvLocked,
 	getSearchConfig,
 	getRateLimitConfig,
 	getTranslationApiRuntimeConfig,
@@ -1720,6 +1828,7 @@ module.exports = {
 	updateSystemConfig,
 	updateOAuthConfig,
 	updateApiToken,
+	updateWifiApiToken,
 	updateSearchConfig,
 	updateRateLimitConfig,
 	updateTranslationApiConfig,

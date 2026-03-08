@@ -8,11 +8,34 @@ const config = require('./config/config');
 require('./app/config-manager');
 const { validateStartupConfig, printStartupValidation } = require('./app/startup-validation');
 
+function parseTrustProxySetting(rawValue) {
+	if (rawValue === undefined) {
+		return false;
+	}
+
+	const normalized = String(rawValue).trim().toLowerCase();
+	if (normalized === 'true' || normalized === '1') {
+		return true;
+	}
+
+	if (normalized === 'false' || normalized === '0') {
+		return false;
+	}
+
+	if (/^\d+$/.test(normalized)) {
+		return parseInt(normalized, 10);
+	}
+
+	return rawValue;
+}
+
 
 // configuration ===============================================================
 // use public folder for js, css, imgs, etc
 app.use(express.static("static"));
 app.use(express.static(`${__dirname}/ui-react/build`));
+
+app.set('trust proxy', parseTrustProxySetting(process.env.TRUST_PROXY));
 
 // Parse JSON request bodies
 app.use(express.json());
