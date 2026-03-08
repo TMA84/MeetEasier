@@ -2,12 +2,11 @@ const graph = require('@microsoft/microsoft-graph-client');
 const config = require('../../config/config');
 require('isomorphic-fetch');
 
-// TODO: Move this somewhere else?
-Date.prototype.addDays = function(days) {
-	const date = new Date(this.valueOf());
-	date.setDate(date.getDate() + days);
-	return date;
-};
+function addDays(date, days) {
+	const result = new Date(date.valueOf());
+	result.setDate(result.getDate() + days);
+	return result;
+}
 
 module.exports = {
 	getRoomList: async (msalClient) => {
@@ -43,7 +42,7 @@ module.exports = {
 		const maxItems = parseInt(config.calendarSearch.maxItems);
 
 		const start_datetime = new Date();
-		const end_datetime = start_datetime.addDays(parseInt(config.calendarSearch.maxDays));
+		const end_datetime = addDays(start_datetime, parseInt(config.calendarSearch.maxDays));
 
 		const request = client
 			.api(`/users/${email}/calendar/calendarView`)
