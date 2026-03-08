@@ -3,7 +3,14 @@ const config = require('../config/config');
 const configManager = require('./config-manager');
 const checkinManager = require('./checkin-manager');
 
-const msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
+let msalClient = null;
+
+function refreshMsalClient() {
+  msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
+  return msalClient;
+}
+
+refreshMsalClient();
 
 let isRunning = false;
 let lastSyncTime = null;
@@ -17,10 +24,10 @@ const GRAPH_FAILURE_MAINTENANCE_MESSAGE = process.env.GRAPH_FAILURE_MAINTENANCE_
   || 'Calendar backend currently unavailable. Display is temporarily in fallback mode.';
 
 function isGraphModeEnabled() {
-  return config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
+  return true;
 }
 
-function ensureGraphFailureMaintenance(errorMessage) {
+function ensureGraphFailureMaintenance() {
   if (!isGraphModeEnabled()) {
     return;
   }
@@ -28,18 +35,21 @@ function ensureGraphFailureMaintenance(errorMessage) {
   try {
     const currentMaintenance = configManager.getMaintenanceConfig();
 
-    if (currentMaintenance.enabled && currentMaintenance.message === GRAPH_FAILURE_MAINTENANCE_MESSAGE) {
-      autoMaintenanceOwned = true;
-      return;
-    }
-
     if (currentMaintenance.enabled) {
+      const isAutoMessage = String(currentMaintenance.message || '').startsWith(GRAPH_FAILURE_MAINTENANCE_MESSAGE);
+      if (isAutoMessage) {
+        autoMaintenanceOwned = true;
+        if (currentMaintenance.message !== GRAPH_FAILURE_MAINTENANCE_MESSAGE) {
+          configManager.updateMaintenanceConfig(true, GRAPH_FAILURE_MAINTENANCE_MESSAGE).catch((err) => {
+            console.error('Failed to normalize maintenance fallback message:', err.message);
+          });
+        }
+      }
       return;
     }
 
     autoMaintenanceOwned = true;
-    const reason = errorMessage ? `${GRAPH_FAILURE_MAINTENANCE_MESSAGE} (${errorMessage})` : GRAPH_FAILURE_MAINTENANCE_MESSAGE;
-    configManager.updateMaintenanceConfig(true, reason).catch((err) => {
+    configManager.updateMaintenanceConfig(true, GRAPH_FAILURE_MAINTENANCE_MESSAGE).catch((err) => {
       console.error('Failed to auto-enable maintenance fallback:', err.message);
     });
   } catch (err) {
@@ -74,6 +84,28 @@ function clearGraphFailureMaintenance() {
   }
 }
 
+function formatSyncError(error) {
+  if (!error) {
+    return 'Unknown error';
+  }
+
+  const baseMessage = error.message || String(error);
+  const graphMessage = error.body?.error?.message;
+  const graphCode = error.body?.error?.code || error.code;
+  const statusCode = error.statusCode || error.status;
+
+  const parts = [];
+  if (statusCode) {
+    parts.push(`HTTP ${statusCode}`);
+  }
+  if (graphCode) {
+    parts.push(graphCode);
+  }
+
+  const detail = graphMessage || baseMessage;
+  return parts.length > 0 ? `${parts.join(' ')}: ${detail}` : detail;
+}
+
 function fetchAndBroadcastRooms() {
   return new Promise((resolve) => {
     if (!socketIO) {
@@ -81,12 +113,7 @@ function fetchAndBroadcastRooms() {
       return;
     }
 
-    let api;
-    if (config.calendarSearch.useGraphAPI === 'true') {
-      api = require('./msgraph/rooms.js');
-    } else {
-      api = require('./ews/rooms.js');
-    }
+    const api = require('./msgraph/rooms.js');
 
     api(function(err, result) {
       lastSyncTime = new Date().toISOString();
@@ -95,8 +122,8 @@ function fetchAndBroadcastRooms() {
         if (err) {
           console.error('Error fetching room data:', err);
           lastSyncSuccess = false;
-          syncErrorMessage = err.message || 'Unknown error';
-          ensureGraphFailureMaintenance(syncErrorMessage);
+          syncErrorMessage = formatSyncError(err);
+          ensureGraphFailureMaintenance();
           socketIO.of('/').emit('controllerDone', 'done');
           resolve(false);
           return;
@@ -120,8 +147,10 @@ function fetchAndBroadcastRooms() {
           });
       } else {
         lastSyncSuccess = false;
-        syncErrorMessage = 'No data returned from API';
-        ensureGraphFailureMaintenance(syncErrorMessage);
+        syncErrorMessage = err
+          ? formatSyncError(err)
+          : 'No data returned from API';
+        ensureGraphFailureMaintenance();
       }
 
       socketIO.of('/').emit('controllerDone', 'done');
@@ -152,22 +181,6 @@ async function deleteGraphEvent(roomEmail, appointmentId) {
   }
 }
 
-async function deleteEwsEvent(roomEmail, appointmentId) {
-  const ews = require('ews-javascript-api');
-
-  const exch = new ews.ExchangeService(ews.ExchangeVersion.Exchange2016);
-  exch.Credentials = new ews.ExchangeCredentials(config.exchange.username, config.exchange.password);
-  exch.Url = new ews.Uri(config.exchange.uri);
-  exch.ImpersonatedUserId = new ews.ImpersonatedUserId(
-    ews.ConnectingIdType.SmtpAddress,
-    roomEmail
-  );
-
-  const itemId = new ews.ItemId(appointmentId);
-  const appointment = await ews.Appointment.Bind(exch, itemId);
-  await appointment.Delete(ews.DeleteMode.MoveToDeletedItems, ews.SendCancellationsMode.SendToNone);
-}
-
 async function releaseNoShowAppointments(rooms) {
   const bookingConfig = configManager.getBookingConfig();
   const checkInSettings = checkinManager.resolveCheckInSettings(bookingConfig?.checkIn);
@@ -181,8 +194,6 @@ async function releaseNoShowAppointments(rooms) {
   }
 
   let releasedCount = 0;
-  const useGraph = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
-
   for (const room of rooms) {
     if (!room || !room.Busy || !Array.isArray(room.Appointments) || room.Appointments.length === 0) {
       continue;
@@ -207,11 +218,7 @@ async function releaseNoShowAppointments(rooms) {
     }
 
     try {
-      if (useGraph) {
-        await deleteGraphEvent(room.Email, currentAppointment.Id);
-      } else {
-        await deleteEwsEvent(room.Email, currentAppointment.Id);
-      }
+      await deleteGraphEvent(room.Email, currentAppointment.Id);
 
       checkinManager.clearCheckedIn({ roomEmail: room.Email, appointmentId: currentAppointment.Id });
       releasedCount += 1;
@@ -284,7 +291,7 @@ async function triggerImmediateRefresh() {
 /**
  * Socket Controller - Manages Socket.IO connections and room data updates
  * Polls the calendar API at a configurable interval and broadcasts updates to all connected clients
- * Supports both Microsoft Graph API and Exchange Web Services (EWS)
+ * Uses Microsoft Graph API
  * 
  * @param {Object} io - Socket.IO server instance
  */
@@ -318,8 +325,10 @@ module.exports = function(io) {
   module.exports.getSyncStatus = getSyncStatus;
   module.exports.triggerImmediateRefresh = triggerImmediateRefresh;
   module.exports.refreshPollingSchedule = refreshPollingSchedule;
+  module.exports.refreshMsalClient = refreshMsalClient;
 };
 
 module.exports.getSyncStatus = getSyncStatus;
 module.exports.triggerImmediateRefresh = triggerImmediateRefresh;
 module.exports.refreshPollingSchedule = refreshPollingSchedule;
+module.exports.refreshMsalClient = refreshMsalClient;

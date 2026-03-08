@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const QRCode = require('qrcode');
 const config = require('../config/config');
 
@@ -19,7 +20,17 @@ const maintenanceConfigPath = path.join(__dirname, '../data/maintenance-config.j
 const i18nConfigPath = path.join(__dirname, '../data/i18n-config.json');
 const searchConfigPath = path.join(__dirname, '../data/search-config.json');
 const rateLimitConfigPath = path.join(__dirname, '../data/rate-limit-config.json');
+const oauthConfigPath = path.join(__dirname, '../data/oauth-config.json');
+const systemConfigPath = path.join(__dirname, '../data/system-config.json');
+const apiTokenConfigPath = path.join(__dirname, '../data/api-token-config.json');
 const qrPath = path.join(__dirname, '../static/img/wifi-qr.png');
+
+const OAUTH_SECRET_ALGO = 'aes-256-gcm';
+const DEFAULT_API_TOKEN = 'change-me-admin-token';
+const API_TOKEN_PLACEHOLDERS = new Set([
+	'',
+	'api_token_not_set'
+]);
 
 let io = null;
 
@@ -238,13 +249,407 @@ function toMinInt(value, fallback, min) {
 	return Math.max(parsed, min);
 }
 
+
+function getOAuthEncryptionKey(tokenOverride) {
+	const keyMaterial = normalizeApiTokenValue(tokenOverride) || getEffectiveApiToken();
+	if (!keyMaterial) {
+		return null;
+	}
+
+	return crypto.createHash('sha256').update(keyMaterial).digest();
+}
+
+function normalizeApiTokenValue(value) {
+	const normalized = String(value || '').trim();
+	if (!normalized) {
+		return '';
+	}
+
+	if (API_TOKEN_PLACEHOLDERS.has(normalized.toLowerCase())) {
+		return '';
+	}
+
+	return normalized;
+}
+
+function isPlaceholderApiTokenValue(value) {
+	const normalized = String(value || '').trim().toLowerCase();
+	return normalized === 'your-secure-token-here' || normalized === 'api_token_not_set';
+}
+
+function isApiTokenEnvLocked() {
+	const normalized = String(process.env.API_TOKEN || '').trim();
+	return !!normalized;
+}
+
+function readRawApiTokenConfig() {
+	try {
+		const data = fs.readFileSync(apiTokenConfigPath, 'utf8');
+		return JSON.parse(data);
+	} catch (err) {
+		return null;
+	}
+}
+
+function getApiTokenRuntimeConfig() {
+	const envToken = normalizeApiTokenValue(process.env.API_TOKEN);
+	if (envToken) {
+		return {
+			token: envToken,
+			source: 'env',
+			isDefault: false,
+			lastUpdated: null
+		};
+	}
+
+	const rawConfig = readRawApiTokenConfig();
+	const runtimeToken = normalizeApiTokenValue(rawConfig?.token);
+	if (runtimeToken) {
+		return {
+			token: runtimeToken,
+			source: 'runtime',
+			isDefault: false,
+			lastUpdated: rawConfig?.lastUpdated || null
+		};
+	}
+
+	return {
+		token: DEFAULT_API_TOKEN,
+		source: 'default',
+		isDefault: true,
+		lastUpdated: null
+	};
+}
+
+function getEffectiveApiToken() {
+	return getApiTokenRuntimeConfig().token;
+}
+
+function getApiTokenConfig() {
+	const runtimeConfig = getApiTokenRuntimeConfig();
+	return {
+		source: runtimeConfig.source,
+		isDefault: runtimeConfig.isDefault,
+		lastUpdated: runtimeConfig.lastUpdated
+	};
+}
+
+function saveApiTokenConfig(apiToken) {
+	const normalizedToken = normalizeApiTokenValue(apiToken);
+	if (!normalizedToken) {
+		throw new Error('API token must not be empty.');
+	}
+
+	const configData = {
+		token: normalizedToken,
+		lastUpdated: new Date().toISOString()
+	};
+
+	fs.writeFileSync(apiTokenConfigPath, JSON.stringify(configData, null, 2));
+	return {
+		token: normalizedToken,
+		lastUpdated: configData.lastUpdated
+	};
+}
+
+function migrateEncryptedOAuthSecretForTokenChange(oldToken, newToken) {
+	const rawOauthConfig = readRawOAuthConfig();
+	if (!rawOauthConfig || !rawOauthConfig.clientSecretEncrypted) {
+		return;
+	}
+
+	const decryptedSecret = decryptOAuthSecret(rawOauthConfig.clientSecretEncrypted, oldToken);
+	if (decryptedSecret === null) {
+		throw new Error('Failed to decrypt stored OAuth client secret while updating API token.');
+	}
+
+	rawOauthConfig.clientSecretEncrypted = encryptOAuthSecret(decryptedSecret, newToken);
+	fs.writeFileSync(oauthConfigPath, JSON.stringify(rawOauthConfig, null, 2));
+}
+
+function encryptOAuthSecret(secretValue, tokenOverride) {
+	const key = getOAuthEncryptionKey(tokenOverride);
+	if (!key) {
+		throw new Error('Missing encryption key. Set API_TOKEN.');
+	}
+
+	const iv = crypto.randomBytes(12);
+	const cipher = crypto.createCipheriv(OAUTH_SECRET_ALGO, key, iv);
+	const encrypted = Buffer.concat([cipher.update(String(secretValue), 'utf8'), cipher.final()]);
+	const authTag = cipher.getAuthTag();
+
+	return {
+		algorithm: OAUTH_SECRET_ALGO,
+		iv: iv.toString('base64'),
+		authTag: authTag.toString('base64'),
+		value: encrypted.toString('base64')
+	};
+}
+
+function decryptOAuthSecret(payload, tokenOverride) {
+	if (!payload || typeof payload !== 'object') {
+		return null;
+	}
+
+	const candidates = [];
+	const overrideToken = normalizeApiTokenValue(tokenOverride);
+	if (overrideToken) {
+		candidates.push(overrideToken);
+	}
+
+	const effectiveToken = normalizeApiTokenValue(getEffectiveApiToken());
+	if (effectiveToken && !candidates.includes(effectiveToken)) {
+		candidates.push(effectiveToken);
+	}
+
+	const rawEnvToken = String(process.env.API_TOKEN || '').trim();
+	if (rawEnvToken && !candidates.includes(rawEnvToken)) {
+		candidates.push(rawEnvToken);
+	}
+
+	if (!candidates.includes(DEFAULT_API_TOKEN)) {
+		candidates.push(DEFAULT_API_TOKEN);
+	}
+
+	for (const candidate of candidates) {
+		const key = getOAuthEncryptionKey(candidate);
+		if (!key) {
+			continue;
+		}
+
+		try {
+			const iv = Buffer.from(String(payload.iv || ''), 'base64');
+			const authTag = Buffer.from(String(payload.authTag || ''), 'base64');
+			const encryptedValue = Buffer.from(String(payload.value || ''), 'base64');
+
+			const decipher = crypto.createDecipheriv(OAUTH_SECRET_ALGO, key, iv);
+			decipher.setAuthTag(authTag);
+			const decrypted = Buffer.concat([decipher.update(encryptedValue), decipher.final()]);
+			return decrypted.toString('utf8');
+		} catch (error) {
+			// try next candidate
+		}
+	}
+
+	console.error('Failed to decrypt OAuth client secret: no valid API token key found.');
+	return null;
+}
+
+function readRawOAuthConfig() {
+	try {
+		const data = fs.readFileSync(oauthConfigPath, 'utf8');
+		return JSON.parse(data);
+	} catch (err) {
+		return null;
+	}
+}
+
+function extractTenantIdFromAuthority(authorityValue) {
+	const raw = String(authorityValue || '').trim();
+	if (!raw) {
+		return '';
+	}
+
+	try {
+		const parsed = new URL(raw);
+		const host = String(parsed.hostname || '').toLowerCase();
+		if (!host.includes('login.microsoftonline.com')) {
+			return '';
+		}
+		const pathPart = String(parsed.pathname || '').split('/').filter(Boolean)[0] || '';
+		return String(pathPart).trim();
+	} catch (error) {
+		if (raw.includes('login.microsoftonline.com/')) {
+			const afterDomain = raw.split('login.microsoftonline.com/')[1] || '';
+			const firstSegment = afterDomain.split(/[/?#]/)[0] || '';
+			return String(firstSegment).trim();
+		}
+		if (raw.includes('://')) {
+			return '';
+		}
+		if (raw.includes('/')) {
+			return String(raw).split('/').filter(Boolean)[0] || '';
+		}
+		return raw;
+	}
+}
+
+function authorityFromTenantId(tenantId) {
+	const normalizedTenant = String(tenantId || '').trim();
+	if (!normalizedTenant) {
+		return '';
+	}
+	return `https://login.microsoftonline.com/${normalizedTenant}`;
+}
+
+function normalizeOAuthAuthorityInput(value) {
+	const tenantId = extractTenantIdFromAuthority(value);
+	if (!tenantId) {
+		return '';
+	}
+	return authorityFromTenantId(tenantId);
+}
+
+function normalizeOAuthConfigBase(oauthConfig, fallback = {}) {
+	const source = oauthConfig && typeof oauthConfig === 'object' && !Array.isArray(oauthConfig)
+		? oauthConfig
+		: {};
+
+	const normalizeValue = (value) => {
+		const normalized = String(value || '').trim();
+		if (
+			normalized === 'OAUTH_CLIENT_ID_NOT_SET'
+			|| normalized === 'OAUTH_AUTHORITY_NOT_SET'
+			|| normalized === 'OAUTH_CLIENT_SECRET_NOT_SET'
+		) {
+			return '';
+		}
+		return normalized;
+	};
+
+	return {
+		clientId: source.clientId !== undefined ? normalizeValue(source.clientId) : normalizeValue(fallback.clientId),
+		authority: source.authority !== undefined
+			? normalizeOAuthAuthorityInput(normalizeValue(source.authority))
+			: normalizeOAuthAuthorityInput(normalizeValue(fallback.authority))
+	};
+}
+
+function getOAuthRuntimeConfig() {
+	const fallback = {
+		clientId: config.msalConfig?.auth?.clientId || '',
+		authority: config.msalConfig?.auth?.authority || '',
+		clientSecret: config.msalConfig?.auth?.clientSecret || ''
+	};
+
+	const envClientId = process.env.OAUTH_CLIENT_ID;
+	const envAuthority = process.env.OAUTH_AUTHORITY;
+	const envClientSecret = process.env.OAUTH_CLIENT_SECRET;
+	const oauthEnvConfigured = envClientId !== undefined || envAuthority !== undefined || envClientSecret !== undefined;
+
+	if (oauthEnvConfigured) {
+		return {
+			clientId: envClientId !== undefined ? String(envClientId || '').trim() : fallback.clientId,
+			authority: envAuthority !== undefined
+				? normalizeOAuthAuthorityInput(String(envAuthority || '').trim())
+				: normalizeOAuthAuthorityInput(fallback.authority),
+			clientSecret: envClientSecret !== undefined ? String(envClientSecret || '') : fallback.clientSecret,
+			lastUpdated: null
+		};
+	}
+
+	const rawConfig = readRawOAuthConfig();
+	if (!rawConfig) {
+		return {
+			...fallback,
+			lastUpdated: null
+		};
+	}
+
+	const normalizedBase = normalizeOAuthConfigBase(rawConfig, fallback);
+	const decryptedSecret = decryptOAuthSecret(rawConfig.clientSecretEncrypted);
+
+	return {
+		clientId: normalizedBase.clientId || fallback.clientId,
+		authority: normalizedBase.authority || fallback.authority,
+		clientSecret: decryptedSecret !== null ? decryptedSecret : fallback.clientSecret,
+		lastUpdated: rawConfig.lastUpdated || null
+	};
+}
+
+function getOAuthConfig() {
+	const runtimeConfig = getOAuthRuntimeConfig();
+	const normalizedAuthority = runtimeConfig.authority === 'OAUTH_AUTHORITY_NOT_SET' ? '' : runtimeConfig.authority;
+	const tenantId = extractTenantIdFromAuthority(normalizedAuthority);
+	return {
+		clientId: runtimeConfig.clientId === 'OAUTH_CLIENT_ID_NOT_SET' ? '' : runtimeConfig.clientId,
+		authority: normalizedAuthority,
+		tenantId,
+		hasClientSecret: !!runtimeConfig.clientSecret,
+		lastUpdated: runtimeConfig.lastUpdated
+	};
+}
+
+function normalizeSystemConfig(systemConfig, fallback = {}) {
+	const source = systemConfig && typeof systemConfig === 'object' && !Array.isArray(systemConfig)
+		? systemConfig
+		: {};
+
+	const fallbackWebhookIps = Array.isArray(fallback.graphWebhookAllowedIps)
+		? fallback.graphWebhookAllowedIps
+		: [];
+
+	const parseWebhookIps = (value, fallbackValue) => {
+		if (Array.isArray(value)) {
+			return value.map((item) => String(item || '').trim()).filter(Boolean);
+		}
+
+		if (typeof value === 'string') {
+			return value.split(',').map((item) => item.trim()).filter(Boolean);
+		}
+
+		return fallbackValue;
+	};
+
+	return {
+		startupValidationStrict: toBoolean(source.startupValidationStrict, toBoolean(fallback.startupValidationStrict, false)),
+		graphWebhookEnabled: toBoolean(source.graphWebhookEnabled, toBoolean(fallback.graphWebhookEnabled, false)),
+		graphWebhookClientState: source.graphWebhookClientState !== undefined
+			? String(source.graphWebhookClientState || '').trim()
+			: String(fallback.graphWebhookClientState || '').trim(),
+		graphWebhookAllowedIps: parseWebhookIps(source.graphWebhookAllowedIps, fallbackWebhookIps)
+	};
+}
+
+function getSystemRuntimeConfig() {
+	const fallback = {
+		startupValidationStrict: config.startupValidation?.strict === true,
+		graphWebhookEnabled: config.graphWebhook?.enabled === true,
+		graphWebhookClientState: config.graphWebhook?.clientState || '',
+		graphWebhookAllowedIps: Array.isArray(config.graphWebhook?.allowedIps) ? config.graphWebhook.allowedIps : []
+	};
+
+	const rawConfig = (() => {
+		try {
+			const data = fs.readFileSync(systemConfigPath, 'utf8');
+			return JSON.parse(data);
+		} catch (err) {
+			return null;
+		}
+	})();
+
+	if (!rawConfig) {
+		return {
+			...fallback,
+			lastUpdated: null
+		};
+	}
+
+	const normalized = normalizeSystemConfig(rawConfig, fallback);
+
+	return {
+		...normalized,
+		lastUpdated: rawConfig.lastUpdated || null
+	};
+}
+
+function getSystemConfig() {
+	const runtimeConfig = getSystemRuntimeConfig();
+	return {
+		startupValidationStrict: runtimeConfig.startupValidationStrict,
+		graphWebhookEnabled: runtimeConfig.graphWebhookEnabled,
+		graphWebhookClientState: runtimeConfig.graphWebhookClientState,
+		graphWebhookAllowedIps: runtimeConfig.graphWebhookAllowedIps,
+		lastUpdated: runtimeConfig.lastUpdated
+	};
+}
+
 function normalizeSearchConfig(searchConfig) {
 	const defaults = config.calendarSearch || {};
 	const source = searchConfig && typeof searchConfig === 'object' && !Array.isArray(searchConfig)
 		? searchConfig
 		: {};
 
-	const fallbackUseGraphAPI = toBoolean(defaults.useGraphAPI, true);
 	const fallbackMaxDays = toMinInt(defaults.maxDays, 7, 1);
 	const fallbackMaxRoomLists = toMinInt(defaults.maxRoomLists, 5, 1);
 	const fallbackMaxRooms = toMinInt(defaults.maxRooms, 50, 1);
@@ -252,7 +657,7 @@ function normalizeSearchConfig(searchConfig) {
 	const fallbackPollInterval = toMinInt(defaults.pollIntervalMs, 15000, 5000);
 
 	return {
-		useGraphAPI: toBoolean(source.useGraphAPI, fallbackUseGraphAPI),
+		useGraphAPI: true,
 		maxDays: toMinInt(source.maxDays, fallbackMaxDays, 1),
 		maxRoomLists: toMinInt(source.maxRoomLists, fallbackMaxRoomLists, 1),
 		maxRooms: toMinInt(source.maxRooms, fallbackMaxRooms, 1),
@@ -314,6 +719,75 @@ function getRateLimitConfig() {
 			lastUpdated: null
 		};
 	}
+}
+
+function saveOAuthConfig(oauthConfig) {
+	const existingRaw = readRawOAuthConfig() || {};
+	const existingBase = normalizeOAuthConfigBase(existingRaw, {
+		clientId: config.msalConfig?.auth?.clientId || '',
+		authority: config.msalConfig?.auth?.authority || ''
+	});
+
+	const nextBase = normalizeOAuthConfigBase(oauthConfig, existingBase);
+	let encryptedSecret = existingRaw.clientSecretEncrypted || null;
+
+	if (oauthConfig && Object.prototype.hasOwnProperty.call(oauthConfig, 'clientSecret')) {
+		const incomingSecret = String(oauthConfig.clientSecret || '');
+		if (incomingSecret.trim().length === 0) {
+			encryptedSecret = null;
+		} else {
+			encryptedSecret = encryptOAuthSecret(incomingSecret);
+		}
+	}
+
+	const configData = {
+		clientId: nextBase.clientId,
+		authority: nextBase.authority,
+		clientSecretEncrypted: encryptedSecret,
+		lastUpdated: new Date().toISOString()
+	};
+
+	fs.writeFileSync(oauthConfigPath, JSON.stringify(configData, null, 2));
+	return {
+		clientId: configData.clientId,
+		authority: configData.authority,
+		hasClientSecret: !!encryptedSecret,
+		lastUpdated: configData.lastUpdated
+	};
+}
+
+function saveSystemConfig(systemConfig) {
+	let existingRaw = {};
+	try {
+		const data = fs.readFileSync(systemConfigPath, 'utf8');
+		existingRaw = JSON.parse(data);
+	} catch (err) {
+		// File doesn't exist or is invalid, use defaults
+	}
+
+	const normalized = normalizeSystemConfig(
+		systemConfig,
+		normalizeSystemConfig(existingRaw, {
+			startupValidationStrict: config.startupValidation?.strict === true,
+			graphWebhookEnabled: config.graphWebhook?.enabled === true,
+			graphWebhookClientState: config.graphWebhook?.clientState || '',
+			graphWebhookAllowedIps: Array.isArray(config.graphWebhook?.allowedIps) ? config.graphWebhook.allowedIps : []
+		})
+	);
+
+	const configData = {
+		...normalized,
+		lastUpdated: new Date().toISOString()
+	};
+
+	fs.writeFileSync(systemConfigPath, JSON.stringify(configData, null, 2));
+	return {
+		startupValidationStrict: configData.startupValidationStrict,
+		graphWebhookEnabled: configData.graphWebhookEnabled,
+		graphWebhookClientState: configData.graphWebhookClientState,
+		graphWebhookAllowedIps: configData.graphWebhookAllowedIps,
+		lastUpdated: configData.lastUpdated
+	};
 }
 
 function getDefaultI18nConfig() {
@@ -896,7 +1370,83 @@ async function updateRateLimitConfig(rateLimitConfig) {
 	return updatedConfig;
 }
 
+async function updateOAuthConfig(oauthConfig) {
+	const savedConfig = saveOAuthConfig(oauthConfig || {});
+	const runtimeConfig = getOAuthRuntimeConfig();
+
+	config.msalConfig.auth.clientId = runtimeConfig.clientId;
+	config.msalConfig.auth.authority = runtimeConfig.authority;
+	config.msalConfig.auth.clientSecret = runtimeConfig.clientSecret;
+
+	if (io) {
+		io.of('/').emit('oauthConfigUpdated', savedConfig);
+		console.log('OAuth config updated, notified all clients via Socket.IO');
+	}
+
+	return savedConfig;
+}
+
+async function updateSystemConfig(systemConfig) {
+	const savedConfig = saveSystemConfig(systemConfig || {});
+	const runtimeConfig = getSystemRuntimeConfig();
+
+	config.startupValidation.strict = runtimeConfig.startupValidationStrict;
+	config.graphWebhook.enabled = runtimeConfig.graphWebhookEnabled;
+	config.graphWebhook.clientState = runtimeConfig.graphWebhookClientState || null;
+	config.graphWebhook.allowedIps = Array.isArray(runtimeConfig.graphWebhookAllowedIps)
+		? runtimeConfig.graphWebhookAllowedIps
+		: [];
+
+	if (io) {
+		io.of('/').emit('systemConfigUpdated', savedConfig);
+		console.log('System config updated, notified all clients via Socket.IO');
+	}
+
+	return savedConfig;
+}
+
+async function updateApiToken(nextToken) {
+	const normalizedNextToken = normalizeApiTokenValue(nextToken);
+	if (!normalizedNextToken) {
+		throw new Error('API token must not be empty.');
+	}
+
+	const runtimeConfig = getApiTokenRuntimeConfig();
+	if (isApiTokenEnvLocked()) {
+		throw new Error('API token is locked by environment variable API_TOKEN.');
+	}
+
+	const currentToken = runtimeConfig.token;
+	if (currentToken !== normalizedNextToken) {
+		migrateEncryptedOAuthSecretForTokenChange(currentToken, normalizedNextToken);
+	}
+
+	const savedConfig = saveApiTokenConfig(normalizedNextToken);
+	config.apiToken = normalizedNextToken;
+	process.env.API_TOKEN = normalizedNextToken;
+
+	if (io) {
+		io.of('/').emit('apiTokenUpdated', { lastUpdated: savedConfig.lastUpdated });
+		console.log('API token updated.');
+	}
+
+	return getApiTokenConfig();
+}
+
 function applyRuntimeConfigOverrides() {
+	const persistedSystemConfig = getSystemRuntimeConfig();
+	config.startupValidation.strict = persistedSystemConfig.startupValidationStrict;
+	config.graphWebhook.enabled = persistedSystemConfig.graphWebhookEnabled;
+	config.graphWebhook.clientState = persistedSystemConfig.graphWebhookClientState || null;
+	config.graphWebhook.allowedIps = Array.isArray(persistedSystemConfig.graphWebhookAllowedIps)
+		? persistedSystemConfig.graphWebhookAllowedIps
+		: [];
+
+	const persistedOAuthConfig = getOAuthRuntimeConfig();
+	config.msalConfig.auth.clientId = persistedOAuthConfig.clientId;
+	config.msalConfig.auth.authority = persistedOAuthConfig.authority;
+	config.msalConfig.auth.clientSecret = persistedOAuthConfig.clientSecret;
+
 	const persistedSearchConfig = getSearchConfig();
 	config.calendarSearch.useGraphAPI = persistedSearchConfig.useGraphAPI;
 	config.calendarSearch.maxDays = persistedSearchConfig.maxDays;
@@ -912,6 +1462,10 @@ function applyRuntimeConfigOverrides() {
 	config.rateLimit.writeMax = persistedRateLimitConfig.writeMax;
 	config.rateLimit.authWindowMs = persistedRateLimitConfig.authWindowMs;
 	config.rateLimit.authMax = persistedRateLimitConfig.authMax;
+
+	const persistedApiTokenConfig = getApiTokenRuntimeConfig();
+	config.apiToken = persistedApiTokenConfig.token;
+	process.env.API_TOKEN = persistedApiTokenConfig.token;
 }
 
 applyRuntimeConfigOverrides();
@@ -922,6 +1476,10 @@ module.exports = {
 	getLogoConfig,
 	getSidebarConfig,
 	getBookingConfig,
+	getSystemConfig,
+	getOAuthConfig,
+	getApiTokenConfig,
+	getEffectiveApiToken,
 	getSearchConfig,
 	getRateLimitConfig,
 	getColorsConfig,
@@ -931,6 +1489,9 @@ module.exports = {
 	updateLogoConfig,
 	updateSidebarConfig,
 	updateBookingConfig,
+	updateSystemConfig,
+	updateOAuthConfig,
+	updateApiToken,
 	updateSearchConfig,
 	updateRateLimitConfig,
 	updateColorsConfig,

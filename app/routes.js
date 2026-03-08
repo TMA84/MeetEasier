@@ -9,7 +9,14 @@ const { createRateLimiter } = require('./rate-limiter');
 const { appendAuditLog, getAuditLogs } = require('./audit-logger');
 const checkinManager = require('./checkin-manager');
 
-const msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
+let msalClient = null;
+
+function refreshMsalClient() {
+	msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
+	return msalClient;
+}
+
+refreshMsalClient();
 
 // Check if Calendars.ReadWrite permission is available
 let hasCalendarWritePermission = null;
@@ -17,6 +24,28 @@ let graphAuthHealthCache = {
 	checkedAt: 0,
 	result: null
 };
+
+function isEnvDefined(name) {
+	return process.env[name] !== undefined;
+}
+
+function isOAuthEnvConfigured() {
+	return isEnvDefined('OAUTH_CLIENT_ID')
+		|| isEnvDefined('OAUTH_AUTHORITY')
+		|| isEnvDefined('OAUTH_CLIENT_SECRET');
+}
+
+function isSystemEnvConfigured() {
+	return isEnvDefined('STARTUP_VALIDATION_STRICT')
+		|| isEnvDefined('GRAPH_WEBHOOK_ENABLED')
+		|| isEnvDefined('GRAPH_WEBHOOK_CLIENT_STATE')
+		|| isEnvDefined('GRAPH_WEBHOOK_ALLOWED_IPS');
+}
+
+function isMaintenanceEnvConfigured() {
+	return isEnvDefined('MAINTENANCE_MODE')
+		|| isEnvDefined('MAINTENANCE_MESSAGE');
+}
 
 function getClientIp(req) {
 	const forwardedFor = req.headers['x-forwarded-for'];
@@ -76,16 +105,6 @@ async function getGraphAuthHealth(forceRefresh = false) {
 
 	if (!forceRefresh && graphAuthHealthCache.result && now - graphAuthHealthCache.checkedAt < ttlMs) {
 		return graphAuthHealthCache.result;
-	}
-
-	const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
-	if (!useGraphAPI) {
-		const result = {
-			status: 'skipped',
-			message: 'Graph auth check skipped because SEARCH_USE_GRAPHAPI is disabled.'
-		};
-		graphAuthHealthCache = { checkedAt: now, result };
-		return result;
 	}
 
 	try {
@@ -276,30 +295,6 @@ async function endGraphEventEarly(roomEmail, appointmentId) {
 	return newEnd;
 }
 
-async function endEwsEventEarly(roomEmail, appointmentId) {
-	const ews = require('ews-javascript-api');
-
-	const exch = new ews.ExchangeService(ews.ExchangeVersion.Exchange2016);
-	exch.Credentials = new ews.ExchangeCredentials(config.exchange.username, config.exchange.password);
-	exch.Url = new ews.Uri(config.exchange.uri);
-	exch.ImpersonatedUserId = new ews.ImpersonatedUserId(
-		ews.ConnectingIdType.SmtpAddress,
-		roomEmail
-	);
-
-	const itemId = new ews.ItemId(appointmentId);
-	const appointment = await ews.Appointment.Bind(exch, itemId);
-	const startDate = new Date(appointment?.Start?.toISOString ? appointment.Start.toISOString() : appointment?.Start);
-	const newEnd = calculateEarlyEndTime(startDate, new Date());
-	appointment.End = ews.DateTime.Parse(newEnd.toISOString());
-	await appointment.Update(
-		ews.ConflictResolutionMode.AlwaysOverwrite,
-		ews.SendInvitationsOrCancellationsMode.SendToNone
-	);
-
-	return newEnd;
-}
-
 async function moveGraphEventStartToNow(roomEmail, appointmentId, nowDate = new Date()) {
 	const tokenRequest = {
 		scopes: ['https://graph.microsoft.com/.default']
@@ -327,26 +322,6 @@ async function moveGraphEventStartToNow(roomEmail, appointmentId, nowDate = new 
 		const errorText = await response.text();
 		throw new Error(`Failed to update meeting start time (${response.status}): ${errorText}`);
 	}
-}
-
-async function moveEwsEventStartToNow(roomEmail, appointmentId, nowDate = new Date()) {
-	const ews = require('ews-javascript-api');
-
-	const exch = new ews.ExchangeService(ews.ExchangeVersion.Exchange2016);
-	exch.Credentials = new ews.ExchangeCredentials(config.exchange.username, config.exchange.password);
-	exch.Url = new ews.Uri(config.exchange.uri);
-	exch.ImpersonatedUserId = new ews.ImpersonatedUserId(
-		ews.ConnectingIdType.SmtpAddress,
-		roomEmail
-	);
-
-	const itemId = new ews.ItemId(appointmentId);
-	const appointment = await ews.Appointment.Bind(exch, itemId);
-	appointment.Start = ews.DateTime.Parse(nowDate.toISOString());
-	await appointment.Update(
-		ews.ConflictResolutionMode.AlwaysOverwrite,
-		ews.SendInvitationsOrCancellationsMode.SendToNone
-	);
 }
 
 // Configure multer for logo uploads
@@ -440,6 +415,9 @@ module.exports = function(app) {
 			'/sync-status',
 			'/maintenance-status',
 			'/maintenance',
+			'/api-token-config',
+			'/oauth-config',
+			'/system-config',
 			'/graph/webhook'
 		]);
 
@@ -551,36 +529,23 @@ module.exports = function(app) {
 	// api routes ================================================================
 	// returns an array of room objects
 	app.get('/api/rooms', function(req, res) {
-		const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
-		
-		// Check if credentials for the selected API are set
-		const hasRequiredCreds = useGraphAPI 
-			? (
-				config.msalConfig.auth.clientId !== 'OAUTH_CLIENT_ID_NOT_SET'
-				&& config.msalConfig.auth.authority !== 'OAUTH_AUTHORITY_NOT_SET'
-				&& config.msalConfig.auth.clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET'
-			)
-			: (
-				config.exchange.username !== 'EWS_USERNAME_NOT_SET'
-				&& config.exchange.password !== 'EWS_PASSWORD_NOT_SET'
-				&& config.exchange.uri !== 'EWS_URI_NOT_SET'
-			);
+		const hasRequiredCreds = (
+			!!config.msalConfig.auth.clientId
+			&& config.msalConfig.auth.clientId !== 'OAUTH_CLIENT_ID_NOT_SET'
+			&& !!config.msalConfig.auth.authority
+			&& config.msalConfig.auth.authority !== 'OAUTH_AUTHORITY_NOT_SET'
+			&& !!config.msalConfig.auth.clientSecret
+			&& config.msalConfig.auth.clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET'
+		);
 		
 		if (!hasRequiredCreds) {
 			return res.status(503).json({
 				error: 'Calendar backend is not configured',
-				message: useGraphAPI
-					? 'Microsoft Graph credentials are missing. Configure OAUTH_CLIENT_ID, OAUTH_AUTHORITY, and OAUTH_CLIENT_SECRET.'
-					: 'EWS credentials are missing. Configure EWS_USERNAME, EWS_PASSWORD, and EWS_URI.'
+				message: 'Microsoft Graph credentials are missing. Configure OAUTH_CLIENT_ID, OAUTH_AUTHORITY, and OAUTH_CLIENT_SECRET.'
 			});
 		}
 
-		let api;
-		if (useGraphAPI) {
-			api = require('./msgraph/rooms.js');
-		} else {
-			api = require('./ews/rooms.js');
-		}
+		const api = require('./msgraph/rooms.js');
 
 		api(function(err, rooms) {
 			if (err) {
@@ -603,12 +568,7 @@ module.exports = function(app) {
 
 	// returns an array of roomlist objects with aliases for filtering
 	app.get('/api/roomlists', function(req, res) {
-		let api;
-		if (config.calendarSearch.useGraphAPI === 'true') {
-			api = require('./msgraph/roomlists.js');
-		} else {
-			api = require('./ews/roomlists.js');
-		}
+		const api = require('./msgraph/roomlists.js');
 
 		api(function(err, roomlists) {
 			if (err) {
@@ -694,31 +654,12 @@ module.exports = function(app) {
 		}
 
 		const bookingDetails = { subject, startTime, endTime, description };
-		const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
 
 		try {
-			// Proceed with booking (conflict checks are handled in booking implementations)
-			if (useGraphAPI) {
-				const bookRoom = require('./msgraph/booking.js');
-				const result = await bookRoom(msalClient, roomEmail, bookingDetails);
-				triggerRoomRefreshWithFollowUp();
-				res.json(result);
-			} else {
-				// Use EWS
-				const bookRoom = require('./ews/booking.js');
-				bookRoom(roomEmail, bookingDetails, function(err, result) {
-					if (err) {
-						console.error('Booking error:', err);
-						res.status(500).json({ 
-							error: 'Booking failed',
-							message: err.message || 'Failed to book room'
-						});
-					} else {
-						triggerRoomRefreshWithFollowUp();
-						res.json(result);
-					}
-				});
-			}
+			const bookRoom = require('./msgraph/booking.js');
+			const result = await bookRoom(msalClient, roomEmail, bookingDetails);
+			triggerRoomRefreshWithFollowUp();
+			res.json(result);
 		} catch (error) {
 			console.error('Booking error:', error);
 			const errorMessage = error.message || 'Failed to book room';
@@ -797,117 +738,107 @@ module.exports = function(app) {
 			});
 		}
 
-		const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
-
 		try {
-			if (useGraphAPI) {
-				const graphApi = require('./msgraph/graph.js');
+			const graphApi = require('./msgraph/graph.js');
 				
-				// Get the access token
-				const tokenRequest = {
-					scopes: ['https://graph.microsoft.com/.default']
-				};
-				const authResult = await msalClient.acquireTokenByClientCredential(tokenRequest);
-				const accessToken = authResult.accessToken;
+			// Get the access token
+			const tokenRequest = {
+				scopes: ['https://graph.microsoft.com/.default']
+			};
+			const authResult = await msalClient.acquireTokenByClientCredential(tokenRequest);
+			const accessToken = authResult.accessToken;
 
-				// Get the current event
-				const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
-				const eventResponse = await fetch(eventUrl, {
-					headers: {
-						'Authorization': `Bearer ${accessToken}`,
-						'Content-Type': 'application/json'
-					}
-				});
-
-				if (!eventResponse.ok) {
-					throw new Error(t.fetchError);
+			// Get the current event
+			const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
+			const eventResponse = await fetch(eventUrl, {
+				headers: {
+					'Authorization': `Bearer ${accessToken}`,
+					'Content-Type': 'application/json'
 				}
+			});
 
-				const event = await eventResponse.json();
-				const currentStart = new Date(event.start.dateTime);
-				const currentEnd = new Date(event.end.dateTime);
-				const newEnd = new Date(currentEnd.getTime() + (minutes * 60 * 1000));
+			if (!eventResponse.ok) {
+				throw new Error(t.fetchError);
+			}
 
-				// Format the new end time properly for Graph API
-				// Graph API expects format: "2024-01-15T14:30:00" without the Z
-				const formatDateForGraph = (date) => {
-					const year = date.getFullYear();
-					const month = String(date.getMonth() + 1).padStart(2, '0');
-					const day = String(date.getDate()).padStart(2, '0');
-					const hours = String(date.getHours()).padStart(2, '0');
-					const minutes = String(date.getMinutes()).padStart(2, '0');
-					const seconds = String(date.getSeconds()).padStart(2, '0');
-					return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-				};
+			const event = await eventResponse.json();
+			const currentStart = new Date(event.start.dateTime);
+			const currentEnd = new Date(event.end.dateTime);
+			const newEnd = new Date(currentEnd.getTime() + (minutes * 60 * 1000));
 
-				// Check for conflicts with the extension
-				// We need to check if extending from currentEnd to newEnd would overlap with any other meeting
-				const calendarView = await graphApi.getCalendarView(msalClient, roomEmail);
-				const calendarEvents = calendarView.value || [];
+			// Format the new end time properly for Graph API
+			// Graph API expects format: "2024-01-15T14:30:00" without the Z
+			const formatDateForGraph = (date) => {
+				const year = date.getFullYear();
+				const month = String(date.getMonth() + 1).padStart(2, '0');
+				const day = String(date.getDate()).padStart(2, '0');
+				const hours = String(date.getHours()).padStart(2, '0');
+				const minutes = String(date.getMinutes()).padStart(2, '0');
+				const seconds = String(date.getSeconds()).padStart(2, '0');
+				return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+			};
 
-				const hasConflict = calendarEvents.some(e => {
-					if (e.id === appointmentId) return false; // Skip current meeting
-					const eventStart = new Date(e.start.dateTime);
-					const eventEnd = new Date(e.end.dateTime);
-					
-					// Check if there's any overlap between the extended meeting and this event
-					// Overlap exists if: (extendedStart < eventEnd) AND (extendedEnd > eventStart)
-					// The extended meeting runs from currentStart to newEnd
-					return currentStart < eventEnd && newEnd > eventStart;
-				});
+			// Check for conflicts with the extension
+			// We need to check if extending from currentEnd to newEnd would overlap with any other meeting
+			const calendarView = await graphApi.getCalendarView(msalClient, roomEmail);
+			const calendarEvents = calendarView.value || [];
 
-				if (hasConflict) {
-					return res.status(409).json({
-						success: false,
-						error: t.conflictError
-					});
-				}
-
-				// Additional check: ensure the extension doesn't go beyond a reasonable time (e.g., end of business day)
-				const maxEndTime = new Date(currentStart);
-				maxEndTime.setHours(23, 59, 59, 999); // End of day
+			const hasConflict = calendarEvents.some(e => {
+				if (e.id === appointmentId) return false; // Skip current meeting
+				const eventStart = new Date(e.start.dateTime);
+				const eventEnd = new Date(e.end.dateTime);
 				
-				if (newEnd > maxEndTime) {
-					return res.status(400).json({
-						success: false,
-						error: t.endOfDayError
-					});
-				}
+				// Check if there's any overlap between the extended meeting and this event
+				// Overlap exists if: (extendedStart < eventEnd) AND (extendedEnd > eventStart)
+				// The extended meeting runs from currentStart to newEnd
+				return currentStart < eventEnd && newEnd > eventStart;
+			});
 
-				// Update the event end time
-				const updateUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
-				const updateResponse = await fetch(updateUrl, {
-					method: 'PATCH',
-					headers: {
-						'Authorization': `Bearer ${accessToken}`,
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						end: {
-							dateTime: formatDateForGraphUtc(newEnd),
-							timeZone: event.end.timeZone || 'UTC'
-						}
-					})
-				});
-
-				if (!updateResponse.ok) {
-					const errorText = await updateResponse.text();
-					throw new Error(`${t.updateError}: ${errorText}`);
-				}
-
-				res.json({ 
-					success: true,
-					message: `Meeting extended by ${minutes} minutes`,
-					newEndTime: newEnd.toISOString()
-				});
-				triggerRoomRefreshWithFollowUp();
-			} else {
-				// EWS not yet implemented for extend meeting
-				res.status(501).json({ 
+			if (hasConflict) {
+				return res.status(409).json({
 					success: false,
-					error: 'Extend meeting is not yet supported for EWS'
+					error: t.conflictError
 				});
 			}
+
+			// Additional check: ensure the extension doesn't go beyond a reasonable time (e.g., end of business day)
+			const maxEndTime = new Date(currentStart);
+			maxEndTime.setHours(23, 59, 59, 999); // End of day
+			
+			if (newEnd > maxEndTime) {
+				return res.status(400).json({
+					success: false,
+					error: t.endOfDayError
+				});
+			}
+
+			// Update the event end time
+			const updateUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
+			const updateResponse = await fetch(updateUrl, {
+				method: 'PATCH',
+				headers: {
+					'Authorization': `Bearer ${accessToken}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					end: {
+						dateTime: formatDateForGraphUtc(newEnd),
+						timeZone: event.end.timeZone || 'UTC'
+					}
+				})
+			});
+
+			if (!updateResponse.ok) {
+				const errorText = await updateResponse.text();
+				throw new Error(`${t.updateError}: ${errorText}`);
+			}
+
+			res.json({ 
+				success: true,
+				message: `Meeting extended by ${minutes} minutes`,
+				newEndTime: newEnd.toISOString()
+			});
+			triggerRoomRefreshWithFollowUp();
 		} catch (error) {
 			console.error('Extend meeting error:', error);
 			res.status(500).json({ 
@@ -956,12 +887,8 @@ module.exports = function(app) {
 			});
 		}
 
-		const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
-
 		try {
-			const endedAt = useGraphAPI
-				? await endGraphEventEarly(roomEmail, appointmentId)
-				: await endEwsEventEarly(roomEmail, appointmentId);
+			const endedAt = await endGraphEventEarly(roomEmail, appointmentId);
 
 			checkinManager.clearCheckedIn({ roomEmail, appointmentId });
 			triggerRoomRefreshWithFollowUp();
@@ -1051,13 +978,8 @@ module.exports = function(app) {
 		const shouldMoveMeetingStart = Number.isFinite(status.startTimestamp) && Date.now() < status.startTimestamp;
 
 		if (shouldMoveMeetingStart) {
-			const useGraphAPI = config.calendarSearch.useGraphAPI === 'true' || config.calendarSearch.useGraphAPI === true;
 			try {
-				if (useGraphAPI) {
-					await moveGraphEventStartToNow(roomEmail, appointmentId, new Date());
-				} else {
-					await moveEwsEventStartToNow(roomEmail, appointmentId, new Date());
-				}
+				await moveGraphEventStartToNow(roomEmail, appointmentId, new Date());
 				triggerRoomRefreshWithFollowUp();
 			} catch (error) {
 				console.error('Check-in pre-start meeting update error:', error);
@@ -1092,16 +1014,11 @@ module.exports = function(app) {
 		}
 
 		const token = req.headers['authorization'] || req.headers['x-api-token'];
-		
-		// If no token is configured, allow access (backward compatibility)
-		if (!config.apiToken) {
-			console.warn('WARNING: API_TOKEN not set. Admin API is unprotected!');
-			return next();
-		}
+		const expectedToken = configManager.getEffectiveApiToken();
 
 		// Check if token matches
 		const providedToken = token?.replace('Bearer ', '');
-		if (providedToken === config.apiToken) {
+		if (providedToken === expectedToken) {
 			return next();
 		}
 
@@ -1127,6 +1044,215 @@ module.exports = function(app) {
 			res.json(config);
 		} catch (err) {
 			res.status(500).json({ error: 'Failed to retrieve WiFi configuration' });
+		}
+	});
+
+	app.get('/api/oauth-config', checkApiToken, function(req, res) {
+		try {
+			const oauthConfig = configManager.getOAuthConfig();
+			res.json(oauthConfig);
+		} catch (err) {
+			console.error('Error retrieving OAuth config:', err);
+			res.status(500).json({ error: 'Failed to retrieve OAuth configuration' });
+		}
+	});
+
+	app.get('/api/api-token-config', checkApiToken, function(req, res) {
+		try {
+			res.json(configManager.getApiTokenConfig());
+		} catch (err) {
+			console.error('Error retrieving API token config:', err);
+			res.status(500).json({ error: 'Failed to retrieve API token configuration' });
+		}
+	});
+
+	app.post('/api/api-token-config', checkApiToken, async function(req, res) {
+		try {
+			const envToken = String(process.env.API_TOKEN || '').trim();
+			if (envToken) {
+				return res.status(403).json({
+					error: 'API token is locked by environment variable',
+					message: 'Remove API_TOKEN from environment to edit via admin panel.'
+				});
+			}
+
+			const { newToken } = req.body || {};
+			const normalizedToken = String(newToken || '').trim();
+
+			if (!normalizedToken || normalizedToken.length < 8) {
+				return res.status(400).json({
+					error: 'Invalid API token',
+					message: 'Please provide an API token with at least 8 characters.'
+				});
+			}
+
+			const beforeConfig = configManager.getApiTokenConfig();
+			const updatedConfig = await configManager.updateApiToken(normalizedToken);
+
+			appendAuditLog({
+				event: 'config.apiToken.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: updatedConfig
+			});
+
+			res.json({
+				success: true,
+				config: updatedConfig,
+				message: 'API token updated'
+			});
+		} catch (err) {
+			console.error('Error updating API token:', err);
+			res.status(500).json({ error: err.message || 'Failed to update API token' });
+		}
+	});
+
+	app.post('/api/oauth-config', checkApiToken, async function(req, res) {
+		try {
+			if (isOAuthEnvConfigured()) {
+				return res.status(403).json({
+					error: 'OAuth configuration is locked by environment variables',
+					message: 'Remove OAUTH_CLIENT_ID/OAUTH_AUTHORITY/OAUTH_CLIENT_SECRET from environment to edit via admin panel.'
+				});
+			}
+
+			const { clientId, authority, tenantId, clientSecret } = req.body || {};
+			const invalidSentinelValues = new Set([
+				'OAUTH_CLIENT_ID_NOT_SET',
+				'OAUTH_AUTHORITY_NOT_SET',
+				'OAUTH_CLIENT_SECRET_NOT_SET'
+			]);
+
+			if (typeof clientId === 'string' && invalidSentinelValues.has(clientId.trim())) {
+				return res.status(400).json({
+					error: 'Invalid OAuth client ID',
+					message: 'Please provide a real OAuth Client ID (placeholder values are not allowed).'
+				});
+			}
+
+			if (typeof authority === 'string' && invalidSentinelValues.has(authority.trim())) {
+				return res.status(400).json({
+					error: 'Invalid OAuth authority',
+					message: 'Please provide a real OAuth Tenant ID or Authority URL (placeholder values are not allowed).'
+				});
+			}
+
+			if (typeof tenantId === 'string' && invalidSentinelValues.has(tenantId.trim())) {
+				return res.status(400).json({
+					error: 'Invalid OAuth tenant ID',
+					message: 'Please provide a real OAuth Tenant ID (placeholder values are not allowed).'
+				});
+			}
+
+			if (typeof clientSecret === 'string' && invalidSentinelValues.has(clientSecret.trim())) {
+				return res.status(400).json({
+					error: 'Invalid OAuth client secret',
+					message: 'Please provide a real OAuth Client Secret (placeholder values are not allowed).'
+				});
+			}
+
+			if (clientId === undefined && authority === undefined && tenantId === undefined && clientSecret === undefined) {
+				return res.status(400).json({ error: 'At least one OAuth configuration option is required' });
+			}
+
+			const beforeConfig = configManager.getOAuthConfig();
+			const updatedConfig = await configManager.updateOAuthConfig({
+				clientId,
+				authority: tenantId !== undefined ? tenantId : authority,
+				clientSecret
+			});
+
+			refreshMsalClient();
+			require('./socket-controller').refreshMsalClient();
+			triggerRoomRefreshWithFollowUp();
+
+			appendAuditLog({
+				event: 'config.oauth.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: updatedConfig
+			});
+
+			res.json({
+				success: true,
+				config: updatedConfig,
+				message: 'OAuth configuration updated'
+			});
+		} catch (err) {
+			console.error('Error updating OAuth config:', err);
+			res.status(500).json({ error: err.message || 'Failed to update OAuth configuration' });
+		}
+	});
+
+	app.get('/api/system-config', checkApiToken, function(req, res) {
+		try {
+			const systemConfig = configManager.getSystemConfig();
+			res.json(systemConfig);
+		} catch (err) {
+			console.error('Error retrieving system config:', err);
+			res.status(500).json({ error: 'Failed to retrieve system configuration' });
+		}
+	});
+
+	app.post('/api/system-config', checkApiToken, async function(req, res) {
+		try {
+			if (isSystemEnvConfigured()) {
+				return res.status(403).json({
+					error: 'System configuration is locked by environment variables',
+					message: 'Remove STARTUP_VALIDATION/GRAPH_WEBHOOK env variables to edit via admin panel.'
+				});
+			}
+
+			const {
+				startupValidationStrict,
+				graphWebhookEnabled,
+				graphWebhookClientState,
+				graphWebhookAllowedIps
+			} = req.body || {};
+
+			if (
+				startupValidationStrict === undefined
+				&& graphWebhookEnabled === undefined
+				&& graphWebhookClientState === undefined
+				&& graphWebhookAllowedIps === undefined
+			) {
+				return res.status(400).json({ error: 'At least one system configuration option is required' });
+			}
+
+			const beforeConfig = configManager.getSystemConfig();
+			const updatedConfig = await configManager.updateSystemConfig({
+				startupValidationStrict,
+				graphWebhookEnabled,
+				graphWebhookClientState,
+				graphWebhookAllowedIps
+			});
+
+			require('./socket-controller').refreshPollingSchedule();
+
+			appendAuditLog({
+				event: 'config.system.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: updatedConfig
+			});
+
+			res.json({
+				success: true,
+				config: updatedConfig,
+				message: 'System configuration updated'
+			});
+		} catch (err) {
+			console.error('Error updating system config:', err);
+			res.status(500).json({ error: err.message || 'Failed to update system configuration' });
 		}
 	});
 
@@ -1260,6 +1386,10 @@ module.exports = function(app) {
 	app.get('/api/config-locks', function(req, res) {
 		try {
 			const isEnvConfigured = (name) => process.env[name] !== undefined;
+			const isApiTokenEnvConfigured = () => {
+				const value = String(process.env.API_TOKEN || '').trim();
+				return !!value;
+			};
 
 			const locks = {
 				wifiLocked: isEnvConfigured('WIFI_SSID') || isEnvConfigured('WIFI_PASSWORD'),
@@ -1286,7 +1416,11 @@ module.exports = function(app) {
 					|| isEnvConfigured('RATE_LIMIT_WRITE_MAX')
 					|| isEnvConfigured('RATE_LIMIT_AUTH_WINDOW_MS')
 					|| isEnvConfigured('RATE_LIMIT_AUTH_MAX')
-				)
+				),
+				apiTokenLocked: isApiTokenEnvConfigured(),
+				oauthLocked: isOAuthEnvConfigured(),
+				systemLocked: isSystemEnvConfigured(),
+				maintenanceLocked: isMaintenanceEnvConfigured()
 			};
 			res.json(locks);
 		} catch (err) {
@@ -1585,6 +1719,13 @@ module.exports = function(app) {
 
 	app.post('/api/maintenance', checkApiToken, async function(req, res) {
 		try {
+			if (isMaintenanceEnvConfigured()) {
+				return res.status(403).json({
+					error: 'Maintenance configuration is locked by environment variables',
+					message: 'Remove MAINTENANCE_MODE/MAINTENANCE_MESSAGE from environment to edit via admin panel.'
+				});
+			}
+
 			const { enabled, message } = req.body;
 			const beforeConfig = configManager.getMaintenanceConfig();
 			if (enabled === undefined && message === undefined) {
@@ -1665,6 +1806,8 @@ module.exports = function(app) {
 			logo: configManager.getLogoConfig(),
 			sidebar: configManager.getSidebarConfig(),
 			booking: configManager.getBookingConfig(),
+			system: configManager.getSystemConfig(),
+			oauth: configManager.getOAuthConfig(),
 			search: configManager.getSearchConfig(),
 			rateLimit: configManager.getRateLimitConfig(),
 			colors: configManager.getColorsConfig(),
@@ -1695,6 +1838,8 @@ module.exports = function(app) {
 				logo: configManager.getLogoConfig(),
 				sidebar: configManager.getSidebarConfig(),
 				booking: configManager.getBookingConfig(),
+				system: configManager.getSystemConfig(),
+				oauth: configManager.getOAuthConfig(),
 				search: configManager.getSearchConfig(),
 				rateLimit: configManager.getRateLimitConfig(),
 				colors: configManager.getColorsConfig(),
@@ -1729,6 +1874,25 @@ module.exports = function(app) {
 					payload.booking.roomGroupFeatureFlags,
 					payload.booking.checkIn
 				);
+			}
+
+			if (payload.system && !isSystemEnvConfigured()) {
+				await configManager.updateSystemConfig({
+					startupValidationStrict: payload.system.startupValidationStrict,
+					graphWebhookEnabled: payload.system.graphWebhookEnabled,
+					graphWebhookClientState: payload.system.graphWebhookClientState,
+					graphWebhookAllowedIps: payload.system.graphWebhookAllowedIps
+				});
+				require('./socket-controller').refreshPollingSchedule();
+			}
+
+			if (payload.oauth && !isOAuthEnvConfigured()) {
+				await configManager.updateOAuthConfig({
+					clientId: payload.oauth.clientId,
+					authority: payload.oauth.authority
+				});
+				refreshMsalClient();
+				require('./socket-controller').refreshMsalClient();
 			}
 
 			if (payload.search) {
@@ -1781,6 +1945,8 @@ module.exports = function(app) {
 				logo: configManager.getLogoConfig(),
 				sidebar: configManager.getSidebarConfig(),
 				booking: configManager.getBookingConfig(),
+				system: configManager.getSystemConfig(),
+				oauth: configManager.getOAuthConfig(),
 				search: configManager.getSearchConfig(),
 				rateLimit: configManager.getRateLimitConfig(),
 				colors: configManager.getColorsConfig(),

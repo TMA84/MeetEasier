@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.9] - 2026-03-08
+
+### Added
+- **Admin Operations Runtime Controls**
+  - Added runtime API endpoints for OAuth and System configuration (`/api/oauth-config`, `/api/system-config`)
+  - Added runtime API token metadata and update endpoints (`/api/api-token-config`)
+  - Added runtime persistence for OAuth/System/API token configuration in dedicated files under `data/`
+
+- **Admin Auth Session Flow**
+  - Added explicit admin login/logout flow with session token persistence in the React admin UI
+  - Added centralized unauthorized handling with automatic logout on `401` responses
+
+- **Admin API Token Management UX**
+  - Added Operations tab section to show API token source/default status and rotate token
+  - Added translated UI strings for the API token section across all shipped admin languages (DE/EN/FR/ES/IT/NL/PL/PT/CS)
+
+### Changed
+- **Graph-Only Runtime Model**
+  - Unified calendar operations to Microsoft Graph runtime paths and removed remaining EWS execution branches in routes/socket flow
+  - Search mode now runs in Graph-only mode at runtime (`useGraphAPI: true`)
+  - Corrected Graph auth scope usage to `https://graph.microsoft.com/.default`
+
+- **API Token Source & Lock Semantics**
+  - Added default fallback token (`change-me-admin-token`) when no token is configured
+  - Effective admin auth token now resolves from env → runtime → default consistently in backend middleware
+  - If `API_TOKEN` is set in environment, admin token updates are locked (not changeable via Admin UI/API)
+
+- **OAuth Runtime Handling**
+  - OAuth authority inputs are normalized to tenant-based Microsoft login authority URLs
+  - OAuth secret encryption now derives from effective API token and supports re-encryption on token rotation
+  - MSAL clients are refreshed after OAuth runtime updates in routes/socket controller
+
+- **Environment Lock Coverage**
+  - Extended config-lock reporting and enforcement for API token, OAuth, System and Maintenance sections
+
+### Fixed
+- **Maintenance Message Safety**
+  - Auto-maintenance fallback no longer appends technical backend error details to display messages
+  - Existing auto-generated maintenance messages are normalized back to the safe fallback message
+
+- **Admin Login Visibility & Reliability**
+  - Improved login button contrast/visibility in admin styling
+  - Fixed admin flow so protected requests consistently trigger unauthorized handling and logout
+
+- **Startup Validation Behavior**
+  - Missing OAuth values now produce actionable startup info instead of hard failure to allow admin-side setup
+  - Default API token now triggers a warning instead of blocking startup
+
+### Documentation
+- Updated default API token behavior and production guidance in `README.md`, `INSTALLATION.md`, `CONFIGURATION.md`, and `.env.template`
+
+### Maintenance
+- Updated `.gitignore` runtime config ignore behavior for generated `data/*` runtime files
+
 ## [1.2.8] - 2026-03-07
 
 ### Added

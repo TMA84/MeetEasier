@@ -172,6 +172,8 @@ docker run -d -p 8080:8080 \
   meeteasier
 ```
 
+If `API_TOKEN` is omitted, the default admin token `change-me-admin-token` is used.
+
 **Or use the pre-built image from GitHub Container Registry:**
 
 ```bash
@@ -187,6 +189,8 @@ docker run -d -p 8080:8080 \
   --name meeteasier \
   ghcr.io/tma84/meeteasier:latest
 ```
+
+If `API_TOKEN` is omitted, the default admin token `change-me-admin-token` is used.
 
 ### Persistent Storage
 
@@ -216,7 +220,7 @@ services:
       - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID}
       - OAUTH_AUTHORITY=${OAUTH_AUTHORITY}
       - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET}
-      # Admin API Token (required)
+      # Admin API Token (optional override; default: change-me-admin-token)
       - API_TOKEN=${API_TOKEN}
       # Optional: WiFi Configuration
       - WIFI_SSID=${WIFI_SSID}
@@ -259,6 +263,8 @@ docker run -d -p 8080:8080 \
   --name meeteasier \
   meeteasier
 ```
+
+**Note:** If `API_TOKEN` is not set, the app uses `change-me-admin-token`. For production, always set a secure token (or rotate it immediately via Admin panel).
 
 **Note:** When environment variables are set, the corresponding admin panel sections will be hidden to prevent accidental changes.
 
@@ -425,7 +431,8 @@ Use a .env file (recommended method). See .env.template for all available variab
 
 **Note:** 
 - EWS (Exchange Web Services) variables are deprecated and no longer needed.
-- The API_TOKEN is required to protect admin endpoints. Generate a secure random token (64+ characters recommended).
+- If API_TOKEN is not set, the app uses the default admin token: `change-me-admin-token`.
+- For production, set API_TOKEN to a secure random value (64+ characters recommended) or change it immediately via Admin panel (Operations → Admin API Token).
 - Microsoft Graph API now supports pagination, so MAXROOMS and MAXITEMS can be set higher than the API's 30-item limit.
 
 ---

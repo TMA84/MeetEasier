@@ -10,32 +10,32 @@ function validateStartupConfig(config) {
 	const warnings = [];
 	const info = [];
 
-	const useGraphApi = isTruthy(config.calendarSearch.useGraphAPI);
+	const useGraphApi = true;
+	const hasGraphClientId = config?.msalConfig?.auth?.clientId && config.msalConfig.auth.clientId !== 'OAUTH_CLIENT_ID_NOT_SET';
+	const hasGraphAuthority = config?.msalConfig?.auth?.authority && config.msalConfig.auth.authority !== 'OAUTH_AUTHORITY_NOT_SET';
+	const hasGraphSecret = config?.msalConfig?.auth?.clientSecret && config.msalConfig.auth.clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET';
 
 	if (useGraphApi) {
-		if (!process.env.OAUTH_CLIENT_ID) {
-			errors.push('OAUTH_CLIENT_ID is required when SEARCH_USE_GRAPHAPI=true.');
+		const missingOAuthValues = [];
+		if (!hasGraphClientId) {
+			missingOAuthValues.push('OAUTH_CLIENT_ID');
 		}
-		if (!process.env.OAUTH_AUTHORITY) {
-			errors.push('OAUTH_AUTHORITY is required when SEARCH_USE_GRAPHAPI=true.');
+		if (!hasGraphAuthority) {
+			missingOAuthValues.push('OAUTH_AUTHORITY');
 		}
-		if (!process.env.OAUTH_CLIENT_SECRET) {
-			errors.push('OAUTH_CLIENT_SECRET is required when SEARCH_USE_GRAPHAPI=true.');
+		if (!hasGraphSecret) {
+			missingOAuthValues.push('OAUTH_CLIENT_SECRET');
 		}
-	} else {
-		if (!process.env.EWS_USERNAME) {
-			errors.push('EWS_USERNAME is required when SEARCH_USE_GRAPHAPI=false.');
-		}
-		if (!process.env.EWS_PASSWORD) {
-			errors.push('EWS_PASSWORD is required when SEARCH_USE_GRAPHAPI=false.');
-		}
-		if (!process.env.EWS_URI) {
-			errors.push('EWS_URI is required when SEARCH_USE_GRAPHAPI=false.');
+
+		if (missingOAuthValues.length > 0) {
+			info.push(`OAuth is not fully configured yet (${missingOAuthValues.join(', ')} missing). Server starts so credentials can be set via Admin panel.`);
 		}
 	}
 
 	if (!config.apiToken) {
-		errors.push('API_TOKEN is required for protected admin operations.');
+		errors.push('Admin API token is not configured.');
+	} else if (config.apiToken === 'change-me-admin-token') {
+		warnings.push('Default API token is active. Change it in Admin panel or set API_TOKEN in environment.');
 	}
 
 	if (!Number.isFinite(config.calendarSearch.pollIntervalMs) || config.calendarSearch.pollIntervalMs < 5000) {
