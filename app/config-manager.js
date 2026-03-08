@@ -22,11 +22,16 @@ const searchConfigPath = path.join(__dirname, '../data/search-config.json');
 const rateLimitConfigPath = path.join(__dirname, '../data/rate-limit-config.json');
 const oauthConfigPath = path.join(__dirname, '../data/oauth-config.json');
 const systemConfigPath = path.join(__dirname, '../data/system-config.json');
+const translationApiConfigPath = path.join(__dirname, '../data/translation-api-config.json');
 const apiTokenConfigPath = path.join(__dirname, '../data/api-token-config.json');
+const apiTokenEncryptionKeyPath = path.join(__dirname, '../data/.api-token-key');
 const qrPath = path.join(__dirname, '../static/img/wifi-qr.png');
 
 const OAUTH_SECRET_ALGO = 'aes-256-gcm';
+const API_TOKEN_ENCRYPTION_ALGO = 'aes-256-gcm';
+const API_TOKEN_ENCRYPTION_ENV = 'API_TOKEN_ENCRYPTION_KEY';
 const DEFAULT_API_TOKEN = 'change-me-admin-token';
+const INITIAL_API_TOKEN_ENV_VALUE = String(process.env.API_TOKEN || '').trim();
 const API_TOKEN_PLACEHOLDERS = new Set([
 	'',
 	'api_token_not_set'
@@ -278,21 +283,100 @@ function isPlaceholderApiTokenValue(value) {
 }
 
 function isApiTokenEnvLocked() {
-	const normalized = String(process.env.API_TOKEN || '').trim();
-	return !!normalized;
+	return !!INITIAL_API_TOKEN_ENV_VALUE;
+}
+
+function getApiTokenEncryptionKey() {
+	const envKeyMaterial = String(process.env[API_TOKEN_ENCRYPTION_ENV] || '').trim();
+	if (envKeyMaterial) {
+		return crypto.createHash('sha256').update(envKeyMaterial).digest();
+	}
+
+	try {
+		const stored = fs.readFileSync(apiTokenEncryptionKeyPath, 'utf8').trim();
+		const keyBuffer = Buffer.from(stored, 'base64');
+		if (keyBuffer.length === 32) {
+			return keyBuffer;
+		}
+	} catch (err) {
+		// key file missing or invalid, create a new one
+	}
+
+	const generatedKey = crypto.randomBytes(32);
+	fs.writeFileSync(apiTokenEncryptionKeyPath, generatedKey.toString('base64'), {
+		mode: 0o600
+	});
+	return generatedKey;
+}
+
+function encryptApiToken(tokenValue) {
+	const key = getApiTokenEncryptionKey();
+	const iv = crypto.randomBytes(12);
+	const cipher = crypto.createCipheriv(API_TOKEN_ENCRYPTION_ALGO, key, iv);
+	const encrypted = Buffer.concat([cipher.update(String(tokenValue), 'utf8'), cipher.final()]);
+	const authTag = cipher.getAuthTag();
+
+	return {
+		algorithm: API_TOKEN_ENCRYPTION_ALGO,
+		iv: iv.toString('base64'),
+		authTag: authTag.toString('base64'),
+		value: encrypted.toString('base64')
+	};
+}
+
+function decryptApiToken(payload) {
+	if (!payload || typeof payload !== 'object') {
+		return null;
+	}
+
+	if (payload.algorithm && payload.algorithm !== API_TOKEN_ENCRYPTION_ALGO) {
+		return null;
+	}
+
+	try {
+		const key = getApiTokenEncryptionKey();
+		const iv = Buffer.from(String(payload.iv || ''), 'base64');
+		const authTag = Buffer.from(String(payload.authTag || ''), 'base64');
+		const encryptedValue = Buffer.from(String(payload.value || ''), 'base64');
+
+		const decipher = crypto.createDecipheriv(API_TOKEN_ENCRYPTION_ALGO, key, iv);
+		decipher.setAuthTag(authTag);
+		const decrypted = Buffer.concat([decipher.update(encryptedValue), decipher.final()]);
+		return decrypted.toString('utf8');
+	} catch (error) {
+		return null;
+	}
 }
 
 function readRawApiTokenConfig() {
 	try {
 		const data = fs.readFileSync(apiTokenConfigPath, 'utf8');
-		return JSON.parse(data);
+		const parsed = JSON.parse(data);
+
+		if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+			if (parsed.tokenEncrypted && typeof parsed.tokenEncrypted === 'object') {
+				return parsed;
+			}
+
+			const legacyToken = normalizeApiTokenValue(parsed.token);
+			if (legacyToken) {
+				const migratedConfig = {
+					tokenEncrypted: encryptApiToken(legacyToken),
+					lastUpdated: parsed.lastUpdated || new Date().toISOString()
+				};
+				fs.writeFileSync(apiTokenConfigPath, JSON.stringify(migratedConfig, null, 2));
+				return migratedConfig;
+			}
+		}
+
+		return parsed;
 	} catch (err) {
 		return null;
 	}
 }
 
 function getApiTokenRuntimeConfig() {
-	const envToken = normalizeApiTokenValue(process.env.API_TOKEN);
+	const envToken = normalizeApiTokenValue(INITIAL_API_TOKEN_ENV_VALUE);
 	if (envToken) {
 		return {
 			token: envToken,
@@ -303,7 +387,8 @@ function getApiTokenRuntimeConfig() {
 	}
 
 	const rawConfig = readRawApiTokenConfig();
-	const runtimeToken = normalizeApiTokenValue(rawConfig?.token);
+	const decryptedRuntimeToken = decryptApiToken(rawConfig?.tokenEncrypted);
+	const runtimeToken = normalizeApiTokenValue(decryptedRuntimeToken);
 	if (runtimeToken) {
 		return {
 			token: runtimeToken,
@@ -341,7 +426,7 @@ function saveApiTokenConfig(apiToken) {
 	}
 
 	const configData = {
-		token: normalizedToken,
+		tokenEncrypted: encryptApiToken(normalizedToken),
 		lastUpdated: new Date().toISOString()
 	};
 
@@ -689,6 +774,115 @@ function normalizeRateLimitConfig(rateLimitConfig) {
 	};
 }
 
+function normalizeTranslationApiConfig(translationApiConfig, fallback = {}) {
+	const fallbackEnabled = toBoolean(fallback.enabled, true);
+	const fallbackUrl = String(fallback.url || 'https://translation.googleapis.com/language/translate/v2').trim() || 'https://translation.googleapis.com/language/translate/v2';
+	const fallbackTimeoutMs = toMinInt(fallback.timeoutMs, 20000, 3000);
+	const fallbackApiKey = String(fallback.apiKey || '');
+
+	const source = translationApiConfig && typeof translationApiConfig === 'object' && !Array.isArray(translationApiConfig)
+		? translationApiConfig
+		: {};
+
+	return {
+		enabled: toBoolean(source.enabled, fallbackEnabled),
+		url: source.url !== undefined
+			? (String(source.url || '').trim() || fallbackUrl)
+			: fallbackUrl,
+		timeoutMs: toMinInt(source.timeoutMs, fallbackTimeoutMs, 3000),
+		apiKey: source.apiKey !== undefined ? String(source.apiKey || '') : fallbackApiKey
+	};
+}
+
+function getTranslationApiRuntimeConfig() {
+	const fallback = normalizeTranslationApiConfig({
+		enabled: process.env.AUTO_TRANSLATE_ENABLED !== 'false',
+		url: process.env.AUTO_TRANSLATE_URL || 'https://translation.googleapis.com/language/translate/v2',
+		apiKey: process.env.AUTO_TRANSLATE_API_KEY || '',
+		timeoutMs: process.env.AUTO_TRANSLATE_TIMEOUT_MS
+			? Math.max(parseInt(process.env.AUTO_TRANSLATE_TIMEOUT_MS, 10) || 0, 3000)
+			: 20000
+	});
+
+	const rawConfig = (() => {
+		try {
+			const data = fs.readFileSync(translationApiConfigPath, 'utf8');
+			return JSON.parse(data);
+		} catch (err) {
+			return null;
+		}
+	})();
+
+	if (!rawConfig) {
+		return {
+			...fallback,
+			lastUpdated: null
+		};
+	}
+
+	const normalized = normalizeTranslationApiConfig(rawConfig, fallback);
+	return {
+		...normalized,
+		lastUpdated: rawConfig.lastUpdated || null
+	};
+}
+
+function getTranslationApiConfig() {
+	const runtimeConfig = getTranslationApiRuntimeConfig();
+	const hasApiKey = !!String(runtimeConfig.apiKey || '').trim();
+	return {
+		enabled: runtimeConfig.enabled && hasApiKey,
+		url: runtimeConfig.url,
+		timeoutMs: runtimeConfig.timeoutMs,
+		hasApiKey,
+		lastUpdated: runtimeConfig.lastUpdated
+	};
+}
+
+function saveTranslationApiConfig(translationApiConfig) {
+	let existingRaw = {};
+	try {
+		const data = fs.readFileSync(translationApiConfigPath, 'utf8');
+		existingRaw = JSON.parse(data);
+	} catch (err) {
+		// File doesn't exist or is invalid, use defaults
+	}
+
+	const existingBase = normalizeTranslationApiConfig(existingRaw, {
+		enabled: process.env.AUTO_TRANSLATE_ENABLED !== 'false',
+		url: process.env.AUTO_TRANSLATE_URL || 'https://translation.googleapis.com/language/translate/v2',
+		apiKey: process.env.AUTO_TRANSLATE_API_KEY || '',
+		timeoutMs: process.env.AUTO_TRANSLATE_TIMEOUT_MS
+			? Math.max(parseInt(process.env.AUTO_TRANSLATE_TIMEOUT_MS, 10) || 0, 3000)
+			: 20000
+	});
+
+	const source = translationApiConfig && typeof translationApiConfig === 'object' && !Array.isArray(translationApiConfig)
+		? translationApiConfig
+		: {};
+
+	const normalized = normalizeTranslationApiConfig(source, existingBase);
+	const keepExistingApiKey = source.apiKey === undefined;
+
+	const configData = {
+		enabled: normalized.enabled,
+		url: normalized.url,
+		timeoutMs: normalized.timeoutMs,
+		apiKey: keepExistingApiKey ? existingBase.apiKey : normalized.apiKey,
+		lastUpdated: new Date().toISOString()
+	};
+
+	fs.writeFileSync(translationApiConfigPath, JSON.stringify(configData, null, 2));
+	const hasApiKey = !!String(configData.apiKey || '').trim();
+	return {
+		enabled: configData.enabled && hasApiKey,
+		url: configData.url,
+		timeoutMs: configData.timeoutMs,
+		hasApiKey,
+		lastUpdated: configData.lastUpdated
+	};
+}
+
 function getSearchConfig() {
 	try {
 		const data = fs.readFileSync(searchConfigPath, 'utf8');
@@ -864,7 +1058,8 @@ function normalizeAdminTranslations(rawTranslations) {
 	return normalized;
 }
 
-function normalizeI18nConfig(rawConfig) {
+function normalizeI18nConfig(rawConfig, options = {}) {
+	const includeDefaults = options.includeDefaults !== false;
 	const defaults = getDefaultI18nConfig();
 	const source = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
 	const normalizedMessages = {};
@@ -890,14 +1085,18 @@ function normalizeI18nConfig(rawConfig) {
 	}
 
 	return {
-		maintenanceMessages: {
-			...defaults.maintenanceMessages,
-			...normalizedMessages
-		},
-		adminTranslations: {
-			...defaults.adminTranslations,
-			...normalizedAdminTranslations
-		},
+		maintenanceMessages: includeDefaults
+			? {
+				...defaults.maintenanceMessages,
+				...normalizedMessages
+			}
+			: normalizedMessages,
+		adminTranslations: includeDefaults
+			? {
+				...defaults.adminTranslations,
+				...normalizedAdminTranslations
+			}
+			: normalizedAdminTranslations,
 		lastUpdated: source.lastUpdated || null
 	};
 }
@@ -909,7 +1108,7 @@ function normalizeI18nConfig(rawConfig) {
 function getI18nConfig() {
 	try {
 		const data = fs.readFileSync(i18nConfigPath, 'utf8');
-		return normalizeI18nConfig(JSON.parse(data));
+		return normalizeI18nConfig(JSON.parse(data), { includeDefaults: false });
 	} catch (err) {
 		return getDefaultI18nConfig();
 	}
@@ -1073,24 +1272,39 @@ function saveMaintenanceConfig(maintenanceConfig) {
  */
 function saveI18nConfig(i18nConfig) {
 	const existingConfig = getI18nConfig();
-	const normalizedIncoming = normalizeI18nConfig(i18nConfig);
-	const mergedAdminTranslations = { ...existingConfig.adminTranslations };
-
-	for (const [langKey, value] of Object.entries(normalizedIncoming.adminTranslations || {})) {
-		mergedAdminTranslations[langKey] = {
-			...(mergedAdminTranslations[langKey] || {}),
-			...value
-		};
-	}
+	const defaults = getDefaultI18nConfig();
+	const normalizedIncoming = normalizeI18nConfig(i18nConfig, { includeDefaults: false });
+	const hasMaintenanceMessages = i18nConfig
+		&& typeof i18nConfig === 'object'
+		&& Object.prototype.hasOwnProperty.call(i18nConfig, 'maintenanceMessages');
+	const hasAdminTranslations = i18nConfig
+		&& typeof i18nConfig === 'object'
+		&& Object.prototype.hasOwnProperty.call(i18nConfig, 'adminTranslations');
 
 	const configData = {
-		maintenanceMessages: {
-			...existingConfig.maintenanceMessages,
-			...normalizedIncoming.maintenanceMessages
-		},
-		adminTranslations: mergedAdminTranslations,
+		maintenanceMessages: hasMaintenanceMessages
+			? normalizedIncoming.maintenanceMessages
+			: existingConfig.maintenanceMessages,
+		adminTranslations: hasAdminTranslations
+			? normalizedIncoming.adminTranslations
+			: existingConfig.adminTranslations,
 		lastUpdated: new Date().toISOString()
 	};
+
+	for (const protectedLanguage of ['en', 'de']) {
+		if (!configData.maintenanceMessages[protectedLanguage]) {
+			configData.maintenanceMessages[protectedLanguage] =
+				existingConfig.maintenanceMessages?.[protectedLanguage]
+				|| defaults.maintenanceMessages?.[protectedLanguage]
+				|| { title: '', body: '' };
+		}
+
+		if (!configData.adminTranslations[protectedLanguage] && existingConfig.adminTranslations?.[protectedLanguage]) {
+			configData.adminTranslations[protectedLanguage] = {
+				...existingConfig.adminTranslations[protectedLanguage]
+			};
+		}
+	}
 
 	fs.writeFileSync(i18nConfigPath, JSON.stringify(configData, null, 2));
 	return configData;
@@ -1405,6 +1619,17 @@ async function updateSystemConfig(systemConfig) {
 	return savedConfig;
 }
 
+async function updateTranslationApiConfig(translationApiConfig) {
+	const savedConfig = saveTranslationApiConfig(translationApiConfig || {});
+
+	if (io) {
+		io.of('/').emit('translationApiConfigUpdated', savedConfig);
+		console.log('Translation API config updated, notified all clients via Socket.IO');
+	}
+
+	return savedConfig;
+}
+
 async function updateApiToken(nextToken) {
 	const normalizedNextToken = normalizeApiTokenValue(nextToken);
 	if (!normalizedNextToken) {
@@ -1480,8 +1705,11 @@ module.exports = {
 	getOAuthConfig,
 	getApiTokenConfig,
 	getEffectiveApiToken,
+	isApiTokenEnvLocked,
 	getSearchConfig,
 	getRateLimitConfig,
+	getTranslationApiRuntimeConfig,
+	getTranslationApiConfig,
 	getColorsConfig,
 	getMaintenanceConfig,
 	getI18nConfig,
@@ -1494,6 +1722,7 @@ module.exports = {
 	updateApiToken,
 	updateSearchConfig,
 	updateRateLimitConfig,
+	updateTranslationApiConfig,
 	updateColorsConfig,
 	updateMaintenanceConfig,
 	updateI18nConfig,

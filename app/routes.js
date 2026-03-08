@@ -47,6 +47,13 @@ function isMaintenanceEnvConfigured() {
 		|| isEnvDefined('MAINTENANCE_MESSAGE');
 }
 
+function isTranslationApiEnvConfigured() {
+	return isEnvDefined('AUTO_TRANSLATE_ENABLED')
+		|| isEnvDefined('AUTO_TRANSLATE_URL')
+		|| isEnvDefined('AUTO_TRANSLATE_API_KEY')
+		|| isEnvDefined('AUTO_TRANSLATE_TIMEOUT_MS');
+}
+
 function getClientIp(req) {
 	const forwardedFor = req.headers['x-forwarded-for'];
 	if (forwardedFor) {
@@ -70,6 +77,168 @@ function normalizeRoomKey(roomEmail) {
 
 function normalizeRoomGroupKey(roomGroup) {
 	return String(roomGroup || '').trim().toLowerCase();
+}
+
+function normalizeLanguageCode(value) {
+	return String(value || '').trim().toLowerCase();
+}
+
+function getAutoTranslateConfig() {
+	const runtimeConfig = configManager.getTranslationApiConfig();
+	const runtimeSecret = configManager.getTranslationApiRuntimeConfig
+		? configManager.getTranslationApiRuntimeConfig()
+		: null;
+	const hasApiKey = !!String(runtimeSecret?.apiKey || '').trim();
+
+	return {
+		enabled: runtimeConfig.enabled && hasApiKey,
+		url: runtimeConfig.url,
+		apiKey: runtimeSecret?.apiKey || '',
+		timeoutMs: runtimeConfig.timeoutMs
+	};
+}
+
+async function translateTextBatch(texts, sourceLanguage, targetLanguage) {
+	if (!Array.isArray(texts) || texts.length === 0) {
+		return [];
+	}
+
+	const source = normalizeLanguageCode(sourceLanguage) || 'en';
+	const target = normalizeLanguageCode(targetLanguage);
+	if (!target || source === target) {
+		return texts.map((text) => String(text || ''));
+	}
+
+	const translatorConfig = getAutoTranslateConfig();
+	if (!translatorConfig.enabled) {
+		return texts.map((text) => String(text || ''));
+	}
+
+	const sourceTexts = texts.map((text) => String(text || ''));
+	const sourceCandidates = Array.from(new Set([source, source.split('-')[0], 'auto'].filter(Boolean)));
+	const targetCandidates = Array.from(new Set([target, target.split('-')[0]].filter(Boolean)));
+
+	const parseTranslatedPayload = (payload, originals) => {
+		if (Array.isArray(payload?.data?.translations)) {
+			return payload.data.translations.map((entry, index) => String(entry?.translatedText || originals[index] || ''));
+		}
+
+		if (Array.isArray(payload)) {
+			return payload.map((entry, index) => String(entry?.translatedText || originals[index] || ''));
+		}
+
+		if (Array.isArray(payload?.translatedText)) {
+			return payload.translatedText.map((entry, index) => String(entry || originals[index] || ''));
+		}
+
+		if (typeof payload?.translatedText === 'string' && originals.length === 1) {
+			return [payload.translatedText];
+		}
+
+		throw new Error('Unexpected translation payload');
+	};
+
+	const requestTranslation = async (q, sourceCode, targetCode) => {
+		const abortController = new AbortController();
+		const timeout = setTimeout(() => abortController.abort(), translatorConfig.timeoutMs);
+
+		try {
+			const isGoogleTranslateApi = /translation\.googleapis\.com/i.test(String(translatorConfig.url || ''));
+			const requestUrl = new URL(String(translatorConfig.url));
+
+			if (isGoogleTranslateApi && translatorConfig.apiKey) {
+				requestUrl.searchParams.set('key', translatorConfig.apiKey);
+			}
+
+			const requestBody = isGoogleTranslateApi
+				? {
+					q,
+					target: targetCode,
+					format: 'text',
+					...(sourceCode !== 'auto' ? { source: sourceCode } : {})
+				}
+				: {
+					q,
+					source: sourceCode,
+					target: targetCode,
+					format: 'text',
+					...(translatorConfig.apiKey ? { api_key: translatorConfig.apiKey } : {})
+				};
+
+			const response = await fetch(requestUrl.toString(), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(requestBody),
+				signal: abortController.signal
+			});
+
+			if (!response.ok) {
+				let errorDetail = '';
+				try {
+					errorDetail = await response.text();
+				} catch (error) {
+					errorDetail = '';
+				}
+				throw new Error(`Translation request failed with status ${response.status}${errorDetail ? `: ${errorDetail}` : ''}`);
+			}
+
+			return response.json();
+		} finally {
+			clearTimeout(timeout);
+		}
+	};
+
+	let lastError = null;
+
+	for (const sourceCandidate of sourceCandidates) {
+		for (const targetCandidate of targetCandidates) {
+			try {
+				const batchPayload = await requestTranslation(sourceTexts, sourceCandidate, targetCandidate);
+				return parseTranslatedPayload(batchPayload, sourceTexts);
+			} catch (error) {
+				lastError = error;
+				try {
+					const translatedValues = [];
+					for (const value of sourceTexts) {
+						const singlePayload = await requestTranslation(value, sourceCandidate, targetCandidate);
+						const parsedSingle = parseTranslatedPayload(singlePayload, [value]);
+						translatedValues.push(parsedSingle[0] || value);
+					}
+					return translatedValues;
+				} catch (fallbackError) {
+					lastError = fallbackError;
+				}
+			}
+		}
+	}
+
+	console.warn('Auto-translation fallback to source text:', lastError?.message || lastError);
+	return sourceTexts;
+}
+
+async function translateObjectValues(sourceObject, sourceLanguage, targetLanguage) {
+	const entries = Object.entries(sourceObject || {});
+	if (entries.length === 0) {
+		return {};
+	}
+
+	const translated = {};
+	const chunkSize = 40;
+
+	for (let index = 0; index < entries.length; index += chunkSize) {
+		const chunk = entries.slice(index, index + chunkSize);
+		const keys = chunk.map(([key]) => key);
+		const values = chunk.map(([, value]) => String(value || ''));
+		const translatedValues = await translateTextBatch(values, sourceLanguage, targetLanguage);
+
+		for (let i = 0; i < keys.length; i += 1) {
+			translated[keys[i]] = translatedValues[i] || values[i] || '';
+		}
+	}
+
+	return translated;
 }
 
 function getEffectiveBookingConfig(bookingConfig, roomEmail, roomGroup, hasPermission) {
@@ -1068,8 +1237,7 @@ module.exports = function(app) {
 
 	app.post('/api/api-token-config', checkApiToken, async function(req, res) {
 		try {
-			const envToken = String(process.env.API_TOKEN || '').trim();
-			if (envToken) {
+			if (configManager.isApiTokenEnvLocked()) {
 				return res.status(403).json({
 					error: 'API token is locked by environment variable',
 					message: 'Remove API_TOKEN from environment to edit via admin panel.'
@@ -1386,10 +1554,6 @@ module.exports = function(app) {
 	app.get('/api/config-locks', function(req, res) {
 		try {
 			const isEnvConfigured = (name) => process.env[name] !== undefined;
-			const isApiTokenEnvConfigured = () => {
-				const value = String(process.env.API_TOKEN || '').trim();
-				return !!value;
-			};
 
 			const locks = {
 				wifiLocked: isEnvConfigured('WIFI_SSID') || isEnvConfigured('WIFI_PASSWORD'),
@@ -1417,14 +1581,80 @@ module.exports = function(app) {
 					|| isEnvConfigured('RATE_LIMIT_AUTH_WINDOW_MS')
 					|| isEnvConfigured('RATE_LIMIT_AUTH_MAX')
 				),
-				apiTokenLocked: isApiTokenEnvConfigured(),
+				apiTokenLocked: configManager.isApiTokenEnvLocked(),
 				oauthLocked: isOAuthEnvConfigured(),
 				systemLocked: isSystemEnvConfigured(),
 				maintenanceLocked: isMaintenanceEnvConfigured()
+				,
+				translationApiLocked: isTranslationApiEnvConfigured()
 			};
 			res.json(locks);
 		} catch (err) {
 			res.status(500).json({ error: 'Failed to retrieve configuration locks' });
+		}
+	});
+
+	app.get('/api/translation-api-config', function(req, res) {
+		try {
+			const translationApiConfig = configManager.getTranslationApiConfig();
+			res.json(translationApiConfig);
+		} catch (err) {
+			console.error('Error retrieving translation API config:', err);
+			res.status(500).json({ error: 'Failed to retrieve translation API configuration' });
+		}
+	});
+
+	app.post('/api/translation-api-config', checkApiToken, async function(req, res) {
+		try {
+			if (isTranslationApiEnvConfigured()) {
+				return res.status(403).json({
+					error: 'Translation API configuration is locked by environment variables',
+					message: 'Remove AUTO_TRANSLATE_* env variables to edit via admin panel.'
+				});
+			}
+
+			const {
+				enabled,
+				url,
+				apiKey,
+				timeoutMs
+			} = req.body || {};
+
+			if (
+				enabled === undefined
+				&& url === undefined
+				&& apiKey === undefined
+				&& timeoutMs === undefined
+			) {
+				return res.status(400).json({ error: 'At least one translation API configuration option is required' });
+			}
+
+			const beforeConfig = configManager.getTranslationApiConfig();
+			const updatedConfig = await configManager.updateTranslationApiConfig({
+				enabled,
+				url,
+				apiKey,
+				timeoutMs
+			});
+
+			appendAuditLog({
+				event: 'config.translation_api.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: beforeConfig,
+				after: updatedConfig
+			});
+
+			res.json({
+				success: true,
+				config: updatedConfig,
+				message: 'Translation API configuration updated'
+			});
+		} catch (err) {
+			console.error('Error updating translation API config:', err);
+			res.status(500).json({ error: err.message || 'Failed to update translation API configuration' });
 		}
 	});
 
@@ -1788,6 +2018,50 @@ module.exports = function(app) {
 		} catch (err) {
 			console.error('Error updating i18n config:', err);
 			res.status(500).json({ error: 'Failed to update i18n configuration' });
+		}
+	});
+
+	app.post('/api/i18n/auto-translate', checkApiToken, async function(req, res) {
+		try {
+			const { targetLanguage, sourceLanguage, maintenanceSource, adminSource } = req.body || {};
+			const normalizedTargetLanguage = normalizeLanguageCode(targetLanguage);
+			const normalizedSourceLanguage = normalizeLanguageCode(sourceLanguage) || 'en';
+
+			if (!normalizedTargetLanguage || !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/.test(normalizedTargetLanguage)) {
+				return res.status(400).json({ error: 'Invalid target language code' });
+			}
+
+			if (!maintenanceSource || typeof maintenanceSource !== 'object' || Array.isArray(maintenanceSource)) {
+				return res.status(400).json({ error: 'maintenanceSource must be an object' });
+			}
+
+			if (!adminSource || typeof adminSource !== 'object' || Array.isArray(adminSource)) {
+				return res.status(400).json({ error: 'adminSource must be an object' });
+			}
+
+			const translatedMaintenance = await translateObjectValues(
+				{
+					title: maintenanceSource.title || '',
+					body: maintenanceSource.body || ''
+				},
+				normalizedSourceLanguage,
+				normalizedTargetLanguage
+			);
+
+			const translatedAdmin = await translateObjectValues(
+				adminSource,
+				normalizedSourceLanguage,
+				normalizedTargetLanguage
+			);
+
+			return res.json({
+				success: true,
+				maintenance: translatedMaintenance,
+				admin: translatedAdmin
+			});
+		} catch (err) {
+			console.error('Error auto-translating i18n:', err);
+			return res.status(500).json({ error: 'Failed to auto-translate language content' });
 		}
 	});
 
