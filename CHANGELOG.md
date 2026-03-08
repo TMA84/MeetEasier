@@ -59,6 +59,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Graph Date Handling Hardening**
   - Removed global `Date.prototype` mutation in Graph calendar logic and replaced it with a local date helper in `app/msgraph/graph.js`
 
+- **Extend Meeting Graph Validation Fix**
+  - Fixed Graph event extension payload generation to use consistent DateTime + timeZone handling, resolving `ErrorPropertyValidationFailure` when extending meetings
+
 ## [1.2.8] - 2026-03-08
 
 ### Changed
