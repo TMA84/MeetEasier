@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import io from 'socket.io-client';
 import defaultAdminTranslations, { getAdminTranslations } from '../../config/adminTranslations.js';
 
 const QUICK_ADMIN_TRANSLATION_GROUPS = [
@@ -199,6 +200,7 @@ class Admin extends Component {
       searchLocked: false,
       rateLimitLocked: false,
       apiTokenLocked: false,
+      wifiApiTokenLocked: false,
       oauthLocked: false,
       systemLocked: false,
       maintenanceLocked: false,
@@ -265,6 +267,13 @@ class Admin extends Component {
       apiTokenConfigLastUpdated: '',
       newApiToken: '',
       newApiTokenConfirm: '',
+      wifiApiTokenConfigMessage: null,
+      wifiApiTokenConfigMessageType: null,
+      currentWifiApiTokenSource: 'default',
+      currentWifiApiTokenConfigured: false,
+      wifiApiTokenConfigLastUpdated: '',
+      newWifiApiToken: '',
+      newWifiApiTokenConfirm: '',
       oauthMessage: null,
       oauthMessageType: null,
       systemMessage: null,
@@ -403,6 +412,7 @@ class Admin extends Component {
             this.loadCurrentConfig();
             this.loadSyncStatus();
             this.startSyncIntervals();
+            this.startRealtimeConfigUpdates();
           });
         })
         .catch(() => {
@@ -427,6 +437,44 @@ class Admin extends Component {
     if (this.syncStatusClockInterval) {
       clearInterval(this.syncStatusClockInterval);
     }
+    if (this.configRefreshInterval) {
+      clearInterval(this.configRefreshInterval);
+    }
+    if (this.adminSocket) {
+      this.adminSocket.disconnect();
+      this.adminSocket = null;
+    }
+  }
+
+  startRealtimeConfigUpdates = () => {
+    if (this.adminSocket) {
+      return;
+    }
+
+    this.adminSocket = io();
+    if (!this.adminSocket || !this.adminSocket.on) {
+      return;
+    }
+
+    const refreshConfig = () => {
+      this.loadCurrentConfig();
+      this.loadConfigLocks();
+    };
+
+    this.adminSocket.on('wifiConfigUpdated', refreshConfig);
+    this.adminSocket.on('logoConfigUpdated', refreshConfig);
+    this.adminSocket.on('sidebarConfigUpdated', refreshConfig);
+    this.adminSocket.on('bookingConfigUpdated', refreshConfig);
+    this.adminSocket.on('maintenanceConfigUpdated', refreshConfig);
+    this.adminSocket.on('i18nConfigUpdated', refreshConfig);
+    this.adminSocket.on('colorsConfigUpdated', refreshConfig);
+    this.adminSocket.on('searchConfigUpdated', refreshConfig);
+    this.adminSocket.on('rateLimitConfigUpdated', refreshConfig);
+    this.adminSocket.on('oauthConfigUpdated', refreshConfig);
+    this.adminSocket.on('systemConfigUpdated', refreshConfig);
+    this.adminSocket.on('translationApiConfigUpdated', refreshConfig);
+    this.adminSocket.on('apiTokenUpdated', refreshConfig);
+    this.adminSocket.on('wifiApiTokenUpdated', refreshConfig);
   }
 
   startSyncIntervals = () => {
@@ -440,6 +488,13 @@ class Admin extends Component {
       this.syncStatusClockInterval = setInterval(() => {
         this.setState({ syncStatusTick: Date.now() });
       }, 1000);
+    }
+
+    if (!this.configRefreshInterval) {
+      this.configRefreshInterval = setInterval(() => {
+        this.loadCurrentConfig();
+        this.loadConfigLocks();
+      }, 5000);
     }
   }
 
@@ -501,6 +556,7 @@ class Admin extends Component {
           this.loadCurrentConfig();
           this.loadSyncStatus();
           this.startSyncIntervals();
+          this.startRealtimeConfigUpdates();
         });
       })
       .catch(() => {
@@ -527,6 +583,14 @@ class Admin extends Component {
     if (this.syncStatusClockInterval) {
       clearInterval(this.syncStatusClockInterval);
       this.syncStatusClockInterval = null;
+    }
+    if (this.configRefreshInterval) {
+      clearInterval(this.configRefreshInterval);
+      this.configRefreshInterval = null;
+    }
+    if (this.adminSocket) {
+      this.adminSocket.disconnect();
+      this.adminSocket = null;
     }
 
     this.setState({
@@ -579,6 +643,7 @@ class Admin extends Component {
           searchLocked: data.searchLocked || false,
           rateLimitLocked: data.rateLimitLocked || false,
           apiTokenLocked: data.apiTokenLocked || false,
+          wifiApiTokenLocked: data.wifiApiTokenLocked || false,
           oauthLocked: data.oauthLocked || false,
           systemLocked: data.systemLocked || false,
           maintenanceLocked: data.maintenanceLocked || false,
@@ -994,8 +1059,16 @@ class Admin extends Component {
   }
 
   loadCurrentConfig = () => {
+	const { apiToken } = this.state;
+	const wifiHeaders = {};
+	if (apiToken) {
+	  wifiHeaders['Authorization'] = `Bearer ${apiToken}`;
+	}
+
     // Load WiFi config
-    fetch('/api/wifi')
+    fetch('/api/wifi', {
+	  headers: wifiHeaders
+	})
       .then(response => response.json())
       .then(data => {
         this.setState({
@@ -1377,6 +1450,11 @@ class Admin extends Component {
           currentApiTokenIsDefault: !!data.isDefault,
           apiTokenConfigLastUpdated: data.lastUpdated
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
+            : '-',
+          currentWifiApiTokenSource: data.wifiSource || 'default',
+          currentWifiApiTokenConfigured: !!data.wifiConfigured,
+          wifiApiTokenConfigLastUpdated: data.wifiLastUpdated
+            ? new Date(data.wifiLastUpdated).toLocaleString(navigator.language || 'de-DE')
             : '-'
         });
       })
@@ -2120,6 +2198,74 @@ class Admin extends Component {
       });
   }
 
+  handleWiFiApiTokenSubmit = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const { apiToken, newWifiApiToken, newWifiApiTokenConfirm } = this.state;
+    const trimmedNewToken = String(newWifiApiToken || '').trim();
+    const trimmedConfirmToken = String(newWifiApiTokenConfirm || '').trim();
+
+    if (!trimmedNewToken || trimmedNewToken.length < 8) {
+      this.setState({
+        wifiApiTokenConfigMessage: `${t.errorPrefix} ${t.apiTokenConfigMinLengthError || 'API token must have at least 8 characters.'}`,
+        wifiApiTokenConfigMessageType: 'error'
+      });
+      return;
+    }
+
+    if (trimmedNewToken !== trimmedConfirmToken) {
+      this.setState({
+        wifiApiTokenConfigMessage: `${t.errorPrefix} ${t.apiTokenConfigMismatchError || 'New API token and confirmation do not match.'}`,
+        wifiApiTokenConfigMessageType: 'error'
+      });
+      return;
+    }
+
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (apiToken) {
+      headers.Authorization = `Bearer ${apiToken}`;
+    }
+
+    fetch('/api/api-token-config', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        newWifiToken: trimmedNewToken
+      })
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        this.setState({
+          newWifiApiToken: '',
+          newWifiApiTokenConfirm: '',
+          wifiApiTokenConfigMessage: t.wifiApiTokenConfigUpdateSuccess || 'WiFi API token updated successfully.',
+          wifiApiTokenConfigMessageType: 'success'
+        });
+
+        this.loadConfigLocks();
+        this.loadCurrentConfig();
+      })
+      .catch(err => {
+        this.setState({
+          wifiApiTokenConfigMessage: `${t.errorPrefix} ${err.message}`,
+          wifiApiTokenConfigMessageType: 'error'
+        });
+      });
+  }
+
   handleSearchSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
@@ -2523,6 +2669,9 @@ class Admin extends Component {
       apiTokenConfigMessage, apiTokenConfigMessageType,
       currentApiTokenSource, currentApiTokenIsDefault, apiTokenConfigLastUpdated,
       newApiToken, newApiTokenConfirm,
+      wifiApiTokenConfigMessage, wifiApiTokenConfigMessageType,
+      currentWifiApiTokenSource, currentWifiApiTokenConfigured, wifiApiTokenConfigLastUpdated,
+      newWifiApiToken, newWifiApiTokenConfirm,
       bookingButtonColor, currentBookingButtonColor,
       statusAvailableColor, currentStatusAvailableColor,
       statusBusyColor, currentStatusBusyColor,
@@ -2531,7 +2680,7 @@ class Admin extends Component {
       wifiMessage, wifiMessageType, logoMessage, logoMessageType, informationMessage, informationMessageType,
       bookingMessage, bookingMessageType, colorMessage, colorMessageType,
       systemMessage, systemMessageType, translationApiMessage, translationApiMessageType, oauthMessage, oauthMessageType, searchMessage, searchMessageType, rateLimitMessage, rateLimitMessageType,
-      wifiLocked, logoLocked, informationLocked, bookingLocked, searchLocked, rateLimitLocked, apiTokenLocked, oauthLocked, systemLocked, maintenanceLocked, translationApiLocked,
+      wifiLocked, logoLocked, informationLocked, bookingLocked, searchLocked, rateLimitLocked, apiTokenLocked, wifiApiTokenLocked, oauthLocked, systemLocked, maintenanceLocked, translationApiLocked,
       isAuthenticated, authChecking, authMessage, authMessageType,
       bookingPermissionMissing,
       activeTab,
@@ -2581,7 +2730,7 @@ class Admin extends Component {
         tabs: [
           { key: 'system', label: 'System' },
           { key: 'translationApi', label: t.translationApiTabLabel || 'Translation API' },
-          { key: 'oauth', label: t.oauthTabLabel || 'Kalender' },
+          { key: 'oauth', label: t.oauthTabLabel || 'Graph-API' },
           { key: 'maintenance', label: t.maintenanceTabLabel || 'Wartungsmodus' },
           { key: 'apiToken', label: t.apiTokenTabLabel || 'API-Token' },
           { key: 'search', label: t.searchTabLabel || 'Suche' },
@@ -3644,81 +3793,136 @@ class Admin extends Component {
               {activeTab === 'apiToken' && (
               <div className="admin-card" id="ops-api-token">
 
+              <h3>{t.apiTokenConfigSectionTitle || 'API Tokens'}</h3>
+              <div className="admin-current-config">
+                <h3>{t.currentConfigTitle}</h3>
+                <div className="config-grid">
+                  <div className="config-item">
+                    <span className="config-label">{t.apiTokenSourceLabel || 'Token Source'}</span>
+                    <span className="config-value">{apiTokenSourceLabelMap[currentApiTokenSource] || currentApiTokenSource || '-'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.apiTokenDefaultActiveLabel || 'Default Token Active'}</span>
+                    <span className="config-value">{currentApiTokenIsDefault ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.apiTokenDefaultValueLabel || 'Default Token'}</span>
+                    <span className="config-value">{t.apiTokenDefaultValue || 'change-me-admin-token'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.lastUpdatedLabel}</span>
+                    <span className="config-value">{apiTokenConfigLastUpdated || '-'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.wifiApiTokenSourceLabel || 'WiFi Token Source'}</span>
+                    <span className="config-value">{apiTokenSourceLabelMap[currentWifiApiTokenSource] || currentWifiApiTokenSource || '-'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.wifiApiTokenConfiguredLabel || 'WiFi Token Configured'}</span>
+                    <span className="config-value">{currentWifiApiTokenConfigured ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.wifiApiTokenLastUpdatedLabel || 'WiFi Token Last Updated'}</span>
+                    <span className="config-value">{wifiApiTokenConfigLastUpdated || '-'}</span>
+                  </div>
+                </div>
+              </div>
+
               {!apiTokenLocked && (
-                <>
-                  <h3>{t.apiTokenConfigSectionTitle || 'Admin API Token'}</h3>
-                  <div className="admin-current-config">
-                    <h3>{t.currentConfigTitle}</h3>
-                    <div className="config-grid">
-                      <div className="config-item">
-                        <span className="config-label">{t.apiTokenSourceLabel || 'Token Source'}</span>
-                        <span className="config-value">{apiTokenSourceLabelMap[currentApiTokenSource] || currentApiTokenSource || '-'}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">{t.apiTokenDefaultActiveLabel || 'Default Token Active'}</span>
-                        <span className="config-value">{currentApiTokenIsDefault ? 'Yes' : 'No'}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">{t.apiTokenDefaultValueLabel || 'Default Token'}</span>
-                        <span className="config-value">{t.apiTokenDefaultValue || 'change-me-admin-token'}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">{t.lastUpdatedLabel}</span>
-                        <span className="config-value">{apiTokenConfigLastUpdated || '-'}</span>
-                      </div>
-                    </div>
+                <form onSubmit={this.handleApiTokenSubmit}>
+                  <div className="admin-form-group">
+                    <label htmlFor="newApiToken">{t.apiTokenNewLabel || 'New API Token'}</label>
+                    <input
+                      type="password"
+                      id="newApiToken"
+                      value={newApiToken}
+                      onChange={(e) => this.setState({ newApiToken: e.target.value })}
+                      placeholder={t.apiTokenMinLengthPlaceholder || 'At least 8 characters'}
+                      autoComplete="new-password"
+                    />
                   </div>
 
-                  <form onSubmit={this.handleApiTokenSubmit}>
-                    <div className="admin-form-group">
-                      <label htmlFor="newApiToken">{t.apiTokenNewLabel || 'New API Token'}</label>
-                      <input
-                        type="password"
-                        id="newApiToken"
-                        value={newApiToken}
-                        onChange={(e) => this.setState({ newApiToken: e.target.value })}
-                        placeholder={t.apiTokenMinLengthPlaceholder || 'At least 8 characters'}
-                        autoComplete="new-password"
-                      />
-                    </div>
+                  <div className="admin-form-group">
+                    <label htmlFor="newApiTokenConfirm">{t.apiTokenNewConfirmLabel || 'Confirm New API Token'}</label>
+                    <input
+                      type="password"
+                      id="newApiTokenConfirm"
+                      value={newApiTokenConfirm}
+                      onChange={(e) => this.setState({ newApiTokenConfirm: e.target.value })}
+                      placeholder={t.apiTokenConfirmPlaceholder || 'Repeat new token'}
+                      autoComplete="new-password"
+                    />
+                    <small>{t.apiTokenConfigHelp || 'After saving, use the new token for future logins.'}</small>
+                  </div>
 
-                    <div className="admin-form-group">
-                      <label htmlFor="newApiTokenConfirm">{t.apiTokenNewConfirmLabel || 'Confirm New API Token'}</label>
-                      <input
-                        type="password"
-                        id="newApiTokenConfirm"
-                        value={newApiTokenConfirm}
-                        onChange={(e) => this.setState({ newApiTokenConfirm: e.target.value })}
-                        placeholder={t.apiTokenConfirmPlaceholder || 'Repeat new token'}
-                        autoComplete="new-password"
-                      />
-                      <small>{t.apiTokenConfigHelp || 'After saving, use the new token for future logins.'}</small>
-                    </div>
-
-                    <button type="submit" className="admin-submit-button">
-                      {t.apiTokenConfigSaveButton || 'Save API Token'}
-                    </button>
-                  </form>
-
-                  {apiTokenConfigMessage && (
-                    <div className={`admin-message admin-message-${apiTokenConfigMessageType || 'error'}`}>
-                      {apiTokenConfigMessage}
-                    </div>
-                  )}
-
-                  <div className="admin-form-divider"></div>
-                </>
+                  <button type="submit" className="admin-submit-button">
+                    {t.apiTokenConfigSaveButton || 'Save API Token'}
+                  </button>
+                </form>
               )}
 
               {apiTokenLocked && (
-                <>
-                  <h3>{t.apiTokenConfigSectionTitle || 'Admin API Token'}</h3>
-                  <div className="admin-locked-message">
-                    <p>{t.configuredViaEnv}</p>
-                  </div>
-                  <div className="admin-form-divider"></div>
-                </>
+                <div className="admin-locked-message">
+                  <p>{t.adminApiTokenConfiguredViaEnv || 'Admin API token is configured via environment (.env).'}</p>
+                </div>
               )}
+
+              {apiTokenConfigMessage && (
+                <div className={`admin-message admin-message-${apiTokenConfigMessageType || 'error'}`}>
+                  {apiTokenConfigMessage}
+                </div>
+              )}
+
+              <div className="admin-form-divider"></div>
+
+              <h3>{t.wifiApiTokenConfigSectionTitle || 'WiFi API Token'}</h3>
+
+              {!wifiApiTokenLocked && (
+                <form onSubmit={this.handleWiFiApiTokenSubmit}>
+                  <div className="admin-form-group">
+                    <label htmlFor="newWifiApiToken">{t.wifiApiTokenNewLabel || 'New WiFi API Token'}</label>
+                    <input
+                      type="password"
+                      id="newWifiApiToken"
+                      value={newWifiApiToken}
+                      onChange={(e) => this.setState({ newWifiApiToken: e.target.value })}
+                      placeholder={t.apiTokenMinLengthPlaceholder || 'At least 8 characters'}
+                      autoComplete="new-password"
+                    />
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label htmlFor="newWifiApiTokenConfirm">{t.wifiApiTokenNewConfirmLabel || 'Confirm New WiFi API Token'}</label>
+                    <input
+                      type="password"
+                      id="newWifiApiTokenConfirm"
+                      value={newWifiApiTokenConfirm}
+                      onChange={(e) => this.setState({ newWifiApiTokenConfirm: e.target.value })}
+                      placeholder={t.apiTokenConfirmPlaceholder || 'Repeat new token'}
+                      autoComplete="new-password"
+                    />
+                    <small>{t.wifiApiTokenConfigHelp || 'Use this token for external WiFi API integrations.'}</small>
+                  </div>
+
+                  <button type="submit" className="admin-submit-button">
+                    {t.wifiApiTokenConfigSaveButton || 'Save WiFi API Token'}
+                  </button>
+                </form>
+              )}
+
+              {wifiApiTokenLocked && (
+                <div className="admin-locked-message">
+                  <p>{t.wifiApiTokenConfiguredViaEnv || 'WiFi API token is configured via environment (.env).'}</p>
+                </div>
+              )}
+
+              {wifiApiTokenConfigMessage && (
+                <div className={`admin-message admin-message-${wifiApiTokenConfigMessageType || 'error'}`}>
+                  {wifiApiTokenConfigMessage}
+                </div>
+              )}
+
+              <div className="admin-form-divider"></div>
 
               </div>
               )}
@@ -3758,44 +3962,47 @@ class Admin extends Component {
                   <form onSubmit={this.handleSystemSubmit}>
                     <div className="admin-form-group">
                       <label className="inline-label">
-                        <span className="label-text">Startup validation strict</span>
+                        <span className="label-text">Startup Validation Strict</span>
                         <input
                           type="checkbox"
                           checked={systemStartupValidationStrict}
                           onChange={(e) => this.setState({ systemStartupValidationStrict: e.target.checked })}
                         />
                       </label>
+                      <small>Stop startup when warnings are present.</small>
                     </div>
 
                     <div className="admin-form-group">
                       <label className="inline-label">
-                        <span className="label-text">Graph webhook enabled</span>
+                        <span className="label-text">Graph Webhook Enabled</span>
                         <input
                           type="checkbox"
                           checked={systemGraphWebhookEnabled}
                           onChange={(e) => this.setState({ systemGraphWebhookEnabled: e.target.checked })}
                         />
                       </label>
+                      <small>Enable Microsoft Graph webhook endpoint handling.</small>
                     </div>
 
                     <div className="admin-form-group">
-                      <label htmlFor="systemGraphWebhookClientState">Graph webhook client state</label>
+                      <label htmlFor="systemGraphWebhookClientState">Graph Webhook Client State</label>
                       <input
                         type="text"
                         id="systemGraphWebhookClientState"
                         value={systemGraphWebhookClientState}
                         onChange={(e) => this.setState({ systemGraphWebhookClientState: e.target.value })}
+                        placeholder="Shared secret value for webhook notifications"
                       />
                     </div>
 
                     <div className="admin-form-group">
-                      <label htmlFor="systemGraphWebhookAllowedIps">Graph webhook allowed IPs</label>
+                      <label htmlFor="systemGraphWebhookAllowedIps">Graph Webhook Allowed IPs</label>
                       <input
                         type="text"
                         id="systemGraphWebhookAllowedIps"
                         value={systemGraphWebhookAllowedIps}
                         onChange={(e) => this.setState({ systemGraphWebhookAllowedIps: e.target.value })}
-                        placeholder="Comma-separated CIDRs or IPs"
+                        placeholder="Comma-separated IP addresses"
                       />
                     </div>
 

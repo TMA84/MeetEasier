@@ -3,6 +3,7 @@ const config = require('../config/config');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const roomlistAliasHelper = require('./roomlist-alias-helper');
 const configManager = require('./config-manager');
 const { createRateLimiter } = require('./rate-limiter');
@@ -54,11 +55,52 @@ function isTranslationApiEnvConfigured() {
 		|| isEnvDefined('AUTO_TRANSLATE_TIMEOUT_MS');
 }
 
-function getClientIp(req) {
-	const forwardedFor = req.headers['x-forwarded-for'];
-	if (forwardedFor) {
-		return String(forwardedFor).split(',')[0].trim();
+function normalizeAuthToken(rawToken) {
+	if (typeof rawToken !== 'string') {
+		return '';
 	}
+
+	return rawToken.replace(/^Bearer\s+/i, '').trim();
+}
+
+function secureTokenEquals(providedToken, expectedToken) {
+	const providedBuffer = Buffer.from(String(providedToken || ''), 'utf8');
+	const expectedBuffer = Buffer.from(String(expectedToken || ''), 'utf8');
+
+	if (!providedBuffer.length || !expectedBuffer.length || providedBuffer.length !== expectedBuffer.length) {
+		return false;
+	}
+
+	return crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+}
+
+function hasValidApiToken(req) {
+	const token = req.headers['authorization'] || req.headers['x-api-token'];
+	const providedToken = normalizeAuthToken(token);
+	const expectedToken = configManager.getEffectiveApiToken();
+
+	return secureTokenEquals(providedToken, expectedToken);
+}
+
+function hasValidWiFiApiToken(req) {
+	const token = req.headers['authorization'] || req.headers['x-api-token'];
+	const providedToken = normalizeAuthToken(token);
+	if (!providedToken) {
+		return false;
+	}
+
+	const adminToken = configManager.getEffectiveApiToken();
+	if (secureTokenEquals(providedToken, adminToken)) {
+		return true;
+	}
+
+	const wifiToken = configManager.getEffectiveWifiApiToken
+		? configManager.getEffectiveWifiApiToken()
+		: '';
+	return secureTokenEquals(providedToken, wifiToken);
+}
+
+function getClientIp(req) {
 	return req.ip || req.socket?.remoteAddress || 'unknown';
 }
 
@@ -69,6 +111,17 @@ function isWebhookIpAllowed(req) {
 
 	const ip = getClientIp(req);
 	return config.graphWebhook.allowedIps.includes(ip);
+}
+
+function hasWebhookSecurityConfig() {
+	if (!config.graphWebhook.enabled) {
+		return true;
+	}
+
+	const hasClientState = !!String(config.graphWebhook.clientState || '').trim();
+	const hasAllowedIps = Array.isArray(config.graphWebhook.allowedIps) && config.graphWebhook.allowedIps.length > 0;
+
+	return hasClientState && hasAllowedIps;
 }
 
 function normalizeRoomKey(roomEmail) {
@@ -609,6 +662,13 @@ module.exports = function(app) {
 			});
 		}
 
+		if (!hasWebhookSecurityConfig()) {
+			return res.status(503).json({
+				error: 'Webhook security configuration incomplete',
+				message: 'Set GRAPH_WEBHOOK_CLIENT_STATE and GRAPH_WEBHOOK_ALLOWED_IPS before enabling webhooks.'
+			});
+		}
+
 		if (!isWebhookIpAllowed(req)) {
 			return res.status(403).json({ error: 'Webhook origin not allowed' });
 		}
@@ -627,6 +687,13 @@ module.exports = function(app) {
 			return res.status(503).json({
 				error: 'Webhook disabled',
 				message: 'GRAPH_WEBHOOK_ENABLED is false'
+			});
+		}
+
+		if (!hasWebhookSecurityConfig()) {
+			return res.status(503).json({
+				error: 'Webhook security configuration incomplete',
+				message: 'Set GRAPH_WEBHOOK_CLIENT_STATE and GRAPH_WEBHOOK_ALLOWED_IPS before enabling webhooks.'
 			});
 		}
 
@@ -1182,12 +1249,7 @@ module.exports = function(app) {
 			return;
 		}
 
-		const token = req.headers['authorization'] || req.headers['x-api-token'];
-		const expectedToken = configManager.getEffectiveApiToken();
-
-		// Check if token matches
-		const providedToken = token?.replace('Bearer ', '');
-		if (providedToken === expectedToken) {
+		if (hasValidApiToken(req)) {
 			return next();
 		}
 
@@ -1206,11 +1268,35 @@ module.exports = function(app) {
 		});
 	};
 
+	const checkWiFiApiToken = (req, res, next) => {
+		authRateLimiter(req, res, () => {});
+		if (res.headersSent) {
+			return;
+		}
+
+		if (hasValidWiFiApiToken(req)) {
+			return next();
+		}
+
+		appendAuditLog({
+			event: 'auth.failure',
+			path: req.path,
+			method: req.method,
+			ip: getClientIp(req),
+			userAgent: req.headers['user-agent'] || null
+		});
+
+		res.status(401).json({
+			error: 'Unauthorized',
+			message: 'Valid API token required. Provide token in Authorization header or X-API-Token header.'
+		});
+	};
+
 	// Get current WiFi configuration (public - no auth required)
 	app.get('/api/wifi', function(req, res) {
 		try {
-			const config = configManager.getWiFiConfig();
-			res.json(config);
+			const wifiConfig = configManager.getWiFiConfig();
+			res.json(wifiConfig);
 		} catch (err) {
 			res.status(500).json({ error: 'Failed to retrieve WiFi configuration' });
 		}
@@ -1237,25 +1323,60 @@ module.exports = function(app) {
 
 	app.post('/api/api-token-config', checkApiToken, async function(req, res) {
 		try {
-			if (configManager.isApiTokenEnvLocked()) {
-				return res.status(403).json({
-					error: 'API token is locked by environment variable',
-					message: 'Remove API_TOKEN from environment to edit via admin panel.'
+			const { newToken, newWifiToken } = req.body || {};
+			const hasNewAdminToken = newToken !== undefined;
+			const hasNewWiFiToken = newWifiToken !== undefined;
+
+			if (!hasNewAdminToken && !hasNewWiFiToken) {
+				return res.status(400).json({
+					error: 'Invalid token update payload',
+					message: 'Please provide newToken and/or newWifiToken.'
 				});
 			}
 
-			const { newToken } = req.body || {};
 			const normalizedToken = String(newToken || '').trim();
+			const normalizedWiFiToken = String(newWifiToken || '').trim();
 
-			if (!normalizedToken || normalizedToken.length < 8) {
-				return res.status(400).json({
-					error: 'Invalid API token',
-					message: 'Please provide an API token with at least 8 characters.'
-				});
+			if (hasNewAdminToken) {
+				if (configManager.isApiTokenEnvLocked()) {
+					return res.status(403).json({
+						error: 'API token is locked by environment variable',
+						message: 'Remove API_TOKEN from environment to edit via admin panel.'
+					});
+				}
+
+				if (!normalizedToken || normalizedToken.length < 8) {
+					return res.status(400).json({
+						error: 'Invalid API token',
+						message: 'Please provide an API token with at least 8 characters.'
+					});
+				}
+			}
+
+			if (hasNewWiFiToken) {
+				if (configManager.isWifiApiTokenEnvLocked && configManager.isWifiApiTokenEnvLocked()) {
+					return res.status(403).json({
+						error: 'WiFi API token is locked by environment variable',
+						message: 'Remove WIFI_API_TOKEN from environment to edit via admin panel.'
+					});
+				}
+
+				if (!normalizedWiFiToken || normalizedWiFiToken.length < 8) {
+					return res.status(400).json({
+						error: 'Invalid WiFi API token',
+						message: 'Please provide a WiFi API token with at least 8 characters.'
+					});
+				}
 			}
 
 			const beforeConfig = configManager.getApiTokenConfig();
-			const updatedConfig = await configManager.updateApiToken(normalizedToken);
+			if (hasNewAdminToken) {
+				await configManager.updateApiToken(normalizedToken);
+			}
+			if (hasNewWiFiToken && configManager.updateWifiApiToken) {
+				await configManager.updateWifiApiToken(normalizedWiFiToken);
+			}
+			const updatedConfig = configManager.getApiTokenConfig();
 
 			appendAuditLog({
 				event: 'config.apiToken.update',
@@ -1263,6 +1384,10 @@ module.exports = function(app) {
 				method: req.method,
 				ip: getClientIp(req),
 				userAgent: req.headers['user-agent'] || null,
+				tokensUpdated: {
+					admin: hasNewAdminToken,
+					wifi: hasNewWiFiToken
+				},
 				before: beforeConfig,
 				after: updatedConfig
 			});
@@ -1270,7 +1395,9 @@ module.exports = function(app) {
 			res.json({
 				success: true,
 				config: updatedConfig,
-				message: 'API token updated'
+				message: hasNewAdminToken && hasNewWiFiToken
+					? 'API tokens updated'
+					: (hasNewAdminToken ? 'API token updated' : 'WiFi API token updated')
 			});
 		} catch (err) {
 			console.error('Error updating API token:', err);
@@ -1425,7 +1552,7 @@ module.exports = function(app) {
 	});
 
 	// Update WiFi configuration and regenerate QR code (protected - requires token)
-	app.post('/api/wifi', checkApiToken, async function(req, res) {
+	app.post('/api/wifi', checkWiFiApiToken, async function(req, res) {
 		try {
 			const { ssid, password } = req.body;
 			const beforeConfig = configManager.getWiFiConfig();
@@ -1582,6 +1709,7 @@ module.exports = function(app) {
 					|| isEnvConfigured('RATE_LIMIT_AUTH_MAX')
 				),
 				apiTokenLocked: configManager.isApiTokenEnvLocked(),
+				wifiApiTokenLocked: configManager.isWifiApiTokenEnvLocked ? configManager.isWifiApiTokenEnvLocked() : false,
 				oauthLocked: isOAuthEnvConfigured(),
 				systemLocked: isSystemEnvConfigured(),
 				maintenanceLocked: isMaintenanceEnvConfigured()

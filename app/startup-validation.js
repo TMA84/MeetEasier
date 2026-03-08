@@ -46,6 +46,10 @@ function validateStartupConfig(config) {
 		warnings.push('GRAPH_WEBHOOK_ENABLED is true but GRAPH_WEBHOOK_CLIENT_STATE is empty. Signature validation is weakened.');
 	}
 
+	if (config.graphWebhook.enabled && (!Array.isArray(config.graphWebhook.allowedIps) || config.graphWebhook.allowedIps.length === 0)) {
+		warnings.push('GRAPH_WEBHOOK_ENABLED is true but GRAPH_WEBHOOK_ALLOWED_IPS is empty. Origin filtering is disabled.');
+	}
+
 	const cacheFile = path.join(__dirname, '../data/cache.json');
 	if (!fs.existsSync(cacheFile)) {
 		info.push('MS Graph cache file does not exist yet (data/cache.json). It will be created on first token caching event.');
