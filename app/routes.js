@@ -1824,7 +1824,7 @@ module.exports = function(app) {
 			const locks = {
 				wifiLocked: isEnvConfigured('WIFI_SSID') || isEnvConfigured('WIFI_PASSWORD'),
 				logoLocked: isEnvConfigured('LOGO_DARK_URL') || isEnvConfigured('LOGO_LIGHT_URL'),
-				sidebarLocked: isEnvConfigured('SIDEBAR_SHOW_WIFI') || isEnvConfigured('SIDEBAR_SHOW_UPCOMING') || isEnvConfigured('SIDEBAR_SHOW_TITLES'),
+				sidebarLocked: isEnvConfigured('SIDEBAR_SHOW_WIFI') || isEnvConfigured('SIDEBAR_SHOW_UPCOMING') || isEnvConfigured('SIDEBAR_SHOW_TITLES') || isEnvConfigured('SIDEBAR_UPCOMING_COUNT'),
 				bookingLocked: isEnvConfigured('ENABLE_BOOKING')
 					|| isEnvConfigured('CHECKIN_ENABLED')
 					|| isEnvConfigured('CHECKIN_REQUIRED_FOR_EXTERNAL')
@@ -2065,14 +2065,14 @@ module.exports = function(app) {
 	// Update information configuration (protected - requires token)
 	app.post('/api/sidebar', checkApiToken, async function(req, res) {
 		try {
-			const { showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle } = req.body;
+			const { showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount } = req.body;
 			const beforeConfig = configManager.getSidebarConfig();
 			
-			if (showWiFi === undefined && showUpcomingMeetings === undefined && showMeetingTitles === undefined && minimalHeaderStyle === undefined) {
+			if (showWiFi === undefined && showUpcomingMeetings === undefined && showMeetingTitles === undefined && minimalHeaderStyle === undefined && upcomingMeetingsCount === undefined) {
 				return res.status(400).json({ error: 'At least one configuration option is required' });
 			}
 
-			const config = await configManager.updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle);
+			const config = await configManager.updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount);
 			appendAuditLog({
 				event: 'config.sidebar.update',
 				path: req.path,

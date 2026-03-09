@@ -51,6 +51,15 @@ function normalizeApiTokenFromEnv(value) {
 	return normalized;
 }
 
+function parseSidebarUpcomingMeetingsCountFromEnv(value) {
+	const parsed = Number.parseInt(value, 10);
+	if (!Number.isFinite(parsed)) {
+		return 3;
+	}
+
+	return Math.min(Math.max(parsed, 1), 10);
+}
+
 // expose our config directly to our application using module.exports
 module.exports = {
 	exchange: {
@@ -139,7 +148,8 @@ module.exports = {
 	sidebarDefaults: {
 		showWiFi: process.env.SIDEBAR_SHOW_WIFI === 'true' || process.env.SIDEBAR_SHOW_WIFI === undefined,
 		showUpcomingMeetings: process.env.SIDEBAR_SHOW_UPCOMING === 'true',
-		showMeetingTitles: process.env.SIDEBAR_SHOW_TITLES === 'true'
+		showMeetingTitles: process.env.SIDEBAR_SHOW_TITLES === 'true',
+		upcomingMeetingsCount: parseSidebarUpcomingMeetingsCountFromEnv(process.env.SIDEBAR_UPCOMING_COUNT)
 	},
 
 	// Booking feature configuration

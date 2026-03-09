@@ -183,11 +183,13 @@ class Admin extends Component {
       currentShowWiFi: true,
       currentShowUpcomingMeetings: false,
       currentShowMeetingTitles: false,
+      currentUpcomingMeetingsCount: 3,
       currentMinimalHeaderStyle: 'filled',
       informationLastUpdated: '',
       showWiFi: true,
       showUpcomingMeetings: false,
       showMeetingTitles: false,
+      upcomingMeetingsCount: 3,
       minimalHeaderStyle: 'filled',
       informationMessage: null,
       informationMessageType: null,
@@ -1082,6 +1084,9 @@ class Admin extends Component {
           currentShowWiFi: data.showWiFi !== undefined ? data.showWiFi : true,
           currentShowUpcomingMeetings: data.showUpcomingMeetings !== undefined ? data.showUpcomingMeetings : false,
           currentShowMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false,
+          currentUpcomingMeetingsCount: Number.isFinite(Number(data.upcomingMeetingsCount))
+            ? Math.min(Math.max(parseInt(data.upcomingMeetingsCount, 10), 1), 10)
+            : 3,
           currentMinimalHeaderStyle: data.minimalHeaderStyle || 'filled',
           informationLastUpdated: data.lastUpdated 
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
@@ -1089,6 +1094,9 @@ class Admin extends Component {
           showWiFi: data.showWiFi !== undefined ? data.showWiFi : true,
           showUpcomingMeetings: data.showUpcomingMeetings !== undefined ? data.showUpcomingMeetings : false,
           showMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false,
+          upcomingMeetingsCount: Number.isFinite(Number(data.upcomingMeetingsCount))
+            ? Math.min(Math.max(parseInt(data.upcomingMeetingsCount, 10), 1), 10)
+            : 3,
           minimalHeaderStyle: data.minimalHeaderStyle || 'filled'
         });
       })
@@ -1673,7 +1681,10 @@ class Admin extends Component {
   handleSidebarSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
-    const { apiToken, showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle } = this.state;
+    const { apiToken, showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount } = this.state;
+    const sanitizedUpcomingMeetingsCount = Number.isFinite(Number(upcomingMeetingsCount))
+      ? Math.min(Math.max(parseInt(upcomingMeetingsCount, 10), 1), 10)
+      : 3;
     
     const headers = {
       'Content-Type': 'application/json',
@@ -1686,7 +1697,13 @@ class Admin extends Component {
     fetch('/api/sidebar', {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify({ showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle })
+      body: JSON.stringify({
+        showWiFi,
+        showUpcomingMeetings,
+        showMeetingTitles,
+        minimalHeaderStyle,
+        upcomingMeetingsCount: sanitizedUpcomingMeetingsCount
+      })
     })
     .then(response => {
       if (response.status === 401) {
@@ -2595,12 +2612,12 @@ class Admin extends Component {
     const { 
       currentSsid, currentPassword, wifiLastUpdated, 
       currentLogoDarkUrl, currentLogoLightUrl, logoLastUpdated,
-      currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, currentMinimalHeaderStyle, informationLastUpdated,
+      currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, currentUpcomingMeetingsCount, currentMinimalHeaderStyle, informationLastUpdated,
       currentEnableBooking, currentEnableExtendMeeting, bookingLastUpdated,
       currentCheckInEnabled, currentCheckInRequiredForExternalMeetings,
       currentCheckInEarlyMinutes, currentCheckInWindowMinutes, currentCheckInAutoReleaseNoShow,
       apiToken, ssid, password, logoDarkUrl, logoLightUrl, logoDarkFile, logoLightFile, uploadMode,
-      showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle,
+      showWiFi, showUpcomingMeetings, showMeetingTitles, upcomingMeetingsCount, minimalHeaderStyle,
       enableBooking, enableExtendMeeting,
       checkInEnabled, checkInRequiredForExternalMeetings,
       checkInEarlyMinutes, checkInWindowMinutes, checkInAutoReleaseNoShow,
@@ -2874,6 +2891,10 @@ class Admin extends Component {
                     <span className="config-value">{currentShowMeetingTitles ? 'Yes' : 'No'}</span>
                   </div>
                   <div className="config-item">
+                    <span className="config-label">{t.upcomingMeetingsCountLabel}</span>
+                    <span className="config-value">{currentUpcomingMeetingsCount}</span>
+                  </div>
+                  <div className="config-item">
                     <span className="config-label">{t.minimalHeaderStyleLabel}</span>
                     <span className="config-value">{currentMinimalHeaderStyle === 'filled' ? t.minimalHeaderStyleFilled : t.minimalHeaderStyleTransparent}</span>
                   </div>
@@ -2889,10 +2910,9 @@ class Admin extends Component {
                   <label className="inline-label">
                     <span className="label-text">{t.showWiFiLabel}</span>
                     <input
-                      type="radio"
-                      name="sidebarDisplay"
-                      checked={showWiFi && !showUpcomingMeetings}
-                      onChange={() => this.setState({ showWiFi: true, showUpcomingMeetings: false })}
+                      type="checkbox"
+                      checked={showWiFi}
+                      onChange={(e) => this.setState({ showWiFi: e.target.checked })}
                     />
                   </label>
                 </div>
@@ -2901,10 +2921,9 @@ class Admin extends Component {
                   <label className="inline-label">
                     <span className="label-text">{t.showUpcomingMeetingsLabel}</span>
                     <input
-                      type="radio"
-                      name="sidebarDisplay"
-                      checked={!showWiFi && showUpcomingMeetings}
-                      onChange={() => this.setState({ showWiFi: false, showUpcomingMeetings: true })}
+                      type="checkbox"
+                      checked={showUpcomingMeetings}
+                      onChange={(e) => this.setState({ showUpcomingMeetings: e.target.checked })}
                     />
                   </label>
                 </div>
@@ -2921,6 +2940,22 @@ class Admin extends Component {
                     />
                   </label>
                   <small>{t.showMeetingTitlesHelp}</small>
+                </div>
+
+                <div className="admin-form-group">
+                  <label htmlFor="upcomingMeetingsCount" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                    {t.upcomingMeetingsCountLabel}
+                  </label>
+                  <input
+                    id="upcomingMeetingsCount"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={upcomingMeetingsCount}
+                    onChange={(e) => this.setState({ upcomingMeetingsCount: e.target.value })}
+                    style={{ width: '120px' }}
+                  />
+                  <small style={{ display: 'block', marginTop: '0.5rem' }}>{t.upcomingMeetingsCountHelp}</small>
                 </div>
                 
                 <hr className="admin-form-divider" />

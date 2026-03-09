@@ -91,13 +91,28 @@ function getLogoConfig() {
 function getSidebarConfig() {
 	try {
 		const data = fs.readFileSync(sidebarConfigPath, 'utf8');
-		return JSON.parse(data);
+		const parsed = JSON.parse(data);
+		const defaultUpcomingMeetingsCount = toMinInt(config.sidebarDefaults.upcomingMeetingsCount, 3, 1);
+		const normalizedUpcomingMeetingsCount = Math.min(
+			toMinInt(parsed.upcomingMeetingsCount, defaultUpcomingMeetingsCount, 1),
+			10
+		);
+
+		return {
+			showWiFi: parsed.showWiFi !== undefined ? !!parsed.showWiFi : config.sidebarDefaults.showWiFi,
+			showUpcomingMeetings: parsed.showUpcomingMeetings !== undefined ? !!parsed.showUpcomingMeetings : config.sidebarDefaults.showUpcomingMeetings,
+			showMeetingTitles: parsed.showMeetingTitles !== undefined ? !!parsed.showMeetingTitles : config.sidebarDefaults.showMeetingTitles,
+			upcomingMeetingsCount: normalizedUpcomingMeetingsCount,
+			minimalHeaderStyle: parsed.minimalHeaderStyle === 'transparent' ? 'transparent' : 'filled',
+			lastUpdated: parsed.lastUpdated || null
+		};
 	} catch (err) {
 		// Return default config from environment variables if file doesn't exist
 		return {
 			showWiFi: config.sidebarDefaults.showWiFi,
 			showUpcomingMeetings: config.sidebarDefaults.showUpcomingMeetings,
 			showMeetingTitles: config.sidebarDefaults.showMeetingTitles,
+			upcomingMeetingsCount: config.sidebarDefaults.upcomingMeetingsCount,
 			minimalHeaderStyle: 'filled',
 			lastUpdated: null
 		};
@@ -1255,7 +1270,7 @@ function saveLogoConfig(config) {
  * @param {Object} config - Information configuration with display settings
  * @returns {Object} Saved configuration with timestamp
  */
-function saveSidebarConfig(config) {
+function saveSidebarConfig(sidebarConfig) {
 	// Read existing config first to preserve all fields
 	let existingConfig = {};
 	try {
@@ -1265,11 +1280,19 @@ function saveSidebarConfig(config) {
 		// File doesn't exist or is invalid, use defaults
 	}
 
+	const defaultSidebarUpcomingCount = toMinInt(config.sidebarDefaults?.upcomingMeetingsCount, 3, 1);
+
 	const configData = {
-		showWiFi: config.showWiFi !== undefined ? config.showWiFi : (existingConfig.showWiFi !== undefined ? existingConfig.showWiFi : true),
-		showUpcomingMeetings: config.showUpcomingMeetings !== undefined ? config.showUpcomingMeetings : (existingConfig.showUpcomingMeetings !== undefined ? existingConfig.showUpcomingMeetings : false),
-		showMeetingTitles: config.showMeetingTitles !== undefined ? config.showMeetingTitles : (existingConfig.showMeetingTitles !== undefined ? existingConfig.showMeetingTitles : false),
-		minimalHeaderStyle: config.minimalHeaderStyle !== undefined ? config.minimalHeaderStyle : (existingConfig.minimalHeaderStyle || 'filled'),
+		showWiFi: sidebarConfig.showWiFi !== undefined ? sidebarConfig.showWiFi : (existingConfig.showWiFi !== undefined ? existingConfig.showWiFi : true),
+		showUpcomingMeetings: sidebarConfig.showUpcomingMeetings !== undefined ? sidebarConfig.showUpcomingMeetings : (existingConfig.showUpcomingMeetings !== undefined ? existingConfig.showUpcomingMeetings : false),
+		showMeetingTitles: sidebarConfig.showMeetingTitles !== undefined ? sidebarConfig.showMeetingTitles : (existingConfig.showMeetingTitles !== undefined ? existingConfig.showMeetingTitles : false),
+		upcomingMeetingsCount: Math.min(
+			sidebarConfig.upcomingMeetingsCount !== undefined
+				? toMinInt(sidebarConfig.upcomingMeetingsCount, defaultSidebarUpcomingCount, 1)
+				: toMinInt(existingConfig.upcomingMeetingsCount, defaultSidebarUpcomingCount, 1),
+			10
+		),
+		minimalHeaderStyle: sidebarConfig.minimalHeaderStyle !== undefined ? sidebarConfig.minimalHeaderStyle : (existingConfig.minimalHeaderStyle || 'filled'),
 		lastUpdated: new Date().toISOString()
 	};
 	
@@ -1527,10 +1550,11 @@ async function updateLogoConfig(logoDarkUrl, logoLightUrl) {
  * @param {boolean} showUpcomingMeetings - Whether to show upcoming meetings
  * @param {boolean} showMeetingTitles - Whether to show meeting titles
  * @param {string} minimalHeaderStyle - Header style for minimal display ('filled' or 'transparent')
+	* @param {number} upcomingMeetingsCount - Number of upcoming meetings to display
  * @returns {Promise<Object>} Updated configuration
  */
-async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle) {
-	const config = saveSidebarConfig({ showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle });
+async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount) {
+	const config = saveSidebarConfig({ showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount });
 	
 	// Emit Socket.IO event to notify all connected clients
 	if (io) {

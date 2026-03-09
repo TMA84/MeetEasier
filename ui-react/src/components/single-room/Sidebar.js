@@ -22,7 +22,8 @@ class Sidebar extends Component {
       sidebarConfig: {
         showWiFi: true,
         showUpcomingMeetings: false,
-        showMeetingTitles: false
+        showMeetingTitles: false,
+        upcomingMeetingsCount: 3
       }
     };
     this.socket = null;
@@ -56,7 +57,16 @@ class Sidebar extends Component {
     // Listen for Sidebar config updates
     this.socket.on('sidebarConfigUpdated', (config) => {
       console.log('Sidebar config updated via Socket.IO:', config);
-      this.setState({ sidebarConfig: config });
+      this.setState({
+        sidebarConfig: {
+          showWiFi: config.showWiFi !== undefined ? config.showWiFi : true,
+          showUpcomingMeetings: config.showUpcomingMeetings !== undefined ? config.showUpcomingMeetings : false,
+          showMeetingTitles: config.showMeetingTitles !== undefined ? config.showMeetingTitles : false,
+          upcomingMeetingsCount: Number.isFinite(Number(config.upcomingMeetingsCount))
+            ? Math.min(Math.max(parseInt(config.upcomingMeetingsCount, 10), 1), 10)
+            : 3
+        }
+      });
     });
     
     // Refresh configs every 5 minutes as backup
@@ -119,7 +129,10 @@ class Sidebar extends Component {
           sidebarConfig: {
             showWiFi: data.showWiFi !== undefined ? data.showWiFi : true,
             showUpcomingMeetings: data.showUpcomingMeetings !== undefined ? data.showUpcomingMeetings : false,
-            showMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false
+            showMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false,
+            upcomingMeetingsCount: Number.isFinite(Number(data.upcomingMeetingsCount))
+              ? Math.min(Math.max(parseInt(data.upcomingMeetingsCount, 10), 1), 10)
+              : 3
           }
         });
       })
@@ -132,9 +145,13 @@ class Sidebar extends Component {
     const { config, room } = this.props;
     const { wifiConfig, logoUrl, sidebarConfig } = this.state;
 
+    const upcomingLimit = Number.isFinite(Number(sidebarConfig.upcomingMeetingsCount))
+      ? Math.min(Math.max(parseInt(sidebarConfig.upcomingMeetingsCount, 10), 1), 10)
+      : 3;
+
     // Get upcoming appointments (skip the current one if room is busy)
     const upcomingAppointments = room && room.Appointments ? 
-      (room.Busy ? room.Appointments.slice(1, 4) : room.Appointments.slice(0, 3)) : [];
+      (room.Busy ? room.Appointments.slice(1, 1 + upcomingLimit) : room.Appointments.slice(0, upcomingLimit)) : [];
 
     return (
       <div className="modern-room-sidebar">
@@ -157,9 +174,6 @@ class Sidebar extends Component {
         {/* Upcoming Meetings Section */}
         {sidebarConfig.showUpcomingMeetings && (
           <div className="sidebar-upcoming">
-            <div className="upcoming-title">
-              {config && config.upcomingMeetingsTitle ? config.upcomingMeetingsTitle : 'Upcoming Meetings'}
-            </div>
             <div className="upcoming-list">
               {upcomingAppointments.length > 0 ? (
                 upcomingAppointments.map((appointment, index) => {
