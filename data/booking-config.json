@@ -6,11 +6,11 @@
   "roomFeatureFlags": {},
   "roomGroupFeatureFlags": {},
   "checkIn": {
-    "enabled": true,
+    "enabled": false,
     "requiredForExternalMeetings": true,
     "earlyCheckInMinutes": 5,
     "windowMinutes": 1,
     "autoReleaseNoShow": true
   },
-  "lastUpdated": "2026-03-07T21:45:29.062Z"
+  "lastUpdated": "2026-03-09T08:03:02.636Z"
 }
