@@ -172,7 +172,8 @@ docker run -d -p 8080:8080 \
   meeteasier
 ```
 
-If `API_TOKEN` is omitted, the default admin token `change-me-admin-token` is used.
+If `API_TOKEN` is omitted, no static default token is used.
+Open `/admin` and create the initial admin token on first login.
 
 **Or use the pre-built image from GitHub Container Registry:**
 
@@ -190,7 +191,8 @@ docker run -d -p 8080:8080 \
   ghcr.io/tma84/meeteasier:latest
 ```
 
-If `API_TOKEN` is omitted, the default admin token `change-me-admin-token` is used.
+If `API_TOKEN` is omitted, no static default token is used.
+Open `/admin` and create the initial admin token on first login.
 
 ### Persistent Storage
 
@@ -220,7 +222,7 @@ services:
       - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID}
       - OAUTH_AUTHORITY=${OAUTH_AUTHORITY}
       - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET}
-      # Admin API Token (optional override; default: change-me-admin-token)
+      # Admin API Token (optional; if omitted, create initial token via /admin)
       - API_TOKEN=${API_TOKEN}
       # Optional: WiFi Configuration
       - WIFI_SSID=${WIFI_SSID}
@@ -264,7 +266,8 @@ docker run -d -p 8080:8080 \
   meeteasier
 ```
 
-**Note:** If `API_TOKEN` is not set, the app uses `change-me-admin-token`. For production, always set a secure token (or rotate it immediately via Admin panel).
+**Note:** If `API_TOKEN` is not set, open `/admin` and create the initial admin token.
+For production, prefer setting a secure token via environment/secrets manager.
 
 **Note:** When environment variables are set, the corresponding admin panel sections will be hidden to prevent accidental changes.
 
@@ -431,8 +434,8 @@ Use a .env file (recommended method). See .env.template for all available variab
 
 **Note:** 
 - EWS (Exchange Web Services) variables are deprecated and no longer needed.
-- If API_TOKEN is not set, the app uses the default admin token: `change-me-admin-token`.
-- For production, set API_TOKEN to a secure random value (64+ characters recommended) or change it immediately via Admin panel (Operations → Admin API Token).
+- If `API_TOKEN` is not set, create the initial admin token on first `/admin` login.
+- For production, set `API_TOKEN` to a secure random value (64+ characters recommended) or rotate it via Admin panel (Operations → API Tokens).
 - Microsoft Graph API now supports pagination, so MAXROOMS and MAXITEMS can be set higher than the API's 30-item limit.
 
 ---

@@ -106,7 +106,8 @@ SEARCH_MAXITEMS=100
 API_TOKEN=your-secure-random-token-here
 ```
 
-If `API_TOKEN` is not set, MeetEasier uses the default admin token `change-me-admin-token`.
+If `API_TOKEN` is not set, MeetEasier starts without a static default token.
+Create the initial admin token on first login at `/admin`.
 For production, always set a secure custom token (or rotate it immediately via Admin panel).
 
 **Security recommendations:**
@@ -246,7 +247,7 @@ URL: `http://your-server:8080/admin`
 
 Enter your `API_TOKEN` in the API Token field at the top of the page.
 
-If no `API_TOKEN` is set in environment/config, use `change-me-admin-token` for first login and change it immediately.
+If no `API_TOKEN` is set in environment/config, open `/admin` and create the initial admin token on first login.
 
 ### Configuration Sections
 

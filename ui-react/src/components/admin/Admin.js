@@ -278,6 +278,8 @@ class Admin extends Component {
       newWifiApiTokenConfirm: '',
       oauthMessage: null,
       oauthMessageType: null,
+      graphRuntimeMessage: null,
+      graphRuntimeMessageType: null,
       systemMessage: null,
       systemMessageType: null,
       translationApiMessage: null,
@@ -290,6 +292,18 @@ class Admin extends Component {
       systemGraphWebhookClientState: '',
       currentSystemGraphWebhookAllowedIps: '',
       systemGraphWebhookAllowedIps: '',
+      currentSystemExposeDetailedErrors: false,
+      systemExposeDetailedErrors: false,
+      currentSystemGraphFetchTimeoutMs: 10000,
+      systemGraphFetchTimeoutMs: 10000,
+      currentSystemGraphFetchRetryAttempts: 2,
+      systemGraphFetchRetryAttempts: 2,
+      currentSystemGraphFetchRetryBaseMs: 250,
+      systemGraphFetchRetryBaseMs: 250,
+      currentSystemHstsMaxAge: 31536000,
+      systemHstsMaxAge: 31536000,
+      currentSystemRateLimitMaxBuckets: 10000,
+      systemRateLimitMaxBuckets: 10000,
       systemLastUpdated: '',
       currentTranslationApiEnabled: true,
       translationApiEnabled: true,
@@ -307,6 +321,7 @@ class Admin extends Component {
       currentOauthHasClientSecret: false,
       oauthClientSecret: '',
       oauthLastUpdated: '',
+      oauthFormDirty: false,
       searchMessage: null,
       searchMessageType: null,
       rateLimitMessage: null,
@@ -359,6 +374,8 @@ class Admin extends Component {
       authChecking: true,
       authMessage: null,
       authMessageType: null,
+      requiresInitialTokenSetup: false,
+      initialTokenSetupLockedByEnv: false,
       
       // Sync status
       syncStatus: null,
@@ -379,12 +396,14 @@ class Admin extends Component {
     this.verifyAdminSession()
       .then((valid) => {
         if (!valid) {
-          this.setState({
-            apiToken: '',
-            isAuthenticated: false,
-            authChecking: false,
-            authMessage: null,
-            authMessageType: null
+          this.loadAdminBootstrapStatus().finally(() => {
+            this.setState({
+              apiToken: '',
+              isAuthenticated: false,
+              authChecking: false,
+              authMessage: null,
+              authMessageType: null
+            });
           });
           return;
         }
@@ -404,13 +423,35 @@ class Admin extends Component {
         });
       })
       .catch(() => {
-        this.setState({
-          apiToken: '',
-          isAuthenticated: false,
-          authChecking: false,
-          authMessage: null,
-          authMessageType: null
+        this.loadAdminBootstrapStatus().finally(() => {
+          this.setState({
+            apiToken: '',
+            isAuthenticated: false,
+            authChecking: false,
+            authMessage: null,
+            authMessageType: null
+          });
         });
+      });
+  }
+
+  loadAdminBootstrapStatus = () => {
+    return fetch('/api/admin/bootstrap-status', {
+      method: 'GET'
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!data) {
+          return;
+        }
+
+        this.setState({
+          requiresInitialTokenSetup: !!data.requiresSetup,
+          initialTokenSetupLockedByEnv: !!data.lockedByEnv
+        });
+      })
+      .catch(() => {
+        // ignore bootstrap status errors, login can still proceed
       });
   }
 
@@ -485,7 +526,7 @@ class Admin extends Component {
   verifyAdminSession = () => {
     return fetch('/api/admin/session', {
       method: 'GET'
-    }).then((response) => response.status !== 401);
+    }).then((response) => response.status === 200);
   }
 
   handleAdminLogin = (e) => {
@@ -503,6 +544,22 @@ class Admin extends Component {
 
     this.setState({ authChecking: true, authMessage: null, authMessageType: null });
 
+    const completeLoginSuccess = () => {
+      this.setState({
+        apiToken: '',
+        isAuthenticated: true,
+        authChecking: false,
+        authMessage: null,
+        authMessageType: null
+      }, () => {
+        this.loadConfigLocks();
+        this.loadCurrentConfig();
+        this.loadSyncStatus();
+        this.startSyncIntervals();
+        this.startRealtimeConfigUpdates();
+      });
+    };
+
     fetch('/api/admin/login', {
       method: 'POST',
       headers: {
@@ -510,33 +567,40 @@ class Admin extends Component {
       },
       body: JSON.stringify({ token })
     })
-      .then((response) => {
+      .then(async (response) => {
+        if (response.status === 428) {
+          const bootstrapResponse = await fetch('/api/admin/bootstrap-token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ token })
+          });
+
+          if (!bootstrapResponse.ok) {
+            const errorPayload = await bootstrapResponse.json().catch(() => ({}));
+            throw new Error(errorPayload?.message || errorPayload?.error || t.errorUnauthorized);
+          }
+
+          completeLoginSuccess();
+          return;
+        }
+
         if (response.status === 401) {
           throw new Error(t.errorUnauthorized);
         }
         if (!response.ok) {
-          throw new Error(t.errorUnknown || 'Login failed');
+          const errorPayload = await response.json().catch(() => ({}));
+          throw new Error(errorPayload?.message || errorPayload?.error || t.errorUnknown || 'Login failed');
         }
 
-        this.setState({
-          apiToken: '',
-          isAuthenticated: true,
-          authChecking: false,
-          authMessage: null,
-          authMessageType: null
-        }, () => {
-          this.loadConfigLocks();
-          this.loadCurrentConfig();
-          this.loadSyncStatus();
-          this.startSyncIntervals();
-          this.startRealtimeConfigUpdates();
-        });
+        completeLoginSuccess();
       })
-      .catch(() => {
+      .catch((error) => {
         this.setState({
           isAuthenticated: false,
           authChecking: false,
-          authMessage: t.errorUnauthorized,
+          authMessage: error?.message || t.errorUnauthorized,
           authMessageType: 'error'
         });
       });
@@ -1355,6 +1419,18 @@ class Admin extends Component {
           systemGraphWebhookClientState: data.graphWebhookClientState || '',
           currentSystemGraphWebhookAllowedIps: webhookIpsText,
           systemGraphWebhookAllowedIps: webhookIpsText,
+          currentSystemExposeDetailedErrors: !!data.exposeDetailedErrors,
+          systemExposeDetailedErrors: !!data.exposeDetailedErrors,
+          currentSystemGraphFetchTimeoutMs: parseInt(data.graphFetchTimeoutMs, 10) || 10000,
+          systemGraphFetchTimeoutMs: parseInt(data.graphFetchTimeoutMs, 10) || 10000,
+          currentSystemGraphFetchRetryAttempts: parseInt(data.graphFetchRetryAttempts, 10) || 2,
+          systemGraphFetchRetryAttempts: parseInt(data.graphFetchRetryAttempts, 10) || 2,
+          currentSystemGraphFetchRetryBaseMs: parseInt(data.graphFetchRetryBaseMs, 10) || 250,
+          systemGraphFetchRetryBaseMs: parseInt(data.graphFetchRetryBaseMs, 10) || 250,
+          currentSystemHstsMaxAge: Math.max(parseInt(data.hstsMaxAge, 10) || 0, 0),
+          systemHstsMaxAge: Math.max(parseInt(data.hstsMaxAge, 10) || 0, 0),
+          currentSystemRateLimitMaxBuckets: parseInt(data.rateLimitMaxBuckets, 10) || 10000,
+          systemRateLimitMaxBuckets: parseInt(data.rateLimitMaxBuckets, 10) || 10000,
           systemLastUpdated: data.lastUpdated
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
             : '-'
@@ -1387,16 +1463,23 @@ class Admin extends Component {
 
         const tenantId = data.tenantId || '';
 
-        this.setState({
-          currentOauthClientId: data.clientId || '',
-          oauthClientId: data.clientId || '',
-          currentOauthAuthority: tenantId,
-          oauthAuthority: tenantId,
-          currentOauthHasClientSecret: !!data.hasClientSecret,
-          oauthLastUpdated: data.lastUpdated
-            ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
-            : '-',
-          oauthClientSecret: ''
+        this.setState((prevState) => {
+          const nextState = {
+            currentOauthClientId: data.clientId || '',
+            currentOauthAuthority: tenantId,
+            currentOauthHasClientSecret: !!data.hasClientSecret,
+            oauthLastUpdated: data.lastUpdated
+              ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
+              : '-'
+          };
+
+          if (!prevState.oauthFormDirty) {
+            nextState.oauthClientId = data.clientId || '';
+            nextState.oauthAuthority = tenantId;
+            nextState.oauthClientSecret = '';
+          }
+
+          return nextState;
         });
       })
       .catch(err => {
@@ -1934,9 +2017,9 @@ class Admin extends Component {
     const {
       apiToken,
       systemStartupValidationStrict,
-      systemGraphWebhookEnabled,
-      systemGraphWebhookClientState,
-      systemGraphWebhookAllowedIps
+      systemExposeDetailedErrors,
+      systemHstsMaxAge,
+      systemRateLimitMaxBuckets
     } = this.state;
 
     const headers = {
@@ -1947,19 +2030,14 @@ class Admin extends Component {
       headers.Authorization = `Bearer ${apiToken}`;
     }
 
-    const webhookAllowedIps = String(systemGraphWebhookAllowedIps || '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
-
     fetch('/api/system-config', {
       method: 'POST',
       headers,
       body: JSON.stringify({
         startupValidationStrict: !!systemStartupValidationStrict,
-        graphWebhookEnabled: !!systemGraphWebhookEnabled,
-        graphWebhookClientState: String(systemGraphWebhookClientState || '').trim(),
-        graphWebhookAllowedIps: webhookAllowedIps
+        exposeDetailedErrors: !!systemExposeDetailedErrors,
+        hstsMaxAge: Math.max(parseInt(systemHstsMaxAge, 10) || 0, 0),
+        rateLimitMaxBuckets: Math.max(parseInt(systemRateLimitMaxBuckets, 10) || 1000, 1000)
       })
     })
       .then(response => {
@@ -1975,7 +2053,7 @@ class Admin extends Component {
         }
 
         this.setState({
-          systemMessage: 'System configuration updated successfully.',
+          systemMessage: t.systemConfigUpdateSuccess || 'System configuration updated successfully.',
           systemMessageType: 'success'
         });
         this.loadCurrentConfig();
@@ -1988,6 +2066,74 @@ class Admin extends Component {
         this.setState({
           systemMessage: `${t.errorPrefix} ${err.message}`,
           systemMessageType: 'error'
+        });
+      });
+  }
+
+  handleGraphRuntimeSubmit = (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const {
+      apiToken,
+      systemGraphWebhookEnabled,
+      systemGraphWebhookClientState,
+      systemGraphWebhookAllowedIps,
+      systemGraphFetchTimeoutMs,
+      systemGraphFetchRetryAttempts,
+      systemGraphFetchRetryBaseMs
+    } = this.state;
+
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (apiToken) {
+      headers.Authorization = `Bearer ${apiToken}`;
+    }
+
+    const webhookAllowedIps = String(systemGraphWebhookAllowedIps || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    fetch('/api/system-config', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        graphWebhookEnabled: !!systemGraphWebhookEnabled,
+        graphWebhookClientState: String(systemGraphWebhookClientState || '').trim(),
+        graphWebhookAllowedIps: webhookAllowedIps,
+        graphFetchTimeoutMs: Math.max(parseInt(systemGraphFetchTimeoutMs, 10) || 1000, 1000),
+        graphFetchRetryAttempts: Math.max(parseInt(systemGraphFetchRetryAttempts, 10) || 0, 0),
+        graphFetchRetryBaseMs: Math.max(parseInt(systemGraphFetchRetryBaseMs, 10) || 50, 50)
+      })
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.error || t.errorUnknown);
+        }
+
+        this.setState({
+          graphRuntimeMessage: t.graphRuntimeUpdateSuccess || 'Graph runtime configuration updated successfully.',
+          graphRuntimeMessageType: 'success'
+        });
+        this.loadCurrentConfig();
+
+        setTimeout(() => {
+          this.setState({ graphRuntimeMessage: null, graphRuntimeMessageType: null });
+        }, 5000);
+      })
+      .catch(err => {
+        this.setState({
+          graphRuntimeMessage: `${t.errorPrefix} ${err.message}`,
+          graphRuntimeMessageType: 'error'
         });
       });
   }
@@ -2092,9 +2238,10 @@ class Admin extends Component {
         }
 
         this.setState({
-          oauthMessage: 'OAuth configuration updated successfully.',
+          oauthMessage: t.oauthConfigUpdateSuccess || 'OAuth configuration updated successfully.',
           oauthMessageType: 'success',
-          oauthClientSecret: ''
+          oauthClientSecret: '',
+          oauthFormDirty: false
         });
 
         this.loadCurrentConfig();
@@ -2631,6 +2778,12 @@ class Admin extends Component {
       currentSystemGraphWebhookEnabled, systemGraphWebhookEnabled,
       currentSystemGraphWebhookClientState, systemGraphWebhookClientState,
       currentSystemGraphWebhookAllowedIps, systemGraphWebhookAllowedIps,
+      currentSystemExposeDetailedErrors, systemExposeDetailedErrors,
+      currentSystemGraphFetchTimeoutMs, systemGraphFetchTimeoutMs,
+      currentSystemGraphFetchRetryAttempts, systemGraphFetchRetryAttempts,
+      currentSystemGraphFetchRetryBaseMs, systemGraphFetchRetryBaseMs,
+      currentSystemHstsMaxAge, systemHstsMaxAge,
+      currentSystemRateLimitMaxBuckets, systemRateLimitMaxBuckets,
       systemLastUpdated,
       currentTranslationApiEnabled, translationApiEnabled,
       currentTranslationApiUrl, translationApiUrl,
@@ -2645,6 +2798,8 @@ class Admin extends Component {
       currentRateLimitApiWindowMs, currentRateLimitApiMax, currentRateLimitWriteWindowMs, currentRateLimitWriteMax, currentRateLimitAuthWindowMs, currentRateLimitAuthMax, rateLimitLastUpdated,
       rateLimitApiWindowMs, rateLimitApiMax, rateLimitWriteWindowMs, rateLimitWriteMax, rateLimitAuthWindowMs, rateLimitAuthMax,
       maintenanceMessageBanner, maintenanceMessageType,
+      requiresInitialTokenSetup,
+      initialTokenSetupLockedByEnv,
       i18nLastUpdated, currentMaintenanceTranslations, maintenanceTranslationsText, currentAdminTranslations, adminTranslationsText, translationLanguage, newTranslationLanguageCode, translationLanguageDraftError, collapsedTranslationGroups, showAdvancedTranslationsEditor, i18nMessage, i18nMessageType,
       backupPayloadText, backupMessage, backupMessageType,
       auditLogs, auditMessage, auditMessageType,
@@ -2662,6 +2817,7 @@ class Admin extends Component {
       wifiMessage, wifiMessageType, logoMessage, logoMessageType, informationMessage, informationMessageType,
       bookingMessage, bookingMessageType, colorMessage, colorMessageType,
       systemMessage, systemMessageType, translationApiMessage, translationApiMessageType, oauthMessage, oauthMessageType, searchMessage, searchMessageType, rateLimitMessage, rateLimitMessageType,
+      graphRuntimeMessage, graphRuntimeMessageType,
       wifiLocked, logoLocked, informationLocked, bookingLocked, searchLocked, rateLimitLocked, apiTokenLocked, wifiApiTokenLocked, oauthLocked, systemLocked, maintenanceLocked, translationApiLocked,
       isAuthenticated, authChecking, authMessage, authMessageType,
       bookingPermissionMissing,
@@ -2690,6 +2846,7 @@ class Admin extends Component {
     const browserLang = navigator.language || navigator.userLanguage;
     const lang = browserLang.split('-')[0];
     const apiTokenSourceLabelMap = {
+	  unset: t.apiTokenSourceUnset || 'Not configured',
       default: t.apiTokenSourceDefault || 'Default',
       runtime: t.apiTokenSourceRuntime || 'Admin Runtime',
       env: t.apiTokenSourceEnv || 'Environment (.env)'
@@ -2760,9 +2917,17 @@ class Admin extends Component {
                     autoComplete="off"
                     disabled={authChecking}
                   />
-                  <small>{t.apiTokenHelp}</small>
+                  <small>
+                    {requiresInitialTokenSetup
+                      ? (initialTokenSetupLockedByEnv
+                          ? (t.apiTokenHelp || 'Required to update settings')
+                          : (t.apiTokenBootstrapHelp || 'No admin token is configured yet. Enter a new token (min. 8 chars) to create the initial admin token.'))
+                      : (t.apiTokenHelp || 'Required to update settings')}
+                  </small>
                   <button type="submit" className="admin-submit-button admin-login-button" disabled={authChecking}>
-                    {authChecking ? 'Logging in...' : 'Login'}
+                    {authChecking
+                      ? (requiresInitialTokenSetup ? (t.apiTokenBootstrapButtonBusy || 'Creating token...') : 'Logging in...')
+                      : (requiresInitialTokenSetup ? (t.apiTokenBootstrapButton || 'Create Token') : 'Login')}
                   </button>
                 </form>
               </div>
@@ -3932,25 +4097,25 @@ class Admin extends Component {
 
               {!systemLocked && (
                 <>
-                  <h3>System Configuration</h3>
+                  <h3>{t.systemConfigSectionTitle || 'System Configuration'}</h3>
                   <div className="admin-current-config">
                     <h3>{t.currentConfigTitle}</h3>
                     <div className="config-grid">
                       <div className="config-item">
-                        <span className="config-label">Startup Validation Strict</span>
+                        <span className="config-label">{t.systemStartupValidationStrictLabel || 'Startup Validation Strict'}</span>
                         <span className="config-value">{currentSystemStartupValidationStrict ? 'Yes' : 'No'}</span>
                       </div>
                       <div className="config-item">
-                        <span className="config-label">Graph Webhook Enabled</span>
-                        <span className="config-value">{currentSystemGraphWebhookEnabled ? 'Yes' : 'No'}</span>
+                        <span className="config-label">{t.systemExposeDetailedErrorsLabel || 'Expose Detailed Errors'}</span>
+                        <span className="config-value">{currentSystemExposeDetailedErrors ? 'Yes' : 'No'}</span>
                       </div>
                       <div className="config-item">
-                        <span className="config-label">Graph Webhook Client State</span>
-                        <span className="config-value">{currentSystemGraphWebhookClientState || '-'}</span>
+                        <span className="config-label">{t.systemHstsMaxAgeLabel || 'HSTS Max Age (s)'}</span>
+                        <span className="config-value">{currentSystemHstsMaxAge}</span>
                       </div>
                       <div className="config-item">
-                        <span className="config-label">Graph Webhook Allowed IPs</span>
-                        <span className="config-value">{currentSystemGraphWebhookAllowedIps || '-'}</span>
+                        <span className="config-label">{t.systemRateLimitMaxBucketsLabel || 'Rate Limiter Max Buckets'}</span>
+                        <span className="config-value">{currentSystemRateLimitMaxBuckets}</span>
                       </div>
                       <div className="config-item">
                         <span className="config-label">{t.lastUpdatedLabel}</span>
@@ -3962,52 +4127,55 @@ class Admin extends Component {
                   <form onSubmit={this.handleSystemSubmit}>
                     <div className="admin-form-group">
                       <label className="inline-label">
-                        <span className="label-text">Startup Validation Strict</span>
+                        <span className="label-text">{t.systemStartupValidationStrictLabel || 'Startup Validation Strict'}</span>
                         <input
                           type="checkbox"
                           checked={systemStartupValidationStrict}
                           onChange={(e) => this.setState({ systemStartupValidationStrict: e.target.checked })}
                         />
                       </label>
-                      <small>Stop startup when warnings are present.</small>
+                      <small>{t.systemStartupValidationStrictHelp || 'Stop startup when warnings are present.'}</small>
                     </div>
 
                     <div className="admin-form-group">
                       <label className="inline-label">
-                        <span className="label-text">Graph Webhook Enabled</span>
+                        <span className="label-text">{t.systemExposeDetailedErrorsLabel || 'Expose Detailed Errors'}</span>
                         <input
                           type="checkbox"
-                          checked={systemGraphWebhookEnabled}
-                          onChange={(e) => this.setState({ systemGraphWebhookEnabled: e.target.checked })}
+                          checked={systemExposeDetailedErrors}
+                          onChange={(e) => this.setState({ systemExposeDetailedErrors: e.target.checked })}
                         />
                       </label>
-                      <small>Enable Microsoft Graph webhook endpoint handling.</small>
+                      <small>{t.systemExposeDetailedErrorsHelp || 'Only enable for trusted debugging environments.'}</small>
                     </div>
 
                     <div className="admin-form-group">
-                      <label htmlFor="systemGraphWebhookClientState">Graph Webhook Client State</label>
+                      <label htmlFor="systemHstsMaxAge">{t.systemHstsMaxAgeInputLabel || 'HSTS Max Age (seconds)'}</label>
                       <input
-                        type="text"
-                        id="systemGraphWebhookClientState"
-                        value={systemGraphWebhookClientState}
-                        onChange={(e) => this.setState({ systemGraphWebhookClientState: e.target.value })}
-                        placeholder="Shared secret value for webhook notifications"
+                        type="number"
+                        id="systemHstsMaxAge"
+                        value={systemHstsMaxAge}
+                        onChange={(e) => this.setState({ systemHstsMaxAge: e.target.value })}
+                        min="0"
+                        step="300"
                       />
+                      <small>{t.systemHstsMaxAgeHelp || 'Set to 0 to disable HSTS header.'}</small>
                     </div>
 
                     <div className="admin-form-group">
-                      <label htmlFor="systemGraphWebhookAllowedIps">Graph Webhook Allowed IPs</label>
+                      <label htmlFor="systemRateLimitMaxBuckets">{t.systemRateLimitMaxBucketsLabel || 'Rate Limiter Max Buckets'}</label>
                       <input
-                        type="text"
-                        id="systemGraphWebhookAllowedIps"
-                        value={systemGraphWebhookAllowedIps}
-                        onChange={(e) => this.setState({ systemGraphWebhookAllowedIps: e.target.value })}
-                        placeholder="Comma-separated IP addresses"
+                        type="number"
+                        id="systemRateLimitMaxBuckets"
+                        value={systemRateLimitMaxBuckets}
+                        onChange={(e) => this.setState({ systemRateLimitMaxBuckets: e.target.value })}
+                        min="1000"
+                        step="500"
                       />
                     </div>
 
                     <button type="submit" className="admin-submit-button">
-                      Save System Configuration
+                      {t.systemSaveButton || 'Save System Configuration'}
                     </button>
                   </form>
 
@@ -4023,7 +4191,7 @@ class Admin extends Component {
 
               {systemLocked && (
                 <>
-                  <h3>System Configuration</h3>
+                  <h3>{t.systemConfigSectionTitle || 'System Configuration'}</h3>
                   <div className="admin-locked-message">
                     <p>{t.configuredViaEnv}</p>
                   </div>
@@ -4144,21 +4312,21 @@ class Admin extends Component {
 
               {!oauthLocked && (
                 <>
-                  <h3>OAuth Configuration</h3>
+                  <h3>{t.oauthSectionTitle || 'OAuth Configuration'}</h3>
                   <div className="admin-current-config">
                     <h3>{t.currentConfigTitle}</h3>
                     <div className="config-grid">
                       <div className="config-item">
-                        <span className="config-label">Client ID</span>
+                        <span className="config-label">{t.oauthClientIdLabel || 'Client ID'}</span>
                         <span className="config-value">{currentOauthClientId || '-'}</span>
                       </div>
                       <div className="config-item">
-                        <span className="config-label">Tenant ID</span>
+                        <span className="config-label">{t.oauthTenantIdLabel || 'Tenant ID'}</span>
                         <span className="config-value">{currentOauthAuthority || '-'}</span>
                       </div>
                       <div className="config-item">
-                        <span className="config-label">Client Secret</span>
-                        <span className="config-value">{currentOauthHasClientSecret ? 'Configured' : 'Not configured'}</span>
+                        <span className="config-label">{t.oauthClientSecretLabel || 'Client Secret'}</span>
+                        <span className="config-value">{currentOauthHasClientSecret ? (t.oauthClientSecretConfigured || 'Configured') : (t.oauthClientSecretNotConfigured || 'Not configured')}</span>
                       </div>
                       <div className="config-item">
                         <span className="config-label">{t.lastUpdatedLabel}</span>
@@ -4169,42 +4337,42 @@ class Admin extends Component {
 
                   <form onSubmit={this.handleOAuthSubmit}>
                     <div className="admin-form-group">
-                      <label htmlFor="oauthClientId">OAuth Client ID</label>
+                      <label htmlFor="oauthClientId">{t.oauthClientIdInputLabel || 'OAuth Client ID'}</label>
                       <input
                         type="text"
                         id="oauthClientId"
                         value={oauthClientId}
-                        onChange={(e) => this.setState({ oauthClientId: e.target.value })}
-                        placeholder="Application (client) ID"
+                        onChange={(e) => this.setState({ oauthClientId: e.target.value, oauthFormDirty: true })}
+                        placeholder={t.oauthClientIdPlaceholder || 'Application (client) ID'}
                       />
                     </div>
 
                     <div className="admin-form-group">
-                      <label htmlFor="oauthAuthority">OAuth Tenant ID</label>
+                      <label htmlFor="oauthAuthority">{t.oauthTenantIdInputLabel || 'OAuth Tenant ID'}</label>
                       <input
                         type="text"
                         id="oauthAuthority"
                         value={oauthAuthority}
-                        onChange={(e) => this.setState({ oauthAuthority: e.target.value })}
-                        placeholder="Directory (tenant) ID"
+                        onChange={(e) => this.setState({ oauthAuthority: e.target.value, oauthFormDirty: true })}
+                        placeholder={t.oauthTenantIdPlaceholder || 'Directory (tenant) ID'}
                       />
                     </div>
 
                     <div className="admin-form-group">
-                      <label htmlFor="oauthClientSecret">OAuth Client Secret</label>
+                      <label htmlFor="oauthClientSecret">{t.oauthClientSecretInputLabel || 'OAuth Client Secret'}</label>
                       <input
                         type="password"
                         id="oauthClientSecret"
                         value={oauthClientSecret}
-                        onChange={(e) => this.setState({ oauthClientSecret: e.target.value })}
-                        placeholder="Leave empty to keep existing secret"
+                        onChange={(e) => this.setState({ oauthClientSecret: e.target.value, oauthFormDirty: true })}
+                        placeholder={t.oauthClientSecretPlaceholder || 'Leave empty to keep existing secret'}
                         autoComplete="new-password"
                       />
-                      <small>Secret is encrypted before it is written to disk.</small>
+                      <small>{t.oauthClientSecretHelp || 'Secret is encrypted before it is written to disk.'}</small>
                     </div>
 
                     <button type="submit" className="admin-submit-button">
-                      Save OAuth Configuration
+                      {t.oauthSaveButton || 'Save OAuth Configuration'}
                     </button>
                   </form>
 
@@ -4215,12 +4383,144 @@ class Admin extends Component {
                   )}
 
                   <div className="admin-form-divider"></div>
+
+                  {!systemLocked && (
+                    <>
+                      <h3>{t.graphRuntimeSectionTitle || 'Graph Runtime Configuration'}</h3>
+                      <div className="admin-current-config">
+                        <h3>{t.currentConfigTitle}</h3>
+                        <div className="config-grid">
+                          <div className="config-item">
+                            <span className="config-label">{t.graphWebhookEnabledLabel || 'Graph Webhook Enabled'}</span>
+                            <span className="config-value">{currentSystemGraphWebhookEnabled ? 'Yes' : 'No'}</span>
+                          </div>
+                          <div className="config-item">
+                            <span className="config-label">{t.graphWebhookClientStateLabel || 'Graph Webhook Client State'}</span>
+                            <span className="config-value">{currentSystemGraphWebhookClientState || '-'}</span>
+                          </div>
+                          <div className="config-item">
+                            <span className="config-label">{t.graphWebhookAllowedIpsLabel || 'Graph Webhook Allowed IPs'}</span>
+                            <span className="config-value">{currentSystemGraphWebhookAllowedIps || '-'}</span>
+                          </div>
+                          <div className="config-item">
+                            <span className="config-label">{t.graphFetchTimeoutLabel || 'Graph Fetch Timeout (ms)'}</span>
+                            <span className="config-value">{currentSystemGraphFetchTimeoutMs}</span>
+                          </div>
+                          <div className="config-item">
+                            <span className="config-label">{t.graphFetchRetryAttemptsLabel || 'Graph Fetch Retry Attempts'}</span>
+                            <span className="config-value">{currentSystemGraphFetchRetryAttempts}</span>
+                          </div>
+                          <div className="config-item">
+                            <span className="config-label">{t.graphFetchRetryBaseLabel || 'Graph Fetch Retry Base (ms)'}</span>
+                            <span className="config-value">{currentSystemGraphFetchRetryBaseMs}</span>
+                          </div>
+                          <div className="config-item">
+                            <span className="config-label">{t.lastUpdatedLabel}</span>
+                            <span className="config-value">{systemLastUpdated || '-'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <form onSubmit={this.handleGraphRuntimeSubmit}>
+                        <div className="admin-form-group">
+                          <label className="inline-label">
+                            <span className="label-text">{t.graphWebhookEnabledLabel || 'Graph Webhook Enabled'}</span>
+                            <input
+                              type="checkbox"
+                              checked={systemGraphWebhookEnabled}
+                              onChange={(e) => this.setState({ systemGraphWebhookEnabled: e.target.checked })}
+                            />
+                          </label>
+                          <small>{t.graphWebhookEnabledHelp || 'Enable Microsoft Graph webhook endpoint handling.'}</small>
+                        </div>
+
+                        <div className="admin-form-group">
+                          <label htmlFor="systemGraphWebhookClientState">{t.graphWebhookClientStateLabel || 'Graph Webhook Client State'}</label>
+                          <input
+                            type="text"
+                            id="systemGraphWebhookClientState"
+                            value={systemGraphWebhookClientState}
+                            onChange={(e) => this.setState({ systemGraphWebhookClientState: e.target.value })}
+                            placeholder={t.graphWebhookClientStatePlaceholder || 'Shared secret value for webhook notifications'}
+                          />
+                        </div>
+
+                        <div className="admin-form-group">
+                          <label htmlFor="systemGraphWebhookAllowedIps">{t.graphWebhookAllowedIpsLabel || 'Graph Webhook Allowed IPs'}</label>
+                          <input
+                            type="text"
+                            id="systemGraphWebhookAllowedIps"
+                            value={systemGraphWebhookAllowedIps}
+                            onChange={(e) => this.setState({ systemGraphWebhookAllowedIps: e.target.value })}
+                            placeholder={t.graphWebhookAllowedIpsPlaceholder || 'Comma-separated IP addresses'}
+                          />
+                        </div>
+
+                        <div className="admin-form-group">
+                          <label htmlFor="systemGraphFetchTimeoutMs">{t.graphFetchTimeoutLabel || 'Graph Fetch Timeout (ms)'}</label>
+                          <input
+                            type="number"
+                            id="systemGraphFetchTimeoutMs"
+                            value={systemGraphFetchTimeoutMs}
+                            onChange={(e) => this.setState({ systemGraphFetchTimeoutMs: e.target.value })}
+                            min="1000"
+                            step="100"
+                          />
+                        </div>
+
+                        <div className="admin-form-group">
+                          <label htmlFor="systemGraphFetchRetryAttempts">{t.graphFetchRetryAttemptsLabel || 'Graph Fetch Retry Attempts'}</label>
+                          <input
+                            type="number"
+                            id="systemGraphFetchRetryAttempts"
+                            value={systemGraphFetchRetryAttempts}
+                            onChange={(e) => this.setState({ systemGraphFetchRetryAttempts: e.target.value })}
+                            min="0"
+                            step="1"
+                          />
+                        </div>
+
+                        <div className="admin-form-group">
+                          <label htmlFor="systemGraphFetchRetryBaseMs">{t.graphFetchRetryBaseLabel || 'Graph Fetch Retry Base (ms)'}</label>
+                          <input
+                            type="number"
+                            id="systemGraphFetchRetryBaseMs"
+                            value={systemGraphFetchRetryBaseMs}
+                            onChange={(e) => this.setState({ systemGraphFetchRetryBaseMs: e.target.value })}
+                            min="50"
+                            step="50"
+                          />
+                        </div>
+
+                        <button type="submit" className="admin-submit-button">
+                          {t.graphRuntimeSaveButton || 'Save Graph Runtime Configuration'}
+                        </button>
+                      </form>
+
+                      {graphRuntimeMessage && (
+                        <div className={`admin-message admin-message-${graphRuntimeMessageType}`}>
+                          {graphRuntimeMessage}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {systemLocked && (
+                    <>
+                      <h3>{t.graphRuntimeSectionTitle || 'Graph Runtime Configuration'}</h3>
+                      <div className="admin-locked-message">
+                        <p>{t.configuredViaEnv}</p>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="admin-form-divider"></div>
                 </>
               )}
 
               {oauthLocked && (
                 <>
-                  <h3>OAuth Configuration</h3>
+                  <h3>{t.oauthSectionTitle || 'OAuth Configuration'}</h3>
                   <div className="admin-locked-message">
                     <p>{t.configuredViaEnv}</p>
                   </div>

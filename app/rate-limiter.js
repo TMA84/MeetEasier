@@ -3,6 +3,7 @@ function createRateLimiter(options) {
 	const max = options.max;
 	const keyFn = options.keyGenerator || ((req) => req.ip || req.socket.remoteAddress || 'unknown');
 	const buckets = new Map();
+	const maxBuckets = Number.isFinite(options.maxBuckets) && options.maxBuckets > 0 ? options.maxBuckets : 10000;
 
 	setInterval(() => {
 		const now = Date.now();
@@ -16,6 +17,27 @@ function createRateLimiter(options) {
 	return function rateLimitMiddleware(req, res, next) {
 		const now = Date.now();
 		const key = keyFn(req);
+
+		for (const [bucketKey, bucket] of buckets.entries()) {
+			if (bucket.resetAt <= now) {
+				buckets.delete(bucketKey);
+			}
+		}
+
+		if (buckets.size >= maxBuckets && !buckets.has(key)) {
+			let oldestKey = null;
+			let oldestResetAt = Number.POSITIVE_INFINITY;
+			for (const [bucketKey, bucket] of buckets.entries()) {
+				if (bucket.resetAt < oldestResetAt) {
+					oldestResetAt = bucket.resetAt;
+					oldestKey = bucketKey;
+				}
+			}
+			if (oldestKey !== null) {
+				buckets.delete(oldestKey);
+			}
+		}
+
 		const existing = buckets.get(key);
 
 		if (!existing || existing.resetAt <= now) {

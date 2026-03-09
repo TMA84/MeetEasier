@@ -2,6 +2,24 @@ const graph = require('./graph');
 const blacklist = require('../../config/room-blacklist.js');
 const roomlistAliasHelper = require('../roomlist-alias-helper');
 
+function toClientRoomErrorMessage(error) {
+	const baseMessage = String(error?.message || error || '').trim();
+	if (!baseMessage) {
+		return 'Calendar backend unavailable';
+	}
+
+	const normalized = baseMessage.toLowerCase();
+	if (normalized.includes('aadsts7000215') || normalized.includes('invalid_client')) {
+		return 'Graph authentication failed: invalid OAuth client secret.';
+	}
+
+	if (normalized.includes('url_parse_error')) {
+		return 'Graph configuration error: invalid OAuth authority URL.';
+	}
+
+	return baseMessage;
+}
+
 module.exports = function(callback, msalClient) {
 	// promise: get all room lists
 	const getListOfRooms = () => {
@@ -89,7 +107,7 @@ module.exports = function(callback, msalClient) {
 			});
 		});
 
-		if (option.errorMessage) room.ErrorMessage = option.errorMessage;
+		if (option.errorMessage) room.ErrorMessage = toClientRoomErrorMessage(option.errorMessage);
 		context.itemsProcessed++;
 
 		if (context.itemsProcessed === context.roomAddresses.length) {

@@ -5,13 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.1] - 2026-03-09
+## [1.3.2] - 2026-03-09
 
 ### Added
 - **Configurable Upcoming Meetings Count**
   - Added `upcomingMeetingsCount` to sidebar runtime configuration with validation and persistence
   - Added support for `SIDEBAR_UPCOMING_COUNT` environment default/lock behavior
   - Added admin UI input to configure the upcoming meetings count (range: 1-10)
+
+- **First-Run Admin Token Bootstrap**
+  - Removed automatic fallback admin token and introduced first-run token bootstrap flow
+  - Added initial setup API endpoints to create the first admin token when none is configured
+  - Admin login now supports bootstrap-on-first-login using the entered token
+  - Fixed bootstrap flow after deleting prior token/key artifacts by allowing initial token creation without blocked OAuth secret migration
+  - Prevented automatic maintenance fallback when Graph API is not configured yet, so first-run admin setup can be completed normally
 
 ### Changed
 - **Sidebar Display Controls**
@@ -23,6 +30,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Sidebar Upcoming Section Layout**
   - Removed the upcoming meetings headline in room-minimal and single-room sidebars to increase vertical space for appointments
+
+- **Security Hardening: Booking + Webhooks**
+  - Added strict booking datetime validation (parseable start/end, start < end, max booking duration 24h)
+  - Enforced strict Graph webhook `clientState` matching per notification (no permissive fallback)
+
+- **Security Hardening: Logs + Validation + CORS**
+  - Sanitized backend error logging in critical booking/sync paths to avoid leaking raw exception payloads
+  - Added stricter request validation for booking payloads (room email, subject length, description length, time field bounds)
+  - Added strict OAuth input validation for client ID, tenant ID, authority format and client secret constraints
+  - Tightened public API CORS policy to require same-origin or explicit allowlist via `PUBLIC_ALLOWED_ORIGINS`/`ALLOWED_ORIGINS`
+
+- **Security + Stability Hardening: Headers, Timeouts, Retries**
+  - Enforced explicit `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY` via Helmet defaults
+  - Enabled strict HSTS handling for HTTPS responses (configurable via `HSTS_MAX_AGE`)
+  - Added centralized Graph fetch timeout/retry behavior for key Graph API operations (`GRAPH_FETCH_TIMEOUT_MS`, `GRAPH_FETCH_RETRY_ATTEMPTS`, `GRAPH_FETCH_RETRY_BASE_MS`)
+  - Reduced error-information disclosure by defaulting to generic client error messages unless `EXPOSE_DETAILED_ERRORS=true`
+  - Mitigated rate limiter memory growth with bounded bucket capacity and on-request cleanup
+  - Added process-level handlers for `unhandledRejection` and `uncaughtException` to avoid silent failure modes
+  - Added Admin Panel controls for these runtime settings (Operations → System for generic system settings, Operations → Graph-API for Graph runtime settings)
+  - Removed legacy OAuth secret decryption/token-migration fallback tied to `change-me-admin-token`
+  - Fixed false-positive system runtime lock state by basing lock detection on startup env snapshot instead of runtime `process.env` overrides
 
 ## [1.3.0] - 2026-03-08
 

@@ -30,9 +30,21 @@ const qrPath = path.join(__dirname, '../static/img/wifi-qr.png');
 const OAUTH_SECRET_ALGO = 'aes-256-gcm';
 const API_TOKEN_ENCRYPTION_ALGO = 'aes-256-gcm';
 const API_TOKEN_ENCRYPTION_ENV = 'API_TOKEN_ENCRYPTION_KEY';
-const DEFAULT_API_TOKEN = 'change-me-admin-token';
 const INITIAL_API_TOKEN_ENV_VALUE = String(process.env.API_TOKEN || '').trim();
 const INITIAL_WIFI_API_TOKEN_ENV_VALUE = String(process.env.WIFI_API_TOKEN || '').trim();
+const SYSTEM_ENV_LOCK_KEYS = [
+	'STARTUP_VALIDATION_STRICT',
+	'GRAPH_WEBHOOK_ENABLED',
+	'GRAPH_WEBHOOK_CLIENT_STATE',
+	'GRAPH_WEBHOOK_ALLOWED_IPS',
+	'EXPOSE_DETAILED_ERRORS',
+	'GRAPH_FETCH_TIMEOUT_MS',
+	'GRAPH_FETCH_RETRY_ATTEMPTS',
+	'GRAPH_FETCH_RETRY_BASE_MS',
+	'HSTS_MAX_AGE',
+	'RATE_LIMIT_MAX_BUCKETS'
+];
+const INITIAL_SYSTEM_ENV_LOCKED = SYSTEM_ENV_LOCK_KEYS.some((key) => process.env[key] !== undefined);
 const API_TOKEN_PLACEHOLDERS = new Set([
 	'',
 	'api_token_not_set'
@@ -306,6 +318,10 @@ function isWifiApiTokenEnvLocked() {
 	return !!INITIAL_WIFI_API_TOKEN_ENV_VALUE;
 }
 
+function isSystemEnvLocked() {
+	return INITIAL_SYSTEM_ENV_LOCKED;
+}
+
 function getApiTokenEncryptionKey() {
 	const envKeyMaterial = String(process.env[API_TOKEN_ENCRYPTION_ENV] || '').trim();
 	if (envKeyMaterial) {
@@ -423,9 +439,9 @@ function getApiTokenRuntimeConfig() {
 	}
 
 	return {
-		token: DEFAULT_API_TOKEN,
-		source: 'default',
-		isDefault: true,
+		token: '',
+		source: 'unset',
+		isDefault: false,
 		lastUpdated: null
 	};
 }
@@ -545,6 +561,17 @@ function migrateEncryptedOAuthSecretForTokenChange(oldToken, newToken) {
 	fs.writeFileSync(oauthConfigPath, JSON.stringify(rawOauthConfig, null, 2));
 }
 
+function clearStoredOAuthClientSecret() {
+	const rawOauthConfig = readRawOAuthConfig();
+	if (!rawOauthConfig || !rawOauthConfig.clientSecretEncrypted) {
+		return;
+	}
+
+	delete rawOauthConfig.clientSecretEncrypted;
+	rawOauthConfig.lastUpdated = rawOauthConfig.lastUpdated || new Date().toISOString();
+	fs.writeFileSync(oauthConfigPath, JSON.stringify(rawOauthConfig, null, 2));
+}
+
 function encryptOAuthSecret(secretValue, tokenOverride) {
 	const key = getOAuthEncryptionKey(tokenOverride);
 	if (!key) {
@@ -583,10 +610,6 @@ function decryptOAuthSecret(payload, tokenOverride) {
 	const rawEnvToken = String(process.env.API_TOKEN || '').trim();
 	if (rawEnvToken && !candidates.includes(rawEnvToken)) {
 		candidates.push(rawEnvToken);
-	}
-
-	if (!candidates.includes(DEFAULT_API_TOKEN)) {
-		candidates.push(DEFAULT_API_TOKEN);
 	}
 
 	for (const candidate of candidates) {
@@ -775,7 +798,13 @@ function normalizeSystemConfig(systemConfig, fallback = {}) {
 		graphWebhookClientState: source.graphWebhookClientState !== undefined
 			? String(source.graphWebhookClientState || '').trim()
 			: String(fallback.graphWebhookClientState || '').trim(),
-		graphWebhookAllowedIps: parseWebhookIps(source.graphWebhookAllowedIps, fallbackWebhookIps)
+		graphWebhookAllowedIps: parseWebhookIps(source.graphWebhookAllowedIps, fallbackWebhookIps),
+		exposeDetailedErrors: toBoolean(source.exposeDetailedErrors, toBoolean(fallback.exposeDetailedErrors, false)),
+		graphFetchTimeoutMs: toMinInt(source.graphFetchTimeoutMs, toMinInt(fallback.graphFetchTimeoutMs, 10000, 1000), 1000),
+		graphFetchRetryAttempts: toMinInt(source.graphFetchRetryAttempts, toMinInt(fallback.graphFetchRetryAttempts, 2, 0), 0),
+		graphFetchRetryBaseMs: toMinInt(source.graphFetchRetryBaseMs, toMinInt(fallback.graphFetchRetryBaseMs, 250, 50), 50),
+		hstsMaxAge: toMinInt(source.hstsMaxAge, toMinInt(fallback.hstsMaxAge, 31536000, 0), 0),
+		rateLimitMaxBuckets: toMinInt(source.rateLimitMaxBuckets, toMinInt(fallback.rateLimitMaxBuckets, 10000, 1000), 1000)
 	};
 }
 
@@ -784,7 +813,13 @@ function getSystemRuntimeConfig() {
 		startupValidationStrict: config.startupValidation?.strict === true,
 		graphWebhookEnabled: config.graphWebhook?.enabled === true,
 		graphWebhookClientState: config.graphWebhook?.clientState || '',
-		graphWebhookAllowedIps: Array.isArray(config.graphWebhook?.allowedIps) ? config.graphWebhook.allowedIps : []
+		graphWebhookAllowedIps: Array.isArray(config.graphWebhook?.allowedIps) ? config.graphWebhook.allowedIps : [],
+		exposeDetailedErrors: config.systemDefaults?.exposeDetailedErrors === true,
+		graphFetchTimeoutMs: toMinInt(config.systemDefaults?.graphFetchTimeoutMs, 10000, 1000),
+		graphFetchRetryAttempts: toMinInt(config.systemDefaults?.graphFetchRetryAttempts, 2, 0),
+		graphFetchRetryBaseMs: toMinInt(config.systemDefaults?.graphFetchRetryBaseMs, 250, 50),
+		hstsMaxAge: toMinInt(config.systemDefaults?.hstsMaxAge, 31536000, 0),
+		rateLimitMaxBuckets: toMinInt(config.systemDefaults?.rateLimitMaxBuckets, 10000, 1000)
 	};
 
 	const rawConfig = (() => {
@@ -818,6 +853,12 @@ function getSystemConfig() {
 		graphWebhookEnabled: runtimeConfig.graphWebhookEnabled,
 		graphWebhookClientState: runtimeConfig.graphWebhookClientState,
 		graphWebhookAllowedIps: runtimeConfig.graphWebhookAllowedIps,
+		exposeDetailedErrors: runtimeConfig.exposeDetailedErrors,
+		graphFetchTimeoutMs: runtimeConfig.graphFetchTimeoutMs,
+		graphFetchRetryAttempts: runtimeConfig.graphFetchRetryAttempts,
+		graphFetchRetryBaseMs: runtimeConfig.graphFetchRetryBaseMs,
+		hstsMaxAge: runtimeConfig.hstsMaxAge,
+		rateLimitMaxBuckets: runtimeConfig.rateLimitMaxBuckets,
 		lastUpdated: runtimeConfig.lastUpdated
 	};
 }
@@ -1062,7 +1103,13 @@ function saveSystemConfig(systemConfig) {
 			startupValidationStrict: config.startupValidation?.strict === true,
 			graphWebhookEnabled: config.graphWebhook?.enabled === true,
 			graphWebhookClientState: config.graphWebhook?.clientState || '',
-			graphWebhookAllowedIps: Array.isArray(config.graphWebhook?.allowedIps) ? config.graphWebhook.allowedIps : []
+			graphWebhookAllowedIps: Array.isArray(config.graphWebhook?.allowedIps) ? config.graphWebhook.allowedIps : [],
+			exposeDetailedErrors: config.systemDefaults?.exposeDetailedErrors === true,
+			graphFetchTimeoutMs: toMinInt(config.systemDefaults?.graphFetchTimeoutMs, 10000, 1000),
+			graphFetchRetryAttempts: toMinInt(config.systemDefaults?.graphFetchRetryAttempts, 2, 0),
+			graphFetchRetryBaseMs: toMinInt(config.systemDefaults?.graphFetchRetryBaseMs, 250, 50),
+			hstsMaxAge: toMinInt(config.systemDefaults?.hstsMaxAge, 31536000, 0),
+			rateLimitMaxBuckets: toMinInt(config.systemDefaults?.rateLimitMaxBuckets, 10000, 1000)
 		})
 	);
 
@@ -1077,6 +1124,12 @@ function saveSystemConfig(systemConfig) {
 		graphWebhookEnabled: configData.graphWebhookEnabled,
 		graphWebhookClientState: configData.graphWebhookClientState,
 		graphWebhookAllowedIps: configData.graphWebhookAllowedIps,
+		exposeDetailedErrors: configData.exposeDetailedErrors,
+		graphFetchTimeoutMs: configData.graphFetchTimeoutMs,
+		graphFetchRetryAttempts: configData.graphFetchRetryAttempts,
+		graphFetchRetryBaseMs: configData.graphFetchRetryBaseMs,
+		hstsMaxAge: configData.hstsMaxAge,
+		rateLimitMaxBuckets: configData.rateLimitMaxBuckets,
 		lastUpdated: configData.lastUpdated
 	};
 }
@@ -1718,6 +1771,18 @@ async function updateSystemConfig(systemConfig) {
 	config.graphWebhook.allowedIps = Array.isArray(runtimeConfig.graphWebhookAllowedIps)
 		? runtimeConfig.graphWebhookAllowedIps
 		: [];
+	config.systemDefaults.exposeDetailedErrors = runtimeConfig.exposeDetailedErrors;
+	config.systemDefaults.graphFetchTimeoutMs = runtimeConfig.graphFetchTimeoutMs;
+	config.systemDefaults.graphFetchRetryAttempts = runtimeConfig.graphFetchRetryAttempts;
+	config.systemDefaults.graphFetchRetryBaseMs = runtimeConfig.graphFetchRetryBaseMs;
+	config.systemDefaults.hstsMaxAge = runtimeConfig.hstsMaxAge;
+	config.systemDefaults.rateLimitMaxBuckets = runtimeConfig.rateLimitMaxBuckets;
+	process.env.EXPOSE_DETAILED_ERRORS = runtimeConfig.exposeDetailedErrors ? 'true' : 'false';
+	process.env.GRAPH_FETCH_TIMEOUT_MS = String(runtimeConfig.graphFetchTimeoutMs);
+	process.env.GRAPH_FETCH_RETRY_ATTEMPTS = String(runtimeConfig.graphFetchRetryAttempts);
+	process.env.GRAPH_FETCH_RETRY_BASE_MS = String(runtimeConfig.graphFetchRetryBaseMs);
+	process.env.HSTS_MAX_AGE = String(runtimeConfig.hstsMaxAge);
+	process.env.RATE_LIMIT_MAX_BUCKETS = String(runtimeConfig.rateLimitMaxBuckets);
 
 	if (io) {
 		io.of('/').emit('systemConfigUpdated', savedConfig);
@@ -1749,9 +1814,10 @@ async function updateApiToken(nextToken) {
 		throw new Error('API token is locked by environment variable API_TOKEN.');
 	}
 
-	const currentToken = runtimeConfig.token;
-	if (currentToken !== normalizedNextToken) {
-		migrateEncryptedOAuthSecretForTokenChange(currentToken, normalizedNextToken);
+	if (runtimeConfig.source === 'unset') {
+		clearStoredOAuthClientSecret();
+	} else if (runtimeConfig.token !== normalizedNextToken) {
+		migrateEncryptedOAuthSecretForTokenChange(runtimeConfig.token, normalizedNextToken);
 	}
 
 	const savedConfig = saveApiTokenConfig(normalizedNextToken);
@@ -1795,6 +1861,18 @@ function applyRuntimeConfigOverrides() {
 	config.graphWebhook.allowedIps = Array.isArray(persistedSystemConfig.graphWebhookAllowedIps)
 		? persistedSystemConfig.graphWebhookAllowedIps
 		: [];
+	config.systemDefaults.exposeDetailedErrors = persistedSystemConfig.exposeDetailedErrors;
+	config.systemDefaults.graphFetchTimeoutMs = persistedSystemConfig.graphFetchTimeoutMs;
+	config.systemDefaults.graphFetchRetryAttempts = persistedSystemConfig.graphFetchRetryAttempts;
+	config.systemDefaults.graphFetchRetryBaseMs = persistedSystemConfig.graphFetchRetryBaseMs;
+	config.systemDefaults.hstsMaxAge = persistedSystemConfig.hstsMaxAge;
+	config.systemDefaults.rateLimitMaxBuckets = persistedSystemConfig.rateLimitMaxBuckets;
+	process.env.EXPOSE_DETAILED_ERRORS = persistedSystemConfig.exposeDetailedErrors ? 'true' : 'false';
+	process.env.GRAPH_FETCH_TIMEOUT_MS = String(persistedSystemConfig.graphFetchTimeoutMs);
+	process.env.GRAPH_FETCH_RETRY_ATTEMPTS = String(persistedSystemConfig.graphFetchRetryAttempts);
+	process.env.GRAPH_FETCH_RETRY_BASE_MS = String(persistedSystemConfig.graphFetchRetryBaseMs);
+	process.env.HSTS_MAX_AGE = String(persistedSystemConfig.hstsMaxAge);
+	process.env.RATE_LIMIT_MAX_BUCKETS = String(persistedSystemConfig.rateLimitMaxBuckets);
 
 	const persistedOAuthConfig = getOAuthRuntimeConfig();
 	config.msalConfig.auth.clientId = persistedOAuthConfig.clientId;
@@ -1844,6 +1922,7 @@ module.exports = {
 	getEffectiveWifiApiToken,
 	isApiTokenEnvLocked,
 	isWifiApiTokenEnvLocked,
+	isSystemEnvLocked,
 	getSearchConfig,
 	getRateLimitConfig,
 	getTranslationApiRuntimeConfig,
