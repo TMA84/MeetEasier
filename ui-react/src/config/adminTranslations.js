@@ -84,6 +84,8 @@ const defaultAdminTranslations = {
     "errorUnauthorized": "Nicht autorisiert: Ungültiger oder fehlender API-Token",
     "errorPrefix": "Fehler:",
     "errorUnknown": "Unbekannter Fehler",
+    "yesLabel": "Ja",
+    "noLabel": "Nein",
     "loading": "Lädt...",
     "configuredViaEnv": "Diese Einstellungen sind über Umgebungsvariablen konfiguriert und können hier nicht geändert werden.",
     "syncStatusTitle": "Kalender Synchronisierung",
@@ -336,6 +338,8 @@ const defaultAdminTranslations = {
     "errorUnauthorized": "Unauthorized: Invalid or missing API token",
     "errorPrefix": "Error:",
     "errorUnknown": "Unknown error",
+    "yesLabel": "Yes",
+    "noLabel": "No",
     "loading": "Loading...",
     "configuredViaEnv": "These settings are configured via environment variables and cannot be changed here.",
     "syncStatusTitle": "Calendar Synchronization",
@@ -541,15 +545,21 @@ export const getDefaultAdminTranslations = () => defaultAdminTranslations;
 
 export const getAdminTranslations = (rawOverrides) => {
   const overrides = normalizeAdminTranslations(rawOverrides);
-  const merged = {
-    ...defaultAdminTranslations,
-    ...overrides
-  };
-
   const language = getAdminLanguage();
+  const englishTranslations = {
+    ...(defaultAdminTranslations.en || {}),
+    ...(overrides.en || {})
+  };
+  const selectedLanguageTranslations = language === 'en'
+    ? englishTranslations
+    : {
+      ...(defaultAdminTranslations[language] || {}),
+      ...(overrides[language] || {})
+    };
+
   return {
-    ...merged.en,
-    ...(merged[language] || {})
+    ...englishTranslations,
+    ...selectedLanguageTranslations
   };
 };
 
