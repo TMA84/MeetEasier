@@ -21,6 +21,10 @@ function parseAllowedOrigins(rawValue) {
 		.filter(Boolean);
 }
 
+function parsePublicAllowedOrigins(rawValue) {
+	return parseAllowedOrigins(rawValue);
+}
+
 function isPublicCorsPath(req) {
 	if (req.method !== 'GET') {
 		return false;
@@ -88,11 +92,23 @@ function parseParameterLimit(rawValue, fallback = 1000) {
 	return parsed;
 }
 
+function parseHstsMaxAge(rawValue, fallback = 31536000) {
+	const parsed = Number.parseInt(rawValue, 10);
+	if (!Number.isFinite(parsed) || parsed < 0) {
+		return fallback;
+	}
+	return parsed;
+}
+
 
 // configuration ===============================================================
 const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
+const publicAllowedOrigins = parsePublicAllowedOrigins(process.env.PUBLIC_ALLOWED_ORIGINS);
 
 app.use(helmet({
+	hsts: false,
+	frameguard: { action: 'deny' },
+	noSniff: true,
 	contentSecurityPolicy: {
 		directives: {
 			defaultSrc: ["'self'"],
@@ -117,7 +133,12 @@ const apiCorsOptionsDelegate = (req, callback) => {
 	}
 
 	if (isPublicCorsPath(req)) {
-		return callback(null, { origin: true });
+		const normalizedOrigin = String(origin).trim().toLowerCase().replace(/\/$/, '');
+		const allowedPublic = isSameOrigin(origin, req)
+			|| publicAllowedOrigins.includes(normalizedOrigin)
+			|| allowedOrigins.includes(normalizedOrigin);
+
+		return callback(null, { origin: allowedPublic });
 	}
 
 	const normalizedOrigin = String(origin).trim().toLowerCase().replace(/\/$/, '');
@@ -137,6 +158,21 @@ app.use(express.static("static"));
 app.use(express.static(`${__dirname}/ui-react/build`));
 
 app.set('trust proxy', parseTrustProxySetting(process.env.TRUST_PROXY));
+
+app.use((req, res, next) => {
+	const forwardedProto = String(req.headers['x-forwarded-proto'] || '').toLowerCase();
+	const isHttpsRequest = req.secure || forwardedProto.includes('https');
+	if (!isHttpsRequest) {
+		return next();
+	}
+
+	const configuredMaxAge = parseHstsMaxAge(config.systemDefaults?.hstsMaxAge, 31536000);
+	if (configuredMaxAge > 0) {
+		res.setHeader('Strict-Transport-Security', `max-age=${configuredMaxAge}; includeSubDomains`);
+	}
+
+	next();
+});
 
 // Parse JSON request bodies
 const requestBodyLimit = parseBodyLimit(process.env.REQUEST_BODY_LIMIT, '1mb');
@@ -159,6 +195,15 @@ printStartupValidation(startupReport, config.startupValidation.strict);
 // Initialize WiFi configuration
 const initWiFi = require('./app/init-wifi');
 initWiFi().catch(err => console.error('WiFi initialization error:', err));
+
+process.on('unhandledRejection', (reason) => {
+	console.error('Unhandled promise rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+	console.error('Uncaught exception:', error);
+	process.exit(1);
+});
 
 // routes ======================================================================
 require("./app/routes.js")(app);

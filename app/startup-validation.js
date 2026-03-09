@@ -33,9 +33,9 @@ function validateStartupConfig(config) {
 	}
 
 	if (!config.apiToken) {
-		errors.push('Admin API token is not configured.');
+		info.push('Admin API token is not configured yet. First admin login will require creating an initial token.');
 	} else if (config.apiToken === 'change-me-admin-token') {
-		warnings.push('Default API token is active. Change it in Admin panel or set API_TOKEN in environment.');
+		warnings.push('Legacy default API token is active. Change it in Admin panel or set API_TOKEN in environment.');
 	}
 
 	if (!Number.isFinite(config.calendarSearch.pollIntervalMs) || config.calendarSearch.pollIntervalMs < 5000) {

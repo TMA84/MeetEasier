@@ -14,12 +14,137 @@ let msalClient = null;
 const isProductionEnv = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 
 function getClientSafeErrorMessage(error, fallbackMessage) {
-	if (isProductionEnv) {
+	if (isProductionEnv || config.systemDefaults?.exposeDetailedErrors !== true) {
 		return fallbackMessage;
 	}
 
 	const message = String(error?.message || '').trim();
 	return message || fallbackMessage;
+}
+
+function sanitizeErrorForLog(error) {
+	if (!error || typeof error !== 'object') {
+		return {
+			message: String(error || 'Unknown error')
+		};
+	}
+
+	return {
+		name: error.name,
+		message: error.message,
+		code: error.code || error.body?.error?.code,
+		status: error.status || error.statusCode
+	};
+}
+
+function logSanitizedError(label, error, extra = undefined) {
+	if (extra) {
+		console.error(label, {
+			error: sanitizeErrorForLog(error),
+			extra
+		});
+		return;
+	}
+
+	console.error(label, sanitizeErrorForLog(error));
+}
+
+function isValidEmailAddress(value) {
+	const normalized = String(value || '').trim();
+	if (!normalized || normalized.length > 320) {
+		return false;
+	}
+
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+}
+
+function isValidGuid(value) {
+	return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim());
+}
+
+function isValidMicrosoftAuthority(authorityValue) {
+	const normalized = String(authorityValue || '').trim();
+	if (!normalized) {
+		return false;
+	}
+
+	try {
+		const parsed = new URL(normalized);
+		const host = String(parsed.hostname || '').toLowerCase();
+		if (host !== 'login.microsoftonline.com') {
+			return false;
+		}
+
+		const tenantSegment = String(parsed.pathname || '').split('/').filter(Boolean)[0] || '';
+		return !!tenantSegment;
+	} catch (error) {
+		return false;
+	}
+}
+
+function getGraphFetchSettings() {
+	return {
+		timeoutMs: Math.max(Number.parseInt(config.systemDefaults?.graphFetchTimeoutMs, 10) || 10000, 1000),
+		retryAttempts: Math.max(Number.parseInt(config.systemDefaults?.graphFetchRetryAttempts, 10) || 2, 0),
+		retryBaseMs: Math.max(Number.parseInt(config.systemDefaults?.graphFetchRetryBaseMs, 10) || 250, 50)
+	};
+}
+
+function isRetryableGraphError(error) {
+	if (!error) {
+		return false;
+	}
+
+	const message = String(error?.message || '').toLowerCase();
+	if (message.includes('aborted') || message.includes('timeout') || message.includes('network')) {
+		return true;
+	}
+
+	const status = Number(error?.status || error?.statusCode || 0);
+	return status === 429 || status >= 500;
+}
+
+function delay(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function graphFetch(url, options = {}) {
+	const settings = getGraphFetchSettings();
+	let lastError = null;
+
+	for (let attempt = 0; attempt <= settings.retryAttempts; attempt += 1) {
+		const controller = new AbortController();
+		const timeoutHandle = setTimeout(() => controller.abort(), settings.timeoutMs);
+
+		try {
+			const response = await fetch(url, {
+				...options,
+				signal: controller.signal
+			});
+
+			if (!response.ok && (response.status === 429 || response.status >= 500)) {
+				const retryError = new Error(`Graph HTTP ${response.status}`);
+				retryError.status = response.status;
+				if (attempt < settings.retryAttempts) {
+					await delay(settings.retryBaseMs * Math.pow(2, attempt));
+					continue;
+				}
+			}
+
+			return response;
+		} catch (error) {
+			lastError = error;
+			if (attempt < settings.retryAttempts && isRetryableGraphError(error)) {
+				await delay(settings.retryBaseMs * Math.pow(2, attempt));
+				continue;
+			}
+			throw error;
+		} finally {
+			clearTimeout(timeoutHandle);
+		}
+	}
+
+	throw lastError || new Error('Graph request failed');
 }
 
 function refreshMsalClient() {
@@ -49,10 +174,7 @@ function isOAuthEnvConfigured() {
 }
 
 function isSystemEnvConfigured() {
-	return isEnvDefined('STARTUP_VALIDATION_STRICT')
-		|| isEnvDefined('GRAPH_WEBHOOK_ENABLED')
-		|| isEnvDefined('GRAPH_WEBHOOK_CLIENT_STATE')
-		|| isEnvDefined('GRAPH_WEBHOOK_ALLOWED_IPS');
+	return configManager.isSystemEnvLocked();
 }
 
 function isMaintenanceEnvConfigured() {
@@ -170,6 +292,15 @@ function hasValidWiFiApiToken(req) {
 		? configManager.getEffectiveWifiApiToken()
 		: '';
 	return secureTokenEquals(providedToken, wifiToken);
+}
+
+function isInitialAdminTokenSetupRequired() {
+	if (configManager.isApiTokenEnvLocked()) {
+		return false;
+	}
+
+	const effectiveToken = normalizeAuthToken(configManager.getEffectiveApiToken());
+	return !effectiveToken;
 }
 
 function getClientIp(req) {
@@ -577,7 +708,7 @@ async function endGraphEventEarly(roomEmail, appointmentId) {
 	const accessToken = authResult.accessToken;
 	const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
 
-	const eventResponse = await fetch(eventUrl, {
+	const eventResponse = await graphFetch(eventUrl, {
 		headers: {
 			Authorization: `Bearer ${accessToken}`,
 			'Content-Type': 'application/json'
@@ -593,7 +724,7 @@ async function endGraphEventEarly(roomEmail, appointmentId) {
 	const startDate = parseGraphDateTime(event?.start?.dateTime, event?.start?.timeZone);
 	const newEnd = calculateEarlyEndTime(startDate, new Date());
 
-	const response = await fetch(eventUrl, {
+	const response = await graphFetch(eventUrl, {
 		method: 'PATCH',
 		headers: {
 			Authorization: `Bearer ${accessToken}`,
@@ -624,7 +755,7 @@ async function moveGraphEventStartToNow(roomEmail, appointmentId, nowDate = new 
 	const accessToken = authResult.accessToken;
 	const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
 
-	const response = await fetch(eventUrl, {
+	const response = await graphFetch(eventUrl, {
 		method: 'PATCH',
 		headers: {
 			Authorization: `Bearer ${accessToken}`,
@@ -690,28 +821,34 @@ module.exports = function(app) {
 	let bookingRateLimiter = null;
 
 	const rebuildRateLimiters = () => {
+		const maxBuckets = config.systemDefaults?.rateLimitMaxBuckets;
+
 		apiRateLimiter = createRateLimiter({
 			windowMs: config.rateLimit.apiWindowMs,
 			max: config.rateLimit.apiMax,
-			keyGenerator: req => `${getClientIp(req)}:${req.path}`
+			keyGenerator: req => `${getClientIp(req)}:${req.path}`,
+			maxBuckets
 		});
 
 		writeRateLimiter = createRateLimiter({
 			windowMs: config.rateLimit.writeWindowMs,
 			max: config.rateLimit.writeMax,
-			keyGenerator: req => `${getClientIp(req)}:${req.path}:${req.method}`
+			keyGenerator: req => `${getClientIp(req)}:${req.path}:${req.method}`,
+			maxBuckets
 		});
 
 		authRateLimiter = createRateLimiter({
 			windowMs: config.rateLimit.authWindowMs,
 			max: config.rateLimit.authMax,
-			keyGenerator: req => `${getClientIp(req)}:auth`
+			keyGenerator: req => `${getClientIp(req)}:auth`,
+			maxBuckets
 		});
 
 		bookingRateLimiter = createRateLimiter({
 			windowMs: config.rateLimit.bookingWindowMs,
 			max: config.rateLimit.bookingMax,
-			keyGenerator: req => `${getClientIp(req)}:booking`
+			keyGenerator: req => `${getClientIp(req)}:booking`,
+			maxBuckets
 		});
 	};
 
@@ -808,13 +945,9 @@ module.exports = function(app) {
 
 		const payload = req.body;
 		const notifications = Array.isArray(payload?.value) ? payload.value : [];
+		const expectedClientState = String(config.graphWebhook.clientState || '').trim();
 
-		const validNotifications = notifications.filter(item => {
-			if (!config.graphWebhook.clientState) {
-				return true;
-			}
-			return item.clientState === config.graphWebhook.clientState;
-		});
+		const validNotifications = notifications.filter(item => String(item?.clientState || '').trim() === expectedClientState);
 
 		if (validNotifications.length > 0) {
 			triggerRoomRefreshWithFollowUp();
@@ -984,6 +1117,40 @@ module.exports = function(app) {
 			});
 		}
 
+		if (!isValidEmailAddress(roomEmail)) {
+			return res.status(400).json({
+				error: 'Invalid room email',
+				message: 'The room email format is invalid.'
+			});
+		}
+
+		const normalizedSubject = String(subject || '').trim();
+		if (!normalizedSubject || normalizedSubject.length > 160) {
+			return res.status(400).json({
+				error: 'Invalid subject',
+				message: 'Subject is required and must not exceed 160 characters.'
+			});
+		}
+
+		const normalizedDescription = description === undefined || description === null
+			? ''
+			: String(description);
+		if (normalizedDescription.length > 2000) {
+			return res.status(400).json({
+				error: 'Invalid description',
+				message: 'Description must not exceed 2000 characters.'
+			});
+		}
+
+		const normalizedStartTime = String(startTime || '').trim();
+		const normalizedEndTime = String(endTime || '').trim();
+		if (!normalizedStartTime || !normalizedEndTime || normalizedStartTime.length > 64 || normalizedEndTime.length > 64) {
+			return res.status(400).json({
+				error: 'Invalid date range',
+				message: 'Start and end time values are invalid.'
+			});
+		}
+
 		// Security: Prevent booking with attendees or additional resources
 		// Only allow the specific fields we need
 		const disallowedFields = ['attendees', 'requiredAttendees', 'optionalAttendees', 'resources', 'locations'];
@@ -996,7 +1163,12 @@ module.exports = function(app) {
 			}
 		}
 
-		const bookingDetails = { subject, startTime, endTime, description };
+		const bookingDetails = {
+			subject: normalizedSubject,
+			startTime: normalizedStartTime,
+			endTime: normalizedEndTime,
+			description: normalizedDescription
+		};
 
 		try {
 			const bookRoom = require('./msgraph/booking.js');
@@ -1004,7 +1176,7 @@ module.exports = function(app) {
 			triggerRoomRefreshWithFollowUp();
 			res.json(result);
 		} catch (error) {
-			console.error('Booking error:', error);
+			logSanitizedError('Booking error:', error, { roomEmail });
 			const rawErrorMessage = String(error?.message || '').toLowerCase();
 			if (rawErrorMessage.includes('already booked')) {
 				return res.status(409).json({
@@ -1014,7 +1186,7 @@ module.exports = function(app) {
 			}
 			res.status(500).json({ 
 				error: 'Booking failed',
-				message: getClientSafeErrorMessage(error, 'Failed to book room')
+				message: 'Failed to book room'
 			});
 		}
 	});
@@ -1095,7 +1267,7 @@ module.exports = function(app) {
 
 			// Get the current event
 			const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
-			const eventResponse = await fetch(eventUrl, {
+			const eventResponse = await graphFetch(eventUrl, {
 				headers: {
 					'Authorization': `Bearer ${accessToken}`,
 					'Content-Type': 'application/json'
@@ -1154,7 +1326,7 @@ module.exports = function(app) {
 
 			// Update the event end time
 			const updateUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
-			const updateResponse = await fetch(updateUrl, {
+			const updateResponse = await graphFetch(updateUrl, {
 				method: 'PATCH',
 				headers: {
 					'Authorization': `Bearer ${accessToken}`,
@@ -1180,7 +1352,7 @@ module.exports = function(app) {
 			});
 			triggerRoomRefreshWithFollowUp();
 		} catch (error) {
-			console.error('Extend meeting error:', error);
+			logSanitizedError('Extend meeting error:', error, { roomEmail, appointmentId });
 			res.status(500).json({ 
 				success: false,
 				error: getClientSafeErrorMessage(error, t.generalError)
@@ -1241,7 +1413,7 @@ module.exports = function(app) {
 				newEndTime: endedAt instanceof Date ? endedAt.toISOString() : null
 			});
 		} catch (error) {
-			console.error('End meeting error:', error);
+			logSanitizedError('End meeting error:', error, { roomEmail, appointmentId });
 			return res.status(500).json({
 				success: false,
 				error: getClientSafeErrorMessage(error, t.genericError)
@@ -1388,10 +1560,71 @@ module.exports = function(app) {
 		});
 	};
 
+	app.get('/api/admin/bootstrap-status', function(req, res) {
+		res.json({
+			requiresSetup: isInitialAdminTokenSetupRequired(),
+			lockedByEnv: configManager.isApiTokenEnvLocked()
+		});
+	});
+
+	app.post('/api/admin/bootstrap-token', function(req, res) {
+		authRateLimiter(req, res, () => {});
+		if (res.headersSent) {
+			return;
+		}
+
+		if (configManager.isApiTokenEnvLocked()) {
+			return res.status(403).json({
+				error: 'API token is locked by environment variable',
+				message: 'Set API_TOKEN in environment or remove it to use bootstrap setup.'
+			});
+		}
+
+		if (!isInitialAdminTokenSetupRequired()) {
+			return res.status(409).json({
+				error: 'Admin token already configured',
+				message: 'Initial setup is not required anymore.'
+			});
+		}
+
+		const providedToken = String(req.body?.token || '').trim();
+		if (!providedToken || providedToken.length < 8) {
+			return res.status(400).json({
+				error: 'Invalid API token',
+				message: 'Please provide an API token with at least 8 characters.'
+			});
+		}
+
+		configManager.updateApiToken(providedToken)
+			.then(() => {
+				appendAuditLog({
+					event: 'auth.bootstrap_token_created',
+					path: req.path,
+					method: req.method,
+					ip: getClientIp(req),
+					userAgent: req.headers['user-agent'] || null
+				});
+
+				setAdminAuthCookie(res, providedToken);
+				res.json({ success: true, message: 'Initial admin API token created.' });
+			})
+			.catch((err) => {
+				console.error('Error creating initial admin API token:', err);
+				res.status(500).json({ error: getClientSafeErrorMessage(err, 'Failed to create initial admin API token') });
+			});
+	});
+
 	app.post('/api/admin/login', function(req, res) {
 		authRateLimiter(req, res, () => {});
 		if (res.headersSent) {
 			return;
+		}
+
+		if (isInitialAdminTokenSetupRequired()) {
+			return res.status(428).json({
+				error: 'Admin token setup required',
+				message: 'No admin API token is configured yet. Create one first.'
+			});
 		}
 
 		const providedToken = String(req.body?.token || '').trim();
@@ -1592,6 +1825,52 @@ module.exports = function(app) {
 				return res.status(400).json({ error: 'At least one OAuth configuration option is required' });
 			}
 
+			if (clientId !== undefined) {
+				const normalizedClientId = String(clientId || '').trim();
+				if (!isValidGuid(normalizedClientId)) {
+					return res.status(400).json({
+						error: 'Invalid OAuth client ID',
+						message: 'Client ID must be a valid GUID.'
+					});
+				}
+			}
+
+			if (tenantId !== undefined) {
+				const normalizedTenantId = String(tenantId || '').trim();
+				if (!isValidGuid(normalizedTenantId)) {
+					return res.status(400).json({
+						error: 'Invalid OAuth tenant ID',
+						message: 'Tenant ID must be a valid GUID.'
+					});
+				}
+			}
+
+			if (authority !== undefined && tenantId === undefined) {
+				const normalizedAuthority = String(authority || '').trim();
+				if (!isValidMicrosoftAuthority(normalizedAuthority)) {
+					return res.status(400).json({
+						error: 'Invalid OAuth authority',
+						message: 'Authority must be a valid login.microsoftonline.com URL with tenant segment.'
+					});
+				}
+			}
+
+			if (clientSecret !== undefined) {
+				const normalizedClientSecret = String(clientSecret || '');
+				if (!normalizedClientSecret.trim()) {
+					return res.status(400).json({
+						error: 'Invalid OAuth client secret',
+						message: 'Client secret must not be empty.'
+					});
+				}
+				if (normalizedClientSecret.length > 4096) {
+					return res.status(400).json({
+						error: 'Invalid OAuth client secret',
+						message: 'Client secret exceeds maximum allowed length.'
+					});
+				}
+			}
+
 			const beforeConfig = configManager.getOAuthConfig();
 			const updatedConfig = await configManager.updateOAuthConfig({
 				clientId,
@@ -1619,7 +1898,7 @@ module.exports = function(app) {
 				message: 'OAuth configuration updated'
 			});
 		} catch (err) {
-			console.error('Error updating OAuth config:', err);
+			logSanitizedError('Error updating OAuth config:', err);
 			res.status(500).json({ error: getClientSafeErrorMessage(err, 'Failed to update OAuth configuration') });
 		}
 	});
@@ -1647,7 +1926,13 @@ module.exports = function(app) {
 				startupValidationStrict,
 				graphWebhookEnabled,
 				graphWebhookClientState,
-				graphWebhookAllowedIps
+				graphWebhookAllowedIps,
+				exposeDetailedErrors,
+				graphFetchTimeoutMs,
+				graphFetchRetryAttempts,
+				graphFetchRetryBaseMs,
+				hstsMaxAge,
+				rateLimitMaxBuckets
 			} = req.body || {};
 
 			if (
@@ -1655,6 +1940,12 @@ module.exports = function(app) {
 				&& graphWebhookEnabled === undefined
 				&& graphWebhookClientState === undefined
 				&& graphWebhookAllowedIps === undefined
+				&& exposeDetailedErrors === undefined
+				&& graphFetchTimeoutMs === undefined
+				&& graphFetchRetryAttempts === undefined
+				&& graphFetchRetryBaseMs === undefined
+				&& hstsMaxAge === undefined
+				&& rateLimitMaxBuckets === undefined
 			) {
 				return res.status(400).json({ error: 'At least one system configuration option is required' });
 			}
@@ -1664,10 +1955,17 @@ module.exports = function(app) {
 				startupValidationStrict,
 				graphWebhookEnabled,
 				graphWebhookClientState,
-				graphWebhookAllowedIps
+				graphWebhookAllowedIps,
+				exposeDetailedErrors,
+				graphFetchTimeoutMs,
+				graphFetchRetryAttempts,
+				graphFetchRetryBaseMs,
+				hstsMaxAge,
+				rateLimitMaxBuckets
 			});
 
 			require('./socket-controller').refreshPollingSchedule();
+			rebuildRateLimiters();
 
 			appendAuditLog({
 				event: 'config.system.update',

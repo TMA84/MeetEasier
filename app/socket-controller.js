@@ -23,8 +23,123 @@ let autoMaintenanceOwned = false;
 const GRAPH_FAILURE_MAINTENANCE_MESSAGE = process.env.GRAPH_FAILURE_MAINTENANCE_MESSAGE
   || 'Calendar backend currently unavailable. Display is temporarily in fallback mode.';
 
+function getGraphFetchSettings() {
+  return {
+    timeoutMs: Math.max(Number.parseInt(config.systemDefaults?.graphFetchTimeoutMs, 10) || 10000, 1000),
+    retryAttempts: Math.max(Number.parseInt(config.systemDefaults?.graphFetchRetryAttempts, 10) || 2, 0),
+    retryBaseMs: Math.max(Number.parseInt(config.systemDefaults?.graphFetchRetryBaseMs, 10) || 250, 50)
+  };
+}
+
+function sanitizeErrorForLog(error) {
+  if (!error || typeof error !== 'object') {
+    return {
+      message: String(error || 'Unknown error')
+    };
+  }
+
+  return {
+    name: error.name,
+    message: error.message,
+    code: error.code || error.body?.error?.code,
+    status: error.status || error.statusCode
+  };
+}
+
+function logSanitizedError(label, error, extra = undefined) {
+  if (extra) {
+    console.error(label, {
+      error: sanitizeErrorForLog(error),
+      extra
+    });
+    return;
+  }
+
+  console.error(label, sanitizeErrorForLog(error));
+}
+
+function isRetryableGraphError(error) {
+  if (!error) {
+    return false;
+  }
+
+  const message = String(error?.message || '').toLowerCase();
+  if (message.includes('aborted') || message.includes('timeout') || message.includes('network')) {
+    return true;
+  }
+
+  const status = Number(error?.status || error?.statusCode || 0);
+  return status === 429 || status >= 500;
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function graphFetch(url, options = {}) {
+  const settings = getGraphFetchSettings();
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= settings.retryAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutHandle = setTimeout(() => controller.abort(), settings.timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+
+      if (!response.ok && (response.status === 429 || response.status >= 500)) {
+        const retryError = new Error(`Graph HTTP ${response.status}`);
+        retryError.status = response.status;
+        if (attempt < settings.retryAttempts) {
+          await delay(settings.retryBaseMs * Math.pow(2, attempt));
+          continue;
+        }
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt < settings.retryAttempts && isRetryableGraphError(error)) {
+        await delay(settings.retryBaseMs * Math.pow(2, attempt));
+        continue;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutHandle);
+    }
+  }
+
+  throw lastError || new Error('Graph request failed');
+}
+
 function isGraphModeEnabled() {
   return true;
+}
+
+function hasValidGraphCredentials() {
+  const clientId = String(config?.msalConfig?.auth?.clientId || '').trim();
+  const authority = String(config?.msalConfig?.auth?.authority || '').trim();
+  const clientSecret = String(config?.msalConfig?.auth?.clientSecret || '').trim();
+
+  if (!clientId || clientId === 'OAUTH_CLIENT_ID_NOT_SET') {
+    return false;
+  }
+  if (!authority || authority === 'OAUTH_AUTHORITY_NOT_SET') {
+    return false;
+  }
+  if (!clientSecret || clientSecret === 'OAUTH_CLIENT_SECRET_NOT_SET') {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(authority);
+    return !!parsed.protocol && !!parsed.hostname;
+  } catch (error) {
+    return false;
+  }
 }
 
 function ensureGraphFailureMaintenance() {
@@ -41,7 +156,7 @@ function ensureGraphFailureMaintenance() {
         autoMaintenanceOwned = true;
         if (currentMaintenance.message !== GRAPH_FAILURE_MAINTENANCE_MESSAGE) {
           configManager.updateMaintenanceConfig(true, GRAPH_FAILURE_MAINTENANCE_MESSAGE).catch((err) => {
-            console.error('Failed to normalize maintenance fallback message:', err.message);
+            logSanitizedError('Failed to normalize maintenance fallback message:', err);
           });
         }
       }
@@ -50,10 +165,10 @@ function ensureGraphFailureMaintenance() {
 
     autoMaintenanceOwned = true;
     configManager.updateMaintenanceConfig(true, GRAPH_FAILURE_MAINTENANCE_MESSAGE).catch((err) => {
-      console.error('Failed to auto-enable maintenance fallback:', err.message);
+      logSanitizedError('Failed to auto-enable maintenance fallback:', err);
     });
   } catch (err) {
-    console.error('Failed to read maintenance config:', err.message);
+    logSanitizedError('Failed to read maintenance config:', err);
   }
 }
 
@@ -76,11 +191,11 @@ function clearGraphFailureMaintenance() {
     }
 
     configManager.updateMaintenanceConfig(false, currentMaintenance.message).catch((err) => {
-      console.error('Failed to auto-disable maintenance fallback:', err.message);
+      logSanitizedError('Failed to auto-disable maintenance fallback:', err);
     });
     autoMaintenanceOwned = false;
   } catch (err) {
-    console.error('Failed to read maintenance config:', err.message);
+    logSanitizedError('Failed to read maintenance config:', err);
   }
 }
 
@@ -90,6 +205,11 @@ function formatSyncError(error) {
   }
 
   const baseMessage = error.message || String(error);
+
+  if (String(baseMessage).includes('AADSTS7000215') || String(baseMessage).toLowerCase().includes('invalid_client')) {
+    return 'Microsoft Graph authentication failed: invalid OAuth client secret. Update the client secret value in Admin → Operations → Graph-API.';
+  }
+
   const graphMessage = error.body?.error?.message;
   const graphCode = error.body?.error?.code || error.code;
   const statusCode = error.statusCode || error.status;
@@ -113,6 +233,29 @@ function fetchAndBroadcastRooms() {
       return;
     }
 
+    if (!hasValidGraphCredentials()) {
+      lastSyncTime = new Date().toISOString();
+      lastSyncSuccess = false;
+      syncErrorMessage = 'Microsoft Graph is not fully configured yet. Please complete Graph-API settings in Admin.';
+
+      try {
+        const currentMaintenance = configManager.getMaintenanceConfig();
+        const isAutoMessage = String(currentMaintenance?.message || '').startsWith(GRAPH_FAILURE_MAINTENANCE_MESSAGE);
+        if (currentMaintenance?.enabled && isAutoMessage) {
+          configManager.updateMaintenanceConfig(false, currentMaintenance.message).catch((err) => {
+            logSanitizedError('Failed to auto-disable maintenance fallback for unconfigured Graph:', err);
+          });
+        }
+      } catch (err) {
+        logSanitizedError('Failed to inspect maintenance config:', err);
+      }
+
+      autoMaintenanceOwned = false;
+      socketIO.of('/').emit('controllerDone', 'done');
+      resolve(false);
+      return;
+    }
+
     const api = require('./msgraph/rooms.js');
 
     api(function(err, result) {
@@ -120,7 +263,7 @@ function fetchAndBroadcastRooms() {
 
       if (result) {
         if (err) {
-          console.error('Error fetching room data:', err);
+          logSanitizedError('Error fetching room data:', err);
           lastSyncSuccess = false;
           syncErrorMessage = formatSyncError(err);
           ensureGraphFailureMaintenance();
@@ -143,7 +286,7 @@ function fetchAndBroadcastRooms() {
             }
           })
           .catch((releaseError) => {
-            console.error('No-show auto-release failed:', releaseError.message || releaseError);
+            logSanitizedError('No-show auto-release failed:', releaseError);
           });
       } else {
         lastSyncSuccess = false;
@@ -168,7 +311,7 @@ async function deleteGraphEvent(roomEmail, appointmentId) {
   const accessToken = authResult.accessToken;
   const deleteUrl = `https://graph.microsoft.com/v1.0/users/${roomEmail}/events/${appointmentId}`;
 
-  const response = await fetch(deleteUrl, {
+  const response = await graphFetch(deleteUrl, {
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -224,7 +367,10 @@ async function releaseNoShowAppointments(rooms) {
       releasedCount += 1;
       console.log(`No-show auto-release applied for room ${room.Email}, appointment ${currentAppointment.Id}`);
     } catch (error) {
-      console.error(`Failed no-show auto-release for room ${room.Email}, appointment ${currentAppointment.Id}:`, error.message || error);
+      logSanitizedError('Failed no-show auto-release for room appointment:', error, {
+        roomEmail: room.Email,
+        appointmentId: currentAppointment.Id
+      });
     }
   }
 

@@ -27,9 +27,18 @@ module.exports = async function(msalClient, roomEmail, bookingDetails) {
 	// Validate time range
 	const start = new Date(startTime);
 	const end = new Date(endTime);
+
+	if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+		throw new Error('Invalid time format. Use valid ISO datetime values for startTime and endTime.');
+	}
 	
 	if (start >= end) {
 		throw new Error('End time must be after start time');
+	}
+
+	const maxBookingDurationMs = 24 * 60 * 60 * 1000;
+	if ((end.getTime() - start.getTime()) > maxBookingDurationMs) {
+		throw new Error('Booking duration exceeds allowed maximum of 24 hours.');
 	}
 
 	// Allow bookings that start within the last 2 minutes (to account for network latency and processing time)

@@ -46,7 +46,7 @@ function normalizeOAuthAuthorityFromEnv(authorityValue) {
 function normalizeApiTokenFromEnv(value) {
 	const normalized = String(value || '').trim();
 	if (!normalized) {
-		return 'change-me-admin-token';
+		return '';
 	}
 	return normalized;
 }
@@ -58,6 +58,14 @@ function parseSidebarUpcomingMeetingsCountFromEnv(value) {
 	}
 
 	return Math.min(Math.max(parsed, 1), 10);
+}
+
+function parseIntWithMin(value, fallback, minValue = 0) {
+	const parsed = Number.parseInt(value, 10);
+	if (!Number.isFinite(parsed)) {
+		return fallback;
+	}
+	return Math.max(parsed, minValue);
 }
 
 // expose our config directly to our application using module.exports
@@ -108,6 +116,15 @@ module.exports = {
 
 	startupValidation: {
 		strict: process.env.STARTUP_VALIDATION_STRICT === 'true'
+	},
+
+	systemDefaults: {
+		exposeDetailedErrors: process.env.EXPOSE_DETAILED_ERRORS === 'true',
+		graphFetchTimeoutMs: parseIntWithMin(process.env.GRAPH_FETCH_TIMEOUT_MS, 10000, 1000),
+		graphFetchRetryAttempts: parseIntWithMin(process.env.GRAPH_FETCH_RETRY_ATTEMPTS, 2, 0),
+		graphFetchRetryBaseMs: parseIntWithMin(process.env.GRAPH_FETCH_RETRY_BASE_MS, 250, 50),
+		hstsMaxAge: parseIntWithMin(process.env.HSTS_MAX_AGE, 31536000, 0),
+		rateLimitMaxBuckets: parseIntWithMin(process.env.RATE_LIMIT_MAX_BUCKETS, 10000, 1000)
 	},
 
 	rateLimit: {

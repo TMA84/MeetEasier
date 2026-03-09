@@ -72,7 +72,8 @@ docker run -d -p 8080:8080 \
   meeteasier
 ```
 
-Wenn `API_TOKEN` nicht gesetzt ist, wird standardmäßig `change-me-admin-token` verwendet.
+Wenn `API_TOKEN` nicht gesetzt ist, gibt es keinen statischen Standard-Token.
+Öffnen Sie `/admin` und erstellen Sie beim ersten Login den initialen Admin-Token.
 Für produktive Umgebungen sollte immer ein eigener, sicherer Token gesetzt werden.
 
 Damit ist die Installation abgeschlossen. Die Anwendung ist jetzt betriebsbereit.
