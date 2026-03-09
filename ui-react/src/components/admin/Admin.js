@@ -517,7 +517,6 @@ class Admin extends Component {
 
     if (!this.configRefreshInterval) {
       this.configRefreshInterval = setInterval(() => {
-        this.loadCurrentConfig();
         this.loadConfigLocks();
       }, 5000);
     }
@@ -2828,6 +2827,7 @@ class Admin extends Component {
       syncStatusTick
     } = this.state;
     const t = this.getTranslations();
+    const booleanLabel = (value) => (value ? (t.yesLabel || 'Yes') : (t.noLabel || 'No'));
     const availableTranslationLanguages = this.getAvailableTranslationLanguages();
     const normalizedSelectedLanguage = String(translationLanguage || '').trim().toLowerCase();
     const activeTranslationLanguage = availableTranslationLanguages.includes(normalizedSelectedLanguage)
@@ -3045,15 +3045,15 @@ class Admin extends Component {
                 <div className="config-grid">
                   <div className="config-item">
                     <span className="config-label">{t.showWiFiLabel}</span>
-                    <span className="config-value">{currentShowWiFi ? 'Yes' : 'No'}</span>
+                    <span className="config-value">{booleanLabel(currentShowWiFi)}</span>
                   </div>
                   <div className="config-item">
                     <span className="config-label">{t.showUpcomingMeetingsLabel}</span>
-                    <span className="config-value">{currentShowUpcomingMeetings ? 'Yes' : 'No'}</span>
+                    <span className="config-value">{booleanLabel(currentShowUpcomingMeetings)}</span>
                   </div>
                   <div className="config-item">
                     <span className="config-label">{t.showMeetingTitlesLabel}</span>
-                    <span className="config-value">{currentShowMeetingTitles ? 'Yes' : 'No'}</span>
+                    <span className="config-value">{booleanLabel(currentShowMeetingTitles)}</span>
                   </div>
                   <div className="config-item">
                     <span className="config-label">{t.upcomingMeetingsCountLabel}</span>
@@ -3426,19 +3426,19 @@ class Admin extends Component {
               <div className="config-grid">
                 <div className="config-item">
                   <span className="config-label">{t.enableBookingLabel}</span>
-                  <span className="config-value">{currentEnableBooking ? 'Yes' : 'No'}</span>
+                  <span className="config-value">{booleanLabel(currentEnableBooking)}</span>
                 </div>
                 <div className="config-item">
                   <span className="config-label">{t.enableExtendMeetingLabel}</span>
-                  <span className="config-value">{currentEnableExtendMeeting ? 'Yes' : 'No'}</span>
+                  <span className="config-value">{booleanLabel(currentEnableExtendMeeting)}</span>
                 </div>
                 <div className="config-item">
                   <span className="config-label">Check-in enabled</span>
-                  <span className="config-value">{currentCheckInEnabled ? 'Yes' : 'No'}</span>
+                  <span className="config-value">{booleanLabel(currentCheckInEnabled)}</span>
                 </div>
                 <div className="config-item">
                   <span className="config-label">Check-in external only</span>
-                  <span className="config-value">{currentCheckInRequiredForExternalMeetings ? 'Yes' : 'No'}</span>
+                  <span className="config-value">{booleanLabel(currentCheckInRequiredForExternalMeetings)}</span>
                 </div>
                 <div className="config-item">
                   <span className="config-label">Check-in starts before meeting</span>
@@ -3450,7 +3450,7 @@ class Admin extends Component {
                 </div>
                 <div className="config-item">
                   <span className="config-label">Auto-release on no-show</span>
-                  <span className="config-value">{currentCheckInAutoReleaseNoShow ? 'Yes' : 'No'}</span>
+                  <span className="config-value">{booleanLabel(currentCheckInAutoReleaseNoShow)}</span>
                 </div>
                 <div className="config-item">
                   <span className="config-label">{t.bookingButtonColorLabel}</span>
@@ -3968,7 +3968,7 @@ class Admin extends Component {
                   </div>
                   <div className="config-item">
                     <span className="config-label">{t.apiTokenDefaultActiveLabel || 'Default Token Active'}</span>
-                    <span className="config-value">{currentApiTokenIsDefault ? 'Yes' : 'No'}</span>
+                    <span className="config-value">{booleanLabel(currentApiTokenIsDefault)}</span>
                   </div>
                   <div className="config-item">
                     <span className="config-label">{t.apiTokenDefaultValueLabel || 'Default Token'}</span>
@@ -3984,7 +3984,7 @@ class Admin extends Component {
                   </div>
                   <div className="config-item">
                     <span className="config-label">{t.wifiApiTokenConfiguredLabel || 'WiFi Token Configured'}</span>
-                    <span className="config-value">{currentWifiApiTokenConfigured ? 'Yes' : 'No'}</span>
+                    <span className="config-value">{booleanLabel(currentWifiApiTokenConfigured)}</span>
                   </div>
                   <div className="config-item">
                     <span className="config-label">{t.wifiApiTokenLastUpdatedLabel || 'WiFi Token Last Updated'}</span>
@@ -4103,11 +4103,11 @@ class Admin extends Component {
                     <div className="config-grid">
                       <div className="config-item">
                         <span className="config-label">{t.systemStartupValidationStrictLabel || 'Startup Validation Strict'}</span>
-                        <span className="config-value">{currentSystemStartupValidationStrict ? 'Yes' : 'No'}</span>
+                        <span className="config-value">{booleanLabel(currentSystemStartupValidationStrict)}</span>
                       </div>
                       <div className="config-item">
                         <span className="config-label">{t.systemExposeDetailedErrorsLabel || 'Expose Detailed Errors'}</span>
-                        <span className="config-value">{currentSystemExposeDetailedErrors ? 'Yes' : 'No'}</span>
+                        <span className="config-value">{booleanLabel(currentSystemExposeDetailedErrors)}</span>
                       </div>
                       <div className="config-item">
                         <span className="config-label">{t.systemHstsMaxAgeLabel || 'HSTS Max Age (s)'}</span>
@@ -4213,7 +4213,7 @@ class Admin extends Component {
                     <div className="config-grid">
                       <div className="config-item">
                         <span className="config-label">{t.translationApiEnabledLabel || 'Auto Translation Enabled'}</span>
-                        <span className="config-value">{currentTranslationApiEnabled ? 'Yes' : 'No'}</span>
+                        <span className="config-value">{booleanLabel(currentTranslationApiEnabled)}</span>
                       </div>
                       <div className="config-item">
                         <span className="config-label">{t.translationApiUrlLabel || 'API URL'}</span>
@@ -4392,7 +4392,7 @@ class Admin extends Component {
                         <div className="config-grid">
                           <div className="config-item">
                             <span className="config-label">{t.graphWebhookEnabledLabel || 'Graph Webhook Enabled'}</span>
-                            <span className="config-value">{currentSystemGraphWebhookEnabled ? 'Yes' : 'No'}</span>
+                            <span className="config-value">{booleanLabel(currentSystemGraphWebhookEnabled)}</span>
                           </div>
                           <div className="config-item">
                             <span className="config-label">{t.graphWebhookClientStateLabel || 'Graph Webhook Client State'}</span>
@@ -4541,7 +4541,7 @@ class Admin extends Component {
                     <div className="config-grid">
                       <div className="config-item">
                         <span className="config-label">{t.maintenanceEnabledLabel}</span>
-                        <span className="config-value">{currentMaintenanceEnabled ? 'Yes' : 'No'}</span>
+                        <span className="config-value">{booleanLabel(currentMaintenanceEnabled)}</span>
                       </div>
                       <div className="config-item">
                         <span className="config-label">{t.maintenanceMessageLabel}</span>
@@ -4612,7 +4612,7 @@ class Admin extends Component {
                     <div className="config-grid">
                       <div className="config-item">
                         <span className="config-label">Use Microsoft Graph API</span>
-                        <span className="config-value">{currentSearchUseGraphAPI ? 'Yes' : 'No'}</span>
+                        <span className="config-value">{booleanLabel(currentSearchUseGraphAPI)}</span>
                       </div>
                       <div className="config-item">
                         <span className="config-label">Max days</span>
