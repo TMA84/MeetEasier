@@ -183,6 +183,7 @@ class Display extends Component {
         showMeetingTitles: false,
         showWiFi: true,
         showUpcomingMeetings: false,
+        upcomingMeetingsCount: 3,
         minimalHeaderStyle: 'filled'
       },
       bookingConfig: {
@@ -321,6 +322,9 @@ class Display extends Component {
             showMeetingTitles: config.showMeetingTitles !== undefined ? config.showMeetingTitles : false,
             showWiFi: config.showWiFi !== undefined ? config.showWiFi : true,
             showUpcomingMeetings: config.showUpcomingMeetings !== undefined ? config.showUpcomingMeetings : false,
+            upcomingMeetingsCount: Number.isFinite(Number(config.upcomingMeetingsCount))
+              ? Math.min(Math.max(parseInt(config.upcomingMeetingsCount, 10), 1), 10)
+              : 3,
             minimalHeaderStyle: config.minimalHeaderStyle || 'filled'
           }
         });
@@ -453,6 +457,9 @@ class Display extends Component {
             showMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false,
             showWiFi: data.showWiFi !== undefined ? data.showWiFi : true,
             showUpcomingMeetings: data.showUpcomingMeetings !== undefined ? data.showUpcomingMeetings : false,
+            upcomingMeetingsCount: Number.isFinite(Number(data.upcomingMeetingsCount))
+              ? Math.min(Math.max(parseInt(data.upcomingMeetingsCount, 10), 1), 10)
+              : 3,
             minimalHeaderStyle: data.minimalHeaderStyle || 'filled'
           }
         });
@@ -900,14 +907,15 @@ class Display extends Component {
               {/* Upcoming Meetings Section */}
               {sidebarConfig.showUpcomingMeetings && room.Appointments && (
                 <div className="minimal-upcoming">
-                  <div className="minimal-upcoming-title">
-                    {displayTranslations.upcomingMeetingsTitle}
-                  </div>
                   <div className="minimal-upcoming-list">
                     {(() => {
+                      const upcomingLimit = Number.isFinite(Number(sidebarConfig.upcomingMeetingsCount))
+                        ? Math.min(Math.max(parseInt(sidebarConfig.upcomingMeetingsCount, 10), 1), 10)
+                        : 3;
+
                       const upcomingAppointments = room.Busy 
-                        ? room.Appointments.slice(1, 4) 
-                        : room.Appointments.slice(0, 3);
+                        ? room.Appointments.slice(1, 1 + upcomingLimit) 
+                        : room.Appointments.slice(0, upcomingLimit);
                       
                       if (upcomingAppointments.length > 0) {
                         return upcomingAppointments.map((appointment, index) => {

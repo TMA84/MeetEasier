@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-03-09
+
+### Added
+- **Configurable Upcoming Meetings Count**
+  - Added `upcomingMeetingsCount` to sidebar runtime configuration with validation and persistence
+  - Added support for `SIDEBAR_UPCOMING_COUNT` environment default/lock behavior
+  - Added admin UI input to configure the upcoming meetings count (range: 1-10)
+
+### Changed
+- **Sidebar Display Controls**
+  - Updated display settings in admin so WiFi/QR and upcoming meetings can be enabled at the same time
+  - Updated single-room and room-minimal displays to honor configured upcoming meetings count
+
+- **Sidebar Density for Small Screens**
+  - Reduced meeting item padding for compact sidebars on smaller displays in both modern single-room and room-minimal layouts
+
+- **Sidebar Upcoming Section Layout**
+  - Removed the upcoming meetings headline in room-minimal and single-room sidebars to increase vertical space for appointments
+
 ## [1.3.0] - 2026-03-08
 
 ### Added
@@ -61,6 +80,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Extend Meeting Graph Validation Fix**
   - Fixed Graph event extension payload generation to use consistent DateTime + timeZone handling, resolving `ErrorPropertyValidationFailure` when extending meetings
+
+- **Configurable Upcoming Meetings Count**
+  - Added configurable sidebar setting for how many upcoming meetings are shown in room-minimal display (range: 1-10)
 
 ## [1.2.8] - 2026-03-08
 

@@ -315,6 +315,14 @@
         background: $neutral-50;
         border-radius: $radius-lg;
         transition: all $transition-base;
+
+        @media (max-width: 900px) {
+          padding: $space-2;
+        }
+
+        @media (max-width: 600px) {
+          padding: $space-1;
+        }
         
         &:hover {
           background: $neutral-100;
