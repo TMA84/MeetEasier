@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed bootstrap flow after deleting prior token/key artifacts by allowing initial token creation without blocked OAuth secret migration
   - Prevented automatic maintenance fallback when Graph API is not configured yet, so first-run admin setup can be completed normally
 
+### Removed
+- **Legacy room-minimal Display Removed**
+  - Removed all obsolete `room-minimal` display components, tests, and layout files
+  - `/room-minimal/:name` route now fully handled by `SingleRoomLayout` with dark mode and legacy compatibility
+  - Ensured full visual and functional parity before cleanup
 ### Changed
 - **Sidebar Display Controls**
   - Updated display settings in admin so WiFi/QR and upcoming meetings can be enabled at the same time
