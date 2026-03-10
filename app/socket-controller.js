@@ -19,6 +19,7 @@ let syncErrorMessage = null;
 let socketIO = null;
 let pollTimerHandle = null;
 let autoMaintenanceOwned = false;
+const connectedDisplayClients = new Map();
 
 const GRAPH_FAILURE_MAINTENANCE_MESSAGE = process.env.GRAPH_FAILURE_MAINTENANCE_MESSAGE
   || 'Calendar backend currently unavailable. Display is temporarily in fallback mode.';
@@ -224,6 +225,108 @@ function formatSyncError(error) {
 
   const detail = graphMessage || baseMessage;
   return parts.length > 0 ? `${parts.join(' ')}: ${detail}` : detail;
+}
+
+function normalizeDisplayClientId(value) {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return '';
+  }
+
+  if (!/^[a-zA-Z0-9._:-]{3,120}$/.test(normalized)) {
+    return '';
+  }
+
+  return normalized;
+}
+
+function emitConnectedClientsUpdated() {
+  if (!socketIO) {
+    return;
+  }
+
+  socketIO.of('/').emit('connectedClientsUpdated', getConnectedDisplayClients());
+}
+
+function registerConnectedClient(socket) {
+  const rawClientId = socket?.handshake?.query?.displayClientId;
+  const clientId = normalizeDisplayClientId(rawClientId);
+  if (!clientId) {
+    return;
+  }
+
+  const rawDisplayType = String(socket?.handshake?.query?.displayType || '').trim().toLowerCase();
+  const displayType = rawDisplayType || 'unknown';
+  const roomAlias = String(socket?.handshake?.query?.roomAlias || '').trim();
+  const nowIso = new Date().toISOString();
+
+  const existing = connectedDisplayClients.get(clientId) || {
+    clientId,
+    displayType,
+    roomAlias,
+    connectedAt: nowIso,
+    lastSeenAt: nowIso,
+    socketIds: new Set()
+  };
+
+  existing.displayType = displayType || existing.displayType;
+  existing.roomAlias = roomAlias || existing.roomAlias;
+  existing.lastSeenAt = nowIso;
+  existing.socketIds.add(socket.id);
+  connectedDisplayClients.set(clientId, existing);
+  socket.data.displayClientId = clientId;
+
+  emitConnectedClientsUpdated();
+}
+
+function unregisterConnectedClient(socket) {
+  const clientId = socket?.data?.displayClientId;
+  if (!clientId || !connectedDisplayClients.has(clientId)) {
+    return;
+  }
+
+  const entry = connectedDisplayClients.get(clientId);
+  entry.socketIds.delete(socket.id);
+  entry.lastSeenAt = new Date().toISOString();
+
+  if (entry.socketIds.size === 0) {
+    connectedDisplayClients.delete(clientId);
+  } else {
+    connectedDisplayClients.set(clientId, entry);
+  }
+
+  emitConnectedClientsUpdated();
+}
+
+function getConnectedDisplayClients() {
+  return Array.from(connectedDisplayClients.values())
+    .map((entry) => ({
+      clientId: entry.clientId,
+      displayType: entry.displayType,
+      roomAlias: entry.roomAlias,
+      connectedAt: entry.connectedAt,
+      lastSeenAt: entry.lastSeenAt,
+      sockets: entry.socketIds.size
+    }))
+    .sort((a, b) => a.clientId.localeCompare(b.clientId));
+}
+
+function emitToDisplayClient(clientId, eventName, payload) {
+  const normalizedClientId = normalizeDisplayClientId(clientId);
+  if (!normalizedClientId || !socketIO) {
+    return false;
+  }
+
+  const entry = connectedDisplayClients.get(normalizedClientId);
+  if (!entry || entry.socketIds.size === 0) {
+    return false;
+  }
+
+  for (const socketId of entry.socketIds) {
+    socketIO.of('/').to(socketId).emit(eventName, payload);
+  }
+
+  return true;
 }
 
 function fetchAndBroadcastRooms() {
@@ -453,6 +556,7 @@ module.exports = function(io) {
    */
   io.of('/').on('connection', function(socket) {
     console.log('Client connected to Socket.IO');
+    registerConnectedClient(socket);
 
     // Start API polling loop only once
     if (!isRunning) {
@@ -463,6 +567,7 @@ module.exports = function(io) {
 
     // Handle client disconnection
     socket.on('disconnect', function() {
+      unregisterConnectedClient(socket);
       console.log('Client disconnected from Socket.IO');
     });
   });
@@ -472,9 +577,13 @@ module.exports = function(io) {
   module.exports.triggerImmediateRefresh = triggerImmediateRefresh;
   module.exports.refreshPollingSchedule = refreshPollingSchedule;
   module.exports.refreshMsalClient = refreshMsalClient;
+  module.exports.getConnectedDisplayClients = getConnectedDisplayClients;
+  module.exports.emitToDisplayClient = emitToDisplayClient;
 };
 
 module.exports.getSyncStatus = getSyncStatus;
 module.exports.triggerImmediateRefresh = triggerImmediateRefresh;
 module.exports.refreshPollingSchedule = refreshPollingSchedule;
 module.exports.refreshMsalClient = refreshMsalClient;
+module.exports.getConnectedDisplayClients = getConnectedDisplayClients;
+module.exports.emitToDisplayClient = emitToDisplayClient;

@@ -4,5 +4,7 @@
   "showMeetingTitles": false,
   "upcomingMeetingsCount": 3,
   "minimalHeaderStyle": "transparent",
-  "lastUpdated": "2026-03-09T07:55:28.268Z"
+  "singleRoomDarkMode": false,
+  "clientOverrides": {},
+  "lastUpdated": "2026-03-10T15:02:46.314Z"
 }

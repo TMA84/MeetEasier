@@ -458,7 +458,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: $neutral-50;
+    background: transparent;
+    border: none;
+    box-shadow: none;
     border-radius: 1rem;
     padding: clamp(1rem, 2vw, 2rem);
     
@@ -527,6 +529,233 @@
       @media (max-width: 900px) {
         font-size: clamp(0.9rem, 1.4vw, 1.2rem);
       }
+    }
+  }
+}
+
+.single-room-layout--dark {
+  .modern-room-status {
+    &::before {
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      opacity: 0.5;
+      animation: none;
+      transition: opacity 0.35s ease;
+    }
+
+    &--available {
+      background:
+        radial-gradient(1200px 600px at 12% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 60%),
+        radial-gradient(900px 500px at 88% 82%, rgba(255, 255, 255, 0.05) 0%, transparent 60%),
+        #121623;
+      box-shadow: inset 0 0 140px rgba(34, 197, 94, 0.24);
+
+      &::before {
+        background: radial-gradient(circle at 18% 24%, rgba(34, 197, 94, 0.42) 0%, transparent 62%);
+      }
+    }
+
+    &--busy {
+      background:
+        radial-gradient(1200px 600px at 12% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 60%),
+        radial-gradient(900px 500px at 88% 82%, rgba(255, 255, 255, 0.05) 0%, transparent 60%),
+        #121623;
+      box-shadow: inset 0 0 140px rgba(239, 68, 68, 0.24);
+
+      &::before {
+        background: radial-gradient(circle at 18% 24%, rgba(239, 68, 68, 0.42) 0%, transparent 62%);
+      }
+    }
+
+    &--upcoming {
+      background:
+        radial-gradient(1200px 600px at 12% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 60%),
+        radial-gradient(900px 500px at 88% 82%, rgba(255, 255, 255, 0.05) 0%, transparent 60%),
+        #121623;
+      box-shadow: inset 0 0 140px rgba(245, 158, 11, 0.24);
+
+      &::before {
+        background: radial-gradient(circle at 18% 24%, rgba(245, 158, 11, 0.42) 0%, transparent 62%);
+      }
+    }
+
+    &--not-found {
+      background:
+        radial-gradient(1200px 600px at 12% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 60%),
+        radial-gradient(900px 500px at 88% 82%, rgba(255, 255, 255, 0.05) 0%, transparent 60%),
+        #121623;
+      box-shadow: none;
+
+      &::before {
+        background: transparent;
+        opacity: 0;
+      }
+    }
+
+    .status-content {
+      backdrop-filter: blur(2px);
+      background: linear-gradient(155deg, rgba(16, 20, 34, 0.9) 0%, rgba(20, 25, 39, 0.82) 100%);
+    }
+
+    .status-header {
+      margin-bottom: clamp($space-4, 3vh, $space-6);
+      text-align: center;
+      border-radius: 1.25rem;
+      backdrop-filter: blur(8px);
+      padding: clamp(1.15rem, 2.4vw, 2.25rem);
+      border: 1px solid transparent;
+    }
+
+    &--available .status-header--filled {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.7) 0%, rgba(34, 197, 94, 0.52) 100%);
+      border-color: rgba(34, 197, 94, 0.62);
+      box-shadow:
+        0 20px 46px rgba(0, 0, 0, 0.42),
+        0 10px 30px rgba(34, 197, 94, 0.44),
+        inset 0 0 0 1px rgba(34, 197, 94, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    }
+
+    &--busy .status-header--filled {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.7) 0%, rgba(239, 68, 68, 0.52) 100%);
+      border-color: rgba(239, 68, 68, 0.62);
+      box-shadow:
+        0 20px 46px rgba(0, 0, 0, 0.42),
+        0 10px 30px rgba(239, 68, 68, 0.44),
+        inset 0 0 0 1px rgba(239, 68, 68, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    }
+
+    &--upcoming .status-header--filled {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.7) 0%, rgba(245, 158, 11, 0.52) 100%);
+      border-color: rgba(245, 158, 11, 0.62);
+      box-shadow:
+        0 20px 46px rgba(0, 0, 0, 0.42),
+        0 10px 30px rgba(245, 158, 11, 0.44),
+        inset 0 0 0 1px rgba(245, 158, 11, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    }
+
+    &--not-found .status-header--filled {
+      background: rgba(107, 114, 128, 0.14);
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: none;
+    }
+
+    .status-header--transparent {
+      background: transparent;
+      border: none;
+      border-color: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+
+    .room-name {
+      color: rgba(255, 255, 255, 0.9);
+      line-height: 1;
+      margin-bottom: clamp($space-4, 3vh, $space-6);
+      letter-spacing: -0.02em;
+    }
+
+    .room-status {
+      margin: 0;
+      letter-spacing: -0.02em;
+
+      .modern-room-status--not-found & {
+        color: var(--status-not-found-color, #6b7280);
+
+        &::before {
+          background: var(--status-not-found-color, #6b7280);
+        }
+      }
+    }
+
+    &--available .status-header--transparent .room-status {
+      color: var(--status-available-color, #22c55e);
+
+      &::before {
+        background: var(--status-available-color, #22c55e);
+      }
+    }
+
+    &--busy .status-header--transparent .room-status {
+      color: var(--status-busy-color, #ef4444);
+
+      &::before {
+        background: var(--status-busy-color, #ef4444);
+      }
+    }
+
+    &--upcoming .status-header--transparent .room-status {
+      color: var(--status-upcoming-color, #f59e0b);
+
+      &::before {
+        background: var(--status-upcoming-color, #f59e0b);
+      }
+    }
+
+    &--not-found .status-header--transparent .room-status {
+      color: var(--status-not-found-color, #6b7280);
+
+      &::before {
+        background: var(--status-not-found-color, #6b7280);
+      }
+    }
+
+    .meeting-card {
+      background: rgba(14, 19, 32, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+  }
+
+  .modern-room-sidebar {
+    background: linear-gradient(180deg, rgba(15, 19, 32, 0.96) 0%, rgba(10, 14, 25, 0.96) 100%);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.92);
+
+    .sidebar-clock {
+      .clock-time {
+        font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+        font-weight: 700;
+        color: #ffffff;
+        line-height: 1;
+        margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
+      }
+
+      .clock-date {
+        font-size: clamp(0.875rem, 1.5vw, 1.25rem);
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 500;
+      }
+    }
+
+    .upcoming-item {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateX(2px);
+      }
+    }
+
+    .sidebar-book-btn {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 12px 22px color-mix(in srgb, var(--booking-button-color, #334155) 24%, transparent);
+    }
+
+    .upcoming-organizer,
+    .upcoming-time,
+    .upcoming-subject,
+    .upcoming-empty,
+    .wifi-title,
+    .wifi-ssid,
+    .wifi-password {
+      color: rgba(255, 255, 255, 0.9);
     }
   }
 }

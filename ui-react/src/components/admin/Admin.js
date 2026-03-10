@@ -185,12 +185,17 @@ class Admin extends Component {
       currentShowMeetingTitles: false,
       currentUpcomingMeetingsCount: 3,
       currentMinimalHeaderStyle: 'filled',
+      currentSingleRoomDarkMode: false,
       informationLastUpdated: '',
       showWiFi: true,
       showUpcomingMeetings: false,
       showMeetingTitles: false,
       upcomingMeetingsCount: 3,
       minimalHeaderStyle: 'filled',
+      singleRoomDarkMode: false,
+      sidebarTargetClientId: '',
+      connectedClients: [],
+      connectedClientsLoading: false,
       informationMessage: null,
       informationMessageType: null,
       
@@ -500,6 +505,7 @@ class Admin extends Component {
     this.adminSocket.on('translationApiConfigUpdated', refreshConfig);
     this.adminSocket.on('apiTokenUpdated', refreshConfig);
     this.adminSocket.on('wifiApiTokenUpdated', refreshConfig);
+    this.adminSocket.on('connectedClientsUpdated', () => this.loadConnectedClients());
   }
 
   startSyncIntervals = () => {
@@ -688,6 +694,29 @@ class Admin extends Component {
       })
       .catch(err => {
         console.error('Error loading config locks:', err);
+      });
+  }
+
+  loadConnectedClients = () => {
+    this.setState({ connectedClientsLoading: true });
+
+    fetch('/api/connected-clients')
+      .then((response) => response.json())
+      .then((data) => {
+        const clients = Array.isArray(data?.clients) ? data.clients : [];
+        this.setState((prevState) => {
+          const currentTarget = String(prevState.sidebarTargetClientId || '');
+          const stillExists = clients.some((client) => String(client?.clientId || '') === currentTarget);
+          return {
+            connectedClients: clients,
+            connectedClientsLoading: false,
+            sidebarTargetClientId: stillExists ? currentTarget : ''
+          };
+        });
+      })
+      .catch((err) => {
+        console.error('Error loading connected clients:', err);
+        this.setState({ connectedClientsLoading: false });
       });
   }
 
@@ -1101,6 +1130,8 @@ class Admin extends Component {
 	  wifiHeaders['Authorization'] = `Bearer ${apiToken}`;
 	}
 
+    this.loadConnectedClients();
+
     // Load WiFi config
     fetch('/api/wifi', {
 	  headers: wifiHeaders
@@ -1143,6 +1174,7 @@ class Admin extends Component {
     fetch('/api/sidebar')
       .then(response => response.json())
       .then(data => {
+        const globalSingleRoomDarkMode = data.singleRoomDarkMode !== undefined ? data.singleRoomDarkMode : false;
         this.setState({
           currentShowWiFi: data.showWiFi !== undefined ? data.showWiFi : true,
           currentShowUpcomingMeetings: data.showUpcomingMeetings !== undefined ? data.showUpcomingMeetings : false,
@@ -1151,6 +1183,7 @@ class Admin extends Component {
             ? Math.min(Math.max(parseInt(data.upcomingMeetingsCount, 10), 1), 10)
             : 3,
           currentMinimalHeaderStyle: data.minimalHeaderStyle || 'filled',
+          currentSingleRoomDarkMode: globalSingleRoomDarkMode,
           informationLastUpdated: data.lastUpdated 
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
             : '-',
@@ -1160,8 +1193,27 @@ class Admin extends Component {
           upcomingMeetingsCount: Number.isFinite(Number(data.upcomingMeetingsCount))
             ? Math.min(Math.max(parseInt(data.upcomingMeetingsCount, 10), 1), 10)
             : 3,
-          minimalHeaderStyle: data.minimalHeaderStyle || 'filled'
+          minimalHeaderStyle: data.minimalHeaderStyle || 'filled',
+          singleRoomDarkMode: this.state.sidebarTargetClientId
+            ? this.state.singleRoomDarkMode
+            : globalSingleRoomDarkMode
         });
+
+        const targetClientId = String(this.state.sidebarTargetClientId || '').trim();
+        if (targetClientId) {
+          fetch(`/api/sidebar?displayClientId=${encodeURIComponent(targetClientId)}`)
+            .then((targetResponse) => targetResponse.json())
+            .then((targetData) => {
+              this.setState({
+                singleRoomDarkMode: targetData.singleRoomDarkMode !== undefined
+                  ? !!targetData.singleRoomDarkMode
+                  : globalSingleRoomDarkMode
+              });
+            })
+            .catch((targetErr) => {
+              console.error('Error loading target sidebar config:', targetErr);
+            });
+        }
       })
       .catch(err => {
         console.error('Error loading information config:', err);
@@ -1763,10 +1815,20 @@ class Admin extends Component {
   handleSidebarSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
-    const { apiToken, showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount } = this.state;
+    const {
+      apiToken,
+      showWiFi,
+      showUpcomingMeetings,
+      showMeetingTitles,
+      minimalHeaderStyle,
+      upcomingMeetingsCount,
+      singleRoomDarkMode,
+      sidebarTargetClientId
+    } = this.state;
     const sanitizedUpcomingMeetingsCount = Number.isFinite(Number(upcomingMeetingsCount))
       ? Math.min(Math.max(parseInt(upcomingMeetingsCount, 10), 1), 10)
       : 3;
+    const targetClientId = String(sidebarTargetClientId || '').trim();
     
     const headers = {
       'Content-Type': 'application/json',
@@ -1776,16 +1838,24 @@ class Admin extends Component {
       headers['Authorization'] = `Bearer ${apiToken}`;
     }
     
+    const payload = targetClientId
+      ? {
+          targetClientId,
+          singleRoomDarkMode
+        }
+      : {
+          showWiFi,
+          showUpcomingMeetings,
+          showMeetingTitles,
+          minimalHeaderStyle,
+          upcomingMeetingsCount: sanitizedUpcomingMeetingsCount,
+          singleRoomDarkMode
+        };
+
     fetch('/api/sidebar', {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify({
-        showWiFi,
-        showUpcomingMeetings,
-        showMeetingTitles,
-        minimalHeaderStyle,
-        upcomingMeetingsCount: sanitizedUpcomingMeetingsCount
-      })
+      body: JSON.stringify(payload)
     })
     .then(response => {
       if (response.status === 401) {
@@ -2758,12 +2828,12 @@ class Admin extends Component {
     const { 
       currentSsid, currentPassword, wifiLastUpdated, 
       currentLogoDarkUrl, currentLogoLightUrl, logoLastUpdated,
-      currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, currentUpcomingMeetingsCount, currentMinimalHeaderStyle, informationLastUpdated,
+      currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, currentUpcomingMeetingsCount, currentMinimalHeaderStyle, currentSingleRoomDarkMode, informationLastUpdated,
       currentEnableBooking, currentEnableExtendMeeting, bookingLastUpdated,
       currentCheckInEnabled, currentCheckInRequiredForExternalMeetings,
       currentCheckInEarlyMinutes, currentCheckInWindowMinutes, currentCheckInAutoReleaseNoShow,
       apiToken, ssid, password, logoDarkUrl, logoLightUrl, logoDarkFile, logoLightFile, uploadMode,
-      showWiFi, showUpcomingMeetings, showMeetingTitles, upcomingMeetingsCount, minimalHeaderStyle,
+      showWiFi, showUpcomingMeetings, showMeetingTitles, upcomingMeetingsCount, minimalHeaderStyle, singleRoomDarkMode, sidebarTargetClientId, connectedClients, connectedClientsLoading,
       enableBooking, enableExtendMeeting,
       checkInEnabled, checkInRequiredForExternalMeetings,
       checkInEarlyMinutes, checkInWindowMinutes, checkInAutoReleaseNoShow,
@@ -3064,6 +3134,10 @@ class Admin extends Component {
                     <span className="config-value">{currentMinimalHeaderStyle === 'filled' ? t.minimalHeaderStyleFilled : t.minimalHeaderStyleTransparent}</span>
                   </div>
                   <div className="config-item">
+                    <span className="config-label">{t.singleRoomDarkModeLabel || 'Single-Room Dark Mode'}</span>
+                    <span className="config-value">{booleanLabel(currentSingleRoomDarkMode)}</span>
+                  </div>
+                  <div className="config-item">
                     <span className="config-label">{t.lastUpdatedLabel}</span>
                     <span className="config-value">{informationLastUpdated}</span>
                   </div>
@@ -3072,11 +3146,64 @@ class Admin extends Component {
 
               <form onSubmit={this.handleSidebarSubmit}>
                 <div className="admin-form-group">
+                  <label htmlFor="sidebarTargetClientId" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                    {t.sidebarTargetClientLabel || 'Target Client'}
+                  </label>
+                  <select
+                    id="sidebarTargetClientId"
+                    value={sidebarTargetClientId}
+                    onChange={(e) => {
+                      const nextTargetClientId = e.target.value;
+                      this.setState({ sidebarTargetClientId: nextTargetClientId }, () => {
+                        if (nextTargetClientId) {
+                          fetch(`/api/sidebar?displayClientId=${encodeURIComponent(nextTargetClientId)}`)
+                            .then((response) => response.json())
+                            .then((data) => {
+                              this.setState({
+                                singleRoomDarkMode: data.singleRoomDarkMode !== undefined
+                                  ? !!data.singleRoomDarkMode
+                                  : this.state.currentSingleRoomDarkMode
+                              });
+                            })
+                            .catch((err) => {
+                              console.error('Error loading selected client sidebar config:', err);
+                            });
+                        } else {
+                          this.setState({ singleRoomDarkMode: this.state.currentSingleRoomDarkMode });
+                        }
+                      });
+                    }}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">{t.sidebarTargetGlobalOption || 'Global default (all displays)'}</option>
+                    {(connectedClients || []).map((client) => {
+                      const clientId = String(client?.clientId || '');
+                      const displayType = String(client?.displayType || 'unknown');
+                      const roomAlias = String(client?.roomAlias || '').trim();
+                      const roomInfo = roomAlias ? ` · ${roomAlias}` : '';
+                      return (
+                        <option key={clientId} value={clientId}>
+                          {`${clientId} (${displayType}${roomInfo})`}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <small style={{ display: 'block', marginTop: '0.5rem' }}>
+                    {connectedClientsLoading
+                      ? (t.sidebarTargetLoading || 'Loading connected clients...')
+                      : (t.sidebarTargetHelp || 'Select a connected client to override Single-Room dark mode only for that client.')}
+                  </small>
+                </div>
+
+                <hr className="admin-form-divider" />
+
+                <div className="admin-form-group">
                   <label className="inline-label">
                     <span className="label-text">{t.showWiFiLabel}</span>
                     <input
                       type="checkbox"
                       checked={showWiFi}
+                      disabled={!!sidebarTargetClientId}
                       onChange={(e) => this.setState({ showWiFi: e.target.checked })}
                     />
                   </label>
@@ -3088,6 +3215,7 @@ class Admin extends Component {
                     <input
                       type="checkbox"
                       checked={showUpcomingMeetings}
+                      disabled={!!sidebarTargetClientId}
                       onChange={(e) => this.setState({ showUpcomingMeetings: e.target.checked })}
                     />
                   </label>
@@ -3101,6 +3229,7 @@ class Admin extends Component {
                     <input
                       type="checkbox"
                       checked={showMeetingTitles}
+                      disabled={!!sidebarTargetClientId}
                       onChange={(e) => this.setState({ showMeetingTitles: e.target.checked })}
                     />
                   </label>
@@ -3117,6 +3246,7 @@ class Admin extends Component {
                     min="1"
                     max="10"
                     value={upcomingMeetingsCount}
+                    disabled={!!sidebarTargetClientId}
                     onChange={(e) => this.setState({ upcomingMeetingsCount: e.target.value })}
                     style={{ width: '120px' }}
                   />
@@ -3139,6 +3269,7 @@ class Admin extends Component {
                       name="minimalHeaderStyle"
                       value="filled"
                       checked={minimalHeaderStyle === 'filled'}
+                      disabled={!!sidebarTargetClientId}
                       onChange={(e) => this.setState({ minimalHeaderStyle: e.target.value })}
                     />
                   </label>
@@ -3149,9 +3280,22 @@ class Admin extends Component {
                       name="minimalHeaderStyle"
                       value="transparent"
                       checked={minimalHeaderStyle === 'transparent'}
+                      disabled={!!sidebarTargetClientId}
                       onChange={(e) => this.setState({ minimalHeaderStyle: e.target.value })}
                     />
                   </label>
+                </div>
+
+                <div className="admin-form-group">
+                  <label className="inline-label">
+                    <span className="label-text">{t.singleRoomDarkModeLabel || 'Single-Room Dark Mode'}</span>
+                    <input
+                      type="checkbox"
+                      checked={singleRoomDarkMode}
+                      onChange={(e) => this.setState({ singleRoomDarkMode: e.target.checked })}
+                    />
+                  </label>
+                  <small>{t.singleRoomDarkModeHelp || 'Uses the dark visual style for single-room displays.'}</small>
                 </div>
                 
                 <button type="submit" className="admin-submit-button">

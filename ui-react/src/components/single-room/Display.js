@@ -10,6 +10,7 @@ import BookingModal from '../booking/BookingModal';
 import ExtendMeetingModal from '../booking/ExtendMeetingModal';
 import { applyI18nConfig, getMaintenanceCopy, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';
 import { getSingleRoomDisplayTranslations } from '../../config/displayTranslations.js';
+import { getDisplayClientId } from '../../utils/displayClientId.js';
 
 /**
  * Display component for single room view
@@ -46,7 +47,9 @@ class Display extends Component {
         upcomingTitle: ''
       },
       sidebarConfig: {
-        showMeetingTitles: false
+        showMeetingTitles: false,
+        singleRoomDarkMode: false,
+        minimalHeaderStyle: 'filled'
       },
       bookingConfig: {
         enableBooking: true,
@@ -72,6 +75,7 @@ class Display extends Component {
         windowMinutes: 10
       }
     };
+    this.displayClientId = getDisplayClientId();
     this.socket = null;
   }
 
@@ -181,13 +185,21 @@ class Display extends Component {
     this.fetchColorsConfig();
     
     // Connect to Socket.IO for real-time sidebar config updates
-    this.socket = io();
+    this.socket = io({
+      query: {
+        displayClientId: this.displayClientId,
+        displayType: 'single-room',
+        roomAlias: this.state.roomAlias || ''
+      }
+    });
     if (this.socket && this.socket.on) {
       this.socket.on('sidebarConfigUpdated', (config) => {
         console.log('Sidebar config updated via Socket.IO:', config);
         this.setState({ 
           sidebarConfig: {
-            showMeetingTitles: config.showMeetingTitles !== undefined ? config.showMeetingTitles : false
+            showMeetingTitles: config.showMeetingTitles !== undefined ? config.showMeetingTitles : false,
+            singleRoomDarkMode: config.singleRoomDarkMode !== undefined ? config.singleRoomDarkMode : false,
+            minimalHeaderStyle: config.minimalHeaderStyle === 'transparent' ? 'transparent' : 'filled'
           }
         });
       });
@@ -254,12 +266,14 @@ class Display extends Component {
    * Gets settings for meeting titles display
    */
   fetchSidebarConfig = () => {
-    fetch('/api/sidebar')
+    fetch(`/api/sidebar?displayClientId=${encodeURIComponent(this.displayClientId)}`)
       .then(response => response.json())
       .then(data => {
         this.setState({ 
           sidebarConfig: {
-            showMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false
+            showMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false,
+            singleRoomDarkMode: data.singleRoomDarkMode !== undefined ? data.singleRoomDarkMode : false,
+            minimalHeaderStyle: data.minimalHeaderStyle === 'transparent' ? 'transparent' : 'filled'
           }
         });
       })
@@ -550,6 +564,8 @@ class Display extends Component {
 
   render() {
     const { response, room, roomDetails, sidebarConfig, bookingConfig, showBookingModal, showExtendModal, showErrorModal, errorMessage, maintenanceConfig, checkInStatus } = this.state;
+    const forceDarkModeFromLegacyRoute = typeof window !== 'undefined' && window.location.pathname.includes('/room-minimal/');
+    const isDarkModeActive = forceDarkModeFromLegacyRoute || !!sidebarConfig.singleRoomDarkMode;
     const canExtendMeeting = this.isExtendMeetingAllowed();
     const extendBlockedByOverbooking = canExtendMeeting && this.isExtendBlockedByOverbooking();
     const displayTranslations = getSingleRoomDisplayTranslations();
@@ -582,7 +598,7 @@ class Display extends Component {
         <Socket response={this.handleSocket} />
 
         {response ? (
-          <div style={{ display: 'flex', height: '100vh' }}>
+          <div className={`single-room-layout ${isDarkModeActive ? 'single-room-layout--dark' : ''}`} style={{ display: 'flex', height: '100vh' }}>
             <RoomStatusBlock 
               room={room} 
               details={roomDetails} 
@@ -591,6 +607,8 @@ class Display extends Component {
             />
             <Sidebar 
               room={room} 
+              displayAlias={this.state.roomAlias}
+              forceDarkMode={isDarkModeActive}
               details={roomDetails} 
               config={displayTranslations}
               bookingConfig={bookingConfig}

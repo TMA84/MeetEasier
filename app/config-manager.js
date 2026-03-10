@@ -101,6 +101,71 @@ function getLogoConfig() {
  * @returns {Object} Information configuration with display settings and lastUpdated
  */
 function getSidebarConfig() {
+	const parsedConfig = readSidebarConfigSnapshot();
+	if (parsedConfig) {
+		return {
+			showWiFi: parsedConfig.showWiFi,
+			showUpcomingMeetings: parsedConfig.showUpcomingMeetings,
+			showMeetingTitles: parsedConfig.showMeetingTitles,
+			upcomingMeetingsCount: parsedConfig.upcomingMeetingsCount,
+			minimalHeaderStyle: parsedConfig.minimalHeaderStyle,
+			singleRoomDarkMode: parsedConfig.singleRoomDarkMode,
+			lastUpdated: parsedConfig.lastUpdated
+		};
+	}
+
+	// Return default config from environment variables if file doesn't exist
+	return {
+		showWiFi: config.sidebarDefaults.showWiFi,
+		showUpcomingMeetings: config.sidebarDefaults.showUpcomingMeetings,
+		showMeetingTitles: config.sidebarDefaults.showMeetingTitles,
+		upcomingMeetingsCount: config.sidebarDefaults.upcomingMeetingsCount,
+		minimalHeaderStyle: 'filled',
+		singleRoomDarkMode: !!config.sidebarDefaults.singleRoomDarkMode,
+		lastUpdated: null
+	};
+}
+
+function normalizeClientId(value) {
+	const normalized = String(value || '').trim();
+	if (!normalized) {
+		return '';
+	}
+
+	if (!/^[a-zA-Z0-9._:-]{3,120}$/.test(normalized)) {
+		return '';
+	}
+
+	return normalized;
+}
+
+function normalizeSidebarClientOverrides(overrides) {
+	if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) {
+		return {};
+	}
+
+	const normalized = {};
+	for (const [rawClientId, rawOverride] of Object.entries(overrides)) {
+		const clientId = normalizeClientId(rawClientId);
+		if (!clientId || !rawOverride || typeof rawOverride !== 'object' || Array.isArray(rawOverride)) {
+			continue;
+		}
+
+		const hasSingleRoomDarkMode = rawOverride.singleRoomDarkMode !== undefined;
+		if (!hasSingleRoomDarkMode) {
+			continue;
+		}
+
+		normalized[clientId] = {
+			singleRoomDarkMode: !!rawOverride.singleRoomDarkMode,
+			lastUpdated: rawOverride.lastUpdated || null
+		};
+	}
+
+	return normalized;
+}
+
+function readSidebarConfigSnapshot() {
 	try {
 		const data = fs.readFileSync(sidebarConfigPath, 'utf8');
 		const parsed = JSON.parse(data);
@@ -116,19 +181,34 @@ function getSidebarConfig() {
 			showMeetingTitles: parsed.showMeetingTitles !== undefined ? !!parsed.showMeetingTitles : config.sidebarDefaults.showMeetingTitles,
 			upcomingMeetingsCount: normalizedUpcomingMeetingsCount,
 			minimalHeaderStyle: parsed.minimalHeaderStyle === 'transparent' ? 'transparent' : 'filled',
+			singleRoomDarkMode: parsed.singleRoomDarkMode !== undefined ? !!parsed.singleRoomDarkMode : !!config.sidebarDefaults.singleRoomDarkMode,
+			clientOverrides: normalizeSidebarClientOverrides(parsed.clientOverrides),
 			lastUpdated: parsed.lastUpdated || null
 		};
 	} catch (err) {
-		// Return default config from environment variables if file doesn't exist
-		return {
-			showWiFi: config.sidebarDefaults.showWiFi,
-			showUpcomingMeetings: config.sidebarDefaults.showUpcomingMeetings,
-			showMeetingTitles: config.sidebarDefaults.showMeetingTitles,
-			upcomingMeetingsCount: config.sidebarDefaults.upcomingMeetingsCount,
-			minimalHeaderStyle: 'filled',
-			lastUpdated: null
-		};
+		return null;
 	}
+}
+
+function getSidebarConfigForClient(clientId) {
+	const baseConfig = getSidebarConfig();
+	const normalizedClientId = normalizeClientId(clientId);
+	if (!normalizedClientId) {
+		return baseConfig;
+	}
+
+	const snapshot = readSidebarConfigSnapshot();
+	if (!snapshot || !snapshot.clientOverrides || !snapshot.clientOverrides[normalizedClientId]) {
+		return baseConfig;
+	}
+
+	const override = snapshot.clientOverrides[normalizedClientId];
+	return {
+		...baseConfig,
+		singleRoomDarkMode: override.singleRoomDarkMode,
+		clientOverrideApplied: true,
+		overrideLastUpdated: override.lastUpdated || null
+	};
 }
 
 /**
@@ -1324,14 +1404,15 @@ function saveLogoConfig(config) {
  * @returns {Object} Saved configuration with timestamp
  */
 function saveSidebarConfig(sidebarConfig) {
-	// Read existing config first to preserve all fields
-	let existingConfig = {};
-	try {
-		const data = fs.readFileSync(sidebarConfigPath, 'utf8');
-		existingConfig = JSON.parse(data);
-	} catch (err) {
-		// File doesn't exist or is invalid, use defaults
-	}
+	const existingConfig = readSidebarConfigSnapshot() || {
+		showWiFi: config.sidebarDefaults.showWiFi,
+		showUpcomingMeetings: config.sidebarDefaults.showUpcomingMeetings,
+		showMeetingTitles: config.sidebarDefaults.showMeetingTitles,
+		upcomingMeetingsCount: toMinInt(config.sidebarDefaults?.upcomingMeetingsCount, 3, 1),
+		minimalHeaderStyle: 'filled',
+		singleRoomDarkMode: !!config.sidebarDefaults.singleRoomDarkMode,
+		clientOverrides: {}
+	};
 
 	const defaultSidebarUpcomingCount = toMinInt(config.sidebarDefaults?.upcomingMeetingsCount, 3, 1);
 
@@ -1346,6 +1427,12 @@ function saveSidebarConfig(sidebarConfig) {
 			10
 		),
 		minimalHeaderStyle: sidebarConfig.minimalHeaderStyle !== undefined ? sidebarConfig.minimalHeaderStyle : (existingConfig.minimalHeaderStyle || 'filled'),
+		singleRoomDarkMode: sidebarConfig.singleRoomDarkMode !== undefined
+			? !!sidebarConfig.singleRoomDarkMode
+			: !!existingConfig.singleRoomDarkMode,
+		clientOverrides: sidebarConfig.clientOverrides !== undefined
+			? normalizeSidebarClientOverrides(sidebarConfig.clientOverrides)
+			: normalizeSidebarClientOverrides(existingConfig.clientOverrides),
 		lastUpdated: new Date().toISOString()
 	};
 	
@@ -1606,8 +1693,46 @@ async function updateLogoConfig(logoDarkUrl, logoLightUrl) {
 	* @param {number} upcomingMeetingsCount - Number of upcoming meetings to display
  * @returns {Promise<Object>} Updated configuration
  */
-async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount) {
-	const config = saveSidebarConfig({ showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount });
+async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount, options = {}) {
+	const normalizedTargetClientId = normalizeClientId(options.targetClientId);
+	if (normalizedTargetClientId) {
+		const snapshot = readSidebarConfigSnapshot() || {
+			showWiFi: config.sidebarDefaults.showWiFi,
+			showUpcomingMeetings: config.sidebarDefaults.showUpcomingMeetings,
+			showMeetingTitles: config.sidebarDefaults.showMeetingTitles,
+			upcomingMeetingsCount: toMinInt(config.sidebarDefaults?.upcomingMeetingsCount, 3, 1),
+			minimalHeaderStyle: 'filled',
+			singleRoomDarkMode: !!config.sidebarDefaults.singleRoomDarkMode,
+			clientOverrides: {},
+			lastUpdated: null
+		};
+
+		const nextOverrides = {
+			...normalizeSidebarClientOverrides(snapshot.clientOverrides)
+		};
+
+		if (options.clearClientOverride) {
+			delete nextOverrides[normalizedTargetClientId];
+		} else {
+			nextOverrides[normalizedTargetClientId] = {
+				singleRoomDarkMode: options.singleRoomDarkMode !== undefined
+					? !!options.singleRoomDarkMode
+					: !!snapshot.singleRoomDarkMode,
+				lastUpdated: new Date().toISOString()
+			};
+		}
+
+		const config = saveSidebarConfig({ clientOverrides: nextOverrides });
+
+		if (io) {
+			io.of('/').emit('sidebarConfigUpdated', config);
+			console.log('Information config updated with client override, notified all clients via Socket.IO');
+		}
+
+		return config;
+	}
+
+	const config = saveSidebarConfig({ showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount, singleRoomDarkMode: options.singleRoomDarkMode });
 	
 	// Emit Socket.IO event to notify all connected clients
 	if (io) {
@@ -1914,6 +2039,7 @@ module.exports = {
 	getWiFiConfig,
 	getLogoConfig,
 	getSidebarConfig,
+	getSidebarConfigForClient,
 	getBookingConfig,
 	getSystemConfig,
 	getOAuthConfig,

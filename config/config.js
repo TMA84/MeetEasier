@@ -166,7 +166,8 @@ module.exports = {
 		showWiFi: process.env.SIDEBAR_SHOW_WIFI === 'true' || process.env.SIDEBAR_SHOW_WIFI === undefined,
 		showUpcomingMeetings: process.env.SIDEBAR_SHOW_UPCOMING === 'true',
 		showMeetingTitles: process.env.SIDEBAR_SHOW_TITLES === 'true',
-		upcomingMeetingsCount: parseSidebarUpcomingMeetingsCountFromEnv(process.env.SIDEBAR_UPCOMING_COUNT)
+		upcomingMeetingsCount: parseSidebarUpcomingMeetingsCountFromEnv(process.env.SIDEBAR_UPCOMING_COUNT),
+		singleRoomDarkMode: process.env.SIDEBAR_SINGLE_ROOM_DARK_MODE === 'true'
 	},
 
 	// Booking feature configuration

@@ -6,7 +6,6 @@ import './index.css';
 
 import FlightboardLayout from './layouts/FlightboardLayout';
 import SingleRoomLayout from './layouts/SingleRoomLayout';
-import RoomMinimalLayout from './layouts/RoomMinimalLayout';
 import WiFiInfoLayout from './layouts/WiFiInfoLayout';
 import AdminLayout from './layouts/AdminLayout';
 import NotFound from './components/global/NotFound';
@@ -19,7 +18,7 @@ root.render(
     <Routes>
       <Route path="/" element={<FlightboardLayout />} />
       <Route path="/single-room/:name" element={<SingleRoomLayout />} />
-      <Route path="/room-minimal/:name" element={<RoomMinimalLayout />} />
+      <Route path="/room-minimal/:name" element={<SingleRoomLayout />} />
       <Route path="/wifi-info" element={<WiFiInfoLayout />} />
       <Route path="/admin" element={<AdminLayout />} />
       <Route path="*" element={<NotFound />} />
