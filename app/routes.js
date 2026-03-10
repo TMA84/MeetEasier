@@ -2107,10 +2107,26 @@ module.exports = function(app) {
 	// Get current information configuration (public - no auth required)
 	app.get('/api/sidebar', function(req, res) {
 		try {
-			const sidebarConfig = configManager.getSidebarConfig();
+			const displayClientId = String(req.query.displayClientId || '').trim();
+			const sidebarConfig = displayClientId
+				? configManager.getSidebarConfigForClient(displayClientId)
+				: configManager.getSidebarConfig();
 			res.json(sidebarConfig);
 		} catch (err) {
 			res.status(500).json({ error: 'Failed to retrieve information configuration' });
+		}
+	});
+
+	app.get('/api/connected-clients', checkApiToken, function(req, res) {
+		try {
+			const socketController = require('./socket-controller');
+			const clients = typeof socketController.getConnectedDisplayClients === 'function'
+				? socketController.getConnectedDisplayClients()
+				: [];
+			res.json({ clients });
+		} catch (err) {
+			console.error('Error retrieving connected clients:', err);
+			res.status(500).json({ error: 'Failed to retrieve connected clients' });
 		}
 	});
 
@@ -2122,7 +2138,7 @@ module.exports = function(app) {
 			const locks = {
 				wifiLocked: isEnvConfigured('WIFI_SSID') || isEnvConfigured('WIFI_PASSWORD'),
 				logoLocked: isEnvConfigured('LOGO_DARK_URL') || isEnvConfigured('LOGO_LIGHT_URL'),
-				sidebarLocked: isEnvConfigured('SIDEBAR_SHOW_WIFI') || isEnvConfigured('SIDEBAR_SHOW_UPCOMING') || isEnvConfigured('SIDEBAR_SHOW_TITLES') || isEnvConfigured('SIDEBAR_UPCOMING_COUNT'),
+				sidebarLocked: isEnvConfigured('SIDEBAR_SHOW_WIFI') || isEnvConfigured('SIDEBAR_SHOW_UPCOMING') || isEnvConfigured('SIDEBAR_SHOW_TITLES') || isEnvConfigured('SIDEBAR_UPCOMING_COUNT') || isEnvConfigured('SIDEBAR_SINGLE_ROOM_DARK_MODE'),
 				bookingLocked: isEnvConfigured('ENABLE_BOOKING')
 					|| isEnvConfigured('CHECKIN_ENABLED')
 					|| isEnvConfigured('CHECKIN_REQUIRED_FOR_EXTERNAL')
@@ -2363,14 +2379,56 @@ module.exports = function(app) {
 	// Update information configuration (protected - requires token)
 	app.post('/api/sidebar', checkApiToken, async function(req, res) {
 		try {
-			const { showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount } = req.body;
+			const {
+				showWiFi,
+				showUpcomingMeetings,
+				showMeetingTitles,
+				minimalHeaderStyle,
+				upcomingMeetingsCount,
+				singleRoomDarkMode,
+				targetClientId,
+				clearClientOverride
+			} = req.body || {};
 			const beforeConfig = configManager.getSidebarConfig();
+			const normalizedTargetClientId = String(targetClientId || '').trim();
 			
-			if (showWiFi === undefined && showUpcomingMeetings === undefined && showMeetingTitles === undefined && minimalHeaderStyle === undefined && upcomingMeetingsCount === undefined) {
+			if (normalizedTargetClientId) {
+				if (!/^[a-zA-Z0-9._:-]{3,120}$/.test(normalizedTargetClientId)) {
+					return res.status(400).json({ error: 'Invalid targetClientId format' });
+				}
+
+				if (singleRoomDarkMode === undefined && !clearClientOverride) {
+					return res.status(400).json({ error: 'singleRoomDarkMode or clearClientOverride is required for client-specific update' });
+				}
+			} else if (showWiFi === undefined && showUpcomingMeetings === undefined && showMeetingTitles === undefined && minimalHeaderStyle === undefined && upcomingMeetingsCount === undefined && singleRoomDarkMode === undefined) {
 				return res.status(400).json({ error: 'At least one configuration option is required' });
 			}
 
-			const config = await configManager.updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount);
+			const config = await configManager.updateSidebarConfig(
+				showWiFi,
+				showUpcomingMeetings,
+				showMeetingTitles,
+				minimalHeaderStyle,
+				upcomingMeetingsCount,
+				{
+					singleRoomDarkMode,
+					targetClientId: normalizedTargetClientId || undefined,
+					clearClientOverride: !!clearClientOverride
+				}
+			);
+
+			if (normalizedTargetClientId) {
+				try {
+					const socketController = require('./socket-controller');
+					if (typeof socketController.emitToDisplayClient === 'function') {
+						const effectiveConfig = configManager.getSidebarConfigForClient(normalizedTargetClientId);
+						socketController.emitToDisplayClient(normalizedTargetClientId, 'sidebarConfigUpdated', effectiveConfig);
+					}
+				} catch (emitErr) {
+					console.warn('Failed to emit targeted sidebar update:', emitErr.message);
+				}
+			}
+
 			appendAuditLog({
 				event: 'config.sidebar.update',
 				path: req.path,
@@ -2378,12 +2436,16 @@ module.exports = function(app) {
 				ip: getClientIp(req),
 				userAgent: req.headers['user-agent'] || null,
 				before: beforeConfig,
-				after: config
+				after: config,
+				targetClientId: normalizedTargetClientId || null,
+				clientOverrideCleared: normalizedTargetClientId ? !!clearClientOverride : false
 			});
 			res.json({ 
 				success: true, 
 				config,
-				message: 'Information configuration updated'
+				message: normalizedTargetClientId
+					? (clearClientOverride ? 'Client-specific information override cleared' : 'Client-specific information configuration updated')
+					: 'Information configuration updated'
 			});
 		} catch (err) {
 			console.error('Error updating information config:', err);

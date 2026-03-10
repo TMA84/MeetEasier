@@ -18,7 +18,8 @@ const RoomStatusBlock = ({
   }, 
   room, 
   sidebarConfig = {
-    showMeetingTitles: false
+    showMeetingTitles: false,
+    minimalHeaderStyle: 'filled'
   }
 }) => {
   const currentTime = new Date();
@@ -44,13 +45,17 @@ const RoomStatusBlock = ({
     statusClass += ' modern-room-status--available';
   }
 
+  const headerStyle = room.NotFound
+    ? 'transparent'
+    : (sidebarConfig?.minimalHeaderStyle === 'transparent' ? 'transparent' : 'filled');
+
   return (
     <div className={statusClass}>
       <div className="status-content">
         {/* Main content area */}
         <div className="status-main">
           {/* Room name and status header */}
-          <div className="status-header">
+          <div className={`status-header status-header--${headerStyle}`}>
             <div className="room-name">{room.Name}</div>
             <div className="room-status">
               {room.NotFound ? (config.statusNotFound || 'Not Found') : (room.Busy ? config.statusBusy : config.statusAvailable)}
@@ -152,7 +157,8 @@ RoomStatusBlock.propTypes = {
   }),
   config: PropTypes.object.isRequired,
   sidebarConfig: PropTypes.shape({
-    showMeetingTitles: PropTypes.bool
+    showMeetingTitles: PropTypes.bool,
+    minimalHeaderStyle: PropTypes.oneOf(['filled', 'transparent'])
   })
 };
 

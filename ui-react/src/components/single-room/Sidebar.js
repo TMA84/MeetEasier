@@ -4,6 +4,7 @@ import io from 'socket.io-client';
 
 import Clock from './Clock';
 import { uses12HourFormat } from '../../utils/timeFormat';
+import { getDisplayClientId } from '../../utils/displayClientId.js';
 
 /**
  * Sidebar component for single room display
@@ -18,14 +19,17 @@ class Sidebar extends Component {
         ssid: 'Loading...',
         password: ''
       },
-      logoUrl: '../img/logo.B.png',
+      logoDarkUrl: '../img/logo.B.png',
+      logoLightUrl: '../img/logo.W.png',
       sidebarConfig: {
         showWiFi: true,
         showUpcomingMeetings: false,
         showMeetingTitles: false,
-        upcomingMeetingsCount: 3
+        upcomingMeetingsCount: 3,
+        singleRoomDarkMode: false
       }
     };
+    this.displayClientId = getDisplayClientId();
     this.socket = null;
   }
 
@@ -35,7 +39,13 @@ class Sidebar extends Component {
     this.fetchSidebarConfig();
     
     // Connect to Socket.IO for real-time updates
-    this.socket = io();
+    this.socket = io({
+      query: {
+        displayClientId: this.displayClientId,
+        displayType: 'single-room',
+        roomAlias: this.props.displayAlias || ''
+      }
+    });
     
     // Listen for WiFi config updates
     this.socket.on('wifiConfigUpdated', (config) => {
@@ -51,7 +61,10 @@ class Sidebar extends Component {
     // Listen for Logo config updates
     this.socket.on('logoConfigUpdated', (config) => {
       console.log('Logo config updated via Socket.IO:', config);
-      this.setState({ logoUrl: config.logoDarkUrl });
+      this.setState({
+        logoDarkUrl: config.logoDarkUrl || '../img/logo.B.png',
+        logoLightUrl: config.logoLightUrl || '../img/logo.W.png'
+      });
     });
     
     // Listen for Sidebar config updates
@@ -64,7 +77,8 @@ class Sidebar extends Component {
           showMeetingTitles: config.showMeetingTitles !== undefined ? config.showMeetingTitles : false,
           upcomingMeetingsCount: Number.isFinite(Number(config.upcomingMeetingsCount))
             ? Math.min(Math.max(parseInt(config.upcomingMeetingsCount, 10), 1), 10)
-            : 3
+            : 3,
+          singleRoomDarkMode: config.singleRoomDarkMode !== undefined ? config.singleRoomDarkMode : false
         }
       });
     });
@@ -110,7 +124,10 @@ class Sidebar extends Component {
     fetch('/api/logo')
       .then(response => response.json())
       .then(data => {
-        this.setState({ logoUrl: data.logoDarkUrl || '../img/logo.B.png' });
+        this.setState({
+          logoDarkUrl: data.logoDarkUrl || '../img/logo.B.png',
+          logoLightUrl: data.logoLightUrl || '../img/logo.W.png'
+        });
       })
       .catch(err => {
         console.error('Error fetching logo config:', err);
@@ -122,7 +139,7 @@ class Sidebar extends Component {
    * Gets settings for WiFi, upcoming meetings, and meeting titles display
    */
   fetchSidebarConfig = () => {
-    fetch('/api/sidebar')
+    fetch(`/api/sidebar?displayClientId=${encodeURIComponent(this.displayClientId)}`)
       .then(response => response.json())
       .then(data => {
         this.setState({ 
@@ -132,7 +149,8 @@ class Sidebar extends Component {
             showMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false,
             upcomingMeetingsCount: Number.isFinite(Number(data.upcomingMeetingsCount))
               ? Math.min(Math.max(parseInt(data.upcomingMeetingsCount, 10), 1), 10)
-              : 3
+              : 3,
+            singleRoomDarkMode: data.singleRoomDarkMode !== undefined ? data.singleRoomDarkMode : false
           }
         });
       })
@@ -143,7 +161,9 @@ class Sidebar extends Component {
 
   render() {
     const { config, room } = this.props;
-    const { wifiConfig, logoUrl, sidebarConfig } = this.state;
+    const { wifiConfig, logoDarkUrl, logoLightUrl, sidebarConfig } = this.state;
+    const isDarkModeActive = !!this.props.forceDarkMode || !!sidebarConfig.singleRoomDarkMode;
+    const effectiveLogoUrl = isDarkModeActive ? logoLightUrl : logoDarkUrl;
 
     const upcomingLimit = Number.isFinite(Number(sidebarConfig.upcomingMeetingsCount))
       ? Math.min(Math.max(parseInt(sidebarConfig.upcomingMeetingsCount, 10), 1), 10)
@@ -160,7 +180,7 @@ class Sidebar extends Component {
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <img 
-              src={logoUrl} 
+              src={effectiveLogoUrl} 
               alt="Logo" 
               onError={(e) => { e.target.src = '../img/logo.B.png'; }} 
             />
@@ -315,6 +335,8 @@ Sidebar.propTypes = {
   }),
   details: PropTypes.object,
   config: PropTypes.object,
+  displayAlias: PropTypes.string,
+  forceDarkMode: PropTypes.bool,
   bookingConfig: PropTypes.shape({
     enableBooking: PropTypes.bool
   }),
