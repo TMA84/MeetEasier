@@ -298,8 +298,11 @@ function generateDisplayIdentifier(socket) {
     const roomAlias = String(socket?.handshake?.query?.roomAlias || '').trim();
     const displayType = String(socket?.handshake?.query?.displayType || '').trim().toLowerCase() || 'unknown';
     
+    // Normalize displayType for flightboard components (flightboard, flightboard-navbar, etc.)
+    const normalizedDisplayType = displayType.startsWith('flightboard') ? 'flightboard' : displayType;
+    
     // Create identifier: ip_room or ip_displayType if no room
-    const roomPart = roomAlias || displayType;
+    const roomPart = roomAlias || normalizedDisplayType;
     return `${ipAddress}_${roomPart}`;
   } else {
     // Client ID based tracking (default)
