@@ -143,7 +143,7 @@ const fromOverrideState = (value) => {
 
 const ADMIN_TAB_SECTIONS = {
   displays: ['display', 'wifi', 'logo', 'colors', 'booking'],
-  operations: ['system', 'translationApi', 'oauth', 'maintenance', 'apiToken', 'search', 'ratelimit', 'backup', 'audit'],
+  operations: ['system', 'translationApi', 'oauth', 'maintenance', 'apiToken', 'search', 'ratelimit', 'backup', 'audit', 'connectedDisplays'],
   content: ['translations']
 };
 
@@ -269,6 +269,10 @@ class Admin extends Component {
       auditLogs: [],
       auditMessage: null,
       auditMessageType: null,
+      connectedDisplays: [],
+      connectedDisplaysMessage: null,
+      connectedDisplaysMessageType: null,
+      connectedDisplaysLoading: false,
       apiTokenConfigMessage: null,
       apiTokenConfigMessageType: null,
       currentApiTokenSource: 'default',
@@ -472,9 +476,44 @@ class Admin extends Component {
     if (this.configRefreshInterval) {
       clearInterval(this.configRefreshInterval);
     }
+    if (this.connectedDisplaysInterval) {
+      clearInterval(this.connectedDisplaysInterval);
+    }
     if (this.adminSocket) {
       this.adminSocket.disconnect();
       this.adminSocket = null;
+    }
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    // Auto-load connected displays when switching to that tab
+    if (this.state.activeTab === 'connectedDisplays' && prevState.activeTab !== 'connectedDisplays') {
+      this.handleLoadConnectedDisplays();
+      this.startConnectedDisplaysAutoRefresh();
+    }
+
+    // Stop auto-refresh when leaving the tab
+    if (prevState.activeTab === 'connectedDisplays' && this.state.activeTab !== 'connectedDisplays') {
+      this.stopConnectedDisplaysAutoRefresh();
+    }
+  }
+
+  startConnectedDisplaysAutoRefresh = () => {
+    if (this.connectedDisplaysInterval) {
+      return;
+    }
+    // Refresh every 10 seconds
+    this.connectedDisplaysInterval = setInterval(() => {
+      if (this.state.activeTab === 'connectedDisplays') {
+        this.handleLoadConnectedDisplays();
+      }
+    }, 10000);
+  }
+
+  stopConnectedDisplaysAutoRefresh = () => {
+    if (this.connectedDisplaysInterval) {
+      clearInterval(this.connectedDisplaysInterval);
+      this.connectedDisplaysInterval = null;
     }
   }
 
@@ -631,6 +670,10 @@ class Admin extends Component {
     if (this.configRefreshInterval) {
       clearInterval(this.configRefreshInterval);
       this.configRefreshInterval = null;
+    }
+    if (this.connectedDisplaysInterval) {
+      clearInterval(this.connectedDisplaysInterval);
+      this.connectedDisplaysInterval = null;
     }
     if (this.adminSocket) {
       this.adminSocket.disconnect();
@@ -2720,6 +2763,45 @@ class Admin extends Component {
       });
   }
 
+  handleLoadConnectedDisplays = () => {
+    const t = this.getTranslations();
+    const { apiToken } = this.state;
+    const headers = {};
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    this.setState({ connectedDisplaysLoading: true });
+
+    fetch('/api/connected-clients', {
+      method: 'GET',
+      headers
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        this.setState({
+          connectedDisplays: Array.isArray(data.clients) ? data.clients : [],
+          connectedDisplaysMessage: null,
+          connectedDisplaysMessageType: null,
+          connectedDisplaysLoading: false
+        });
+      })
+      .catch(err => {
+        this.setState({
+          connectedDisplaysMessage: `${t.errorPrefix} ${err.message}`,
+          connectedDisplaysMessageType: 'error',
+          connectedDisplaysLoading: false
+        });
+      });
+  }
+
   handleI18nSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
@@ -2879,6 +2961,7 @@ class Admin extends Component {
       i18nLastUpdated, currentMaintenanceTranslations, maintenanceTranslationsText, currentAdminTranslations, adminTranslationsText, translationLanguage, newTranslationLanguageCode, translationLanguageDraftError, collapsedTranslationGroups, showAdvancedTranslationsEditor, i18nMessage, i18nMessageType,
       backupPayloadText, backupMessage, backupMessageType,
       auditLogs, auditMessage, auditMessageType,
+      connectedDisplays, connectedDisplaysMessage, connectedDisplaysMessageType, connectedDisplaysLoading,
       apiTokenConfigMessage, apiTokenConfigMessageType,
       currentApiTokenSource, currentApiTokenIsDefault, apiTokenConfigLastUpdated,
       newApiToken, newApiTokenConfirm,
@@ -2951,6 +3034,7 @@ class Admin extends Component {
           { key: 'apiToken', label: t.apiTokenTabLabel || 'API-Token' },
           { key: 'search', label: t.searchTabLabel || 'Suche' },
           { key: 'ratelimit', label: t.rateLimitTabLabel || 'Rate-Limits' },
+          { key: 'connectedDisplays', label: t.connectedDisplaysSectionTitle || 'Connected Displays' },
           { key: 'backup', label: t.backupPayloadLabel || 'Backup' },
           { key: 'audit', label: t.auditTabLabel || 'Audit-Log' }
         ]
@@ -5081,6 +5165,103 @@ class Admin extends Component {
               {backupMessage && (
                 <div className={`admin-message admin-message-${backupMessageType}`}>
                   {backupMessage}
+                </div>
+              )}
+
+              </div>
+              )}
+
+              {activeTab === 'connectedDisplays' && (
+              <div className="admin-card" id="ops-connected-displays">
+
+              <div className="admin-form-divider"></div>
+
+              <h3>{t.connectedDisplaysSectionTitle || 'Connected Displays'}</h3>
+              <div style={{ marginBottom: '1rem' }}>
+                <button 
+                  type="button" 
+                  className="admin-secondary-button" 
+                  onClick={this.handleLoadConnectedDisplays}
+                  disabled={connectedDisplaysLoading}
+                >
+                  {connectedDisplaysLoading ? t.loading : (t.connectedDisplaysRefreshButton || 'Refresh')}
+                </button>
+              </div>
+
+              {connectedDisplaysMessage && (
+                <div className={`admin-message admin-message-${connectedDisplaysMessageType}`}>
+                  {connectedDisplaysMessage}
+                </div>
+              )}
+
+              {connectedDisplays.length === 0 ? (
+                <div className="admin-locked-message">
+                  <p>{t.connectedDisplaysEmpty || 'No displays connected.'}</p>
+                </div>
+              ) : (
+                <div className="admin-displays-table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{t.connectedDisplaysTableStatus || 'Status'}</th>
+                        <th>{t.connectedDisplaysTableDisplayType || 'Type'}</th>
+                        <th>{t.connectedDisplaysTableRoomName || 'Room Name'}</th>
+                        <th>{t.connectedDisplaysTableIpAddress || 'IP Address'}</th>
+                        <th>{t.connectedDisplaysTableConnectedAt || 'Connected'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {connectedDisplays.map((display) => {
+                        const lastSeenTime = display.lastSeenAt ? new Date(display.lastSeenAt) : null;
+                        const now = new Date();
+                        const secondsSinceLastSeen = lastSeenTime ? Math.floor((now - lastSeenTime) / 1000) : null;
+                        const hasActiveSockets = display.sockets > 0;
+                        
+                        // Determine status:
+                        // - Active: Has active sockets AND last seen within 5 minutes
+                        // - Inactive: Has active sockets BUT last seen > 5 minutes (connection issues)
+                        // - Not Connected: No active sockets (disconnected)
+                        let status, statusColor, statusDotColor;
+                        if (hasActiveSockets && secondsSinceLastSeen !== null && secondsSinceLastSeen < 300) {
+                          status = t.connectedDisplaysStatusActive || 'Active';
+                          statusColor = '#86efac';
+                          statusDotColor = '#22c55e';
+                        } else if (hasActiveSockets) {
+                          status = t.connectedDisplaysStatusInactive || 'Inactive';
+                          statusColor = '#fcd34d';
+                          statusDotColor = '#f59e0b';
+                        } else {
+                          status = t.connectedDisplaysStatusDisconnected || 'Not Connected';
+                          statusColor = '#fca5a5';
+                          statusDotColor = '#ef4444';
+                        }
+                        
+                        return (
+                          <tr key={display.clientId}>
+                            <td className="status-cell">
+                              <span style={{
+                                display: 'inline-block',
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                backgroundColor: statusDotColor,
+                                marginRight: '0.5rem'
+                              }}></span>
+                              <span style={{ color: statusColor }}>
+                                {status}
+                              </span>
+                            </td>
+                            <td>{display.displayType || 'unknown'}</td>
+                            <td>{display.roomAlias || '-'}</td>
+                            <td className="ip-address">{display.ipAddress || 'unknown'}</td>
+                            <td className="timestamp">
+                              {display.connectedAt ? new Date(display.connectedAt).toLocaleString() : '-'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
 

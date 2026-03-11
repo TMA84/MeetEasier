@@ -252,12 +252,23 @@ class Display extends Component {
         document.documentElement.style.setProperty('--status-not-found-color', config.statusNotFoundColor || '#6b7280');
       });
     }
+
+    // Send heartbeat every 30 seconds to keep display status active
+    this.heartbeatInterval = setInterval(() => {
+      if (this.socket && this.socket.connected) {
+        this.socket.emit('display-heartbeat');
+      }
+    }, 30000);
   }
 
   componentWillUnmount() {
     // Clean up socket connection
     if (this.socket) {
       this.socket.disconnect();
+    }
+    // Clean up heartbeat interval
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
     }
   }
 
