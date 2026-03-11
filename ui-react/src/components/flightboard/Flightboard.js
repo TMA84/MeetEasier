@@ -23,7 +23,8 @@ class Flightboard extends Component {
         enabled: false,
         message: ''
       },
-      i18nTick: 0
+      i18nTick: 0,
+      flightboardDarkMode: true
     };
 
     this.socket = null;
@@ -90,9 +91,23 @@ class Flightboard extends Component {
       });
   }
 
+  fetchSidebarConfig() {
+    return fetch('/api/sidebar')
+      .then((response) => response.json())
+      .then((data) => {
+        this.setState({
+          flightboardDarkMode: data.flightboardDarkMode !== undefined ? data.flightboardDarkMode : true
+        });
+      })
+      .catch((err) => {
+        console.error('Error fetching sidebar config:', err);
+      });
+  }
+
   componentDidMount() {
     this.getRoomData();
     this.fetchMaintenanceStatus();
+    this.fetchSidebarConfig();
     loadMaintenanceMessages().then(() => {
       this.setState({ i18nTick: Date.now() });
     });
@@ -112,6 +127,10 @@ class Flightboard extends Component {
         applyI18nConfig(i18nConfig);
         this.setState({ i18nTick: Date.now() });
       });
+
+      this.socket.on('sidebarConfigUpdated', () => {
+        this.fetchSidebarConfig();
+      });
     }
   }
 
@@ -122,12 +141,13 @@ class Flightboard extends Component {
   }
 
   render() {
-    const { error, response, rooms, maintenanceConfig } = this.state;
+    const { error, response, rooms, maintenanceConfig, flightboardDarkMode } = this.state;
     const maintenanceCopy = getMaintenanceCopy();
+    const wrapperClass = flightboardDarkMode ? '' : 'flightboard-light';
 
     if (maintenanceConfig.enabled) {
       return (
-        <div className="tracker-wrap">
+        <div className={`tracker-wrap ${wrapperClass}`}>
           <div className="container">
             <div className="credentials-error">
               {maintenanceConfig.message || `${maintenanceCopy.title}. ${maintenanceCopy.body}`}
@@ -138,7 +158,7 @@ class Flightboard extends Component {
     }
 
     return (
-      <div className="tracker-wrap">
+      <div className={`tracker-wrap ${wrapperClass}`}>
         {/* Socket.IO connection for real-time updates */}
         <Socket response={this.handleSocket} />
 

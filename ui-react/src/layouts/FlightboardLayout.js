@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import io from 'socket.io-client';
 
 import Flightboard from '../components/flightboard/Flightboard';
 import Navbar from '../components/flightboard/Navbar';
@@ -11,6 +12,7 @@ function FlightboardLayout() {
   const [filter, setFilter] = React.useState(
     searchParams.get('filter') || config.roomFilter.filterDefault
   );
+  const [flightboardDarkMode, setFlightboardDarkMode] = React.useState(true);
 
   const handleFilter = (filterValue) => {
     setFilter(filterValue);
@@ -21,6 +23,37 @@ function FlightboardLayout() {
       setSearchParams({});
     }
   };
+
+  // Fetch sidebar config for dark mode setting
+  React.useEffect(() => {
+    fetch('/api/sidebar')
+      .then(response => response.json())
+      .then(data => {
+        setFlightboardDarkMode(data.flightboardDarkMode !== undefined ? data.flightboardDarkMode : true);
+      })
+      .catch(err => {
+        console.error('Error fetching sidebar config:', err);
+      });
+
+    // Listen for config updates
+    const socket = io();
+    socket.on('sidebarConfigUpdated', () => {
+      fetch('/api/sidebar')
+        .then(response => response.json())
+        .then(data => {
+          setFlightboardDarkMode(data.flightboardDarkMode !== undefined ? data.flightboardDarkMode : true);
+        })
+        .catch(err => {
+          console.error('Error fetching sidebar config:', err);
+        });
+    });
+
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, []);
 
   // Update filter when URL changes
   React.useEffect(() => {
@@ -35,8 +68,24 @@ function FlightboardLayout() {
     document.title = config.navbar.title;
   }, [config.navbar.title]);
 
+  // Apply flightboard-light class to body
+  React.useEffect(() => {
+    if (!flightboardDarkMode) {
+      document.body.classList.add('flightboard-light');
+    } else {
+      document.body.classList.remove('flightboard-light');
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('flightboard-light');
+    };
+  }, [flightboardDarkMode]);
+
+  const wrapperClass = flightboardDarkMode ? '' : 'flightboard-light';
+
   return (
-    <div id="page-wrap">
+    <div id="page-wrap" className={wrapperClass}>
       <Navbar filter={handleFilter} currentFilter={filter}/>
       <Flightboard filter={filter}/>
     </div>

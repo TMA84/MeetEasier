@@ -17,13 +17,15 @@ class Navbar extends Component {
     super(props);
     this.state = {
       logoUrl: '/img/logo.W.png',
-      i18nTick: 0
+      i18nTick: 0,
+      flightboardDarkMode: true
     };
     this.socket = null;
   }
 
   componentDidMount() {
     this.fetchLogoConfig();
+    this.fetchSidebarConfig();
     loadMaintenanceMessages().then(() => {
       this.setState({ i18nTick: Date.now() });
     });
@@ -33,7 +35,11 @@ class Navbar extends Component {
     
     this.socket.on('logoConfigUpdated', (config) => {
       console.log('Logo config updated via Socket.IO:', config);
-      this.setState({ logoUrl: config.logoLightUrl });
+      this.updateLogoUrl(config);
+    });
+
+    this.socket.on('sidebarConfigUpdated', () => {
+      this.fetchSidebarConfig();
     });
 
     this.socket.on('i18nConfigUpdated', (i18nConfig) => {
@@ -50,17 +56,47 @@ class Navbar extends Component {
   }
 
   /**
+   * Update logo URL based on dark mode setting
+   * @param {Object} config - Logo configuration object
+   */
+  updateLogoUrl = (config) => {
+    const { flightboardDarkMode } = this.state;
+    const logoUrl = flightboardDarkMode 
+      ? (config.logoLightUrl || '/img/logo.W.png')
+      : (config.logoDarkUrl || '/img/logo.B.png');
+    this.setState({ logoUrl });
+  }
+
+  /**
    * Fetch current logo configuration from API
-   * Uses logoLightUrl for flightboard (dark background)
+   * Uses logoLightUrl for dark mode, logoDarkUrl for light mode
    */
   fetchLogoConfig = () => {
     fetch('/api/logo')
       .then(response => response.json())
       .then(data => {
-        this.setState({ logoUrl: data.logoLightUrl || '/img/logo.W.png' });
+        this.updateLogoUrl(data);
       })
       .catch(err => {
         console.error('Error fetching logo config:', err);
+      });
+  }
+
+  /**
+   * Fetch sidebar configuration to determine dark/light mode
+   */
+  fetchSidebarConfig = () => {
+    fetch('/api/sidebar')
+      .then(response => response.json())
+      .then(data => {
+        const flightboardDarkMode = data.flightboardDarkMode !== undefined ? data.flightboardDarkMode : true;
+        this.setState({ flightboardDarkMode }, () => {
+          // Reload logo with correct variant
+          this.fetchLogoConfig();
+        });
+      })
+      .catch(err => {
+        console.error('Error fetching sidebar config:', err);
       });
   }
 

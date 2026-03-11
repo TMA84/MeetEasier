@@ -2386,6 +2386,7 @@ module.exports = function(app) {
 				minimalHeaderStyle,
 				upcomingMeetingsCount,
 				singleRoomDarkMode,
+				flightboardDarkMode,
 				targetClientId,
 				clearClientOverride
 			} = req.body || {};
@@ -2400,7 +2401,7 @@ module.exports = function(app) {
 				if (singleRoomDarkMode === undefined && !clearClientOverride) {
 					return res.status(400).json({ error: 'singleRoomDarkMode or clearClientOverride is required for client-specific update' });
 				}
-			} else if (showWiFi === undefined && showUpcomingMeetings === undefined && showMeetingTitles === undefined && minimalHeaderStyle === undefined && upcomingMeetingsCount === undefined && singleRoomDarkMode === undefined) {
+			} else if (showWiFi === undefined && showUpcomingMeetings === undefined && showMeetingTitles === undefined && minimalHeaderStyle === undefined && upcomingMeetingsCount === undefined && singleRoomDarkMode === undefined && flightboardDarkMode === undefined) {
 				return res.status(400).json({ error: 'At least one configuration option is required' });
 			}
 
@@ -2412,6 +2413,7 @@ module.exports = function(app) {
 				upcomingMeetingsCount,
 				{
 					singleRoomDarkMode,
+					flightboardDarkMode,
 					targetClientId: normalizedTargetClientId || undefined,
 					clearClientOverride: !!clearClientOverride
 				}
