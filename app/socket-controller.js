@@ -320,6 +320,22 @@ function registerConnectedClient(socket) {
   const rawDisplayType = String(socket?.handshake?.query?.displayType || '').trim().toLowerCase();
   const displayType = rawDisplayType || 'unknown';
   const roomAlias = String(socket?.handshake?.query?.roomAlias || '').trim();
+  
+  // Don't register connections without displayType or displayClientId (e.g., admin panel)
+  const trackingConfig = getDisplayTrackingConfig();
+  if (trackingConfig.mode === 'client-id') {
+    // In client-id mode, we need a valid displayClientId
+    const rawClientId = socket?.handshake?.query?.displayClientId;
+    if (!normalizeDisplayClientId(rawClientId)) {
+      return;
+    }
+  } else {
+    // In ip-room mode, we need at least a displayType
+    if (!rawDisplayType) {
+      return;
+    }
+  }
+  
   const nowIso = new Date().toISOString();
   
   // Extract IP address from socket
