@@ -4519,66 +4519,6 @@ class Admin extends Component {
                       />
                     </div>
 
-                    <div className="admin-form-divider"></div>
-                    <h4>{t.systemDisplayTrackingSectionTitle || 'Display Tracking Settings'}</h4>
-
-                    <div className="admin-form-group">
-                      <label>{t.systemDisplayTrackingModeLabel || 'Tracking Mode'}</label>
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <label className="inline-label" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                          <input
-                            type="radio"
-                            name="displayTrackingMode"
-                            value="client-id"
-                            checked={systemDisplayTrackingMode === 'client-id'}
-                            onChange={(e) => this.setState({ systemDisplayTrackingMode: e.target.value })}
-                            style={{ marginRight: '0.5rem' }}
-                          />
-                          <span className="label-text">{t.systemDisplayTrackingModeClientId || 'Client ID (each browser tab separately)'}</span>
-                        </label>
-                        <label className="inline-label" style={{ display: 'block' }}>
-                          <input
-                            type="radio"
-                            name="displayTrackingMode"
-                            value="ip-room"
-                            checked={systemDisplayTrackingMode === 'ip-room'}
-                            onChange={(e) => this.setState({ systemDisplayTrackingMode: e.target.value })}
-                            style={{ marginRight: '0.5rem' }}
-                          />
-                          <span className="label-text">{t.systemDisplayTrackingModeIpRoom || 'IP + Room (one entry per physical display)'}</span>
-                        </label>
-                      </div>
-                      <small>{t.systemDisplayTrackingModeHelp || 'Client ID: Each browser tab is tracked separately. IP+Room: Displays are grouped by IP address and room.'}</small>
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="systemDisplayTrackingRetentionHours">{t.systemDisplayTrackingRetentionLabel || 'Retention Time (hours)'}</label>
-                      <input
-                        type="number"
-                        id="systemDisplayTrackingRetentionHours"
-                        value={systemDisplayTrackingRetentionHours}
-                        onChange={(e) => this.setState({ systemDisplayTrackingRetentionHours: e.target.value })}
-                        min="1"
-                        max="168"
-                        step="1"
-                      />
-                      <small>{t.systemDisplayTrackingRetentionHelp || 'How long disconnected displays remain visible (1-168 hours)'}</small>
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="systemDisplayTrackingCleanupMinutes">{t.systemDisplayTrackingCleanupLabel || 'Cleanup Delay (minutes)'}</label>
-                      <input
-                        type="number"
-                        id="systemDisplayTrackingCleanupMinutes"
-                        value={systemDisplayTrackingCleanupMinutes}
-                        onChange={(e) => this.setState({ systemDisplayTrackingCleanupMinutes: e.target.value })}
-                        min="0"
-                        max="60"
-                        step="1"
-                      />
-                      <small>{t.systemDisplayTrackingCleanupHelp || 'Wait time after disconnect before automatic cleanup (0-60 minutes)'}</small>
-                    </div>
-
                     <button type="submit" className="admin-submit-button">
                       {t.systemSaveButton || 'Save System Configuration'}
                     </button>
@@ -5425,6 +5365,82 @@ class Admin extends Component {
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              <div className="admin-form-divider"></div>
+
+              <h3>{t.systemDisplayTrackingSectionTitle || 'Display Tracking Settings'}</h3>
+              
+              <div className="admin-form-group">
+                <label htmlFor="systemDisplayTrackingMode">{t.systemDisplayTrackingModeLabel || 'Tracking Mode'}</label>
+                <div className="admin-radio-group">
+                  <label className="admin-radio-label">
+                    <input
+                      type="radio"
+                      name="systemDisplayTrackingMode"
+                      value="client-id"
+                      checked={systemDisplayTrackingMode === 'client-id'}
+                      onChange={(e) => this.setState({ systemDisplayTrackingMode: e.target.value })}
+                    />
+                    <span>{t.systemDisplayTrackingModeClientId || 'Client ID (each browser tab separately)'}</span>
+                  </label>
+                  <label className="admin-radio-label">
+                    <input
+                      type="radio"
+                      name="systemDisplayTrackingMode"
+                      value="ip-room"
+                      checked={systemDisplayTrackingMode === 'ip-room'}
+                      onChange={(e) => this.setState({ systemDisplayTrackingMode: e.target.value })}
+                    />
+                    <span>{t.systemDisplayTrackingModeIpRoom || 'IP + Room (one entry per physical display)'}</span>
+                  </label>
+                </div>
+                <small className="admin-help-text">{t.systemDisplayTrackingModeHelp || 'Client ID: Each browser tab is tracked separately. IP+Room: Displays are grouped by IP address and room.'}</small>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="systemDisplayTrackingRetentionHours">{t.systemDisplayTrackingRetentionLabel || 'Retention Time (hours)'}</label>
+                <input
+                  type="number"
+                  id="systemDisplayTrackingRetentionHours"
+                  value={systemDisplayTrackingRetentionHours}
+                  onChange={(e) => this.setState({ systemDisplayTrackingRetentionHours: e.target.value })}
+                  min="1"
+                  max="168"
+                />
+                <small className="admin-help-text">{t.systemDisplayTrackingRetentionHelp || 'How long disconnected displays remain visible (1-168 hours)'}</small>
+              </div>
+
+              <div className="admin-form-group">
+                <label htmlFor="systemDisplayTrackingCleanupMinutes">{t.systemDisplayTrackingCleanupLabel || 'Cleanup Delay (minutes)'}</label>
+                <input
+                  type="number"
+                  id="systemDisplayTrackingCleanupMinutes"
+                  value={systemDisplayTrackingCleanupMinutes}
+                  onChange={(e) => this.setState({ systemDisplayTrackingCleanupMinutes: e.target.value })}
+                  min="0"
+                  max="60"
+                />
+                <small className="admin-help-text">{t.systemDisplayTrackingCleanupHelp || 'Wait time after disconnect before automatic cleanup (0-60 minutes)'}</small>
+              </div>
+
+              <button 
+                type="button" 
+                className="admin-primary-button" 
+                onClick={this.handleSystemSubmit}
+                disabled={
+                  systemDisplayTrackingMode === currentSystemDisplayTrackingMode &&
+                  parseInt(systemDisplayTrackingRetentionHours, 10) === currentSystemDisplayTrackingRetentionHours &&
+                  parseInt(systemDisplayTrackingCleanupMinutes, 10) === currentSystemDisplayTrackingCleanupMinutes
+                }
+              >
+                {t.systemSaveButton || 'Save System Configuration'}
+              </button>
+
+              {systemMessage && (
+                <div className={`admin-message admin-message-${systemMessageType}`}>
+                  {systemMessage}
                 </div>
               )}
 
