@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-03-11
+
+### Changed
+- **Admin Panel Reorganization**
+  - Renamed "Connected Displays" tab to "Devices" in Operations section
+  - Moved Display Tracking Settings from System Configuration to Devices tab for better logical grouping
+  - Display tracking settings now appear directly with the device list for easier access and management
+
 ## [1.5.0] - 2026-03-11
 
 ### Added
@@ -26,10 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added 5-minute grace period before automatic cleanup (allows for brief network interruptions)
   - Display tracking configuration now persists in system-config.json
   - Socket controller now uses configurable tracking settings
-- **Admin Panel Reorganization**
-  - Renamed "Connected Displays" tab to "Devices" in Operations section
-  - Moved Display Tracking Settings from System Configuration to Devices tab for better logical grouping
-  - Display tracking settings now appear directly with the device list for easier access
 
 ## [1.4.1] - 2025-03-11
 
