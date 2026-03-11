@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-03-11
+
+### Changed
+- **Admin Panel UX Improvements**
+  - All save buttons now only activate when changes are made
+  - Prevents unnecessary API calls and provides better visual feedback
+  - Implemented for all 16 configuration forms:
+    - Display Configuration, WiFi, Logo, Colors, Booking
+    - Translations, API Tokens, System, Translation API
+    - OAuth, Graph Runtime, Maintenance, Tracking Settings
+    - Search Configuration, Rate Limit Configuration
+  - Logo button now works correctly for both URL and File upload modes
+
 ## [1.5.1] - 2026-03-11
 
 ### Changed
