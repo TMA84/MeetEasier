@@ -3709,7 +3709,15 @@ class Admin extends Component {
                 </>
               )}
               
-              <button type="submit" className="admin-submit-button">
+              <button 
+                type="submit" 
+                className="admin-submit-button"
+                disabled={
+                  uploadMode === 'file' 
+                    ? (!logoDarkFile && !logoLightFile)
+                    : (logoDarkUrl === currentLogoDarkUrl && logoLightUrl === currentLogoLightUrl)
+                }
+              >
                 {t.submitLogoButton}
               </button>
             </form>
@@ -4301,7 +4309,14 @@ class Admin extends Component {
                   )}
                 </div>
 
-                <button type="submit" className="admin-submit-button">
+                <button 
+                  type="submit" 
+                  className="admin-submit-button"
+                  disabled={
+                    maintenanceTranslationsText === JSON.stringify(currentMaintenanceTranslations, null, 2) &&
+                    adminTranslationsText === JSON.stringify(currentAdminTranslations, null, 2)
+                  }
+                >
                   {t.translationsSubmitButton}
                 </button>
               </form>
@@ -4379,7 +4394,11 @@ class Admin extends Component {
                     <small>{t.apiTokenConfigHelp || 'After saving, use the new token for future logins.'}</small>
                   </div>
 
-                  <button type="submit" className="admin-submit-button">
+                  <button 
+                    type="submit" 
+                    className="admin-submit-button"
+                    disabled={!newApiToken || !newApiTokenConfirm || newApiToken !== newApiTokenConfirm}
+                  >
                     {t.apiTokenConfigSaveButton || 'Save API Token'}
                   </button>
                 </form>
@@ -4428,7 +4447,11 @@ class Admin extends Component {
                     <small>{t.wifiApiTokenConfigHelp || 'Use this token for external WiFi API integrations.'}</small>
                   </div>
 
-                  <button type="submit" className="admin-submit-button">
+                  <button 
+                    type="submit" 
+                    className="admin-submit-button"
+                    disabled={!newWifiApiToken || !newWifiApiTokenConfirm || newWifiApiToken !== newWifiApiTokenConfirm}
+                  >
                     {t.wifiApiTokenConfigSaveButton || 'Save WiFi API Token'}
                   </button>
                 </form>
@@ -4666,7 +4689,16 @@ class Admin extends Component {
                       <small>{t.translationApiTimeoutHelp || 'Minimum: 3000 ms'}</small>
                     </div>
 
-                    <button type="submit" className="admin-submit-button">
+                    <button 
+                      type="submit" 
+                      className="admin-submit-button"
+                      disabled={
+                        translationApiEnabled === currentTranslationApiEnabled &&
+                        translationApiUrl === currentTranslationApiUrl &&
+                        parseInt(translationApiTimeoutMs, 10) === currentTranslationApiTimeoutMs &&
+                        translationApiApiKey === ''
+                      }
+                    >
                       {t.translationApiSaveButton || 'Save Translation API Configuration'}
                     </button>
                   </form>
@@ -4755,7 +4787,15 @@ class Admin extends Component {
                       <small>{t.oauthClientSecretHelp || 'Secret is encrypted before it is written to disk.'}</small>
                     </div>
 
-                    <button type="submit" className="admin-submit-button">
+                    <button 
+                      type="submit" 
+                      className="admin-submit-button"
+                      disabled={
+                        oauthClientId === currentOauthClientId &&
+                        oauthAuthority === currentOauthAuthority &&
+                        oauthClientSecret === ''
+                      }
+                    >
                       {t.oauthSaveButton || 'Save OAuth Configuration'}
                     </button>
                   </form>
@@ -4876,7 +4916,18 @@ class Admin extends Component {
                           />
                         </div>
 
-                        <button type="submit" className="admin-submit-button">
+                        <button 
+                          type="submit" 
+                          className="admin-submit-button"
+                          disabled={
+                            systemGraphWebhookEnabled === currentSystemGraphWebhookEnabled &&
+                            systemGraphWebhookClientState === currentSystemGraphWebhookClientState &&
+                            systemGraphWebhookAllowedIps === currentSystemGraphWebhookAllowedIps &&
+                            parseInt(systemGraphFetchTimeoutMs, 10) === currentSystemGraphFetchTimeoutMs &&
+                            parseInt(systemGraphFetchRetryAttempts, 10) === currentSystemGraphFetchRetryAttempts &&
+                            parseInt(systemGraphFetchRetryBaseMs, 10) === currentSystemGraphFetchRetryBaseMs
+                          }
+                        >
                           {t.graphRuntimeSaveButton || 'Save Graph Runtime Configuration'}
                         </button>
                       </form>
@@ -5101,7 +5152,18 @@ class Admin extends Component {
                       <small>Minimum: 5000 ms</small>
                     </div>
 
-                    <button type="submit" className="admin-submit-button">
+                    <button 
+                      type="submit" 
+                      className="admin-submit-button"
+                      disabled={
+                        searchUseGraphAPI === currentSearchUseGraphAPI &&
+                        parseInt(searchMaxDays, 10) === currentSearchMaxDays &&
+                        parseInt(searchMaxRoomLists, 10) === currentSearchMaxRoomLists &&
+                        parseInt(searchMaxRooms, 10) === currentSearchMaxRooms &&
+                        parseInt(searchMaxItems, 10) === currentSearchMaxItems &&
+                        parseInt(searchPollIntervalMs, 10) === currentSearchPollIntervalMs
+                      }
+                    >
                       Save Search Configuration
                     </button>
                   </form>
@@ -5239,7 +5301,18 @@ class Admin extends Component {
                       />
                     </div>
 
-                    <button type="submit" className="admin-submit-button">
+                    <button 
+                      type="submit" 
+                      className="admin-submit-button"
+                      disabled={
+                        parseInt(rateLimitApiWindowMs, 10) === currentRateLimitApiWindowMs &&
+                        parseInt(rateLimitApiMax, 10) === currentRateLimitApiMax &&
+                        parseInt(rateLimitWriteWindowMs, 10) === currentRateLimitWriteWindowMs &&
+                        parseInt(rateLimitWriteMax, 10) === currentRateLimitWriteMax &&
+                        parseInt(rateLimitAuthWindowMs, 10) === currentRateLimitAuthWindowMs &&
+                        parseInt(rateLimitAuthMax, 10) === currentRateLimitAuthMax
+                      }
+                    >
                       Save Rate Limit Configuration
                     </button>
                   </form>
@@ -6038,6 +6111,13 @@ class Admin extends Component {
                 <button 
                   type="submit" 
                   className="admin-submit-button"
+                  disabled={
+                    bookingButtonColor === currentBookingButtonColor &&
+                    statusAvailableColor === currentStatusAvailableColor &&
+                    statusBusyColor === currentStatusBusyColor &&
+                    statusUpcomingColor === currentStatusUpcomingColor &&
+                    statusNotFoundColor === currentStatusNotFoundColor
+                  }
                 >
                   {t.submitColorsButton}
                 </button>
