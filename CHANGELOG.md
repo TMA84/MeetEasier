@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-03-11
+
+### Added
+- **Configurable Display Tracking System**
+  - Added two tracking modes: Client ID (default) and IP + Room
+  - Client ID mode: Each browser tab is tracked separately with unique identifier
+  - IP + Room mode: Displays are grouped by IP address and room name (ideal for dedicated hardware)
+  - Configurable retention time for disconnected displays (1-168 hours, default: 2 hours)
+  - Configurable cleanup delay after disconnect (0-60 minutes, default: 5 minutes)
+  - Settings available in Admin Panel → Operations → System Configuration
+  - Automatic cleanup based on configured retention time
+  - Scheduled cleanup after configured delay when display disconnects
+
+### Changed
+- **Display Tracking Improvements**
+  - Reduced default retention time from 7 days to 2 hours for cleaner display list
+  - Added 5-minute grace period before automatic cleanup (allows for brief network interruptions)
+  - Display tracking configuration now persists in system-config.json
+  - Socket controller now uses configurable tracking settings
+
 ## [1.4.1] - 2025-03-11
 
 ### Added

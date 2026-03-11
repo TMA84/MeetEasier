@@ -276,10 +276,41 @@ function normalizeIpAddress(rawIp) {
   return ip;
 }
 
+function getDisplayTrackingConfig() {
+  const systemConfig = configManager.getSystemConfig();
+  return {
+    mode: systemConfig.displayTrackingMode || 'client-id',
+    retentionHours: systemConfig.displayTrackingRetentionHours || 2,
+    cleanupMinutes: systemConfig.displayTrackingCleanupMinutes || 5
+  };
+}
+
+function generateDisplayIdentifier(socket) {
+  const trackingConfig = getDisplayTrackingConfig();
+  
+  if (trackingConfig.mode === 'ip-room') {
+    // IP + Room based tracking
+    const rawIpAddress = socket?.handshake?.headers?.['x-forwarded-for']?.split(',')[0]?.trim()
+      || socket?.handshake?.headers?.['x-real-ip']
+      || socket?.handshake?.address
+      || 'unknown';
+    const ipAddress = normalizeIpAddress(rawIpAddress);
+    const roomAlias = String(socket?.handshake?.query?.roomAlias || '').trim();
+    const displayType = String(socket?.handshake?.query?.displayType || '').trim().toLowerCase() || 'unknown';
+    
+    // Create identifier: ip_room or ip_displayType if no room
+    const roomPart = roomAlias || displayType;
+    return `${ipAddress}_${roomPart}`;
+  } else {
+    // Client ID based tracking (default)
+    const rawClientId = socket?.handshake?.query?.displayClientId;
+    return normalizeDisplayClientId(rawClientId);
+  }
+}
+
 function registerConnectedClient(socket) {
-  const rawClientId = socket?.handshake?.query?.displayClientId;
-  const clientId = normalizeDisplayClientId(rawClientId);
-  if (!clientId) {
+  const identifier = generateDisplayIdentifier(socket);
+  if (!identifier) {
     return;
   }
 
@@ -294,12 +325,12 @@ function registerConnectedClient(socket) {
     || socket?.handshake?.address
     || 'unknown';
   
-  console.log(`Raw IP address for client ${clientId}: ${rawIpAddress}`);
+  console.log(`Raw IP address for client ${identifier}: ${rawIpAddress}`);
   const ipAddress = normalizeIpAddress(rawIpAddress);
-  console.log(`Normalized IP address for client ${clientId}: ${ipAddress}`);
+  console.log(`Normalized IP address for client ${identifier}: ${ipAddress}`);
 
-  const existing = connectedDisplayClients.get(clientId) || {
-    clientId,
+  const existing = connectedDisplayClients.get(identifier) || {
+    clientId: identifier,
     displayType,
     roomAlias,
     ipAddress,
@@ -313,42 +344,66 @@ function registerConnectedClient(socket) {
   existing.ipAddress = ipAddress; // Update IP on reconnect
   existing.lastSeenAt = nowIso;
   existing.socketIds.add(socket.id);
-  connectedDisplayClients.set(clientId, existing);
-  socket.data.displayClientId = clientId;
+  connectedDisplayClients.set(identifier, existing);
+  socket.data.displayIdentifier = identifier;
 
   emitConnectedClientsUpdated();
 }
 
 function unregisterConnectedClient(socket) {
-  const clientId = socket?.data?.displayClientId;
-  if (!clientId || !connectedDisplayClients.has(clientId)) {
+  const identifier = socket?.data?.displayIdentifier;
+  if (!identifier || !connectedDisplayClients.has(identifier)) {
     return;
   }
 
-  const entry = connectedDisplayClients.get(clientId);
+  const entry = connectedDisplayClients.get(identifier);
   entry.socketIds.delete(socket.id);
   entry.lastSeenAt = new Date().toISOString();
 
-  // Keep disconnected displays for 7 days before removing them
+  // Keep disconnected displays for configured retention time before removing them
   if (entry.socketIds.size === 0) {
     // Don't delete immediately, just update lastSeenAt
-    connectedDisplayClients.set(clientId, entry);
+    connectedDisplayClients.set(identifier, entry);
+    
+    // Schedule cleanup after configured delay
+    const trackingConfig = getDisplayTrackingConfig();
+    const cleanupDelayMs = trackingConfig.cleanupMinutes * 60 * 1000;
+    
+    if (cleanupDelayMs > 0) {
+      setTimeout(() => {
+        const currentEntry = connectedDisplayClients.get(identifier);
+        // Only delete if still disconnected (no sockets)
+        if (currentEntry && currentEntry.socketIds.size === 0) {
+          const lastSeen = new Date(currentEntry.lastSeenAt);
+          const now = new Date();
+          const minutesSinceLastSeen = (now - lastSeen) / (60 * 1000);
+          
+          if (minutesSinceLastSeen >= trackingConfig.cleanupMinutes) {
+            connectedDisplayClients.delete(identifier);
+            console.log(`Auto-removed disconnected display: ${identifier} (disconnected for ${Math.round(minutesSinceLastSeen)} minutes)`);
+            emitConnectedClientsUpdated();
+          }
+        }
+      }, cleanupDelayMs);
+    }
   } else {
-    connectedDisplayClients.set(clientId, entry);
+    connectedDisplayClients.set(identifier, entry);
   }
 
   emitConnectedClientsUpdated();
 }
 
 function cleanupOldDisplays() {
+  const trackingConfig = getDisplayTrackingConfig();
   const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+  const retentionMs = trackingConfig.retentionHours * 60 * 60 * 1000;
+  const cutoffTime = new Date(now.getTime() - retentionMs);
   
-  for (const [clientId, entry] of connectedDisplayClients.entries()) {
+  for (const [identifier, entry] of connectedDisplayClients.entries()) {
     const lastSeen = new Date(entry.lastSeenAt);
-    if (lastSeen < sevenDaysAgo) {
-      connectedDisplayClients.delete(clientId);
-      console.log(`Removed old display client: ${clientId} (last seen: ${entry.lastSeenAt})`);
+    if (lastSeen < cutoffTime) {
+      connectedDisplayClients.delete(identifier);
+      console.log(`Removed old display client: ${identifier} (last seen: ${entry.lastSeenAt}, retention: ${trackingConfig.retentionHours}h)`);
     }
   }
 }
@@ -653,11 +708,11 @@ module.exports = function(io) {
 
     // Handle heartbeat to update lastSeenAt
     socket.on('display-heartbeat', function() {
-      const clientId = socket?.data?.displayClientId;
-      if (clientId && connectedDisplayClients.has(clientId)) {
-        const entry = connectedDisplayClients.get(clientId);
+      const identifier = socket?.data?.displayIdentifier;
+      if (identifier && connectedDisplayClients.has(identifier)) {
+        const entry = connectedDisplayClients.get(identifier);
         entry.lastSeenAt = new Date().toISOString();
-        connectedDisplayClients.set(clientId, entry);
+        connectedDisplayClients.set(identifier, entry);
       }
     });
 

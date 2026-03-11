@@ -315,6 +315,12 @@ class Admin extends Component {
       systemHstsMaxAge: 31536000,
       currentSystemRateLimitMaxBuckets: 10000,
       systemRateLimitMaxBuckets: 10000,
+      currentSystemDisplayTrackingMode: 'client-id',
+      systemDisplayTrackingMode: 'client-id',
+      currentSystemDisplayTrackingRetentionHours: 2,
+      systemDisplayTrackingRetentionHours: 2,
+      currentSystemDisplayTrackingCleanupMinutes: 5,
+      systemDisplayTrackingCleanupMinutes: 5,
       systemLastUpdated: '',
       currentTranslationApiEnabled: true,
       translationApiEnabled: true,
@@ -1530,6 +1536,12 @@ class Admin extends Component {
           systemHstsMaxAge: Math.max(parseInt(data.hstsMaxAge, 10) || 0, 0),
           currentSystemRateLimitMaxBuckets: parseInt(data.rateLimitMaxBuckets, 10) || 10000,
           systemRateLimitMaxBuckets: parseInt(data.rateLimitMaxBuckets, 10) || 10000,
+          currentSystemDisplayTrackingMode: data.displayTrackingMode || 'client-id',
+          systemDisplayTrackingMode: data.displayTrackingMode || 'client-id',
+          currentSystemDisplayTrackingRetentionHours: parseInt(data.displayTrackingRetentionHours, 10) || 2,
+          systemDisplayTrackingRetentionHours: parseInt(data.displayTrackingRetentionHours, 10) || 2,
+          currentSystemDisplayTrackingCleanupMinutes: parseInt(data.displayTrackingCleanupMinutes, 10) || 5,
+          systemDisplayTrackingCleanupMinutes: parseInt(data.displayTrackingCleanupMinutes, 10) || 5,
           systemLastUpdated: data.lastUpdated
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
             : '-'
@@ -2138,7 +2150,10 @@ class Admin extends Component {
       systemStartupValidationStrict,
       systemExposeDetailedErrors,
       systemHstsMaxAge,
-      systemRateLimitMaxBuckets
+      systemRateLimitMaxBuckets,
+      systemDisplayTrackingMode,
+      systemDisplayTrackingRetentionHours,
+      systemDisplayTrackingCleanupMinutes
     } = this.state;
 
     const headers = {
@@ -2156,7 +2171,10 @@ class Admin extends Component {
         startupValidationStrict: !!systemStartupValidationStrict,
         exposeDetailedErrors: !!systemExposeDetailedErrors,
         hstsMaxAge: Math.max(parseInt(systemHstsMaxAge, 10) || 0, 0),
-        rateLimitMaxBuckets: Math.max(parseInt(systemRateLimitMaxBuckets, 10) || 1000, 1000)
+        rateLimitMaxBuckets: Math.max(parseInt(systemRateLimitMaxBuckets, 10) || 1000, 1000),
+        displayTrackingMode: systemDisplayTrackingMode,
+        displayTrackingRetentionHours: Math.max(Math.min(parseInt(systemDisplayTrackingRetentionHours, 10) || 2, 168), 1),
+        displayTrackingCleanupMinutes: Math.max(Math.min(parseInt(systemDisplayTrackingCleanupMinutes, 10) || 5, 60), 0)
       })
     })
       .then(response => {
@@ -2987,6 +3005,9 @@ class Admin extends Component {
       currentSystemGraphFetchRetryBaseMs, systemGraphFetchRetryBaseMs,
       currentSystemHstsMaxAge, systemHstsMaxAge,
       currentSystemRateLimitMaxBuckets, systemRateLimitMaxBuckets,
+      currentSystemDisplayTrackingMode, systemDisplayTrackingMode,
+      currentSystemDisplayTrackingRetentionHours, systemDisplayTrackingRetentionHours,
+      currentSystemDisplayTrackingCleanupMinutes, systemDisplayTrackingCleanupMinutes,
       systemLastUpdated,
       currentTranslationApiEnabled, translationApiEnabled,
       currentTranslationApiUrl, translationApiUrl,
@@ -4426,6 +4447,22 @@ class Admin extends Component {
                         <span className="config-value">{currentSystemRateLimitMaxBuckets}</span>
                       </div>
                       <div className="config-item">
+                        <span className="config-label">{t.systemDisplayTrackingModeLabel || 'Tracking Mode'}</span>
+                        <span className="config-value">
+                          {currentSystemDisplayTrackingMode === 'ip-room' 
+                            ? (t.systemDisplayTrackingModeIpRoom || 'IP + Room')
+                            : (t.systemDisplayTrackingModeClientId || 'Client ID')}
+                        </span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.systemDisplayTrackingRetentionLabel || 'Retention Time'}</span>
+                        <span className="config-value">{currentSystemDisplayTrackingRetentionHours}h</span>
+                      </div>
+                      <div className="config-item">
+                        <span className="config-label">{t.systemDisplayTrackingCleanupLabel || 'Cleanup Delay'}</span>
+                        <span className="config-value">{currentSystemDisplayTrackingCleanupMinutes}min</span>
+                      </div>
+                      <div className="config-item">
                         <span className="config-label">{t.lastUpdatedLabel}</span>
                         <span className="config-value">{systemLastUpdated || '-'}</span>
                       </div>
@@ -4480,6 +4517,66 @@ class Admin extends Component {
                         min="1000"
                         step="500"
                       />
+                    </div>
+
+                    <div className="admin-form-divider"></div>
+                    <h4>{t.systemDisplayTrackingSectionTitle || 'Display Tracking Settings'}</h4>
+
+                    <div className="admin-form-group">
+                      <label>{t.systemDisplayTrackingModeLabel || 'Tracking Mode'}</label>
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <label className="inline-label" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                          <input
+                            type="radio"
+                            name="displayTrackingMode"
+                            value="client-id"
+                            checked={systemDisplayTrackingMode === 'client-id'}
+                            onChange={(e) => this.setState({ systemDisplayTrackingMode: e.target.value })}
+                            style={{ marginRight: '0.5rem' }}
+                          />
+                          <span className="label-text">{t.systemDisplayTrackingModeClientId || 'Client ID (each browser tab separately)'}</span>
+                        </label>
+                        <label className="inline-label" style={{ display: 'block' }}>
+                          <input
+                            type="radio"
+                            name="displayTrackingMode"
+                            value="ip-room"
+                            checked={systemDisplayTrackingMode === 'ip-room'}
+                            onChange={(e) => this.setState({ systemDisplayTrackingMode: e.target.value })}
+                            style={{ marginRight: '0.5rem' }}
+                          />
+                          <span className="label-text">{t.systemDisplayTrackingModeIpRoom || 'IP + Room (one entry per physical display)'}</span>
+                        </label>
+                      </div>
+                      <small>{t.systemDisplayTrackingModeHelp || 'Client ID: Each browser tab is tracked separately. IP+Room: Displays are grouped by IP address and room.'}</small>
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="systemDisplayTrackingRetentionHours">{t.systemDisplayTrackingRetentionLabel || 'Retention Time (hours)'}</label>
+                      <input
+                        type="number"
+                        id="systemDisplayTrackingRetentionHours"
+                        value={systemDisplayTrackingRetentionHours}
+                        onChange={(e) => this.setState({ systemDisplayTrackingRetentionHours: e.target.value })}
+                        min="1"
+                        max="168"
+                        step="1"
+                      />
+                      <small>{t.systemDisplayTrackingRetentionHelp || 'How long disconnected displays remain visible (1-168 hours)'}</small>
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label htmlFor="systemDisplayTrackingCleanupMinutes">{t.systemDisplayTrackingCleanupLabel || 'Cleanup Delay (minutes)'}</label>
+                      <input
+                        type="number"
+                        id="systemDisplayTrackingCleanupMinutes"
+                        value={systemDisplayTrackingCleanupMinutes}
+                        onChange={(e) => this.setState({ systemDisplayTrackingCleanupMinutes: e.target.value })}
+                        min="0"
+                        max="60"
+                        step="1"
+                      />
+                      <small>{t.systemDisplayTrackingCleanupHelp || 'Wait time after disconnect before automatic cleanup (0-60 minutes)'}</small>
                     </div>
 
                     <button type="submit" className="admin-submit-button">
