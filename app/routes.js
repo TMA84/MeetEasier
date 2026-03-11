@@ -2130,6 +2130,32 @@ module.exports = function(app) {
 		}
 	});
 
+	// Delete a disconnected display client
+	app.delete('/api/connected-clients/:clientId', checkApiToken, function(req, res) {
+		try {
+			const socketController = require('./socket-controller');
+			const clientId = req.params.clientId;
+			
+			if (!clientId) {
+				return res.status(400).json({ error: 'Client ID is required' });
+			}
+
+			if (typeof socketController.removeDisplayClient === 'function') {
+				const removed = socketController.removeDisplayClient(clientId);
+				if (removed) {
+					res.json({ success: true, message: 'Display client removed successfully' });
+				} else {
+					res.status(404).json({ error: 'Display client not found or still connected' });
+				}
+			} else {
+				res.status(500).json({ error: 'Remove function not available' });
+			}
+		} catch (err) {
+			console.error('Error removing display client:', err);
+			res.status(500).json({ error: 'Failed to remove display client' });
+		}
+	});
+
 	// Get configuration lock status (which settings are configured via .env)
 	app.get('/api/config-locks', function(req, res) {
 		try {
