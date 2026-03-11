@@ -3483,7 +3483,19 @@ class Admin extends Component {
                   <small>{t.flightboardDarkModeHelp || 'Enables the dark visual style for flightboard displays.'}</small>
                 </div>
                 
-                <button type="submit" className="admin-submit-button">
+                <button 
+                  type="submit" 
+                  className="admin-submit-button"
+                  disabled={
+                    showWiFi === currentShowWiFi &&
+                    showUpcomingMeetings === currentShowUpcomingMeetings &&
+                    showMeetingTitles === currentShowMeetingTitles &&
+                    parseInt(upcomingMeetingsCount, 10) === currentUpcomingMeetingsCount &&
+                    minimalHeaderStyle === currentMinimalHeaderStyle &&
+                    singleRoomDarkMode === currentSingleRoomDarkMode &&
+                    flightboardDarkMode === currentFlightboardDarkMode
+                  }
+                >
                   {t.submitSidebarButton}
                 </button>
               </form>
@@ -3554,7 +3566,14 @@ class Admin extends Component {
                 />
               </div>
               
-              <button type="submit" className="admin-submit-button">
+              <button 
+                type="submit" 
+                className="admin-submit-button"
+                disabled={
+                  ssid === currentSsid &&
+                  password === currentPassword
+                }
+              >
                 {t.submitWifiButton}
               </button>
             </form>
@@ -4037,7 +4056,18 @@ class Admin extends Component {
               <button 
                 type="submit" 
                 className="admin-submit-button"
-                disabled={bookingPermissionMissing}
+                disabled={
+                  bookingPermissionMissing ||
+                  (enableBooking === currentEnableBooking &&
+                   enableExtendMeeting === currentEnableExtendMeeting &&
+                   checkInEnabled === currentCheckInEnabled &&
+                   checkInRequiredForExternalMeetings === currentCheckInRequiredForExternalMeetings &&
+                   parseInt(checkInEarlyMinutes, 10) === currentCheckInEarlyMinutes &&
+                   parseInt(checkInWindowMinutes, 10) === currentCheckInWindowMinutes &&
+                   checkInAutoReleaseNoShow === currentCheckInAutoReleaseNoShow &&
+                   JSON.stringify(roomFeatureFlags) === JSON.stringify(currentRoomFeatureFlags) &&
+                   JSON.stringify(roomGroupFeatureFlags) === JSON.stringify(currentRoomGroupFeatureFlags))
+                }
               >
                 {t.submitBookingButton}
               </button>
@@ -4519,7 +4549,16 @@ class Admin extends Component {
                       />
                     </div>
 
-                    <button type="submit" className="admin-submit-button">
+                    <button 
+                      type="submit" 
+                      className="admin-submit-button"
+                      disabled={
+                        systemStartupValidationStrict === currentSystemStartupValidationStrict &&
+                        systemExposeDetailedErrors === currentSystemExposeDetailedErrors &&
+                        parseInt(systemHstsMaxAge, 10) === currentSystemHstsMaxAge &&
+                        parseInt(systemRateLimitMaxBuckets, 10) === currentSystemRateLimitMaxBuckets
+                      }
+                    >
                       {t.systemSaveButton || 'Save System Configuration'}
                     </button>
                   </form>
@@ -4922,7 +4961,14 @@ class Admin extends Component {
                       />
                     </div>
 
-                    <button type="submit" className="admin-submit-button">
+                    <button 
+                      type="submit" 
+                      className="admin-submit-button"
+                      disabled={
+                        maintenanceEnabled === currentMaintenanceEnabled &&
+                        maintenanceMessage === currentMaintenanceMessage
+                      }
+                    >
                       {t.maintenanceSubmitButton}
                     </button>
                   </form>
