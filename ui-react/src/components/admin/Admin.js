@@ -5426,8 +5426,8 @@ class Admin extends Component {
               </div>
 
               <button 
-                type="button" 
-                className="admin-primary-button" 
+                type="submit" 
+                className="admin-submit-button" 
                 onClick={this.handleSystemSubmit}
                 disabled={
                   systemDisplayTrackingMode === currentSystemDisplayTrackingMode &&
