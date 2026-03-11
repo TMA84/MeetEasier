@@ -142,8 +142,8 @@ const fromOverrideState = (value) => {
 };
 
 const ADMIN_TAB_SECTIONS = {
-  displays: ['display', 'wifi', 'logo', 'colors', 'booking', 'connectedDisplays'],
-  operations: ['system', 'translationApi', 'oauth', 'maintenance', 'apiToken', 'search', 'ratelimit', 'backup', 'audit'],
+  displays: ['display', 'wifi', 'logo', 'colors', 'booking'],
+  operations: ['system', 'translationApi', 'oauth', 'maintenance', 'apiToken', 'search', 'ratelimit', 'backup', 'audit', 'connectedDisplays'],
   content: ['translations']
 };
 
@@ -3100,9 +3100,9 @@ class Admin extends Component {
           { key: 'apiToken', label: t.apiTokenTabLabel || 'API-Token' },
           { key: 'search', label: t.searchTabLabel || 'Suche' },
           { key: 'ratelimit', label: t.rateLimitTabLabel || 'Rate-Limits' },
-          { key: 'connectedDisplays', label: t.connectedDisplaysSectionTitle || 'Connected Displays' },
           { key: 'backup', label: t.backupPayloadLabel || 'Backup' },
-          { key: 'audit', label: t.auditTabLabel || 'Audit-Log' }
+          { key: 'audit', label: t.auditTabLabel || 'Audit-Log' },
+          { key: 'connectedDisplays', label: t.connectedDisplaysSectionTitle || 'Displays' }
         ]
       },
       {
