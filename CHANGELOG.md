@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Renamed "Connected Displays" tab to "Devices" in Operations section
   - Moved Display Tracking Settings from System Configuration to Devices tab for better logical grouping
   - Display tracking settings now appear directly with the device list for easier access and management
+  - Shortened section title from "Display Tracking Settings" to "Tracking Settings" for cleaner UI
 
 ## [1.5.0] - 2026-03-11
 

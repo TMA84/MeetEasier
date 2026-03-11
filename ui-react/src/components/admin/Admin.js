@@ -5370,7 +5370,7 @@ class Admin extends Component {
 
               <div className="admin-form-divider"></div>
 
-              <h3>{t.systemDisplayTrackingSectionTitle || 'Display Tracking Settings'}</h3>
+              <h3>{t.systemDisplayTrackingSectionTitle || 'Tracking Settings'}</h3>
               
               <div className="admin-form-group">
                 <label htmlFor="systemDisplayTrackingMode">{t.systemDisplayTrackingModeLabel || 'Tracking Mode'}</label>
