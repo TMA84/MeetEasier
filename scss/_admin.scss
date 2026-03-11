@@ -812,6 +812,101 @@
   }
 }
 
+.admin-card .admin-displays-table-wrapper {
+  background: #0f1117 !important;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  overflow-x: auto;
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    min-width: 600px;
+    background: transparent !important;
+    border: none !important;
+
+    thead {
+      background: transparent !important;
+      border: none !important;
+
+      tr {
+        border-bottom: 2px solid rgba(59, 130, 246, 0.5) !important;
+        background: transparent !important;
+
+        th {
+          padding: 0.75rem !important;
+          text-align: left !important;
+          color: #3b82f6 !important;
+          font-weight: 600 !important;
+          font-size: 0.875rem !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.05em !important;
+          background: transparent !important;
+          background-color: transparent !important;
+          border: none !important;
+        }
+      }
+    }
+
+    tbody {
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+
+      tr {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background: transparent !important;
+        background-color: transparent !important;
+
+        &:nth-child(even) {
+          background: transparent !important;
+          background-color: transparent !important;
+        }
+
+        td {
+          padding: 0.75rem !important;
+          color: rgba(255, 255, 255, 0.9) !important;
+          font-size: 0.95rem !important;
+          background: transparent !important;
+          background-color: transparent !important;
+          border: none !important;
+
+          &.status-cell {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+          }
+
+          &.ip-address {
+            font-family: monospace !important;
+            color: #86efac !important;
+            font-weight: 500 !important;
+          }
+
+          &.client-id {
+            font-family: monospace !important;
+            font-size: 0.85rem !important;
+            color: rgba(255, 255, 255, 0.6) !important;
+          }
+
+          &.timestamp {
+            font-size: 0.85rem !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+          }
+        }
+      }
+    }
+
+    tfoot {
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+    }
+  }
+}
+
 @media (max-width: 768px) {
   .admin-header {
     padding: 1.5rem 1rem;

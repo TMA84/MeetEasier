@@ -233,7 +233,8 @@ function normalizeDisplayClientId(value) {
     return '';
   }
 
-  if (!/^[a-zA-Z0-9._:-]{3,120}$/.test(normalized)) {
+  // Allow longer IDs with underscores for session-based IDs
+  if (!/^[a-zA-Z0-9._:-]{3,250}$/.test(normalized)) {
     return '';
   }
 
@@ -248,6 +249,33 @@ function emitConnectedClientsUpdated() {
   socketIO.of('/').emit('connectedClientsUpdated', getConnectedDisplayClients());
 }
 
+function normalizeIpAddress(rawIp) {
+  if (!rawIp || rawIp === 'unknown') {
+    return 'unknown';
+  }
+
+  const ip = String(rawIp).trim();
+  
+  // Extract IPv4 from IPv6-mapped IPv4 address (::ffff:192.168.1.1 -> 192.168.1.1)
+  const ipv6MappedMatch = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (ipv6MappedMatch) {
+    return ipv6MappedMatch[1];
+  }
+
+  // Also handle format with brackets [::ffff:192.168.1.1]
+  const ipv6BracketMatch = ip.match(/^\[?::ffff:(\d+\.\d+\.\d+\.\d+)\]?$/i);
+  if (ipv6BracketMatch) {
+    return ipv6BracketMatch[1];
+  }
+
+  // Handle localhost IPv6 (::1 -> localhost)
+  if (ip === '::1' || ip === '[::1]') {
+    return 'localhost (::1)';
+  }
+
+  return ip;
+}
+
 function registerConnectedClient(socket) {
   const rawClientId = socket?.handshake?.query?.displayClientId;
   const clientId = normalizeDisplayClientId(rawClientId);
@@ -259,11 +287,22 @@ function registerConnectedClient(socket) {
   const displayType = rawDisplayType || 'unknown';
   const roomAlias = String(socket?.handshake?.query?.roomAlias || '').trim();
   const nowIso = new Date().toISOString();
+  
+  // Extract IP address from socket
+  const rawIpAddress = socket?.handshake?.headers?.['x-forwarded-for']?.split(',')[0]?.trim()
+    || socket?.handshake?.headers?.['x-real-ip']
+    || socket?.handshake?.address
+    || 'unknown';
+  
+  console.log(`Raw IP address for client ${clientId}: ${rawIpAddress}`);
+  const ipAddress = normalizeIpAddress(rawIpAddress);
+  console.log(`Normalized IP address for client ${clientId}: ${ipAddress}`);
 
   const existing = connectedDisplayClients.get(clientId) || {
     clientId,
     displayType,
     roomAlias,
+    ipAddress,
     connectedAt: nowIso,
     lastSeenAt: nowIso,
     socketIds: new Set()
@@ -271,6 +310,7 @@ function registerConnectedClient(socket) {
 
   existing.displayType = displayType || existing.displayType;
   existing.roomAlias = roomAlias || existing.roomAlias;
+  existing.ipAddress = ipAddress; // Update IP on reconnect
   existing.lastSeenAt = nowIso;
   existing.socketIds.add(socket.id);
   connectedDisplayClients.set(clientId, existing);
@@ -289,8 +329,10 @@ function unregisterConnectedClient(socket) {
   entry.socketIds.delete(socket.id);
   entry.lastSeenAt = new Date().toISOString();
 
+  // Keep disconnected displays for 7 days before removing them
   if (entry.socketIds.size === 0) {
-    connectedDisplayClients.delete(clientId);
+    // Don't delete immediately, just update lastSeenAt
+    connectedDisplayClients.set(clientId, entry);
   } else {
     connectedDisplayClients.set(clientId, entry);
   }
@@ -298,12 +340,29 @@ function unregisterConnectedClient(socket) {
   emitConnectedClientsUpdated();
 }
 
+function cleanupOldDisplays() {
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+  
+  for (const [clientId, entry] of connectedDisplayClients.entries()) {
+    const lastSeen = new Date(entry.lastSeenAt);
+    if (lastSeen < sevenDaysAgo) {
+      connectedDisplayClients.delete(clientId);
+      console.log(`Removed old display client: ${clientId} (last seen: ${entry.lastSeenAt})`);
+    }
+  }
+}
+
 function getConnectedDisplayClients() {
+  // Clean up old displays before returning the list
+  cleanupOldDisplays();
+  
   return Array.from(connectedDisplayClients.values())
     .map((entry) => ({
       clientId: entry.clientId,
       displayType: entry.displayType,
       roomAlias: entry.roomAlias,
+      ipAddress: entry.ipAddress,
       connectedAt: entry.connectedAt,
       lastSeenAt: entry.lastSeenAt,
       sockets: entry.socketIds.size
@@ -550,6 +609,11 @@ module.exports = function(io) {
   // Pass Socket.IO instance to config-manager for real-time configuration updates
   configManager.setSocketIO(io);
 
+  // Run cleanup of old displays every 24 hours
+  setInterval(() => {
+    cleanupOldDisplays();
+  }, 24 * 60 * 60 * 1000);
+
   /**
    * Handle new Socket.IO connections
    * Starts the API polling loop on first connection
@@ -564,6 +628,16 @@ module.exports = function(io) {
     }
 
     isRunning = true;
+
+    // Handle heartbeat to update lastSeenAt
+    socket.on('display-heartbeat', function() {
+      const clientId = socket?.data?.displayClientId;
+      if (clientId && connectedDisplayClients.has(clientId)) {
+        const entry = connectedDisplayClients.get(clientId);
+        entry.lastSeenAt = new Date().toISOString();
+        connectedDisplayClients.set(clientId, entry);
+      }
+    });
 
     // Handle client disconnection
     socket.on('disconnect', function() {

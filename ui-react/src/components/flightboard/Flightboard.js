@@ -6,6 +6,7 @@ import FlightboardRow from './FlightboardRow';
 import Socket from '../global/Socket';
 import Spinner from '../global/Spinner';
 import { applyI18nConfig, getMaintenanceCopy, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';
+import { getDisplayClientId } from '../../utils/displayClientId.js';
 
 /**
  * Flightboard component - Main display showing all meeting rooms
@@ -27,6 +28,7 @@ class Flightboard extends Component {
       flightboardDarkMode: true
     };
 
+    this.displayClientId = getDisplayClientId();
     this.socket = null;
     this.handleSocket = this.handleSocket.bind(this);
   }
@@ -112,7 +114,13 @@ class Flightboard extends Component {
       this.setState({ i18nTick: Date.now() });
     });
 
-    this.socket = io();
+    this.socket = io({
+      query: {
+        displayClientId: this.displayClientId,
+        displayType: 'flightboard',
+        roomAlias: ''
+      }
+    });
     if (this.socket && this.socket.on) {
       this.socket.on('maintenanceConfigUpdated', (maintenanceConfig) => {
         this.setState({
@@ -132,11 +140,22 @@ class Flightboard extends Component {
         this.fetchSidebarConfig();
       });
     }
+
+    // Send heartbeat every 30 seconds to keep display status active
+    this.heartbeatInterval = setInterval(() => {
+      if (this.socket && this.socket.connected) {
+        this.socket.emit('display-heartbeat');
+      }
+    }, 30000);
   }
 
   componentWillUnmount() {
     if (this.socket) {
       this.socket.disconnect();
+    }
+    // Clean up heartbeat interval
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
     }
   }
 

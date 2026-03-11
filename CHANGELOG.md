@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2025-03-11
+
 ### Added
+- **Connected Displays Overview in Admin Panel**
+  - Added new "Connected Displays" tab in Operations section showing all connected display clients
+  - Displays show: Status, Display Type, Room Name, IP Address, and Connection Time
+  - Three status indicators: Active (green), Inactive (yellow), Not Connected (red)
+  - Automatic status updates every 10 seconds
+  - IPv4 address extraction from IPv6-mapped addresses (::ffff:x.x.x.x → x.x.x.x)
+  - Disconnected displays remain visible for 7 days before automatic cleanup
+  - Heartbeat mechanism: Displays send status updates every 30 seconds
+
+- **Unique Display Client IDs per Browser Tab**
+  - Each browser tab/window now gets a unique display client ID using sessionStorage
+  - Multiple rooms can be opened in the same browser and are tracked separately
+  - Combines base client ID (localStorage) with session ID for uniqueness
+
 - **Flightboard Light Mode**
   - Added configurable light mode for flightboard displays with white background and improved contrast
   - Added `flightboardDarkMode` configuration option in admin panel (default: true for backward compatibility)
