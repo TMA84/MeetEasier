@@ -11,6 +11,8 @@ COPY package*.json ./
 COPY ui-react/package*.json ./ui-react/
 
 # Install all dependencies (including devDependencies needed for build)
+# Skip Cypress binary download to avoid ARM64 QEMU issues
+ENV CYPRESS_INSTALL_BINARY=0
 RUN npm install --ignore-scripts && \
     cd ui-react && npm install
 
