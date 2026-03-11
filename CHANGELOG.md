@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2025-03-11
+
+### Added
+- **Delete Disconnected Displays**
+  - Added delete button for disconnected displays in the Connected Displays tab
+  - Only displays with "Not Connected" status can be deleted
+  - Confirmation dialog before deletion
+  - Automatic list refresh after successful deletion
+
 ## [1.4.0] - 2025-03-11
 
 ### Added
@@ -18,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - IPv4 address extraction from IPv6-mapped addresses (::ffff:x.x.x.x → x.x.x.x)
   - Disconnected displays remain visible for 7 days before automatic cleanup
   - Heartbeat mechanism: Displays send status updates every 30 seconds
+  - Delete button for disconnected displays to manually remove them from the list
 
 - **Unique Display Client IDs per Browser Tab**
   - Each browser tab/window now gets a unique display client ID using sessionStorage

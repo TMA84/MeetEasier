@@ -2802,6 +2802,51 @@ class Admin extends Component {
       });
   }
 
+  handleDeleteDisplay = (clientId) => {
+    const t = this.getTranslations();
+    
+    if (!window.confirm(t.connectedDisplaysDeleteConfirm || 'Are you sure you want to remove this display?')) {
+      return;
+    }
+
+    const { apiToken } = this.state;
+    const headers = {};
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    fetch(`/api/connected-clients/${encodeURIComponent(clientId)}`, {
+      method: 'DELETE',
+      headers
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          this.setState({
+            connectedDisplaysMessage: t.connectedDisplaysDeleteSuccess || 'Display removed successfully.',
+            connectedDisplaysMessageType: 'success'
+          });
+          // Reload the list
+          this.handleLoadConnectedDisplays();
+        } else {
+          throw new Error(data.error || t.connectedDisplaysDeleteError);
+        }
+      })
+      .catch(err => {
+        this.setState({
+          connectedDisplaysMessage: `${t.errorPrefix} ${err.message}`,
+          connectedDisplaysMessageType: 'error'
+        });
+      });
+  }
+
   handleI18nSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
@@ -5208,6 +5253,7 @@ class Admin extends Component {
                         <th>{t.connectedDisplaysTableRoomName || 'Room Name'}</th>
                         <th>{t.connectedDisplaysTableIpAddress || 'IP Address'}</th>
                         <th>{t.connectedDisplaysTableConnectedAt || 'Connected'}</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -5256,6 +5302,26 @@ class Admin extends Component {
                             <td className="ip-address">{display.ipAddress || 'unknown'}</td>
                             <td className="timestamp">
                               {display.connectedAt ? new Date(display.connectedAt).toLocaleString() : '-'}
+                            </td>
+                            <td>
+                              {!hasActiveSockets && (
+                                <button
+                                  type="button"
+                                  className="admin-delete-button"
+                                  onClick={() => this.handleDeleteDisplay(display.clientId)}
+                                  style={{
+                                    padding: '0.25rem 0.5rem',
+                                    fontSize: '0.875rem',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  {t.connectedDisplaysDeleteButton || 'Delete'}
+                                </button>
+                              )}
                             </td>
                           </tr>
                         );

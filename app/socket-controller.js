@@ -388,6 +388,28 @@ function emitToDisplayClient(clientId, eventName, payload) {
   return true;
 }
 
+function removeDisplayClient(clientId) {
+  const normalizedClientId = normalizeDisplayClientId(clientId);
+  if (!normalizedClientId) {
+    return false;
+  }
+
+  const entry = connectedDisplayClients.get(normalizedClientId);
+  if (!entry) {
+    return false;
+  }
+
+  // Only allow deletion if no active sockets
+  if (entry.socketIds.size > 0) {
+    return false;
+  }
+
+  connectedDisplayClients.delete(normalizedClientId);
+  emitConnectedClientsUpdated();
+  console.log(`Manually removed display client: ${normalizedClientId}`);
+  return true;
+}
+
 function fetchAndBroadcastRooms() {
   return new Promise((resolve) => {
     if (!socketIO) {
@@ -653,6 +675,7 @@ module.exports = function(io) {
   module.exports.refreshMsalClient = refreshMsalClient;
   module.exports.getConnectedDisplayClients = getConnectedDisplayClients;
   module.exports.emitToDisplayClient = emitToDisplayClient;
+  module.exports.removeDisplayClient = removeDisplayClient;
 };
 
 module.exports.getSyncStatus = getSyncStatus;
@@ -661,3 +684,4 @@ module.exports.refreshPollingSchedule = refreshPollingSchedule;
 module.exports.refreshMsalClient = refreshMsalClient;
 module.exports.getConnectedDisplayClients = getConnectedDisplayClients;
 module.exports.emitToDisplayClient = emitToDisplayClient;
+module.exports.removeDisplayClient = removeDisplayClient;
