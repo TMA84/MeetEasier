@@ -142,8 +142,8 @@ const fromOverrideState = (value) => {
 };
 
 const ADMIN_TAB_SECTIONS = {
-  displays: ['display', 'wifi', 'logo', 'colors', 'booking'],
-  operations: ['system', 'translationApi', 'oauth', 'maintenance', 'apiToken', 'search', 'ratelimit', 'backup', 'audit', 'connectedDisplays'],
+  displays: ['display', 'wifi', 'logo', 'colors', 'booking', 'connectedDisplays'],
+  operations: ['system', 'translationApi', 'oauth', 'maintenance', 'apiToken', 'search', 'ratelimit', 'backup', 'audit'],
   content: ['translations']
 };
 
