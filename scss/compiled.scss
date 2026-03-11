@@ -6,9 +6,10 @@
 // Loaded after legacy to allow modern styles to override
 @use 'modern-variables' as *;
 @use 'modern-globals';
-@use 'modern-single-room';
-@use 'modern-room-minimal';
-@use 'modern-flightboard';
+@use 'modern-single-room-light';
+@use 'modern-single-room-dark';
+@use 'modern-flightboard-light';
+@use 'modern-flightboard-dark';
 @use 'booking-modal';
 @use 'wifi';
 @use 'admin';

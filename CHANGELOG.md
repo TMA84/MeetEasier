@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Flightboard Light Mode**
+  - Added configurable light mode for flightboard displays with white background and improved contrast
+  - Added `flightboardDarkMode` configuration option in admin panel (default: true for backward compatibility)
+  - Implemented real-time mode switching via Socket.IO
+  - Added automatic logo switching (dark/light) based on flightboard mode
+  - Created `_modern-flightboard-light.scss` with optimized light theme styling
+
+### Changed
+- **Admin Panel Dark Mode Configuration**
+  - Renamed "Raum-Minimal Header-Stil" to "Dark Mode Stil" for better clarity
+  - Reorganized admin panel: Dark Mode toggle now appears before style options
+  - Updated translations (German and English) for improved user experience
+
+- **SCSS File Structure Reorganization**
+  - Renamed `_modern-flightboard.scss` to `_modern-flightboard-dark.scss`
+  - Renamed `_modern-single-room.scss` to `_modern-single-room-light.scss`
+  - Renamed `_modern-room-minimal.scss` to `_modern-single-room-dark.scss`
+  - Improved naming convention for clear distinction between dark and light mode styles
+
+### Removed
+- **Legacy room-minimal Component**
+  - Removed obsolete `ui-react/src/components/room-minimal/` directory
+  - Functionality fully integrated into single-room component with dark mode support
+
 ## [1.3.2] - 2026-03-09
 
 ### Added

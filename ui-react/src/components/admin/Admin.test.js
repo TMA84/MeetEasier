@@ -1,11 +1,12 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 import Admin from './Admin';
 
 describe('Admin Component', () => {
   beforeEach(() => {
-    global.fetch = jest.fn();
+    global.fetch = vi.fn();
     // Mock navigator.language
     Object.defineProperty(navigator, 'language', {
       writable: true,
@@ -14,7 +15,7 @@ describe('Admin Component', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('Component Rendering', () => {
@@ -539,3 +540,263 @@ describe('Admin Component', () => {
     });
   });
 });
+
+describe('Dark Mode and minimalHeaderStyle State Persistence', () => {
+  // Helper to create comprehensive mocks for authenticated admin session
+  const setupAuthenticatedMocks = (sidebarConfig = {}) => {
+    const defaultSidebarConfig = {
+      showWiFi: true,
+      showUpcomingMeetings: false,
+      showMeetingTitles: false,
+      minimalHeaderStyle: 'filled',
+      singleRoomDarkMode: false,
+      ...sidebarConfig
+    };
+
+    return global.fetch = vi.fn()
+      .mockResolvedValueOnce({ status: 200, ok: true }) // 1. verifyAdminSession
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ wifiLocked: false, logoLocked: false, sidebarLocked: false, bookingLocked: false, searchLocked: false, rateLimitLocked: false, apiTokenLocked: false, wifiApiTokenLocked: false, oauthLocked: false, systemLocked: false, maintenanceLocked: false, translationApiLocked: false }) }) // 2. config-locks
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ clients: [] }) }) // 3. connected-clients
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ssid: '', password: '' }) }) // 4. wifi
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ logoDarkUrl: '', logoLightUrl: '' }) }) // 5. logo
+      .mockResolvedValueOnce({ ok: true, json: async () => defaultSidebarConfig }) // 6. sidebar
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ enableBooking: true, checkIn: {} }) }) // 7. booking-config
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ useGraphAPI: true }) }) // 8. search-config
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ apiWindowMs: 60000, apiMax: 300, writeWindowMs: 60000, writeMax: 60, authWindowMs: 60000, authMax: 30 }) }) // 9. rate-limit-config
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ enabled: true, url: '', timeoutMs: 20000, hasApiKey: false }) }) // 10. translation-api-config
+      .mockResolvedValueOnce({ ok: true, json: async () => ([]) }) // 11. roomlists
+      .mockResolvedValueOnce({ ok: true, json: async () => ([]) }) // 12. rooms
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ enabled: false, message: '' }) }) // 13. maintenance-status
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ startupValidationStrict: false, graphWebhookEnabled: false, graphWebhookClientState: '', graphWebhookAllowedIps: '', exposeDetailedErrors: false, graphFetchTimeoutMs: 10000, graphFetchRetryAttempts: 2, graphFetchRetryBaseMs: 250, hstsMaxAge: 31536000, rateLimitMaxBuckets: 10000 }) }) // 14. system-config
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ clientId: '', authority: '', hasClientSecret: false }) }) // 15. oauth-config
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ source: 'default', isDefault: true }) }) // 16. api-token-config
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ maintenanceMessages: {}, adminTranslations: {} }) }) // 17. i18n
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ bookingButtonColor: '#334155', statusAvailableColor: '#22c55e', statusBusyColor: '#ef4444', statusUpcomingColor: '#f59e0b', statusNotFoundColor: '#6b7280' }) }) // 18. colors
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}) }); // 19. sync-status
+  };
+
+  beforeEach(() => {
+    // Mock navigator.language for German translations
+    Object.defineProperty(navigator, 'language', {
+      writable: true,
+      value: 'de-DE'
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('preserves minimalHeaderStyle state when dark mode is toggled off and on', async () => {
+      setupAuthenticatedMocks({
+        minimalHeaderStyle: 'transparent',
+        singleRoomDarkMode: true
+      });
+
+      render(<Admin />);
+
+      // Wait for initial render with dark mode enabled
+      await waitFor(() => {
+        const transparentRadio = screen.getByLabelText(/Transparent/);
+        expect(transparentRadio).toBeInTheDocument();
+        expect(transparentRadio.checked).toBe(true);
+      }, { timeout: 3000 });
+
+      // Toggle dark mode off
+      const darkModeCheckbox = screen.getByLabelText(/Single-Room Dark Mode/i);
+      fireEvent.click(darkModeCheckbox);
+
+      // Verify options are hidden
+      await waitFor(() => {
+        expect(screen.queryByLabelText(/Transparent/)).not.toBeInTheDocument();
+        expect(screen.getByText(/Diese Optionen sind nur im Dark-Mode verfügbar/i)).toBeInTheDocument();
+      });
+
+      // Toggle dark mode back on
+      fireEvent.click(darkModeCheckbox);
+
+      // Verify minimalHeaderStyle is still 'transparent'
+      await waitFor(() => {
+        const transparentRadio = screen.getByLabelText(/Transparent/);
+        expect(transparentRadio).toBeInTheDocument();
+        expect(transparentRadio.checked).toBe(true);
+      });
+    });
+
+    it('loads minimalHeaderStyle value correctly from server', async () => {
+      setupAuthenticatedMocks({
+        minimalHeaderStyle: 'filled',
+        singleRoomDarkMode: true
+      });
+
+      render(<Admin />);
+
+      // First wait for authentication to complete
+      await waitFor(() => {
+        expect(screen.queryByText('Login')).not.toBeInTheDocument();
+      }, { timeout: 3000 });
+
+      // Then wait for the form to render
+      await waitFor(() => {
+        const filledRadio = screen.getByDisplayValue('filled');
+        expect(filledRadio).toBeInTheDocument();
+        expect(filledRadio).toBeChecked();
+      }, { timeout: 3000 });
+    });
+
+    it('sends minimalHeaderStyle value correctly to server', async () => {
+      setupAuthenticatedMocks({
+        minimalHeaderStyle: 'filled',
+        singleRoomDarkMode: true
+      });
+
+      // Add mocks for form submission
+      global.fetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) }) // sidebar POST
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ wifiLocked: false, logoLocked: false, sidebarLocked: false, bookingLocked: false, searchLocked: false, rateLimitLocked: false, apiTokenLocked: false, wifiApiTokenLocked: false, oauthLocked: false, systemLocked: false, maintenanceLocked: false, translationApiLocked: false }) }) // config-locks reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ clients: [] }) }) // connected-clients reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ ssid: '', password: '' }) }) // wifi reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ logoDarkUrl: '', logoLightUrl: '' }) }) // logo reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ showWiFi: true, showUpcomingMeetings: false, showMeetingTitles: false, minimalHeaderStyle: 'transparent', singleRoomDarkMode: true }) }) // sidebar reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ enableBooking: true, checkIn: {} }) }) // booking-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ useGraphAPI: true }) }) // search-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ apiWindowMs: 60000, apiMax: 300, writeWindowMs: 60000, writeMax: 60, authWindowMs: 60000, authMax: 30 }) }) // rate-limit-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ enabled: true, url: '', timeoutMs: 20000, hasApiKey: false }) }) // translation-api-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ([]) }) // roomlists reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ([]) }) // rooms reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ enabled: false, message: '' }) }) // maintenance-status reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ startupValidationStrict: false, graphWebhookEnabled: false, graphWebhookClientState: '', graphWebhookAllowedIps: '', exposeDetailedErrors: false, graphFetchTimeoutMs: 10000, graphFetchRetryAttempts: 2, graphFetchRetryBaseMs: 250, hstsMaxAge: 31536000, rateLimitMaxBuckets: 10000 }) }) // system-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ clientId: '', authority: '', hasClientSecret: false }) }) // oauth-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ source: 'default', isDefault: true }) }) // api-token-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ maintenanceMessages: {}, adminTranslations: {} }) }) // i18n reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ bookingButtonColor: '#334155', statusAvailableColor: '#22c55e', statusBusyColor: '#ef4444', statusUpcomingColor: '#f59e0b', statusNotFoundColor: '#6b7280' }) }); // colors reload
+
+      render(<Admin />);
+
+      await waitFor(() => {
+        const transparentRadio = screen.getByLabelText(/Transparent/);
+        fireEvent.click(transparentRadio);
+      });
+
+      const submitButton = screen.getByText('Informationen aktualisieren');
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        const lastCall = global.fetch.mock.calls.find(call => 
+          call[0] === '/api/sidebar' && call[1]?.method === 'POST'
+        );
+        expect(lastCall).toBeDefined();
+        const body = JSON.parse(lastCall[1].body);
+        expect(body.minimalHeaderStyle).toBe('transparent');
+      });
+    });
+
+    it('preserves minimalHeaderStyle when dark mode is disabled and form is submitted', async () => {
+      setupAuthenticatedMocks({
+        minimalHeaderStyle: 'transparent',
+        singleRoomDarkMode: true
+      });
+
+      // Add mocks for form submission
+      global.fetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) }) // sidebar POST
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ wifiLocked: false, logoLocked: false, sidebarLocked: false, bookingLocked: false, searchLocked: false, rateLimitLocked: false, apiTokenLocked: false, wifiApiTokenLocked: false, oauthLocked: false, systemLocked: false, maintenanceLocked: false, translationApiLocked: false }) }) // config-locks reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ clients: [] }) }) // connected-clients reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ ssid: '', password: '' }) }) // wifi reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ logoDarkUrl: '', logoLightUrl: '' }) }) // logo reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ showWiFi: true, showUpcomingMeetings: false, showMeetingTitles: false, minimalHeaderStyle: 'transparent', singleRoomDarkMode: false }) }) // sidebar reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ enableBooking: true, checkIn: {} }) }) // booking-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ useGraphAPI: true }) }) // search-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ apiWindowMs: 60000, apiMax: 300, writeWindowMs: 60000, writeMax: 60, authWindowMs: 60000, authMax: 30 }) }) // rate-limit-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ enabled: true, url: '', timeoutMs: 20000, hasApiKey: false }) }) // translation-api-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ([]) }) // roomlists reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ([]) }) // rooms reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ enabled: false, message: '' }) }) // maintenance-status reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ startupValidationStrict: false, graphWebhookEnabled: false, graphWebhookClientState: '', graphWebhookAllowedIps: '', exposeDetailedErrors: false, graphFetchTimeoutMs: 10000, graphFetchRetryAttempts: 2, graphFetchRetryBaseMs: 250, hstsMaxAge: 31536000, rateLimitMaxBuckets: 10000 }) }) // system-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ clientId: '', authority: '', hasClientSecret: false }) }) // oauth-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ source: 'default', isDefault: true }) }) // api-token-config reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ maintenanceMessages: {}, adminTranslations: {} }) }) // i18n reload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ bookingButtonColor: '#334155', statusAvailableColor: '#22c55e', statusBusyColor: '#ef4444', statusUpcomingColor: '#f59e0b', statusNotFoundColor: '#6b7280' }) }); // colors reload
+
+      render(<Admin />);
+
+      // Wait for initial render with dark mode enabled
+      await waitFor(() => {
+        const transparentRadio = screen.getByLabelText(/Transparent/);
+        expect(transparentRadio.checked).toBe(true);
+      });
+
+      // Toggle dark mode off
+      const darkModeCheckbox = screen.getByLabelText(/Single-Room Dark Mode/i);
+      fireEvent.click(darkModeCheckbox);
+
+      // Submit form with dark mode disabled
+      const submitButton = screen.getByText('Informationen aktualisieren');
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        const lastCall = global.fetch.mock.calls.find(call => 
+          call[0] === '/api/sidebar' && call[1]?.method === 'POST'
+        );
+        expect(lastCall).toBeDefined();
+        const body = JSON.parse(lastCall[1].body);
+        // minimalHeaderStyle should still be sent even when dark mode is off
+        expect(body.minimalHeaderStyle).toBe('transparent');
+        expect(body.singleRoomDarkMode).toBe(false);
+      });
+    });
+
+    it('displays informational message when dark mode is disabled', async () => {
+      setupAuthenticatedMocks({
+        minimalHeaderStyle: 'filled',
+        singleRoomDarkMode: false
+      });
+
+      render(<Admin />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Diese Optionen sind nur im Dark-Mode verfügbar/i)).toBeInTheDocument();
+      });
+    });
+
+    it('hides informational message when dark mode is enabled', async () => {
+      setupAuthenticatedMocks({
+        minimalHeaderStyle: 'filled',
+        singleRoomDarkMode: true
+      });
+
+      render(<Admin />);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Diese Optionen sind nur im Dark-Mode verfügbar/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it('shows minimalHeaderStyle options when dark mode is enabled', async () => {
+      setupAuthenticatedMocks({
+        minimalHeaderStyle: 'filled',
+        singleRoomDarkMode: true
+      });
+
+      render(<Admin />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/Gefüllt/)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Transparent/)).toBeInTheDocument();
+      });
+    });
+
+    it('hides minimalHeaderStyle options when dark mode is disabled', async () => {
+      setupAuthenticatedMocks({
+        minimalHeaderStyle: 'filled',
+        singleRoomDarkMode: false
+      });
+
+      render(<Admin />);
+
+      await waitFor(() => {
+        expect(screen.queryByLabelText(/Gefüllt/)).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/Transparent/)).not.toBeInTheDocument();
+      });
+    });
+  });

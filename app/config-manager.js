@@ -110,6 +110,7 @@ function getSidebarConfig() {
 			upcomingMeetingsCount: parsedConfig.upcomingMeetingsCount,
 			minimalHeaderStyle: parsedConfig.minimalHeaderStyle,
 			singleRoomDarkMode: parsedConfig.singleRoomDarkMode,
+			flightboardDarkMode: parsedConfig.flightboardDarkMode,
 			lastUpdated: parsedConfig.lastUpdated
 		};
 	}
@@ -122,6 +123,7 @@ function getSidebarConfig() {
 		upcomingMeetingsCount: config.sidebarDefaults.upcomingMeetingsCount,
 		minimalHeaderStyle: 'filled',
 		singleRoomDarkMode: !!config.sidebarDefaults.singleRoomDarkMode,
+		flightboardDarkMode: config.sidebarDefaults.flightboardDarkMode !== undefined ? !!config.sidebarDefaults.flightboardDarkMode : true,
 		lastUpdated: null
 	};
 }
@@ -182,6 +184,7 @@ function readSidebarConfigSnapshot() {
 			upcomingMeetingsCount: normalizedUpcomingMeetingsCount,
 			minimalHeaderStyle: parsed.minimalHeaderStyle === 'transparent' ? 'transparent' : 'filled',
 			singleRoomDarkMode: parsed.singleRoomDarkMode !== undefined ? !!parsed.singleRoomDarkMode : !!config.sidebarDefaults.singleRoomDarkMode,
+			flightboardDarkMode: parsed.flightboardDarkMode !== undefined ? !!parsed.flightboardDarkMode : (config.sidebarDefaults.flightboardDarkMode !== undefined ? !!config.sidebarDefaults.flightboardDarkMode : true),
 			clientOverrides: normalizeSidebarClientOverrides(parsed.clientOverrides),
 			lastUpdated: parsed.lastUpdated || null
 		};
@@ -1411,6 +1414,7 @@ function saveSidebarConfig(sidebarConfig) {
 		upcomingMeetingsCount: toMinInt(config.sidebarDefaults?.upcomingMeetingsCount, 3, 1),
 		minimalHeaderStyle: 'filled',
 		singleRoomDarkMode: !!config.sidebarDefaults.singleRoomDarkMode,
+		flightboardDarkMode: config.sidebarDefaults.flightboardDarkMode !== undefined ? !!config.sidebarDefaults.flightboardDarkMode : true,
 		clientOverrides: {}
 	};
 
@@ -1430,6 +1434,9 @@ function saveSidebarConfig(sidebarConfig) {
 		singleRoomDarkMode: sidebarConfig.singleRoomDarkMode !== undefined
 			? !!sidebarConfig.singleRoomDarkMode
 			: !!existingConfig.singleRoomDarkMode,
+		flightboardDarkMode: sidebarConfig.flightboardDarkMode !== undefined
+			? !!sidebarConfig.flightboardDarkMode
+			: (existingConfig.flightboardDarkMode !== undefined ? !!existingConfig.flightboardDarkMode : true),
 		clientOverrides: sidebarConfig.clientOverrides !== undefined
 			? normalizeSidebarClientOverrides(sidebarConfig.clientOverrides)
 			: normalizeSidebarClientOverrides(existingConfig.clientOverrides),
@@ -1703,6 +1710,7 @@ async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTi
 			upcomingMeetingsCount: toMinInt(config.sidebarDefaults?.upcomingMeetingsCount, 3, 1),
 			minimalHeaderStyle: 'filled',
 			singleRoomDarkMode: !!config.sidebarDefaults.singleRoomDarkMode,
+			flightboardDarkMode: config.sidebarDefaults.flightboardDarkMode !== undefined ? !!config.sidebarDefaults.flightboardDarkMode : true,
 			clientOverrides: {},
 			lastUpdated: null
 		};
@@ -1732,7 +1740,15 @@ async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTi
 		return config;
 	}
 
-	const config = saveSidebarConfig({ showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount, singleRoomDarkMode: options.singleRoomDarkMode });
+	const config = saveSidebarConfig({ 
+		showWiFi, 
+		showUpcomingMeetings, 
+		showMeetingTitles, 
+		minimalHeaderStyle, 
+		upcomingMeetingsCount, 
+		singleRoomDarkMode: options.singleRoomDarkMode,
+		flightboardDarkMode: options.flightboardDarkMode
+	});
 	
 	// Emit Socket.IO event to notify all connected clients
 	if (io) {

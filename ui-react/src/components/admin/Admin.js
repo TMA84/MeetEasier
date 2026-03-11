@@ -186,6 +186,7 @@ class Admin extends Component {
       currentUpcomingMeetingsCount: 3,
       currentMinimalHeaderStyle: 'filled',
       currentSingleRoomDarkMode: false,
+      currentFlightboardDarkMode: true,
       informationLastUpdated: '',
       showWiFi: true,
       showUpcomingMeetings: false,
@@ -193,6 +194,7 @@ class Admin extends Component {
       upcomingMeetingsCount: 3,
       minimalHeaderStyle: 'filled',
       singleRoomDarkMode: false,
+      flightboardDarkMode: true,
       sidebarTargetClientId: '',
       connectedClients: [],
       connectedClientsLoading: false,
@@ -1175,6 +1177,7 @@ class Admin extends Component {
       .then(response => response.json())
       .then(data => {
         const globalSingleRoomDarkMode = data.singleRoomDarkMode !== undefined ? data.singleRoomDarkMode : false;
+        const globalFlightboardDarkMode = data.flightboardDarkMode !== undefined ? data.flightboardDarkMode : true;
         this.setState({
           currentShowWiFi: data.showWiFi !== undefined ? data.showWiFi : true,
           currentShowUpcomingMeetings: data.showUpcomingMeetings !== undefined ? data.showUpcomingMeetings : false,
@@ -1184,6 +1187,7 @@ class Admin extends Component {
             : 3,
           currentMinimalHeaderStyle: data.minimalHeaderStyle || 'filled',
           currentSingleRoomDarkMode: globalSingleRoomDarkMode,
+          currentFlightboardDarkMode: globalFlightboardDarkMode,
           informationLastUpdated: data.lastUpdated 
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
             : '-',
@@ -1196,7 +1200,8 @@ class Admin extends Component {
           minimalHeaderStyle: data.minimalHeaderStyle || 'filled',
           singleRoomDarkMode: this.state.sidebarTargetClientId
             ? this.state.singleRoomDarkMode
-            : globalSingleRoomDarkMode
+            : globalSingleRoomDarkMode,
+          flightboardDarkMode: globalFlightboardDarkMode
         });
 
         const targetClientId = String(this.state.sidebarTargetClientId || '').trim();
@@ -1823,6 +1828,7 @@ class Admin extends Component {
       minimalHeaderStyle,
       upcomingMeetingsCount,
       singleRoomDarkMode,
+      flightboardDarkMode,
       sidebarTargetClientId
     } = this.state;
     const sanitizedUpcomingMeetingsCount = Number.isFinite(Number(upcomingMeetingsCount))
@@ -1849,7 +1855,8 @@ class Admin extends Component {
           showMeetingTitles,
           minimalHeaderStyle,
           upcomingMeetingsCount: sanitizedUpcomingMeetingsCount,
-          singleRoomDarkMode
+          singleRoomDarkMode,
+          flightboardDarkMode
         };
 
     fetch('/api/sidebar', {
@@ -2828,12 +2835,12 @@ class Admin extends Component {
     const { 
       currentSsid, currentPassword, wifiLastUpdated, 
       currentLogoDarkUrl, currentLogoLightUrl, logoLastUpdated,
-      currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, currentUpcomingMeetingsCount, currentMinimalHeaderStyle, currentSingleRoomDarkMode, informationLastUpdated,
+      currentShowWiFi, currentShowUpcomingMeetings, currentShowMeetingTitles, currentUpcomingMeetingsCount, currentMinimalHeaderStyle, currentSingleRoomDarkMode, currentFlightboardDarkMode, informationLastUpdated,
       currentEnableBooking, currentEnableExtendMeeting, bookingLastUpdated,
       currentCheckInEnabled, currentCheckInRequiredForExternalMeetings,
       currentCheckInEarlyMinutes, currentCheckInWindowMinutes, currentCheckInAutoReleaseNoShow,
       apiToken, ssid, password, logoDarkUrl, logoLightUrl, logoDarkFile, logoLightFile, uploadMode,
-      showWiFi, showUpcomingMeetings, showMeetingTitles, upcomingMeetingsCount, minimalHeaderStyle, singleRoomDarkMode, sidebarTargetClientId, connectedClients, connectedClientsLoading,
+      showWiFi, showUpcomingMeetings, showMeetingTitles, upcomingMeetingsCount, minimalHeaderStyle, singleRoomDarkMode, flightboardDarkMode, sidebarTargetClientId, connectedClients, connectedClientsLoading,
       enableBooking, enableExtendMeeting,
       checkInEnabled, checkInRequiredForExternalMeetings,
       checkInEarlyMinutes, checkInWindowMinutes, checkInAutoReleaseNoShow,
@@ -3138,6 +3145,10 @@ class Admin extends Component {
                     <span className="config-value">{booleanLabel(currentSingleRoomDarkMode)}</span>
                   </div>
                   <div className="config-item">
+                    <span className="config-label">{t.flightboardDarkModeLabel || 'Flightboard Dark Mode'}</span>
+                    <span className="config-value">{booleanLabel(currentFlightboardDarkMode)}</span>
+                  </div>
+                  <div className="config-item">
                     <span className="config-label">{t.lastUpdatedLabel}</span>
                     <span className="config-value">{informationLastUpdated}</span>
                   </div>
@@ -3256,37 +3267,6 @@ class Admin extends Component {
                 <hr className="admin-form-divider" />
                 
                 <div className="admin-form-group">
-                  <label style={{ display: 'block', marginBottom: '0.75rem' }}>
-                    {t.minimalHeaderStyleLabel}
-                  </label>
-                  <small style={{ display: 'block', marginBottom: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>
-                    {t.minimalHeaderStyleHelp}
-                  </small>
-                  <label className="inline-label">
-                    <span className="label-text">{t.minimalHeaderStyleFilled}</span>
-                    <input
-                      type="radio"
-                      name="minimalHeaderStyle"
-                      value="filled"
-                      checked={minimalHeaderStyle === 'filled'}
-                      disabled={!!sidebarTargetClientId}
-                      onChange={(e) => this.setState({ minimalHeaderStyle: e.target.value })}
-                    />
-                  </label>
-                  <label className="inline-label" style={{ marginTop: '0.5rem' }}>
-                    <span className="label-text">{t.minimalHeaderStyleTransparent}</span>
-                    <input
-                      type="radio"
-                      name="minimalHeaderStyle"
-                      value="transparent"
-                      checked={minimalHeaderStyle === 'transparent'}
-                      disabled={!!sidebarTargetClientId}
-                      onChange={(e) => this.setState({ minimalHeaderStyle: e.target.value })}
-                    />
-                  </label>
-                </div>
-
-                <div className="admin-form-group">
                   <label className="inline-label">
                     <span className="label-text">{t.singleRoomDarkModeLabel || 'Single-Room Dark Mode'}</span>
                     <input
@@ -3296,6 +3276,61 @@ class Admin extends Component {
                     />
                   </label>
                   <small>{t.singleRoomDarkModeHelp || 'Uses the dark visual style for single-room displays.'}</small>
+                </div>
+
+                {singleRoomDarkMode && (
+                  <div className="admin-form-group">
+                    <label style={{ display: 'block', marginBottom: '0.75rem' }}>
+                      {t.minimalHeaderStyleLabel}
+                    </label>
+                    <small style={{ display: 'block', marginBottom: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>
+                      {t.minimalHeaderStyleHelp}
+                    </small>
+                    <label className="inline-label">
+                      <span className="label-text">{t.minimalHeaderStyleFilled}</span>
+                      <input
+                        type="radio"
+                        name="minimalHeaderStyle"
+                        value="filled"
+                        checked={minimalHeaderStyle === 'filled'}
+                        disabled={!!sidebarTargetClientId}
+                        onChange={(e) => this.setState({ minimalHeaderStyle: e.target.value })}
+                      />
+                    </label>
+                    <label className="inline-label" style={{ marginTop: '0.5rem' }}>
+                      <span className="label-text">{t.minimalHeaderStyleTransparent}</span>
+                      <input
+                        type="radio"
+                        name="minimalHeaderStyle"
+                        value="transparent"
+                        checked={minimalHeaderStyle === 'transparent'}
+                        disabled={!!sidebarTargetClientId}
+                        onChange={(e) => this.setState({ minimalHeaderStyle: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                )}
+
+                {!singleRoomDarkMode && (
+                  <div className="admin-form-group">
+                    <small style={{ display: 'block', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>
+                      {t.minimalHeaderStyleDarkModeRequired}
+                    </small>
+                  </div>
+                )}
+
+                <hr className="admin-form-divider" />
+
+                <div className="admin-form-group">
+                  <label className="inline-label">
+                    <span className="label-text">{t.flightboardDarkModeLabel || 'Flightboard Dark Mode'}</span>
+                    <input
+                      type="checkbox"
+                      checked={flightboardDarkMode}
+                      onChange={(e) => this.setState({ flightboardDarkMode: e.target.checked })}
+                    />
+                  </label>
+                  <small>{t.flightboardDarkModeHelp || 'Enables the dark visual style for flightboard displays.'}</small>
                 </div>
                 
                 <button type="submit" className="admin-submit-button">
