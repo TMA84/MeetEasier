@@ -1932,7 +1932,10 @@ module.exports = function(app) {
 				graphFetchRetryAttempts,
 				graphFetchRetryBaseMs,
 				hstsMaxAge,
-				rateLimitMaxBuckets
+				rateLimitMaxBuckets,
+				displayTrackingMode,
+				displayTrackingRetentionHours,
+				displayTrackingCleanupMinutes
 			} = req.body || {};
 
 			if (
@@ -1946,6 +1949,9 @@ module.exports = function(app) {
 				&& graphFetchRetryBaseMs === undefined
 				&& hstsMaxAge === undefined
 				&& rateLimitMaxBuckets === undefined
+				&& displayTrackingMode === undefined
+				&& displayTrackingRetentionHours === undefined
+				&& displayTrackingCleanupMinutes === undefined
 			) {
 				return res.status(400).json({ error: 'At least one system configuration option is required' });
 			}
@@ -1961,7 +1967,10 @@ module.exports = function(app) {
 				graphFetchRetryAttempts,
 				graphFetchRetryBaseMs,
 				hstsMaxAge,
-				rateLimitMaxBuckets
+				rateLimitMaxBuckets,
+				displayTrackingMode,
+				displayTrackingRetentionHours,
+				displayTrackingCleanupMinutes
 			});
 
 			require('./socket-controller').refreshPollingSchedule();

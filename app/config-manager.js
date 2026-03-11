@@ -875,6 +875,14 @@ function normalizeSystemConfig(systemConfig, fallback = {}) {
 		return fallbackValue;
 	};
 
+	const normalizeTrackingMode = (value, fallbackValue) => {
+		const normalized = String(value || '').trim().toLowerCase();
+		if (normalized === 'ip-room' || normalized === 'client-id') {
+			return normalized;
+		}
+		return fallbackValue;
+	};
+
 	return {
 		startupValidationStrict: toBoolean(source.startupValidationStrict, toBoolean(fallback.startupValidationStrict, false)),
 		graphWebhookEnabled: toBoolean(source.graphWebhookEnabled, toBoolean(fallback.graphWebhookEnabled, false)),
@@ -887,7 +895,10 @@ function normalizeSystemConfig(systemConfig, fallback = {}) {
 		graphFetchRetryAttempts: toMinInt(source.graphFetchRetryAttempts, toMinInt(fallback.graphFetchRetryAttempts, 2, 0), 0),
 		graphFetchRetryBaseMs: toMinInt(source.graphFetchRetryBaseMs, toMinInt(fallback.graphFetchRetryBaseMs, 250, 50), 50),
 		hstsMaxAge: toMinInt(source.hstsMaxAge, toMinInt(fallback.hstsMaxAge, 31536000, 0), 0),
-		rateLimitMaxBuckets: toMinInt(source.rateLimitMaxBuckets, toMinInt(fallback.rateLimitMaxBuckets, 10000, 1000), 1000)
+		rateLimitMaxBuckets: toMinInt(source.rateLimitMaxBuckets, toMinInt(fallback.rateLimitMaxBuckets, 10000, 1000), 1000),
+		displayTrackingMode: normalizeTrackingMode(source.displayTrackingMode, normalizeTrackingMode(fallback.displayTrackingMode, 'client-id')),
+		displayTrackingRetentionHours: toMinInt(source.displayTrackingRetentionHours, toMinInt(fallback.displayTrackingRetentionHours, 2, 1), 1),
+		displayTrackingCleanupMinutes: toMinInt(source.displayTrackingCleanupMinutes, toMinInt(fallback.displayTrackingCleanupMinutes, 5, 0), 0)
 	};
 }
 
@@ -902,7 +913,10 @@ function getSystemRuntimeConfig() {
 		graphFetchRetryAttempts: toMinInt(config.systemDefaults?.graphFetchRetryAttempts, 2, 0),
 		graphFetchRetryBaseMs: toMinInt(config.systemDefaults?.graphFetchRetryBaseMs, 250, 50),
 		hstsMaxAge: toMinInt(config.systemDefaults?.hstsMaxAge, 31536000, 0),
-		rateLimitMaxBuckets: toMinInt(config.systemDefaults?.rateLimitMaxBuckets, 10000, 1000)
+		rateLimitMaxBuckets: toMinInt(config.systemDefaults?.rateLimitMaxBuckets, 10000, 1000),
+		displayTrackingMode: 'client-id',
+		displayTrackingRetentionHours: 2,
+		displayTrackingCleanupMinutes: 5
 	};
 
 	const rawConfig = (() => {
@@ -942,6 +956,9 @@ function getSystemConfig() {
 		graphFetchRetryBaseMs: runtimeConfig.graphFetchRetryBaseMs,
 		hstsMaxAge: runtimeConfig.hstsMaxAge,
 		rateLimitMaxBuckets: runtimeConfig.rateLimitMaxBuckets,
+		displayTrackingMode: runtimeConfig.displayTrackingMode,
+		displayTrackingRetentionHours: runtimeConfig.displayTrackingRetentionHours,
+		displayTrackingCleanupMinutes: runtimeConfig.displayTrackingCleanupMinutes,
 		lastUpdated: runtimeConfig.lastUpdated
 	};
 }
@@ -1192,7 +1209,10 @@ function saveSystemConfig(systemConfig) {
 			graphFetchRetryAttempts: toMinInt(config.systemDefaults?.graphFetchRetryAttempts, 2, 0),
 			graphFetchRetryBaseMs: toMinInt(config.systemDefaults?.graphFetchRetryBaseMs, 250, 50),
 			hstsMaxAge: toMinInt(config.systemDefaults?.hstsMaxAge, 31536000, 0),
-			rateLimitMaxBuckets: toMinInt(config.systemDefaults?.rateLimitMaxBuckets, 10000, 1000)
+			rateLimitMaxBuckets: toMinInt(config.systemDefaults?.rateLimitMaxBuckets, 10000, 1000),
+			displayTrackingMode: 'client-id',
+			displayTrackingRetentionHours: 2,
+			displayTrackingCleanupMinutes: 5
 		})
 	);
 
@@ -1213,6 +1233,9 @@ function saveSystemConfig(systemConfig) {
 		graphFetchRetryBaseMs: configData.graphFetchRetryBaseMs,
 		hstsMaxAge: configData.hstsMaxAge,
 		rateLimitMaxBuckets: configData.rateLimitMaxBuckets,
+		displayTrackingMode: configData.displayTrackingMode,
+		displayTrackingRetentionHours: configData.displayTrackingRetentionHours,
+		displayTrackingCleanupMinutes: configData.displayTrackingCleanupMinutes,
 		lastUpdated: configData.lastUpdated
 	};
 }

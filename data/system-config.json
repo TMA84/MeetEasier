@@ -3,5 +3,8 @@
   "graphWebhookEnabled": false,
   "graphWebhookClientState": "",
   "graphWebhookAllowedIps": [],
+  "displayTrackingMode": "client-id",
+  "displayTrackingRetentionHours": 2,
+  "displayTrackingCleanupMinutes": 5,
   "lastUpdated": "2026-03-08T10:13:27.720Z"
 }
