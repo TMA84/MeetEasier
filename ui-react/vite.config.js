@@ -51,6 +51,20 @@ export default defineConfig({
   build: {
     outDir: 'build',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate vendor chunks for better caching
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'socket-vendor': ['socket.io-client'],
+        },
+      },
+    },
+    // Optimize chunk size
+    chunkSizeWarningLimit: 600,
+    // Enable minification
+    minify: 'esbuild',
+    target: 'es2015',
   },
   test: {
     globals: true,
