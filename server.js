@@ -155,7 +155,22 @@ app.options('/api/*', cors(apiCorsOptionsDelegate));
 
 // use public folder for js, css, imgs, etc
 app.use(express.static("static"));
-app.use(express.static(`${__dirname}/ui-react/build`));
+
+// Serve React build with proper cache control
+app.use(express.static(`${__dirname}/ui-react/build`, {
+  setHeaders: (res, path) => {
+    // Don't cache HTML files (index.html, etc.)
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+    // Cache assets with hash in filename for 1 year
+    else if (path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+}));
 
 app.set('trust proxy', parseTrustProxySetting(process.env.TRUST_PROXY));
 
@@ -217,6 +232,18 @@ const theserver = app.listen(port, function() {
 
 	// controller if using room lists
 	const controller = require('./app/socket-controller.js')(io);
+
+	// Initialize MQTT Client
+	const mqttClient = require('./app/mqtt-client');
+	const mqttPowerBridge = require('./app/mqtt-power-bridge');
+	
+	try {
+		mqttClient.init();
+		mqttPowerBridge.init();
+		console.log('[MQTT] Client and power bridge initialized');
+	} catch (error) {
+		console.error('[MQTT] Failed to initialize:', error);
+	}
 
 	// log something so we know the server is working correctly
 	console.log(`Started on port: ${port}`);

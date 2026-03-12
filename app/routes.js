@@ -2043,13 +2043,13 @@ module.exports = function(app) {
 	// Update global power management configuration (protected - requires token)
 	app.post('/api/power-management', checkApiToken, function(req, res) {
 		try {
-			const { mode, schedule } = req.body;
+			const { mode, schedule, mqttHostname } = req.body;
 
-			if (!mode || !['dpms', 'browser'].includes(mode)) {
-				return res.status(400).json({ error: 'Invalid mode. Must be "dpms" or "browser"' });
+			if (!mode || !['dpms', 'browser', 'mqtt'].includes(mode)) {
+				return res.status(400).json({ error: 'Invalid mode. Must be "dpms", "browser", or "mqtt"' });
 			}
 
-			const config = configManager.updateGlobalPowerManagementConfig({
+			const configData = {
 				mode,
 				schedule: schedule || {
 					enabled: false,
@@ -2057,7 +2057,14 @@ module.exports = function(app) {
 					endTime: '07:00',
 					weekendMode: false
 				}
-			});
+			};
+			
+			// Add MQTT hostname if mode is mqtt
+			if (mode === 'mqtt' && mqttHostname) {
+				configData.mqttHostname = mqttHostname;
+			}
+
+			const config = configManager.updateGlobalPowerManagementConfig(configData);
 
 			appendAuditLog({
 				event: 'config.power-management.global.update',
@@ -2126,13 +2133,13 @@ module.exports = function(app) {
 	app.post('/api/power-management/:clientId', checkApiToken, function(req, res) {
 		try {
 			const { clientId } = req.params;
-			const { mode, schedule } = req.body;
+			const { mode, schedule, mqttHostname } = req.body;
 
-			if (!mode || !['dpms', 'browser'].includes(mode)) {
-				return res.status(400).json({ error: 'Invalid mode. Must be "dpms" or "browser"' });
+			if (!mode || !['dpms', 'browser', 'mqtt'].includes(mode)) {
+				return res.status(400).json({ error: 'Invalid mode. Must be "dpms", "browser", or "mqtt"' });
 			}
 
-			const config = configManager.updatePowerManagementConfig(clientId, {
+			const configData = {
 				mode,
 				schedule: schedule || {
 					enabled: false,
@@ -2140,7 +2147,14 @@ module.exports = function(app) {
 					endTime: '07:00',
 					weekendMode: false
 				}
-			});
+			};
+			
+			// Add MQTT hostname if mode is mqtt
+			if (mode === 'mqtt' && mqttHostname) {
+				configData.mqttHostname = mqttHostname;
+			}
+
+			const config = configManager.updatePowerManagementConfig(clientId, configData);
 
 			appendAuditLog({
 				event: 'config.power-management.update',
@@ -2185,6 +2199,389 @@ module.exports = function(app) {
 		} catch (err) {
 			console.error('Error deleting power management config:', err);
 			res.status(500).json({ error: 'Failed to delete power management configuration' });
+		}
+	});
+
+	// MQTT Configuration Endpoints ============================================
+	
+	// Get MQTT configuration (protected - requires token)
+	app.get('/api/mqtt-config', checkApiToken, function(req, res) {
+		try {
+			const mqttConfig = configManager.getMqttConfig();
+			// Don't send password to client
+			const safeConfig = { ...mqttConfig };
+			if (safeConfig.password) {
+				safeConfig.hasPassword = true;
+				delete safeConfig.password;
+			}
+			res.json(safeConfig);
+		} catch (err) {
+			console.error('Error retrieving MQTT config:', err);
+			res.status(500).json({ error: 'Failed to retrieve MQTT configuration' });
+		}
+	});
+
+	// Update MQTT configuration (protected - requires token)
+	app.post('/api/mqtt-config', checkApiToken, function(req, res) {
+		try {
+			const { enabled, brokerUrl, authentication, username, password, discovery } = req.body;
+			const beforeConfig = configManager.getMqttConfig();
+
+			const updatedConfig = configManager.updateMqttConfig({
+				enabled,
+				brokerUrl,
+				authentication,
+				username,
+				password,
+				discovery
+			});
+
+			appendAuditLog({
+				event: 'config.mqtt.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				before: { ...beforeConfig, password: beforeConfig.password ? '***' : '' },
+				after: { ...updatedConfig, password: updatedConfig.password ? '***' : '' }
+			});
+
+			// Restart MQTT client if enabled changed
+			if (enabled !== beforeConfig.enabled) {
+				const mqttClient = require('./mqtt-client');
+				if (enabled) {
+					mqttClient.restart();
+				} else {
+					mqttClient.stop();
+				}
+			}
+
+			// Don't send password to client
+			const safeConfig = { ...updatedConfig };
+			if (safeConfig.password) {
+				safeConfig.hasPassword = true;
+				delete safeConfig.password;
+			}
+
+			res.json({
+				success: true,
+				config: safeConfig,
+				message: 'MQTT configuration updated'
+			});
+		} catch (err) {
+			console.error('Error updating MQTT config:', err);
+			res.status(500).json({ error: getClientSafeErrorMessage(err, 'Failed to update MQTT configuration') });
+		}
+	});
+
+	// Get MQTT client status (protected - requires token)
+	app.get('/api/mqtt-status', checkApiToken, function(req, res) {
+		try {
+			const mqttClient = require('./mqtt-client');
+			const status = mqttClient.getStatus();
+			res.json(status);
+		} catch (err) {
+			console.error('Error retrieving MQTT status:', err);
+			res.status(500).json({ error: 'Failed to retrieve MQTT status' });
+		}
+	});
+
+	// Get MQTT display states (protected - requires token)
+	app.get('/api/mqtt-displays', checkApiToken, function(req, res) {
+		try {
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const displays = mqttPowerBridge.getDisplayStates();
+			res.json({ displays });
+		} catch (err) {
+			console.error('Error retrieving MQTT displays:', err);
+			res.status(500).json({ error: 'Failed to retrieve MQTT displays' });
+		}
+	});
+
+	// Trigger power command for a display (protected - requires token)
+	app.post('/api/mqtt-power-trigger/:hostname', checkApiToken, function(req, res) {
+		try {
+			const { hostname } = req.params;
+			const { powerState, brightness } = req.body;
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			// Send power command directly to hostname
+			const success = mqttPowerBridge.sendPowerCommand(
+				hostname, 
+				powerState !== undefined ? powerState : true,
+				brightness !== undefined ? brightness : 255
+			);
+
+			if (success) {
+				res.json({ 
+					success: true,
+					message: 'Power command triggered'
+				});
+			} else {
+				res.status(500).json({ error: 'Failed to trigger power command' });
+			}
+		} catch (err) {
+			console.error('Error triggering power command:', err);
+			res.status(500).json({ error: 'Failed to trigger power command' });
+		}
+	});
+
+	// Trigger brightness command for a display (protected - requires token)
+	app.post('/api/mqtt-brightness/:hostname', checkApiToken, function(req, res) {
+		try {
+			const { hostname } = req.params;
+			const { brightness } = req.body;
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			const success = mqttPowerBridge.sendBrightnessCommand(hostname, brightness);
+
+			if (success) {
+				res.json({ success: true, message: 'Brightness command sent' });
+			} else {
+				res.status(500).json({ error: 'Failed to send brightness command' });
+			}
+		} catch (err) {
+			console.error('Error sending brightness command:', err);
+			res.status(500).json({ error: 'Failed to send brightness command' });
+		}
+	});
+
+	// Trigger kiosk status command for a display (protected - requires token)
+	app.post('/api/mqtt-kiosk/:hostname', checkApiToken, function(req, res) {
+		try {
+			const { hostname } = req.params;
+			const { status } = req.body;
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			const success = mqttPowerBridge.sendKioskCommand(hostname, status);
+
+			if (success) {
+				res.json({ success: true, message: 'Kiosk command sent' });
+			} else {
+				res.status(500).json({ error: 'Failed to send kiosk command' });
+			}
+		} catch (err) {
+			console.error('Error sending kiosk command:', err);
+			res.status(500).json({ error: 'Failed to send kiosk command' });
+		}
+	});
+
+	// Trigger theme command for a display (protected - requires token)
+	app.post('/api/mqtt-theme/:hostname', checkApiToken, function(req, res) {
+		try {
+			const { hostname } = req.params;
+			const { theme } = req.body;
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			const success = mqttPowerBridge.sendThemeCommand(hostname, theme);
+
+			if (success) {
+				res.json({ success: true, message: 'Theme command sent' });
+			} else {
+				res.status(500).json({ error: 'Failed to send theme command' });
+			}
+		} catch (err) {
+			console.error('Error sending theme command:', err);
+			res.status(500).json({ error: 'Failed to send theme command' });
+		}
+	});
+
+	// Trigger volume command for a display (protected - requires token)
+	app.post('/api/mqtt-volume/:hostname', checkApiToken, function(req, res) {
+		try {
+			const { hostname } = req.params;
+			const { volume } = req.body;
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			const success = mqttPowerBridge.sendVolumeCommand(hostname, volume);
+
+			if (success) {
+				res.json({ success: true, message: 'Volume command sent' });
+			} else {
+				res.status(500).json({ error: 'Failed to send volume command' });
+			}
+		} catch (err) {
+			console.error('Error sending volume command:', err);
+			res.status(500).json({ error: 'Failed to send volume command' });
+		}
+	});
+
+	// Trigger keyboard visibility command for a display (protected - requires token)
+	app.post('/api/mqtt-keyboard/:hostname', checkApiToken, function(req, res) {
+		try {
+			const { hostname } = req.params;
+			const { visible } = req.body;
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			const success = mqttPowerBridge.sendKeyboardCommand(hostname, visible);
+
+			if (success) {
+				res.json({ success: true, message: 'Keyboard command sent' });
+			} else {
+				res.status(500).json({ error: 'Failed to send keyboard command' });
+			}
+		} catch (err) {
+			console.error('Error sending keyboard command:', err);
+			res.status(500).json({ error: 'Failed to send keyboard command' });
+		}
+	});
+
+	// Trigger page zoom command for a display (protected - requires token)
+	app.post('/api/mqtt-page-zoom/:hostname', checkApiToken, function(req, res) {
+		try {
+			const { hostname } = req.params;
+			const { zoom } = req.body;
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			const success = mqttPowerBridge.sendPageZoomCommand(hostname, zoom);
+
+			if (success) {
+				res.json({ success: true, message: 'Page zoom command sent' });
+			} else {
+				res.status(500).json({ error: 'Failed to send page zoom command' });
+			}
+		} catch (err) {
+			console.error('Error sending page zoom command:', err);
+			res.status(500).json({ error: 'Failed to send page zoom command' });
+		}
+	});
+
+	// Trigger page URL command for a display (protected - requires token)
+	app.post('/api/mqtt-page-url/:hostname', checkApiToken, function(req, res) {
+		try {
+			const { hostname } = req.params;
+			const { url } = req.body;
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			const success = mqttPowerBridge.sendPageUrlCommand(hostname, url);
+
+			if (success) {
+				res.json({ success: true, message: 'Page URL command sent' });
+			} else {
+				res.status(500).json({ error: 'Failed to send page URL command' });
+			}
+		} catch (err) {
+			console.error('Error sending page URL command:', err);
+			res.status(500).json({ error: 'Failed to send page URL command' });
+		}
+	});
+
+	// Trigger refresh command for a display (protected - requires token)
+	app.post('/api/mqtt-refresh/:hostname', checkApiToken, function(req, res) {
+		try {
+			const { hostname } = req.params;
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			const success = mqttPowerBridge.sendRefreshCommand(hostname);
+
+			if (success) {
+				res.json({ success: true, message: 'Refresh command sent' });
+			} else {
+				res.status(500).json({ error: 'Failed to send refresh command' });
+			}
+		} catch (err) {
+			console.error('Error sending refresh command:', err);
+			res.status(500).json({ error: 'Failed to send refresh command' });
+		}
+	});
+
+	// Trigger reboot command for a display (protected - requires token)
+	app.post('/api/mqtt-reboot/:hostname', checkApiToken, function(req, res) {
+		try {
+			const { hostname } = req.params;
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			const success = mqttPowerBridge.sendRebootCommand(hostname);
+
+			if (success) {
+				res.json({ success: true, message: 'Reboot command sent' });
+			} else {
+				res.status(500).json({ error: 'Failed to send reboot command' });
+			}
+		} catch (err) {
+			console.error('Error sending reboot command:', err);
+			res.status(500).json({ error: 'Failed to send reboot command' });
+		}
+	});
+
+	// Trigger shutdown command for a display (protected - requires token)
+	app.post('/api/mqtt-shutdown/:hostname', checkApiToken, function(req, res) {
+		try {
+			const { hostname } = req.params;
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			const success = mqttPowerBridge.sendShutdownCommand(hostname);
+
+			if (success) {
+				res.json({ success: true, message: 'Shutdown command sent' });
+			} else {
+				res.status(500).json({ error: 'Failed to send shutdown command' });
+			}
+		} catch (err) {
+			console.error('Error sending shutdown command:', err);
+			res.status(500).json({ error: 'Failed to send shutdown command' });
+		}
+	});
+
+	// Trigger refresh command for ALL displays (protected - requires token)
+	app.post('/api/mqtt-refresh-all', checkApiToken, function(req, res) {
+		try {
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const displays = mqttPowerBridge.getAllDisplays();
+			
+			let successCount = 0;
+			let failCount = 0;
+
+			displays.forEach(display => {
+				const success = mqttPowerBridge.sendRefreshCommand(display.hostname);
+				if (success) {
+					successCount++;
+				} else {
+					failCount++;
+				}
+			});
+
+			res.json({ 
+				success: true, 
+				message: `Refresh command sent to ${successCount} display(s)`,
+				successCount,
+				failCount,
+				total: displays.length
+			});
+		} catch (err) {
+			console.error('Error sending refresh-all command:', err);
+			res.status(500).json({ error: 'Failed to send refresh-all command' });
+		}
+	});
+
+	// Trigger reboot command for ALL displays (protected - requires token)
+	app.post('/api/mqtt-reboot-all', checkApiToken, function(req, res) {
+		try {
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const displays = mqttPowerBridge.getAllDisplays();
+			
+			let successCount = 0;
+			let failCount = 0;
+
+			displays.forEach(display => {
+				const success = mqttPowerBridge.sendRebootCommand(display.hostname);
+				if (success) {
+					successCount++;
+				} else {
+					failCount++;
+				}
+			});
+
+			res.json({ 
+				success: true, 
+				message: `Reboot command sent to ${successCount} display(s)`,
+				successCount,
+				failCount,
+				total: displays.length
+			});
+		} catch (err) {
+			console.error('Error sending reboot-all command:', err);
+			res.status(500).json({ error: 'Failed to send reboot-all command' });
 		}
 	});
 
@@ -2317,6 +2714,124 @@ module.exports = function(app) {
 		} catch (err) {
 			console.error('Error retrieving connected clients:', err);
 			res.status(500).json({ error: 'Failed to retrieve connected clients' });
+		}
+	});
+
+	// Get merged displays (Socket.IO + MQTT) - protected
+	app.get('/api/displays', checkApiToken, function(req, res) {
+		try {
+			const socketController = require('./socket-controller');
+			const mqttPowerBridge = require('./mqtt-power-bridge');
+			
+			// Get Socket.IO connected displays
+			const socketDisplays = typeof socketController.getConnectedDisplayClients === 'function'
+				? socketController.getConnectedDisplayClients()
+				: [];
+			
+			// Get MQTT displays
+			const mqttDisplays = mqttPowerBridge.getDisplayStates();
+			
+			// Create a map for quick lookup
+			const displayMap = new Map();
+			
+			// Add Socket.IO displays first
+			socketDisplays.forEach(display => {
+				const key = display.clientId.toLowerCase();
+				displayMap.set(key, {
+					id: display.clientId,
+					name: display.roomAlias || display.clientId,
+					type: display.displayType || 'unknown',
+					ipAddress: display.ipAddress,
+					socketIO: {
+						connected: true,
+						status: display.sockets > 0 ? 'active' : 'disconnected',
+						connectedAt: display.connectedAt,
+						lastSeenAt: display.lastSeenAt,
+						sockets: display.sockets
+					},
+					mqtt: null
+				});
+			});
+			
+			// Merge or add MQTT displays
+			mqttDisplays.forEach(mqtt => {
+				const hostnameKey = mqtt.hostname.toLowerCase();
+				const mqttIp = mqtt.networkAddress ? mqtt.networkAddress.toLowerCase() : null;
+				
+				let existingDisplay = null;
+				
+				// Try multiple matching strategies (only match same physical device, not same room!)
+				for (const [key, display] of displayMap.entries()) {
+					// Strategy 1: clientId ends with hostname (e.g., "192.168.1.10_saturn" matches "saturn")
+					// This indicates the Socket.IO client is from the same Touchkio device
+					if (display.id.toLowerCase().endsWith('_' + hostnameKey)) {
+						existingDisplay = display;
+						break;
+					}
+					
+					// Strategy 2: IP address exact match (same physical device)
+					if (mqttIp && display.ipAddress) {
+						const socketIp = display.ipAddress.toLowerCase();
+						// Extract IP from formats like "192.168.1.10" or "localhost (::1)"
+						if (socketIp === mqttIp || socketIp.includes(mqttIp)) {
+							// Additional check: hostname should also match or be part of clientId
+							if (display.id.toLowerCase().includes(hostnameKey)) {
+								existingDisplay = display;
+								break;
+							}
+						}
+					}
+					
+					// Strategy 3: Exact clientId match (rare but possible)
+					if (display.id.toLowerCase() === hostnameKey) {
+						existingDisplay = display;
+						break;
+					}
+				}
+				
+				const mqttData = {
+					connected: true,
+					hostname: mqtt.hostname,
+					power: mqtt.power,
+					brightness: mqtt.brightness,
+					kioskStatus: mqtt.kioskStatus,
+					theme: mqtt.theme,
+					volume: mqtt.volume,
+					cpuUsage: mqtt.cpuUsage,
+					memoryUsage: mqtt.memoryUsage,
+					temperature: mqtt.temperature,
+					networkAddress: mqtt.networkAddress,
+					uptime: mqtt.uptime,
+					lastUpdate: mqtt.lastUpdate
+				};
+				
+				if (existingDisplay) {
+					// Merge MQTT data into existing Socket.IO display
+					existingDisplay.mqtt = mqttData;
+					// Update IP if we have it from MQTT
+					if (mqtt.networkAddress && !existingDisplay.ipAddress) {
+						existingDisplay.ipAddress = mqtt.networkAddress;
+					}
+				} else {
+					// Add as MQTT-only display
+					displayMap.set(hostnameKey, {
+						id: mqtt.hostname,
+						name: mqtt.hostname,
+						type: 'unknown', // We don't know the type from MQTT alone
+						ipAddress: mqtt.networkAddress,
+						socketIO: null,
+						mqtt: mqttData
+					});
+				}
+			});
+			
+			// Convert map to array
+			const displays = Array.from(displayMap.values());
+			
+			res.json({ displays });
+		} catch (err) {
+			console.error('Error retrieving merged displays:', err);
+			res.status(500).json({ error: 'Failed to retrieve displays' });
 		}
 	});
 

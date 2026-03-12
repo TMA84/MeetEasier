@@ -2133,7 +2133,8 @@ function getPowerManagementConfig() {
  * Update power management configuration for a specific display
  * @param {string} clientId - Display client ID
  * @param {object} config - Power management configuration
- * @param {string} config.mode - 'dpms' or 'browser'
+ * @param {string} config.mode - 'dpms', 'browser', or 'mqtt'
+ * @param {string} config.mqttHostname - Touchkio hostname (required for mqtt mode)
  * @param {object} config.schedule - Schedule configuration
  * @param {string} config.schedule.startTime - Start time (HH:MM)
  * @param {string} config.schedule.endTime - End time (HH:MM)
@@ -2143,7 +2144,7 @@ function updatePowerManagementConfig(clientId, displayConfig) {
 	try {
 		const config = getPowerManagementConfig();
 		
-		config.displays[clientId] = {
+		const updatedConfig = {
 			mode: displayConfig.mode || 'browser',
 			schedule: {
 				enabled: displayConfig.schedule?.enabled || false,
@@ -2154,6 +2155,12 @@ function updatePowerManagementConfig(clientId, displayConfig) {
 			lastUpdated: new Date().toISOString()
 		};
 		
+		// Add MQTT hostname if mode is mqtt
+		if (displayConfig.mode === 'mqtt' && displayConfig.mqttHostname) {
+			updatedConfig.mqttHostname = displayConfig.mqttHostname;
+		}
+		
+		config.displays[clientId] = updatedConfig;
 		config.lastUpdated = new Date().toISOString();
 		
 		fs.writeFileSync(powerManagementConfigPath, JSON.stringify(config, null, 2));
@@ -2181,7 +2188,7 @@ function updateGlobalPowerManagementConfig(globalConfig) {
 	try {
 		const config = getPowerManagementConfig();
 		
-		config.global = {
+		const updatedGlobal = {
 			mode: globalConfig.mode || 'browser',
 			schedule: {
 				enabled: globalConfig.schedule?.enabled || false,
@@ -2191,6 +2198,12 @@ function updateGlobalPowerManagementConfig(globalConfig) {
 			}
 		};
 		
+		// Add MQTT hostname if mode is mqtt
+		if (globalConfig.mode === 'mqtt' && globalConfig.mqttHostname) {
+			updatedGlobal.mqttHostname = globalConfig.mqttHostname;
+		}
+		
+		config.global = updatedGlobal;
 		config.lastUpdated = new Date().toISOString();
 		
 		fs.writeFileSync(powerManagementConfigPath, JSON.stringify(config, null, 2));
@@ -2299,3 +2312,61 @@ module.exports = {
 	generateQRCode
 };
 
+
+// MQTT Configuration Path
+const mqttConfigPath = path.join(__dirname, '../data/mqtt-config.json');
+
+/**
+ * Get MQTT configuration
+ */
+function getMqttConfig() {
+	try {
+		const data = fs.readFileSync(mqttConfigPath, 'utf8');
+		return JSON.parse(data);
+	} catch (err) {
+		// Return default config if file doesn't exist
+		return {
+			enabled: false,
+			port: 1883,
+			wsPort: 8883,
+			authentication: false,
+			username: 'meeteasier',
+			password: '',
+			discovery: 'homeassistant',
+			lastUpdated: null
+		};
+	}
+}
+
+/**
+ * Update MQTT configuration
+ */
+function updateMqttConfig(mqttConfig) {
+	try {
+		const config = {
+			enabled: mqttConfig.enabled !== undefined ? mqttConfig.enabled : false,
+			brokerUrl: mqttConfig.brokerUrl || 'mqtt://localhost:1883',
+			authentication: mqttConfig.authentication !== undefined ? mqttConfig.authentication : false,
+			username: mqttConfig.username || 'meeteasier',
+			password: mqttConfig.password || '',
+			discovery: mqttConfig.discovery || 'homeassistant',
+			lastUpdated: new Date().toISOString()
+		};
+
+		fs.writeFileSync(mqttConfigPath, JSON.stringify(config, null, 2));
+
+		// Broadcast update via Socket.IO
+		if (io) {
+			io.emit('mqttConfigUpdated', config);
+		}
+
+		return config;
+	} catch (error) {
+		console.error('[ConfigManager] Error updating MQTT config:', error);
+		throw error;
+	}
+}
+
+// Export MQTT functions
+module.exports.getMqttConfig = getMqttConfig;
+module.exports.updateMqttConfig = updateMqttConfig;

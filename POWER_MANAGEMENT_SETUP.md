@@ -323,11 +323,20 @@ MeetEasier Server
    - System erkennt Touchkio-Displays automatisch
    - Empfiehlt MQTT-Modus für Touchkio
 
-4. **Topic-Struktur** (Vorschlag):
+4. **Topic-Struktur**:
    ```
-   meeteasier/displays/{clientId}/power/command  → "on" / "off"
-   meeteasier/displays/{clientId}/power/state    ← "on" / "off"
-   meeteasier/displays/{clientId}/status         ← "online" / "offline"
+   # Touchkio verwendet Home Assistant MQTT Discovery Format:
+   
+   # State Topic (Touchkio → Broker)
+   homeassistant/light/touchkio_{hostname}/display/state
+   Payload: {"state": "ON", "brightness": 255}
+   
+   # Command Topic (MeetEasier → Touchkio)
+   homeassistant/light/touchkio_{hostname}/display/set
+   Payload: {"state": "OFF"}  # oder {"state": "ON", "brightness": 200}
+   
+   # Hostname ist der Raspberry Pi Hostname (z.B. "raspberrypi" oder "saturn")
+   # Beispiel: homeassistant/light/touchkio_saturn/display/set
    ```
 
 ### Temporäre Lösung (bis v1.6.0):
@@ -337,40 +346,85 @@ Sie können bereits jetzt MQTT mit einem eigenen Skript nutzen:
 ```bash
 #!/bin/bash
 # meeteasier-mqtt-bridge.sh
+# Bridge zwischen MeetEasier Power Management und Touchkio MQTT
 
 MQTT_BROKER="mqtt://your-broker:1883"
 MQTT_USER="meeteasier"
 MQTT_PASS="your-password"
 SERVER_URL="https://meeteasier.your-domain.com"
 ROOM_NAME="Saturn"
+HOSTNAME=$(hostname)  # z.B. "saturn" oder "raspberrypi"
 
-# Subscribe to power commands
-mosquitto_sub -h $MQTT_BROKER -u $MQTT_USER -P $MQTT_PASS \
-  -t "meeteasier/displays/+/power/command" | while read -r msg; do
-  
-  # Parse message and control Touchkio
-  if [ "$msg" = "off" ]; then
-    # Touchkio-spezifischer Befehl zum Ausschalten
-    touchkio-cli display off
-  else
-    touchkio-cli display on
-  fi
-done &
+# Touchkio MQTT Topics (Home Assistant Discovery Format)
+TOUCHKIO_COMMAND_TOPIC="homeassistant/light/touchkio_${HOSTNAME}/display/set"
+TOUCHKIO_STATE_TOPIC="homeassistant/light/touchkio_${HOSTNAME}/display/state"
+
+echo "MeetEasier → Touchkio MQTT Bridge"
+echo "Hostname: $HOSTNAME"
+echo "Command Topic: $TOUCHKIO_COMMAND_TOPIC"
 
 # Fetch schedule from MeetEasier and publish MQTT commands
 while true; do
   LOCAL_IP=$(hostname -I | awk '{print $1}')
   CLIENT_ID="${LOCAL_IP}_${ROOM_NAME}"
   
+  # Fetch power management config from MeetEasier
   CONFIG=$(curl -s "$SERVER_URL/api/power-management/$CLIENT_ID")
   
-  # Parse and determine if display should be on/off
-  # ... (similar logic as DPMS script)
-  
-  # Publish command
-  mosquitto_pub -h $MQTT_BROKER -u $MQTT_USER -P $MQTT_PASS \
-    -t "meeteasier/displays/$CLIENT_ID/power/command" \
-    -m "off"  # or "on"
+  if [ $? -eq 0 ] && [ -n "$CONFIG" ]; then
+    # Parse JSON (requires jq)
+    MODE=$(echo "$CONFIG" | jq -r '.mode // "browser"')
+    ENABLED=$(echo "$CONFIG" | jq -r '.schedule.enabled // false')
+    START_TIME=$(echo "$CONFIG" | jq -r '.schedule.startTime // "20:00"')
+    END_TIME=$(echo "$CONFIG" | jq -r '.schedule.endTime // "07:00"')
+    WEEKEND_MODE=$(echo "$CONFIG" | jq -r '.schedule.weekendMode // false')
+    
+    # Only proceed if MQTT mode and schedule is enabled
+    if [ "$MODE" = "mqtt" ] && [ "$ENABLED" = "true" ]; then
+      CURRENT_TIME=$(date +%H:%M)
+      DAY_OF_WEEK=$(date +%u)  # 1=Monday, 7=Sunday
+      
+      SHOULD_BE_OFF=false
+      
+      # Check weekend mode
+      if [ "$WEEKEND_MODE" = "true" ] && ([ "$DAY_OF_WEEK" = "6" ] || [ "$DAY_OF_WEEK" = "7" ]); then
+        SHOULD_BE_OFF=true
+      else
+        # Check if current time is in off-range
+        # (Simplified - for production use proper time comparison)
+        CURRENT_MINUTES=$((10#${CURRENT_TIME:0:2} * 60 + 10#${CURRENT_TIME:3:2}))
+        START_MINUTES=$((10#${START_TIME:0:2} * 60 + 10#${START_TIME:3:2}))
+        END_MINUTES=$((10#${END_TIME:0:2} * 60 + 10#${END_TIME:3:2}))
+        
+        if [ $START_MINUTES -gt $END_MINUTES ]; then
+          # Overnight range
+          if [ $CURRENT_MINUTES -ge $START_MINUTES ] || [ $CURRENT_MINUTES -lt $END_MINUTES ]; then
+            SHOULD_BE_OFF=true
+          fi
+        else
+          # Same-day range
+          if [ $CURRENT_MINUTES -ge $START_MINUTES ] && [ $CURRENT_MINUTES -lt $END_MINUTES ]; then
+            SHOULD_BE_OFF=true
+          fi
+        fi
+      fi
+      
+      # Publish MQTT command to Touchkio
+      if [ "$SHOULD_BE_OFF" = true ]; then
+        echo "$(date): Turning display OFF"
+        mosquitto_pub -h $MQTT_BROKER -u $MQTT_USER -P $MQTT_PASS \
+          -t "$TOUCHKIO_COMMAND_TOPIC" \
+          -m '{"state":"OFF"}'
+      else
+        echo "$(date): Turning display ON"
+        mosquitto_pub -h $MQTT_BROKER -u $MQTT_USER -P $MQTT_PASS \
+          -t "$TOUCHKIO_COMMAND_TOPIC" \
+          -m '{"state":"ON","brightness":255}'
+      fi
+    fi
+  else
+    echo "$(date): Failed to fetch configuration from MeetEasier"
+  fi
   
   sleep 60
 done

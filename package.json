@@ -1,6 +1,6 @@
 {
   "name": "meet-easier",
-  "version": "1.5.3",
+  "version": "1.6.0",
   "main": "server.js",
   "engines": {
     "node": ">=18.0.0",
@@ -24,6 +24,7 @@
     "express": "^4.21.2",
     "helmet": "^8.1.0",
     "isomorphic-fetch": "^3.0.0",
+    "mqtt": "^5.10.1",
     "multer": "^2.0.2",
     "qrcode": "^1.5.4",
     "reload": "^3.4.2",

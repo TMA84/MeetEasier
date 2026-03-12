@@ -7,15 +7,105 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned Features
+### Added
+- **Unified Display Management**
+  - New "Displays" tab merging Socket.IO and MQTT displays in one view
+  - Intelligent display matching by hostname and IP address
+  - Connection type badges (Socket.IO, MQTT, or both)
+  - Unified status indicators showing overall display state
+  - System resource monitoring (CPU, Memory, Temperature) for MQTT displays
+  - Per-display action buttons based on connection type
+  - Auto-refresh every 10 seconds when tab is active
+  - Display tracking settings (Client ID vs IP+Room mode, retention time, cleanup delay)
+
+- **Touchkio Display Control Modal**
+  - Comprehensive control interface for Touchkio displays
+  - System status cards (Display Status, System Resources, Display Mode, Network)
+  - Display controls (Power On/Off, Refresh Page)
+  - Brightness control (0-255 slider)
+  - Volume control (0-100% slider)
+  - Page zoom control (25-400% slider)
+  - Kiosk mode selection (Fullscreen, Maximized, Framed, Minimized)
+  - Theme switching (Light/Dark)
+  - System controls (Reboot, Shutdown with confirmation)
+  - Real-time status updates and feedback messages
+
+- **Bulk Operations**
+  - "Refresh All Touchkio" button for all MQTT displays
+  - "Reboot All Touchkio" button for all MQTT displays
+  - Buttons automatically disabled when no MQTT displays connected
+  - Confirmation dialogs for destructive operations
+
+- **Enhanced Feedback**
+  - Success/error messages for all MQTT commands
+  - Auto-dismissing notifications (3 seconds)
+  - Command feedback shows target hostname
+  - Visual confirmation for all operations
+
+### Changed
+- Moved display tracking settings from MQTT tab to Displays tab
+- Removed duplicate Touchkio displays list from MQTT tab
+- Power Management button now available for all displays (not just Socket.IO)
+- Removed emojis from UI for more professional appearance
+- Modals now rendered outside tab conditions for global accessibility
+- Cache control headers: no-cache for HTML, 1-year cache for assets
+
+### Fixed
+- Modal accessibility issues (Power Management and Touchkio modals)
+- Duplicate tracking settings in multiple tabs
+- Missing feedback for MQTT command buttons
+- Auto-refresh functionality for display lists
+
+## [1.6.0] - 2026-03-12
+
+### Added
 - **MQTT-based Power Management** for Touchkio displays
-  - Third power management mode alongside Browser and DPMS
-  - Real-time control via MQTT broker
+  - Third power management mode (MQTT) alongside Browser and DPMS
+  - Integrated Aedes MQTT broker with TCP (port 1883) and WebSocket (port 8883) support
+  - Real-time control via MQTT for Touchkio displays on Raspberry Pi
   - Bidirectional communication with status feedback
-  - Configurable MQTT broker, topics, and authentication
-  - Automatic Touchkio display detection
+  - Home Assistant MQTT Discovery protocol support
+  - Configurable MQTT broker settings (port, authentication, discovery)
+  - MQTT hostname configuration per display (e.g., "saturn", "jupiter")
+  - MQTT broker status monitoring in Admin Panel
+  - Connected Touchkio displays list with power control
+  - Manual power trigger API endpoint for testing
   - Better scalability for large deployments (20+ displays)
-  - Integration with Home Assistant, Node-RED, etc.
+  - Integration with Home Assistant, Node-RED, and other MQTT clients
+  - Power management bridge between MeetEasier and Touchkio MQTT topics
+  - Automatic schedule checking for MQTT displays
+  - Dependencies: `aedes`, `mqtt`, `websocket-stream`
+
+- **Admin Panel MQTT Configuration**
+  - New MQTT section in Operations tab
+  - Enable/disable MQTT broker
+  - Configure MQTT ports (TCP and WebSocket)
+  - Authentication settings (username/password)
+  - Home Assistant Discovery toggle
+  - MQTT broker status display (running/stopped, connected clients)
+  - Touchkio displays table with hostname, state, brightness, last update
+  - Manual power control buttons (Turn On/Off) for each Touchkio display
+  - Real-time MQTT status updates
+
+- **Power Management Enhancements**
+  - MQTT mode option in Power Management modal
+  - Touchkio hostname input field for MQTT mode
+  - MQTT hostname stored in power management configuration
+  - Support for MQTT mode in global and display-specific configurations
+  - Updated validation to accept 'mqtt' as valid mode
+  - MQTT hostname passed to config-manager and stored in JSON
+
+### Changed
+- Power management mode validation now accepts 'dpms', 'browser', or 'mqtt'
+- Power management configuration structure updated to include optional `mqttHostname` field
+- Admin translations updated with MQTT-related strings (German and English)
+- Power management help text updated to include MQTT mode description
+
+### Documentation
+- Updated `POWER_MANAGEMENT_SETUP.md` with Touchkio MQTT integration guide
+- Added MQTT broker configuration instructions
+- Documented Touchkio MQTT topic structure
+- Added Home Assistant MQTT Discovery format documentation
 
 ## [1.5.3] - 2026-03-12
 
