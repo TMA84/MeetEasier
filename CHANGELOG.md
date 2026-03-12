@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
 ## [1.7.0] - 2025-03-12
 
 ### Added
@@ -72,30 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modern React patterns and best practices
 - Total: ~5182 lines extracted into reusable modules
 
-## [Unreleased]
-
-### Refactored
-- **Admin Component Modularization**
-  - Extracted PowerManagementModal into separate component (`ui-react/src/components/admin/modals/PowerManagementModal.js`)
-  - Extracted TouchkioModal into separate component (`ui-react/src/components/admin/modals/TouchkioModal.js`)
-  - Extracted DevicesTab into separate component (`ui-react/src/components/admin/tabs/DevicesTab.js`)
-  - Extracted MqttTab into separate component (`ui-react/src/components/admin/tabs/MqttTab.js`)
-  - Extracted AuditTab into separate component (`ui-react/src/components/admin/tabs/AuditTab.js`)
-  - Extracted BackupTab into separate component (`ui-react/src/components/admin/tabs/BackupTab.js`)
-  - Extracted SystemTab into separate component (`ui-react/src/components/admin/tabs/SystemTab.js`)
-  - Created AdminContext for future state management (`ui-react/src/components/admin/AdminContext.js`)
-  - Reduced Admin.js from 7816 to 6840 lines (976 lines removed, 12.5% reduction)
-  - Improved code maintainability and testability
-  - Better separation of concerns between UI and business logic
-  - Created directory structure for continued tab extraction (`tabs/`, `shared/`)
-  - Incremental refactoring approach allows continued extraction of remaining tabs
-
-- Cache control headers: no-cache for HTML, 1-year cache for assets
-
-### Fixed
-- Modal accessibility issues (Power Management and Touchkio modals)
-- Duplicate tracking settings in multiple tabs
-- Missing feedback for MQTT command buttons
+## [1.6.0] - 2024-XX-XX
 - Auto-refresh functionality for display lists
 
 ## [1.6.0] - 2026-03-12
