@@ -7,6 +7,7 @@ import Socket from '../global/Socket';
 import Spinner from '../global/Spinner';
 import { applyI18nConfig, getMaintenanceCopy, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';
 import { getDisplayClientId } from '../../utils/displayClientId.js';
+import { initPowerManagement } from '../../utils/powerManagement.js';
 
 /**
  * Flightboard component - Main display showing all meeting rooms
@@ -114,6 +115,9 @@ class Flightboard extends Component {
       this.setState({ i18nTick: Date.now() });
     });
 
+    // Initialize power management
+    initPowerManagement(this.displayClientId);
+
     this.socket = io({
       query: {
         displayClientId: this.displayClientId,
@@ -138,6 +142,14 @@ class Flightboard extends Component {
 
       this.socket.on('sidebarConfigUpdated', () => {
         this.fetchSidebarConfig();
+      });
+
+      this.socket.on('power-management-update', (data) => {
+        if (data.clientId === this.displayClientId) {
+          console.log('Power management config updated via Socket.IO:', data.config);
+          // Reinitialize power management with new config
+          initPowerManagement(this.displayClientId);
+        }
       });
     }
 

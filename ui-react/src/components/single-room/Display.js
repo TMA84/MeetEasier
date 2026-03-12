@@ -11,6 +11,7 @@ import ExtendMeetingModal from '../booking/ExtendMeetingModal';
 import { applyI18nConfig, getMaintenanceCopy, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';
 import { getSingleRoomDisplayTranslations } from '../../config/displayTranslations.js';
 import { getDisplayClientId } from '../../utils/displayClientId.js';
+import { initPowerManagement } from '../../utils/powerManagement.js';
 
 /**
  * Display component for single room view
@@ -184,6 +185,9 @@ class Display extends Component {
     this.fetchBookingConfig();
     this.fetchColorsConfig();
     
+    // Initialize power management
+    initPowerManagement(this.displayClientId);
+    
     // Connect to Socket.IO for real-time sidebar config updates
     this.socket = io({
       query: {
@@ -216,6 +220,14 @@ class Display extends Component {
       this.socket.on('i18nConfigUpdated', (i18nConfig) => {
         applyI18nConfig(i18nConfig);
         this.setState({ i18nTick: Date.now() });
+      });
+
+      this.socket.on('power-management-update', (data) => {
+        if (data.clientId === this.displayClientId) {
+          console.log('Power management config updated via Socket.IO:', data.config);
+          // Reinitialize power management with new config
+          initPowerManagement(this.displayClientId);
+        }
       });
       
       this.socket.on('bookingConfigUpdated', (config) => {
