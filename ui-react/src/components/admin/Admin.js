@@ -9,6 +9,7 @@ import AuditTab from './tabs/AuditTab.js';
 import BackupTab from './tabs/BackupTab.js';
 import SystemTab from './tabs/SystemTab.js';
 import TranslationApiTab from './tabs/TranslationApiTab.js';
+import MaintenanceTab from './tabs/MaintenanceTab.js';
 
 const QUICK_ADMIN_TRANSLATION_GROUPS = [
   {
@@ -5700,78 +5701,21 @@ class Admin extends Component {
               )}
 
               {activeTab === 'maintenance' && (
-              <div className="admin-card" id="ops-maintenance">
-
-              {!maintenanceLocked && (
-                <>
-                  <div className="admin-current-config">
-                    <h3>{t.currentConfigTitle}</h3>
-                    <div className="config-grid">
-                      <div className="config-item">
-                        <span className="config-label">{t.maintenanceEnabledLabel}</span>
-                        <span className="config-value">{booleanLabel(currentMaintenanceEnabled)}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">{t.maintenanceMessageLabel}</span>
-                        <span className="config-value">{currentMaintenanceMessage || '-'}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">{t.lastUpdatedLabel}</span>
-                        <span className="config-value">{maintenanceLastUpdated || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <form onSubmit={this.handleMaintenanceSubmit}>
-                    <div className="admin-form-group">
-                      <label className="inline-label">
-                        <span className="label-text">{t.maintenanceEnabledLabel}</span>
-                        <input
-                          type="checkbox"
-                          checked={maintenanceEnabled}
-                          onChange={(e) => this.setState({ maintenanceEnabled: e.target.checked })}
-                        />
-                      </label>
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="maintenanceMessage">{t.maintenanceMessageLabel}</label>
-                      <textarea
-                        id="maintenanceMessage"
-                        value={maintenanceMessage}
-                        onChange={(e) => this.setState({ maintenanceMessage: e.target.value })}
-                        rows={4}
-                        className="admin-textarea"
-                      />
-                    </div>
-
-                    <button 
-                      type="submit" 
-                      className="admin-submit-button"
-                      disabled={
-                        maintenanceEnabled === currentMaintenanceEnabled &&
-                        maintenanceMessage === currentMaintenanceMessage
-                      }
-                    >
-                      {t.maintenanceSubmitButton}
-                    </button>
-                  </form>
-                </>
-              )}
-
-              {maintenanceLocked && (
-                <div className="admin-locked-message">
-                  <p>{t.configuredViaEnv}</p>
-                </div>
-              )}
-
-              {maintenanceMessageBanner && (
-                <div className={`admin-message admin-message-${maintenanceMessageType}`}>
-                  {maintenanceMessageBanner}
-                </div>
-              )}
-
-              </div>
+                <MaintenanceTab
+                  maintenanceLocked={maintenanceLocked}
+                  currentMaintenanceEnabled={currentMaintenanceEnabled}
+                  currentMaintenanceMessage={currentMaintenanceMessage}
+                  maintenanceLastUpdated={maintenanceLastUpdated}
+                  maintenanceEnabled={maintenanceEnabled}
+                  maintenanceMessage={maintenanceMessage}
+                  maintenanceMessageBanner={maintenanceMessageBanner}
+                  maintenanceMessageType={maintenanceMessageType}
+                  t={t}
+                  booleanLabel={booleanLabel}
+                  onEnabledChange={(value) => this.setState({ maintenanceEnabled: value })}
+                  onMessageChange={(value) => this.setState({ maintenanceMessage: value })}
+                  onSubmit={this.handleMaintenanceSubmit}
+                />
               )}
 
               {activeTab === 'search' && (
