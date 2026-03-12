@@ -12,18 +12,41 @@ class PowerManagement {
     this.isDisplayOff = false;
     this.overlayElement = null;
     this.wakeLock = null;
+    this.initialized = false;
   }
 
   async init() {
+    if (this.initialized) {
+      console.log('[PowerManagement] Already initialized, skipping');
+      return;
+    }
+
     try {
       // Fetch power management config for this display
-      const response = await fetch(`/api/power-management/${this.clientId}`);
+      console.log('[PowerManagement] Fetching config for client:', this.clientId);
+      const response = await fetch(`/api/power-management/${encodeURIComponent(this.clientId)}`);
+      
+      if (!response.ok) {
+        console.error('[PowerManagement] Failed to fetch config:', response.status);
+        return;
+      }
+      
       this.config = await response.json();
+      
+      console.log('[PowerManagement] Config received:', JSON.stringify(this.config, null, 2));
 
-      // Only initialize if browser mode and schedule is enabled
-      if (this.config.mode === 'browser' && this.config.schedule?.enabled) {
+      // Initialize browser-based power management
+      // This works as a fallback even if DPMS mode is configured
+      // (DPMS script will override if running on Raspberry Pi)
+      if (this.config.schedule?.enabled) {
+        console.log('[PowerManagement] Schedule is enabled, initializing...');
+        console.log('[PowerManagement] Mode:', this.config.mode, '(browser will act as fallback for DPMS)');
+        console.log('[PowerManagement] Schedule:', this.config.schedule);
         this.startScheduleCheck();
         this.requestWakeLock();
+        this.initialized = true;
+      } else {
+        console.log('[PowerManagement] Schedule is NOT enabled, skipping initialization');
       }
     } catch (error) {
       console.error('[PowerManagement] Failed to initialize:', error);
@@ -42,6 +65,7 @@ class PowerManagement {
 
   checkSchedule() {
     if (!this.config?.schedule?.enabled) {
+      console.log('[PowerManagement] checkSchedule: Schedule not enabled');
       return;
     }
 
@@ -51,20 +75,36 @@ class PowerManagement {
     const isWeekend = currentDay === 0 || currentDay === 6;
 
     const { startTime, endTime, weekendMode } = this.config.schedule;
+    
+    console.log('[PowerManagement] checkSchedule:', {
+      currentTime,
+      startTime,
+      endTime,
+      isWeekend,
+      weekendMode,
+      isDisplayOff: this.isDisplayOff
+    });
 
     // Weekend mode: turn off all weekend
     if (weekendMode && isWeekend) {
+      console.log('[PowerManagement] Weekend mode active, turning off');
       this.turnDisplayOff();
       return;
     }
 
     // Check if current time is within off period
     const shouldBeOff = this.isTimeInRange(currentTime, startTime, endTime);
+    
+    console.log('[PowerManagement] shouldBeOff:', shouldBeOff);
 
     if (shouldBeOff && !this.isDisplayOff) {
+      console.log('[PowerManagement] Time to turn off!');
       this.turnDisplayOff();
     } else if (!shouldBeOff && this.isDisplayOff) {
+      console.log('[PowerManagement] Time to turn on!');
       this.turnDisplayOn();
+    } else {
+      console.log('[PowerManagement] No action needed');
     }
   }
 
@@ -145,6 +185,8 @@ class PowerManagement {
     if (this.wakeLock) {
       this.wakeLock.release();
     }
+    
+    this.initialized = false;
   }
 }
 
@@ -152,10 +194,23 @@ class PowerManagement {
 let powerManagementInstance = null;
 
 export function initPowerManagement(clientId) {
-  if (!powerManagementInstance && clientId) {
+  if (!clientId) {
+    console.warn('[PowerManagement] No client ID provided, skipping initialization');
+    return null;
+  }
+
+  // If we already have an instance with a different client ID, destroy it first
+  if (powerManagementInstance && powerManagementInstance.clientId !== clientId) {
+    console.log('[PowerManagement] Client ID changed, reinitializing');
+    powerManagementInstance.destroy();
+    powerManagementInstance = null;
+  }
+
+  if (!powerManagementInstance) {
     powerManagementInstance = new PowerManagement(clientId);
     powerManagementInstance.init();
   }
+  
   return powerManagementInstance;
 }
 
