@@ -45,6 +45,11 @@ Successfully refactored the Admin.js component by extracting modal and tab compo
   - Export and import functionality
   - ~50 lines
 
+- **SystemTab.js** (`ui-react/src/components/admin/tabs/SystemTab.js`)
+  - Extracted system configuration tab
+  - Startup validation, error exposure, HSTS, rate limiting settings
+  - ~170 lines
+
 ### 3. Created Context (Previously)
 - **AdminContext.js** (`ui-react/src/components/admin/AdminContext.js`)
   - React Context for state management
@@ -55,12 +60,12 @@ Successfully refactored the Admin.js component by extracting modal and tab compo
 - Added imports for modal and tab components
 - Replaced inline JSX with component usage
 - Maintained all functionality
-- Reduced file size from 7816 to 6947 lines (869 lines removed, 11.1% reduction)
+- Reduced file size from 7816 to 6840 lines (976 lines removed, 12.5% reduction)
 
 ## File Structure
 ```
 ui-react/src/components/admin/
-├── Admin.js (6947 lines, down from 7816)
+├── Admin.js (6840 lines, down from 7816)
 ├── AdminContext.js
 ├── modals/
 │   ├── PowerManagementModal.js (~160 lines)
@@ -69,7 +74,8 @@ ui-react/src/components/admin/
 │   ├── DevicesTab.js (~310 lines)
 │   ├── MqttTab.js (~140 lines)
 │   ├── AuditTab.js (~45 lines)
-│   └── BackupTab.js (~50 lines)
+│   ├── BackupTab.js (~50 lines)
+│   └── SystemTab.js (~170 lines)
 └── shared/ (created, ready for future use)
 ```
 
@@ -88,11 +94,11 @@ ui-react/src/components/admin/
 - Bundle size slightly increased but within acceptable range
 
 ## Progress Metrics
-- **Total Lines Removed from Admin.js**: 869 lines (11.1% reduction)
+- **Total Lines Removed from Admin.js**: 976 lines (12.5% reduction)
 - **Original Size**: 7816 lines
-- **Current Size**: 6947 lines
-- **Files Created**: 6 components (2 modals + 4 tabs)
-- **Build Time**: ~840ms (stable)
+- **Current Size**: 6840 lines
+- **Files Created**: 7 components (2 modals + 5 tabs)
+- **Build Time**: ~782ms (stable)
 
 ## Next Steps (Future Refactoring)
 1. Extract more tab components:
@@ -110,7 +116,10 @@ ui-react/src/components/admin/
 3. ✅ MqttTab (MQTT configuration) - DONE
 4. ✅ AuditTab (audit logs) - DONE
 5. ✅ BackupTab (backup/restore) - DONE
-6. System Tab (system configuration)
-7. Translations Tab (i18n management)
-8. Display configuration tabs (WiFi, Logo, Colors, Booking)
-9. Remaining operations tabs
+6. ✅ SystemTab (system configuration) - DONE
+7. TranslationApi Tab (translation API settings)
+8. OAuth Tab (OAuth and Graph configuration)
+9. Maintenance Tab (maintenance mode)
+10. Translations Tab (i18n management)
+11. Display configuration tabs (WiFi, Logo, Colors, Booking)
+12. Remaining operations tabs
