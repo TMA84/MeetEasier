@@ -7,6 +7,165 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-03-12
+
+### Added
+- **Version Display in Admin Panel**
+  - Application version now displayed in Admin Panel header
+  - New public API endpoint `/api/version` to retrieve version information
+  - Version automatically loaded from package.json
+  - No authentication required for version endpoint
+
+- **Offline Support & Performance**
+  - Service Worker implementation for offline functionality
+  - Precaching of essential assets (CSS, JS, images, fonts)
+  - Runtime caching for API responses and dynamic content
+  - Cache-first strategy for static assets, network-first for API calls
+  - Automatic cache cleanup on version updates
+  - Connection monitoring with automatic reconnection
+  - Visual connection status indicator (online/offline)
+  - Auto-reload after reconnection (if offline > 30 seconds)
+  - Periodic health checks every 5 seconds when offline
+  - Maximum retry limit (60 attempts = 5 minutes)
+
+- **Admin Panel Enhancements**
+  - Logo display on Admin Panel login screen (before authentication)
+  - New public `/api/logo` endpoint for logo configuration
+  - "Active" status column in Connected Displays table
+  - "Power" column with "Configure" button for each display
+  - Power Management modal with mode selection (Browser/DPMS)
+  - Schedule configuration per display (start time, end time, weekend mode)
+  - "Global Standard" button for default power management settings
+  - Device type display in Connected Displays table (e.g., "single-room-rpi")
+
+- **Display Tracking Features**
+  - Renamed "Display Tracking Settings" to "Tracking Settings"
+  - Two tracking modes: Client ID (per browser tab) or IP+Room (per physical display)
+  - Configurable retention time (1-168 hours)
+  - Configurable cleanup delay (0-60 minutes)
+  - Automatic cleanup of old disconnected displays
+  - Real-time display status updates via Socket.IO
+
+### Fixed
+- **Power Management Critical Bug Fix**
+  - Fixed client ID mismatch between browser and Admin Panel configuration
+  - Browser now requests server-assigned identifier (IP_Room format) via Socket.IO
+  - Power management config lookup now works correctly with IP+Room tracking mode
+  - Added `request-identifier` socket event handler in socket controller
+  - Power management initializes with correct server-generated identifier
+  
+- **Power Management Real-time Updates**
+  - Display now reloads power management config immediately when changed in Admin Panel
+  - Added support for `power-management-update` event (display-specific config)
+  - Added support for `power-management-global-update` event (global config changes)
+  - Power management reinitializes automatically on config updates
+  - Added detailed debug logging for troubleshooting
+
+- **Admin Panel UI Fixes**
+  - Fixed vertical alignment of status cell in Connected Displays table
+  - Status indicator (dot + text) now properly aligned with other table columns
+  - Applied flexbox layout to status cell content
+  - Fixed table row height consistency across all columns
+  - Logo now loads before authentication on Admin Panel login screen
+
+- **Content Security Policy (CSP)**
+  - Added `https://fonts.gstatic.com` to `connectSrc` directive
+  - Fixed Google Fonts loading errors in browser console
+  - Service Worker can now properly cache font files
+  - Eliminated CSP violations for font resources
+
+### Changed
+- **Display Client ID Generation**
+  - Simplified client ID generation - browser generates persistent UUID
+  - Server determines actual tracking identifier based on mode (client-id vs ip-room)
+  - Display requests server-assigned identifier after socket connection
+  - Improved power management initialization flow
+
+- **Power Management Utility**
+  - Added protection against duplicate initialization
+  - Power management can now reinitialize with different client IDs
+  - Added `initialized` flag to prevent redundant API calls
+  - Improved error handling and logging
+  - Better support for browser-based fallback when DPMS unavailable
+
+- **Device Detection**
+  - Automatic Raspberry Pi detection based on user agent and platform
+  - Enhanced displayType includes device info (e.g., "single-room-rpi", "single-room-chrome")
+  - Server auto-recommends DPMS mode for RPi, browser mode for others
+  - Display type sent via Socket.IO query parameters
+
+- **Admin Panel Improvements**
+  - All save buttons now only activate when changes are made
+  - Prevents unnecessary API calls and provides better visual feedback
+  - Improved button states across all 16 configuration forms
+  - Better visual hierarchy in Operations section
+
+### Technical Details
+**Power Management:**
+- Modified `ui-react/src/components/single-room/Display.js` to request server identifier
+- Updated `app/socket-controller.js` with `request-identifier` event handler
+- Enhanced `ui-react/src/utils/powerManagement.js` with reinitialization support
+- Simplified `ui-react/src/utils/displayClientId.js` for cleaner ID generation
+
+**Offline Support:**
+- Created `ui-react/build/service-worker.js` with caching strategies
+- Implemented `ui-react/src/utils/connectionMonitor.js` for network monitoring
+- Added `ui-react/src/components/global/ConnectionStatus.js` visual indicator
+- Integrated Service Worker registration in production builds
+
+**Admin Panel:**
+- Updated `scss/_admin.scss` with improved table cell alignment and version display
+- Added `loadLogoConfig()` method for pre-authentication logo loading
+- Created Power Management modal with real-time config updates
+- Enhanced Connected Displays table with status and power management columns
+
+**API Endpoints:**
+- Created `/api/version` endpoint in `app/routes.js`
+- Made `/api/logo` endpoint public (no authentication required)
+- Enhanced `/api/power-management` endpoints with global config support
+
+**Configuration:**
+- Added version field to `package.json` (1.5.3)
+- Updated `server.js` CSP configuration for font loading
+- Enhanced `app/config-manager.js` with power management functions
+
+### Notes
+- After server restart, displays must be refreshed (Cmd+Shift+R) to load new socket logic
+- Power management config is checked every minute for schedule enforcement
+- Browser-based power management works as fallback even when DPMS mode is configured
+- Service Worker caches are automatically cleaned up on version updates
+- Connection monitor auto-reloads page after 30+ seconds offline when reconnected
+- Logo on Admin Panel login screen requires configured logo in settings
+
+### Breaking Changes
+None
+
+### Security
+- **Input Validation Hardening**
+  - Added comprehensive validation for `/api/power-management/:clientId` endpoint
+  - Protection against prototype pollution attacks (`__proto__`, `constructor`, `prototype`)
+  - Protection against path traversal attacks (`..`, `/`, `\`)
+  - Client ID length validation (3-250 characters)
+  - Whitelist-based character validation for client IDs
+  
+- **Socket.IO Query Parameter Validation**
+  - Added strict validation for `displayType` parameter (alphanumeric, hyphens, underscores only)
+  - Added validation for `roomAlias` parameter (alphanumeric, spaces, dots, hyphens, underscores)
+  - Maximum length limits enforced (50 chars for displayType, 100 chars for roomAlias)
+  - Protection against XSS and injection attacks via socket parameters
+
+- **Code Quality**
+  - Removed duplicate `/api/logo` endpoint definition
+  - Consistent input validation across all public endpoints
+  - All public endpoints protected by rate limiting
+  - No sensitive information exposed in public endpoints
+
+- **Security Review**
+  - Comprehensive security audit completed
+  - All identified vulnerabilities fixed
+  - Security review document created (`SECURITY_REVIEW_1.5.3.md`)
+  - Approved for production deployment
+
 ## [1.5.2] - 2026-03-11
 
 ### Changed

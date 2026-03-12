@@ -1013,6 +1013,15 @@ module.exports = function(app) {
 		res.json({ status: 'ready' });
 	});
 
+	// Version endpoint - returns application version
+	app.get('/api/version', function(req, res) {
+		const packageJson = require('../package.json');
+		res.json({
+			version: packageJson.version || 'unknown',
+			name: packageJson.name || 'meet-easier'
+		});
+	});
+
 	// api routes ================================================================
 	// returns an array of room objects
 	app.get('/api/rooms', function(req, res) {
@@ -1686,6 +1695,16 @@ module.exports = function(app) {
 		}
 	});
 
+	// Get current Logo configuration (public - no auth required)
+	app.get('/api/logo', function(req, res) {
+		try {
+			const logoConfig = configManager.getLogoConfig();
+			res.json(logoConfig);
+		} catch (err) {
+			res.status(500).json({ error: 'Failed to retrieve logo configuration' });
+		}
+	});
+
 	app.get('/api/oauth-config', checkApiToken, function(req, res) {
 		try {
 			const oauthConfig = configManager.getOAuthConfig();
@@ -2021,24 +2040,81 @@ module.exports = function(app) {
 		}
 	});
 
+	// Update global power management configuration (protected - requires token)
+	app.post('/api/power-management', checkApiToken, function(req, res) {
+		try {
+			const { mode, schedule } = req.body;
+
+			if (!mode || !['dpms', 'browser'].includes(mode)) {
+				return res.status(400).json({ error: 'Invalid mode. Must be "dpms" or "browser"' });
+			}
+
+			const config = configManager.updateGlobalPowerManagementConfig({
+				mode,
+				schedule: schedule || {
+					enabled: false,
+					startTime: '20:00',
+					endTime: '07:00',
+					weekendMode: false
+				}
+			});
+
+			appendAuditLog({
+				event: 'config.power-management.global.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				config
+			});
+
+			res.json({ 
+				success: true, 
+				config,
+				message: 'Global power management configuration updated'
+			});
+		} catch (err) {
+			console.error('Error updating global power management config:', err);
+			res.status(500).json({ error: 'Failed to update global power management configuration' });
+		}
+	});
+
 	// Get power management configuration for specific display (public - for displays)
 	app.get('/api/power-management/:clientId', function(req, res) {
 		try {
 			const { clientId } = req.params;
-			const config = configManager.getPowerManagementConfigForDisplay(clientId);
 			
-			if (!config) {
-				return res.json({ 
-					mode: 'browser',
-					schedule: {
-						enabled: false,
-						startTime: '20:00',
-						endTime: '07:00',
-						weekendMode: false
-					}
-				});
+			// Security: Validate clientId format to prevent injection attacks
+			// Allow alphanumeric, dots, underscores, colons, hyphens, parentheses, and spaces
+			// Max length 250 characters (as defined in socket-controller)
+			if (!clientId || typeof clientId !== 'string') {
+				return res.status(400).json({ error: 'Invalid client ID' });
 			}
 			
+			const sanitizedClientId = String(clientId).trim();
+			
+			// Prevent prototype pollution and path traversal
+			if (sanitizedClientId.includes('__proto__') || 
+			    sanitizedClientId.includes('constructor') || 
+			    sanitizedClientId.includes('prototype') ||
+			    sanitizedClientId.includes('..') ||
+			    sanitizedClientId.includes('/') ||
+			    sanitizedClientId.includes('\\')) {
+				return res.status(400).json({ error: 'Invalid client ID format' });
+			}
+			
+			// Validate length and allowed characters
+			if (sanitizedClientId.length < 3 || sanitizedClientId.length > 250) {
+				return res.status(400).json({ error: 'Client ID length must be between 3 and 250 characters' });
+			}
+			
+			// Allow: alphanumeric, dots, underscores, colons, hyphens, parentheses, spaces
+			if (!/^[a-zA-Z0-9._:\-() ]{3,250}$/.test(sanitizedClientId)) {
+				return res.status(400).json({ error: 'Client ID contains invalid characters' });
+			}
+			
+			// This returns display-specific config or falls back to global config
+			const config = configManager.getPowerManagementConfigForDisplay(sanitizedClientId);
 			res.json(config);
 		} catch (err) {
 			console.error('Error retrieving power management config for display:', err);
@@ -2140,16 +2216,6 @@ module.exports = function(app) {
 		} catch (err) {
 			console.error('Error updating WiFi config:', err);
 			res.status(500).json({ error: 'Failed to update WiFi configuration' });
-		}
-	});
-
-	// Get current logo configuration (public - no auth required)
-	app.get('/api/logo', function(req, res) {
-		try {
-			const logoConfig = configManager.getLogoConfig();
-			res.json(logoConfig);
-		} catch (err) {
-			res.status(500).json({ error: 'Failed to retrieve logo configuration' });
 		}
 	});
 

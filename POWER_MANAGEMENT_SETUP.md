@@ -4,6 +4,38 @@ MeetEasier unterstützt hybrides Power Management für Displays:
 - **Browser-Modus**: Funktioniert auf allen Geräten (Tablets, Browser, Raspberry Pi)
 - **DPMS-Modus**: Nur für Raspberry Pi - echtes Display-Ausschalten für Stromersparnis
 
+## Wichtig: Keine feste Server-IP erforderlich!
+
+Das DPMS-Skript läuft **lokal auf jedem Raspberry Pi** und kommuniziert mit dem Server über HTTP/HTTPS. 
+Bei dynamischen Server-IPs (z.B. ECS, Kubernetes) gibt es mehrere Lösungen:
+
+1. **DNS-Name verwenden** (empfohlen):
+   ```bash
+   SERVER_URL="https://meeteasier.your-domain.com"
+   ```
+
+2. **Load Balancer URL**:
+   ```bash
+   SERVER_URL="https://your-loadbalancer.elb.amazonaws.com"
+   ```
+
+3. **Service Discovery** (für Kubernetes/ECS):
+   ```bash
+   SERVER_URL="http://meeteasier-service.default.svc.cluster.local:8080"
+   ```
+
+Der Raspberry Pi benötigt **keine feste IP** - nur der Server muss für die Raspis erreichbar sein.
+
+## Automatischer Fallback
+
+Das System hat einen intelligenten Fallback-Mechanismus:
+
+1. **DPMS-Modus konfiguriert + Skript läuft**: Display wird per DPMS ausgeschaltet (echtes Stromsparen)
+2. **DPMS-Modus konfiguriert + Skript läuft NICHT**: Browser zeigt schwarzen Bildschirm (Fallback)
+3. **Browser-Modus konfiguriert**: Browser zeigt schwarzen Bildschirm
+
+**Vorteil**: Auch wenn das DPMS-Skript nicht installiert ist oder fehlschlägt, funktioniert das Power Management über den Browser als Fallback. Das Display wird zwar nicht wirklich ausgeschaltet, aber zumindest schwarz (reduziert Ablenkung und etwas Strom).
+
 ## Browser-Modus (Automatisch)
 
 Der Browser-Modus funktioniert automatisch auf allen Displays:
@@ -35,16 +67,14 @@ sudo nano /usr/local/bin/meeteasier-power-management.sh
 
 # Configuration
 SERVER_URL="http://YOUR_SERVER_IP:8080"
-CLIENT_ID_FILE="/home/pi/.meeteasier-client-id"
-CHECK_INTERVAL=60  # Check every 60 seconds
+ROOM_NAME="Saturn"  # Name des Raums (z.B. Saturn, Jupiter, Mars)
+CHECK_INTERVAL=60   # Check every 60 seconds
 
-# Get or create client ID
-if [ ! -f "$CLIENT_ID_FILE" ]; then
-    # Generate client ID (same format as browser)
-    CLIENT_ID="display-$(cat /proc/sys/kernel/random/uuid)"
-    echo "$CLIENT_ID" > "$CLIENT_ID_FILE"
-fi
-CLIENT_ID=$(cat "$CLIENT_ID_FILE")
+# Get local IP address
+get_local_ip() {
+    # Try to get the primary IP address
+    ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}'
+}
 
 # Function to turn display on
 display_on() {
@@ -86,9 +116,24 @@ is_time_in_range() {
 
 # Main loop
 echo "$(date): MeetEasier Power Management started"
-echo "Client ID: $CLIENT_ID"
+echo "Room: $ROOM_NAME"
 
 while true; do
+    # Get current IP address
+    LOCAL_IP=$(get_local_ip)
+    
+    if [ -z "$LOCAL_IP" ]; then
+        echo "$(date): Could not determine local IP address, keeping display on"
+        display_on
+        sleep $CHECK_INTERVAL
+        continue
+    fi
+    
+    # Build client ID from IP and room name (same format as server tracking)
+    CLIENT_ID="${LOCAL_IP}_${ROOM_NAME}"
+    
+    echo "$(date): Client ID: $CLIENT_ID"
+    
     # Fetch power management configuration
     CONFIG=$(curl -s "$SERVER_URL/api/power-management/$CLIENT_ID")
     
@@ -132,12 +177,19 @@ done
 sudo chmod +x /usr/local/bin/meeteasier-power-management.sh
 ```
 
-4. **Server-URL anpassen:**
+4. **Konfiguration anpassen:**
 
 ```bash
 sudo nano /usr/local/bin/meeteasier-power-management.sh
-# Ändere SERVER_URL="http://YOUR_SERVER_IP:8080" zu deiner Server-Adresse
 ```
+
+Ändere diese Zeilen:
+```bash
+SERVER_URL="https://meeteasier.your-domain.com"  # Deine Server-URL
+ROOM_NAME="Saturn"  # Name des Raums (muss mit Admin-Panel übereinstimmen)
+```
+
+**Wichtig**: Der `ROOM_NAME` muss **exakt** mit dem Raumnamen im Admin-Panel übereinstimmen (z.B. "Saturn", "Jupiter", "Mars").
 
 5. **jq installieren (für JSON-Parsing):**
 
@@ -188,26 +240,36 @@ sudo journalctl -u meeteasier-power-management.service -f
 ### Konfiguration im Admin-Panel
 
 1. Gehe zu **Operations → Devices**
-2. Finde dein Raspberry Pi Display in der Liste
-3. Klicke auf "Power Management konfigurieren"
-4. Wähle **DPMS-Modus**
-5. Konfiguriere den Zeitplan:
+2. Klicke auf **"Refresh"** um die verbundenen Displays zu sehen
+3. Finde dein Raspberry Pi Display in der Liste (z.B. `192.168.1.100_Saturn`)
+4. Klicke auf **"Konfigurieren"** in der Power-Spalte
+5. Wähle **DPMS-Modus** (wird automatisch erkannt für RPi)
+6. Konfiguriere den Zeitplan:
    - **Startzeit**: z.B. 20:00 (Display geht aus)
    - **Endzeit**: z.B. 07:00 (Display geht an)
    - **Wochenend-Modus**: Display am Wochenende ganztägig aus
-6. Speichern
+7. Speichern
+
+**Tipp**: Du kannst auch den **"Global Standard"** Button verwenden, um Zeiten für alle Displays gleichzeitig zu setzen. Einzelne Displays können dann davon abweichen.
 
 ### Troubleshooting
 
 **Display schaltet sich nicht aus:**
 - Prüfe Service-Status: `sudo systemctl status meeteasier-power-management.service`
 - Prüfe Logs: `sudo journalctl -u meeteasier-power-management.service -f`
-- Prüfe Server-URL im Skript
+- Prüfe Server-URL und Raumnamen im Skript
 - Teste manuell: `vcgencmd display_power 0` (aus) / `vcgencmd display_power 1` (an)
 
-**Client ID stimmt nicht:**
-- Lösche `/home/pi/.meeteasier-client-id` und starte Service neu
-- Oder: Kopiere Client ID aus Admin-Panel und schreibe sie in die Datei
+**Client ID stimmt nicht im Admin-Panel:**
+- Die Client ID wird automatisch aus IP + Raumname generiert: `192.168.1.100_Saturn`
+- Prüfe im Log, welche Client ID verwendet wird
+- Stelle sicher, dass der Raumname im Skript mit dem Admin-Panel übereinstimmt
+
+**IP-Adresse ändert sich:**
+- Das Skript erkennt die IP automatisch bei jedem Check
+- Wenn sich die IP ändert, ändert sich auch die Client ID
+- Im Admin-Panel erscheint dann ein neuer Eintrag
+- Lösung: DHCP-Reservation für den Raspberry Pi einrichten
 
 **jq nicht gefunden:**
 - Installiere jq: `sudo apt-get install -y jq`

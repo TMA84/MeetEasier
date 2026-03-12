@@ -410,7 +410,10 @@ class Admin extends Component {
       
       // UI state
       activeTab: 'display',
-      activeSection: 'displays'
+      activeSection: 'displays',
+      
+      // Version
+      appVersion: null
     };
   }
 
@@ -418,6 +421,12 @@ class Admin extends Component {
     // Set page title
     const t = this.getTranslations();
     document.title = t.title;
+
+    // Load version
+    this.loadVersion();
+
+    // Load logo config (public endpoint, no auth required)
+    this.loadLogoConfig();
 
     this.verifyAdminSession()
       .then((valid) => {
@@ -458,6 +467,49 @@ class Admin extends Component {
             authMessageType: null
           });
         });
+      });
+  }
+
+  loadLogoConfig = () => {
+    // Load logo config without authentication (public endpoint)
+    fetch('/api/logo')
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch logo config');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log('[Admin] Logo config loaded:', data);
+        if (data) {
+          this.setState({
+            currentLogoDarkUrl: data.logoDarkUrl || '',
+            currentLogoLightUrl: data.logoLightUrl || ''
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('[Admin] Failed to load logo config:', err);
+      });
+  }
+
+  loadVersion = () => {
+    // Load application version (public endpoint)
+    fetch('/api/version')
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch version');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log('[Admin] Version loaded:', data);
+        if (data && data.version) {
+          this.setState({ appVersion: data.version });
+        }
+      })
+      .catch((err) => {
+        console.error('[Admin] Failed to load version:', err);
       });
   }
 
@@ -2876,11 +2928,33 @@ class Admin extends Component {
 
   handleOpenPowerManagementModal = async (clientId) => {
     const { apiToken } = this.state;
+    const t = this.getTranslations();
     
     try {
-      // Fetch current power management config for this display
-      const response = await fetch(`/api/power-management/${encodeURIComponent(clientId)}`);
-      const config = await response.json();
+      let config;
+      
+      if (clientId === '__global__') {
+        // Fetch global power management config
+        const response = await fetch('/api/power-management', {
+          headers: {
+            'Authorization': `Bearer ${apiToken}`
+          }
+        });
+        const data = await response.json();
+        config = data.global || {
+          mode: 'browser',
+          schedule: {
+            enabled: false,
+            startTime: '20:00',
+            endTime: '07:00',
+            weekendMode: false
+          }
+        };
+      } else {
+        // Fetch display-specific power management config
+        const response = await fetch(`/api/power-management/${encodeURIComponent(clientId)}`);
+        config = await response.json();
+      }
       
       this.setState({
         showPowerManagementModal: true,
@@ -2937,8 +3011,20 @@ class Admin extends Component {
     }
 
     try {
-      const response = await fetch(`/api/power-management/${encodeURIComponent(powerManagementClientId)}`, {
-        method: 'POST',
+      let url, method;
+      
+      if (powerManagementClientId === '__global__') {
+        // Update global config
+        url = '/api/power-management';
+        method = 'POST';
+      } else {
+        // Update display-specific config
+        url = `/api/power-management/${encodeURIComponent(powerManagementClientId)}`;
+        method = 'POST';
+      }
+      
+      const response = await fetch(url, {
+        method,
         headers,
         body: JSON.stringify({
           mode: powerManagementMode,
@@ -3142,6 +3228,9 @@ class Admin extends Component {
       backupPayloadText, backupMessage, backupMessageType,
       auditLogs, auditMessage, auditMessageType,
       connectedDisplays, connectedDisplaysMessage, connectedDisplaysMessageType, connectedDisplaysLoading,
+      showPowerManagementModal, powerManagementClientId, powerManagementMode,
+      powerManagementScheduleEnabled, powerManagementStartTime, powerManagementEndTime,
+      powerManagementWeekendMode, powerManagementMessage, powerManagementMessageType,
       apiTokenConfigMessage, apiTokenConfigMessageType,
       currentApiTokenSource, currentApiTokenIsDefault, apiTokenConfigLastUpdated,
       newApiToken, newApiTokenConfirm,
@@ -3237,9 +3326,25 @@ class Admin extends Component {
         <div className="admin-header">
           <div className="admin-header-content">
             <div className="admin-logo">
-              <img src={currentLogoLightUrl || "/img/logo.W.png"} alt="Logo" onError={(e) => { e.target.src = "/img/logo.W.png"; }} />
+              <img 
+                src={currentLogoLightUrl || "/img/logo-admin.svg"} 
+                alt="Logo" 
+                onError={(e) => { 
+                  // Fallback to admin logo if custom logo fails
+                  if (!e.target.src.includes('logo-admin.svg')) {
+                    e.target.src = "/img/logo-admin.svg";
+                  }
+                }} 
+              />
             </div>
-            <h1>{t.title}</h1>
+            <div style={{ flex: 1 }}>
+              <h1>{t.title}</h1>
+              {this.state.appVersion && (
+                <div className="admin-version">
+                  Version {this.state.appVersion}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -5492,7 +5597,7 @@ class Admin extends Component {
               <div className="admin-form-divider"></div>
 
               <h3>{t.connectedDisplaysSectionTitle || 'Connected Displays'}</h3>
-              <div style={{ marginBottom: '1rem' }}>
+              <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem' }}>
                 <button 
                   type="button" 
                   className="admin-secondary-button" 
@@ -5500,6 +5605,13 @@ class Admin extends Component {
                   disabled={connectedDisplaysLoading}
                 >
                   {connectedDisplaysLoading ? t.loading : (t.connectedDisplaysRefreshButton || 'Refresh')}
+                </button>
+                <button 
+                  type="button" 
+                  className="admin-primary-button" 
+                  onClick={() => this.handleOpenPowerManagementModal('__global__')}
+                >
+                  {t.powerManagementGlobalButton || 'Global Standard'}
                 </button>
               </div>
 
@@ -5556,16 +5668,18 @@ class Admin extends Component {
                         return (
                           <tr key={display.clientId}>
                             <td className="status-cell">
-                              <span style={{
-                                display: 'inline-block',
-                                width: '8px',
-                                height: '8px',
-                                borderRadius: '50%',
-                                backgroundColor: statusDotColor,
-                                marginRight: '0.5rem'
-                              }}></span>
-                              <span style={{ color: statusColor }}>
-                                {status}
+                              <span>
+                                <span style={{
+                                  display: 'inline-block',
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  backgroundColor: statusDotColor,
+                                  marginRight: '0.5rem'
+                                }}></span>
+                                <span style={{ color: statusColor }}>
+                                  {status}
+                                </span>
                               </span>
                             </td>
                             <td>{display.displayType || 'unknown'}</td>
@@ -5696,7 +5810,12 @@ class Admin extends Component {
                 <div className="admin-modal-overlay" onClick={this.handleClosePowerManagementModal}>
                   <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                     <div className="admin-modal-header">
-                      <h3>{t.powerManagementModalTitle || 'Power Management Configuration'}</h3>
+                      <h3>
+                        {powerManagementClientId === '__global__' 
+                          ? (t.powerManagementGlobalModalTitle || 'Global Power Management Standard')
+                          : (t.powerManagementModalTitle || 'Power Management Configuration')
+                        }
+                      </h3>
                       <button 
                         className="admin-modal-close" 
                         onClick={this.handleClosePowerManagementModal}

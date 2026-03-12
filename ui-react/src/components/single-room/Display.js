@@ -12,6 +12,7 @@ import { applyI18nConfig, getMaintenanceCopy, loadMaintenanceMessages } from '..
 import { getSingleRoomDisplayTranslations } from '../../config/displayTranslations.js';
 import { getDisplayClientId } from '../../utils/displayClientId.js';
 import { initPowerManagement } from '../../utils/powerManagement.js';
+import { getDeviceTypeString } from '../../utils/deviceDetection.js';
 
 /**
  * Display component for single room view
@@ -185,18 +186,34 @@ class Display extends Component {
     this.fetchBookingConfig();
     this.fetchColorsConfig();
     
-    // Initialize power management
-    initPowerManagement(this.displayClientId);
-    
     // Connect to Socket.IO for real-time sidebar config updates
     this.socket = io({
       query: {
         displayClientId: this.displayClientId,
-        displayType: 'single-room',
+        displayType: getDeviceTypeString('single-room'),
         roomAlias: this.state.roomAlias || ''
       }
     });
     if (this.socket && this.socket.on) {
+      // Listen for server-assigned identifier (used in ip-room tracking mode)
+      this.socket.on('connect', () => {
+        console.log('[Display] Socket connected');
+        // Request the server-generated identifier for this display
+        // This will be IP_Room in ip-room mode, or the displayClientId in client-id mode
+        this.socket.emit('request-identifier', (serverIdentifier) => {
+          if (serverIdentifier) {
+            console.log('[Display] Server-assigned identifier:', serverIdentifier);
+            this.serverIdentifier = serverIdentifier;
+            // Initialize power management with server identifier
+            initPowerManagement(serverIdentifier);
+          } else {
+            // Fallback to client ID if server doesn't provide identifier
+            console.log('[Display] Using client-side identifier for power management');
+            initPowerManagement(this.displayClientId);
+          }
+        });
+      });
+
       this.socket.on('sidebarConfigUpdated', (config) => {
         console.log('Sidebar config updated via Socket.IO:', config);
         this.setState({ 
@@ -223,10 +240,39 @@ class Display extends Component {
       });
 
       this.socket.on('power-management-update', (data) => {
-        if (data.clientId === this.displayClientId) {
-          console.log('Power management config updated via Socket.IO:', data.config);
+        const targetId = this.serverIdentifier || this.displayClientId;
+        console.log('[Display] Power management update received:', {
+          eventClientId: data.clientId,
+          myServerIdentifier: this.serverIdentifier,
+          myDisplayClientId: this.displayClientId,
+          targetId: targetId,
+          matches: data.clientId === targetId
+        });
+        
+        if (data.clientId === targetId) {
+          console.log('[Display] Power management config updated via Socket.IO:', data.config);
           // Reinitialize power management with new config
-          initPowerManagement(this.displayClientId);
+          const pm = initPowerManagement(targetId);
+          if (pm) {
+            // Force reinitialization by destroying and recreating
+            pm.destroy();
+            pm.initialized = false;
+            pm.init();
+          }
+        }
+      });
+
+      this.socket.on('power-management-global-update', (data) => {
+        console.log('[Display] Global power management update received:', data.config);
+        // Reload power management to pick up new global config
+        // (only if this display doesn't have a specific config)
+        const targetId = this.serverIdentifier || this.displayClientId;
+        const pm = initPowerManagement(targetId);
+        if (pm) {
+          // Force reinitialization to fetch latest config (global or specific)
+          pm.destroy();
+          pm.initialized = false;
+          pm.init();
         }
       });
       

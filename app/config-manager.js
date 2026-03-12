@@ -2081,15 +2081,48 @@ function getPowerManagementConfig() {
 	try {
 		if (!fs.existsSync(powerManagementConfigPath)) {
 			return {
+				global: {
+					mode: 'browser',
+					schedule: {
+						enabled: false,
+						startTime: '20:00',
+						endTime: '07:00',
+						weekendMode: false
+					}
+				},
 				displays: {},
 				lastUpdated: null
 			};
 		}
 		const data = fs.readFileSync(powerManagementConfigPath, 'utf8');
-		return JSON.parse(data);
+		const config = JSON.parse(data);
+		
+		// Ensure global config exists (for backward compatibility)
+		if (!config.global) {
+			config.global = {
+				mode: 'browser',
+				schedule: {
+					enabled: false,
+					startTime: '20:00',
+					endTime: '07:00',
+					weekendMode: false
+				}
+			};
+		}
+		
+		return config;
 	} catch (error) {
 		console.error('[ConfigManager] Error reading power management config:', error);
 		return {
+			global: {
+				mode: 'browser',
+				schedule: {
+					enabled: false,
+					startTime: '20:00',
+					endTime: '07:00',
+					weekendMode: false
+				}
+			},
 			displays: {},
 			lastUpdated: null
 		};
@@ -2141,11 +2174,63 @@ function updatePowerManagementConfig(clientId, displayConfig) {
 }
 
 /**
+ * Update global power management configuration (default for all displays)
+ * @param {object} globalConfig - Global power management configuration
+ */
+function updateGlobalPowerManagementConfig(globalConfig) {
+	try {
+		const config = getPowerManagementConfig();
+		
+		config.global = {
+			mode: globalConfig.mode || 'browser',
+			schedule: {
+				enabled: globalConfig.schedule?.enabled || false,
+				startTime: globalConfig.schedule?.startTime || '20:00',
+				endTime: globalConfig.schedule?.endTime || '07:00',
+				weekendMode: globalConfig.schedule?.weekendMode || false
+			}
+		};
+		
+		config.lastUpdated = new Date().toISOString();
+		
+		fs.writeFileSync(powerManagementConfigPath, JSON.stringify(config, null, 2));
+		
+		// Broadcast update to all displays that don't have specific config
+		if (io) {
+			io.emit('power-management-global-update', {
+				config: config.global
+			});
+		}
+		
+		return config.global;
+	} catch (error) {
+		console.error('[ConfigManager] Error updating global power management config:', error);
+		throw error;
+	}
+}
+
+/**
  * Get power management configuration for a specific display
+ * Falls back to global config if no display-specific config exists
  */
 function getPowerManagementConfigForDisplay(clientId) {
 	const config = getPowerManagementConfig();
-	return config.displays[clientId] || null;
+	
+	// Return display-specific config if it exists
+	if (config.displays[clientId]) {
+		return config.displays[clientId];
+	}
+	
+	// Fall back to global config
+	return config.global || {
+		mode: 'browser',
+		schedule: {
+			enabled: false,
+			startTime: '20:00',
+			endTime: '07:00',
+			weekendMode: false
+		}
+	};
 }
 
 /**
@@ -2192,6 +2277,9 @@ module.exports = {
 	getI18nConfig,
 	getPowerManagementConfig,
 	getPowerManagementConfigForDisplay,
+	updatePowerManagementConfig,
+	updateGlobalPowerManagementConfig,
+	deletePowerManagementConfig,
 	updateWiFiConfig,
 	updateLogoConfig,
 	updateSidebarConfig,

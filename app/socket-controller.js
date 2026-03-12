@@ -233,8 +233,9 @@ function normalizeDisplayClientId(value) {
     return '';
   }
 
-  // Allow longer IDs with underscores for session-based IDs
-  if (!/^[a-zA-Z0-9._:-]{3,250}$/.test(normalized)) {
+  // Allow alphanumeric, dots, underscores, colons, hyphens, parentheses, and spaces
+  // This matches the validation in the API endpoint
+  if (!/^[a-zA-Z0-9._:\-() ]{3,250}$/.test(normalized)) {
     return '';
   }
 
@@ -295,8 +296,14 @@ function generateDisplayIdentifier(socket) {
       || socket?.handshake?.address
       || 'unknown';
     const ipAddress = normalizeIpAddress(rawIpAddress);
-    const roomAlias = String(socket?.handshake?.query?.roomAlias || '').trim();
-    const displayType = String(socket?.handshake?.query?.displayType || '').trim().toLowerCase() || 'unknown';
+    
+    // Validate and sanitize roomAlias
+    const rawRoomAlias = String(socket?.handshake?.query?.roomAlias || '').trim();
+    const roomAlias = /^[a-zA-Z0-9 _.\-]{0,100}$/.test(rawRoomAlias) ? rawRoomAlias : '';
+    
+    // Validate and sanitize displayType
+    const rawDisplayType = String(socket?.handshake?.query?.displayType || '').trim().toLowerCase();
+    const displayType = /^[a-z0-9_-]{1,50}$/.test(rawDisplayType) ? rawDisplayType : 'unknown';
     
     // Normalize displayType for flightboard components (flightboard, flightboard-navbar, etc.)
     const normalizedDisplayType = displayType.startsWith('flightboard') ? 'flightboard' : displayType;
@@ -317,9 +324,16 @@ function registerConnectedClient(socket) {
     return;
   }
 
+  // Validate and sanitize displayType
   const rawDisplayType = String(socket?.handshake?.query?.displayType || '').trim().toLowerCase();
-  const displayType = rawDisplayType || 'unknown';
-  const roomAlias = String(socket?.handshake?.query?.roomAlias || '').trim();
+  // Only allow alphanumeric, hyphens, and underscores (e.g., "single-room-rpi", "flightboard")
+  const displayType = /^[a-z0-9_-]{1,50}$/.test(rawDisplayType) ? rawDisplayType : 'unknown';
+  
+  // Validate and sanitize roomAlias
+  const rawRoomAlias = String(socket?.handshake?.query?.roomAlias || '').trim();
+  // Allow alphanumeric, spaces, hyphens, underscores, dots (room names)
+  // Max 100 characters to prevent abuse
+  const roomAlias = /^[a-zA-Z0-9 _.\-]{0,100}$/.test(rawRoomAlias) ? rawRoomAlias : '';
   
   // Don't register connections without displayType or displayClientId (e.g., admin panel)
   const trackingConfig = getDisplayTrackingConfig();
@@ -331,7 +345,7 @@ function registerConnectedClient(socket) {
     }
   } else {
     // In ip-room mode, we need at least a displayType
-    if (!rawDisplayType) {
+    if (!rawDisplayType || displayType === 'unknown') {
       return;
     }
   }
@@ -724,6 +738,15 @@ module.exports = function(io) {
     }
 
     isRunning = true;
+
+    // Handle request for server-generated identifier
+    socket.on('request-identifier', function(callback) {
+      const identifier = socket?.data?.displayIdentifier;
+      console.log(`[Socket] Client requested identifier: ${identifier}`);
+      if (typeof callback === 'function') {
+        callback(identifier || null);
+      }
+    });
 
     // Handle heartbeat to update lastSeenAt
     socket.on('display-heartbeat', function() {
