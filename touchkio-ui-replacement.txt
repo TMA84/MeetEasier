@@ -1,0 +1,331 @@
+              {this.state.showTouchkioModal && this.state.touchkioModalDisplay && (
+                <div className="admin-modal-overlay" onClick={this.handleCloseTouchkioModal}>
+                  <div className="admin-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '950px', maxHeight: '90vh', overflowY: 'auto', background: '#1e293b', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <div className="admin-modal-header" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', padding: '1.5rem' }}>
+                      <h3 style={{ margin: 0, color: '#f1f5f9', fontSize: '1.25rem' }}>🖥️ Touchkio Display: {this.state.touchkioModalDisplay.hostname}</h3>
+                      <button className="admin-modal-close" onClick={this.handleCloseTouchkioModal}>×</button>
+                    </div>
+
+                    <div className="admin-modal-body" style={{ padding: '1.5rem' }}>
+                      {this.state.touchkioModalMessage && (
+                        <div className={`admin-message admin-message-${this.state.touchkioModalMessageType}`} style={{ marginBottom: '1.5rem' }}>
+                          {this.state.touchkioModalMessage}
+                        </div>
+                      )}
+
+                      {/* System Status Grid */}
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+                        gap: '1rem',
+                        marginBottom: '2rem'
+                      }}>
+                        <div style={{ 
+                          padding: '1.25rem', 
+                          background: '#2d3142',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>📺 Display Status</div>
+                          <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: this.state.touchkioModalDisplay.power === 'ON' ? '#22c55e' : '#ef4444', marginBottom: '0.5rem' }}>
+                            {this.state.touchkioModalDisplay.power || 'UNKNOWN'}
+                          </div>
+                          <div style={{ fontSize: '0.875rem', color: '#cbd5e1' }}>
+                            Brightness: <strong>{this.state.touchkioModalDisplay.brightness || '-'}</strong>
+                          </div>
+                        </div>
+
+                        <div style={{ 
+                          padding: '1.25rem', 
+                          background: '#2d3142',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>💻 System Resources</div>
+                          <div style={{ fontSize: '0.875rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div>CPU: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.cpuUsage !== undefined ? `${this.state.touchkioModalDisplay.cpuUsage}%` : '-'}</strong></div>
+                            <div>Memory: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.memoryUsage !== undefined ? `${this.state.touchkioModalDisplay.memoryUsage}%` : '-'}</strong></div>
+                            <div>Temp: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.temperature !== undefined ? `${this.state.touchkioModalDisplay.temperature}°C` : '-'}</strong></div>
+                          </div>
+                        </div>
+
+                        <div style={{ 
+                          padding: '1.25rem', 
+                          background: '#2d3142',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>🖼️ Display Mode</div>
+                          <div style={{ fontSize: '0.875rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div>Kiosk: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.kioskStatus || '-'}</strong></div>
+                            <div>Theme: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.theme || '-'}</strong></div>
+                            <div>Volume: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.volume !== undefined ? `${this.state.touchkioModalDisplay.volume}%` : '-'}</strong></div>
+                          </div>
+                        </div>
+
+                        <div style={{ 
+                          padding: '1.25rem', 
+                          background: '#2d3142',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>🌐 Network</div>
+                          <div style={{ fontSize: '0.8rem', color: '#cbd5e1', wordBreak: 'break-all', marginBottom: '0.5rem' }}>
+                            {this.state.touchkioModalDisplay.networkAddress || '-'}
+                          </div>
+                          <div style={{ fontSize: '0.875rem', color: '#cbd5e1' }}>
+                            Uptime: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.uptime !== undefined ? `${Math.floor(this.state.touchkioModalDisplay.uptime / 60)}h ${this.state.touchkioModalDisplay.uptime % 60}m` : '-'}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Control Sections in 2 Columns */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        
+                        {/* Left Column */}
+                        <div>
+                          {/* Display Controls */}
+                          <div style={{ 
+                            marginBottom: '1.5rem',
+                            padding: '1.25rem',
+                            background: '#2d3142',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px'
+                          }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>📺 Display Controls</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                              <button
+                                type="button"
+                                className="admin-primary-button"
+                                onClick={() => this.handleMqttPowerCommandModal(this.state.touchkioModalDisplay.hostname, true)}
+                                style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
+                              >
+                                Turn On
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-secondary-button"
+                                onClick={() => this.handleMqttPowerCommandModal(this.state.touchkioModalDisplay.hostname, false)}
+                                style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
+                              >
+                                Turn Off
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              className="admin-secondary-button"
+                              onClick={() => this.handleMqttRefreshCommandModal(this.state.touchkioModalDisplay.hostname)}
+                              style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
+                            >
+                              🔄 Refresh Page
+                            </button>
+                          </div>
+
+                          {/* Brightness Control */}
+                          <div style={{ 
+                            marginBottom: '1.5rem',
+                            padding: '1.25rem',
+                            background: '#2d3142',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px'
+                          }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>💡 Brightness</h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                              <input
+                                type="range"
+                                min="0"
+                                max="255"
+                                value={this.state.touchkioModalBrightness !== undefined ? this.state.touchkioModalBrightness : this.state.touchkioModalDisplay.brightness || 200}
+                                onChange={(e) => this.setState({ touchkioModalBrightness: parseInt(e.target.value, 10) })}
+                                onMouseUp={(e) => this.handleMqttBrightnessCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                                onTouchEnd={(e) => this.handleMqttBrightnessCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                                style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
+                              />
+                              <span style={{ minWidth: '50px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
+                                {this.state.touchkioModalBrightness !== undefined ? this.state.touchkioModalBrightness : this.state.touchkioModalDisplay.brightness || 200}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Volume Control */}
+                          <div style={{ 
+                            marginBottom: '1.5rem',
+                            padding: '1.25rem',
+                            background: '#2d3142',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px'
+                          }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>🔊 Volume</h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={this.state.touchkioModalVolume !== undefined ? this.state.touchkioModalVolume : this.state.touchkioModalDisplay.volume || 50}
+                                onChange={(e) => this.setState({ touchkioModalVolume: parseInt(e.target.value, 10) })}
+                                onMouseUp={(e) => this.handleMqttVolumeCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                                onTouchEnd={(e) => this.handleMqttVolumeCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                                style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
+                              />
+                              <span style={{ minWidth: '50px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
+                                {this.state.touchkioModalVolume !== undefined ? this.state.touchkioModalVolume : this.state.touchkioModalDisplay.volume || 50}%
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Page Zoom */}
+                          <div style={{ 
+                            padding: '1.25rem',
+                            background: '#2d3142',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px'
+                          }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>🔍 Page Zoom</h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                              <input
+                                type="range"
+                                min="25"
+                                max="400"
+                                step="5"
+                                value={this.state.touchkioModalZoom !== undefined ? this.state.touchkioModalZoom : this.state.touchkioModalDisplay.pageZoom || 100}
+                                onChange={(e) => this.setState({ touchkioModalZoom: parseInt(e.target.value, 10) })}
+                                onMouseUp={(e) => this.handleMqttPageZoomCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                                onTouchEnd={(e) => this.handleMqttPageZoomCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                                style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
+                              />
+                              <span style={{ minWidth: '60px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
+                                {this.state.touchkioModalZoom !== undefined ? this.state.touchkioModalZoom : this.state.touchkioModalDisplay.pageZoom || 100}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right Column */}
+                        <div>
+                          {/* Kiosk Mode */}
+                          <div style={{ 
+                            marginBottom: '1.5rem',
+                            padding: '1.25rem',
+                            background: '#2d3142',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px'
+                          }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>🖥️ Kiosk Mode</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                              {['Fullscreen', 'Maximized', 'Framed', 'Minimized'].map(mode => (
+                                <button
+                                  key={mode}
+                                  type="button"
+                                  className={this.state.touchkioModalDisplay.kioskStatus === mode ? 'admin-primary-button' : 'admin-secondary-button'}
+                                  onClick={() => this.handleMqttKioskCommandModal(this.state.touchkioModalDisplay.hostname, mode)}
+                                  style={{ 
+                                    width: '100%',
+                                    fontSize: '0.875rem',
+                                    padding: '0.625rem'
+                                  }}
+                                >
+                                  {mode}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Theme */}
+                          <div style={{ 
+                            marginBottom: '1.5rem',
+                            padding: '1.25rem',
+                            background: '#2d3142',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px'
+                          }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>🎨 Theme</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                              <button
+                                type="button"
+                                className={this.state.touchkioModalDisplay.theme === 'Light' ? 'admin-primary-button' : 'admin-secondary-button'}
+                                onClick={() => this.handleMqttThemeCommandModal(this.state.touchkioModalDisplay.hostname, 'Light')}
+                                style={{ 
+                                  width: '100%',
+                                  fontSize: '0.875rem',
+                                  padding: '0.625rem'
+                                }}
+                              >
+                                ☀️ Light
+                              </button>
+                              <button
+                                type="button"
+                                className={this.state.touchkioModalDisplay.theme === 'Dark' ? 'admin-primary-button' : 'admin-secondary-button'}
+                                onClick={() => this.handleMqttThemeCommandModal(this.state.touchkioModalDisplay.hostname, 'Dark')}
+                                style={{ 
+                                  width: '100%',
+                                  fontSize: '0.875rem',
+                                  padding: '0.625rem'
+                                }}
+                              >
+                                🌙 Dark
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* System Controls */}
+                          <div style={{ 
+                            padding: '1.25rem',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '2px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: '8px'
+                          }}>
+                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#fca5a5', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>⚠️ System Controls</h4>
+                            <button
+                              type="button"
+                              className="admin-secondary-button"
+                              onClick={() => {
+                                if (window.confirm(`Reboot ${this.state.touchkioModalDisplay.hostname}?`)) {
+                                  this.handleMqttRebootCommandModal(this.state.touchkioModalDisplay.hostname);
+                                }
+                              }}
+                              style={{ 
+                                width: '100%',
+                                marginBottom: '0.5rem',
+                                background: 'rgba(251, 191, 36, 0.2)',
+                                borderColor: 'rgba(251, 191, 36, 0.5)',
+                                color: '#fbbf24',
+                                fontWeight: 600,
+                                fontSize: '0.875rem',
+                                padding: '0.625rem'
+                              }}
+                            >
+                              🔄 Reboot Device
+                            </button>
+                            <button
+                              type="button"
+                              className="admin-secondary-button"
+                              onClick={() => {
+                                if (window.confirm(`Shutdown ${this.state.touchkioModalDisplay.hostname}? This will turn off the device!`)) {
+                                  this.handleMqttShutdownCommandModal(this.state.touchkioModalDisplay.hostname);
+                                }
+                              }}
+                              style={{ 
+                                width: '100%',
+                                background: 'rgba(239, 68, 68, 0.2)',
+                                borderColor: 'rgba(239, 68, 68, 0.5)',
+                                color: '#ef4444',
+                                fontWeight: 600,
+                                fontSize: '0.875rem',
+                                padding: '0.625rem'
+                              }}
+                            >
+                              ⚡ Shutdown Device
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="admin-modal-footer" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', padding: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button type="button" className="admin-secondary-button" onClick={this.handleCloseTouchkioModal}>
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}

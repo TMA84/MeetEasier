@@ -143,7 +143,7 @@ const fromOverrideState = (value) => {
 
 const ADMIN_TAB_SECTIONS = {
   displays: ['display', 'wifi', 'logo', 'colors', 'booking'],
-  operations: ['system', 'translationApi', 'oauth', 'maintenance', 'apiToken', 'search', 'ratelimit', 'backup', 'audit', 'connectedDisplays'],
+  operations: ['system', 'translationApi', 'oauth', 'maintenance', 'apiToken', 'search', 'ratelimit', 'backup', 'audit', 'mqtt', 'connectedDisplays'],
   content: ['translations']
 };
 
@@ -412,6 +412,17 @@ class Admin extends Component {
       activeTab: 'display',
       activeSection: 'displays',
       
+      // MQTT Displays (Touchkio)
+      mqttDisplays: [],
+      mqttDisplaysLoading: false,
+      showTouchkioModal: false,
+      touchkioModalDisplay: null,
+      touchkioModalMessage: null,
+      touchkioModalMessageType: null,
+      touchkioModalBrightness: undefined,
+      touchkioModalVolume: undefined,
+      touchkioModalZoom: undefined,
+      
       // Version
       appVersion: null
     };
@@ -546,6 +557,9 @@ class Admin extends Component {
     if (this.connectedDisplaysInterval) {
       clearInterval(this.connectedDisplaysInterval);
     }
+    if (this.mqttDisplaysInterval) {
+      clearInterval(this.mqttDisplaysInterval);
+    }
     if (this.adminSocket) {
       this.adminSocket.disconnect();
       this.adminSocket = null;
@@ -562,6 +576,19 @@ class Admin extends Component {
     // Stop auto-refresh when leaving the tab
     if (prevState.activeTab === 'connectedDisplays' && this.state.activeTab !== 'connectedDisplays') {
       this.stopConnectedDisplaysAutoRefresh();
+    }
+
+    // Auto-load MQTT displays when switching to that tab
+    if (this.state.activeTab === 'mqtt' && prevState.activeTab !== 'mqtt') {
+      this.handleLoadMqttDisplays(true); // true = start auto-refresh
+    }
+
+    // Stop auto-refresh when leaving the MQTT tab
+    if (prevState.activeTab === 'mqtt' && this.state.activeTab !== 'mqtt') {
+      if (this.mqttDisplaysInterval) {
+        clearInterval(this.mqttDisplaysInterval);
+        this.mqttDisplaysInterval = null;
+      }
     }
   }
 
@@ -1760,6 +1787,10 @@ class Admin extends Component {
       .catch(err => {
         console.error('Error loading colors config:', err);
       });
+    
+    // Load MQTT config
+    this.loadMqttConfig();
+    this.loadMqttStatus();
   }
 
   handleWiFiSubmit = (e) => {
@@ -2853,7 +2884,7 @@ class Admin extends Component {
 
     this.setState({ connectedDisplaysLoading: true });
 
-    fetch('/api/connected-clients', {
+    fetch('/api/displays', {
       method: 'GET',
       headers
     })
@@ -2866,7 +2897,7 @@ class Admin extends Component {
       })
       .then(data => {
         this.setState({
-          connectedDisplays: Array.isArray(data.clients) ? data.clients : [],
+          connectedDisplays: Array.isArray(data.displays) ? data.displays : [],
           connectedDisplaysMessage: null,
           connectedDisplaysMessageType: null,
           connectedDisplaysLoading: false
@@ -2960,6 +2991,7 @@ class Admin extends Component {
         showPowerManagementModal: true,
         powerManagementClientId: clientId,
         powerManagementMode: config.mode || 'browser',
+        powerManagementMqttHostname: config.mqttHostname || '',
         powerManagementScheduleEnabled: config.schedule?.enabled || false,
         powerManagementStartTime: config.schedule?.startTime || '20:00',
         powerManagementEndTime: config.schedule?.endTime || '07:00',
@@ -2973,6 +3005,7 @@ class Admin extends Component {
         showPowerManagementModal: true,
         powerManagementClientId: clientId,
         powerManagementMode: 'browser',
+        powerManagementMqttHostname: '',
         powerManagementScheduleEnabled: false,
         powerManagementStartTime: '20:00',
         powerManagementEndTime: '07:00',
@@ -2996,6 +3029,7 @@ class Admin extends Component {
       apiToken,
       powerManagementClientId,
       powerManagementMode,
+      powerManagementMqttHostname,
       powerManagementScheduleEnabled,
       powerManagementStartTime,
       powerManagementEndTime,
@@ -3023,18 +3057,25 @@ class Admin extends Component {
         method = 'POST';
       }
       
+      const payload = {
+        mode: powerManagementMode,
+        schedule: {
+          enabled: powerManagementScheduleEnabled,
+          startTime: powerManagementStartTime,
+          endTime: powerManagementEndTime,
+          weekendMode: powerManagementWeekendMode
+        }
+      };
+      
+      // Add MQTT hostname if mode is mqtt
+      if (powerManagementMode === 'mqtt') {
+        payload.mqttHostname = powerManagementMqttHostname || '';
+      }
+      
       const response = await fetch(url, {
         method,
         headers,
-        body: JSON.stringify({
-          mode: powerManagementMode,
-          schedule: {
-            enabled: powerManagementScheduleEnabled,
-            startTime: powerManagementStartTime,
-            endTime: powerManagementEndTime,
-            weekendMode: powerManagementWeekendMode
-          }
-        })
+        body: JSON.stringify(payload)
       });
 
       if (response.status === 401) {
@@ -3063,6 +3104,668 @@ class Admin extends Component {
         powerManagementMessageType: 'error'
       });
     }
+  }
+
+  handleMqttConfigSubmit = async (e) => {
+    e.preventDefault();
+    const t = this.getTranslations();
+    const { apiToken } = this.state;
+
+    this.setState({ mqttConfigSaving: true, mqttConfigMessage: null });
+
+    try {
+      const response = await fetch('/api/mqtt-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        },
+        body: JSON.stringify({
+          enabled: this.state.mqttEnabled || false,
+          brokerUrl: this.state.mqttBrokerUrl || 'mqtt://localhost:1883',
+          authentication: this.state.mqttAuthentication || false,
+          username: this.state.mqttUsername || '',
+          password: this.state.mqttPassword || '',
+          discovery: this.state.mqttDiscovery || ''
+        })
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        throw new Error(t.errorUnauthorized);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        this.setState({
+          mqttConfigMessage: t.mqttConfigUpdateSuccess || 'MQTT configuration updated successfully.',
+          mqttConfigMessageType: 'success',
+          mqttConfigSaving: false
+        });
+        
+        // Reload MQTT status
+        this.loadMqttStatus();
+      } else {
+        throw new Error(data.error || t.mqttConfigUpdateError);
+      }
+    } catch (err) {
+      this.setState({
+        mqttConfigMessage: `${t.errorPrefix} ${err.message}`,
+        mqttConfigMessageType: 'error',
+        mqttConfigSaving: false
+      });
+    }
+  }
+
+  loadMqttConfig = async () => {
+    const { apiToken } = this.state;
+
+    try {
+      const response = await fetch('/api/mqtt-config', {
+        headers: {
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.setState({
+          mqttEnabled: data.enabled || false,
+          mqttBrokerUrl: data.brokerUrl || 'mqtt://localhost:1883',
+          mqttAuthentication: data.authentication || false,
+          mqttUsername: data.username || '',
+          mqttPassword: data.password || '',
+          mqttDiscovery: data.discovery || ''
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load MQTT config:', err);
+    }
+  }
+
+  loadMqttStatus = async () => {
+    const { apiToken } = this.state;
+
+    try {
+      const response = await fetch('/api/mqtt-status', {
+        headers: {
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.setState({ mqttStatus: data });
+      }
+    } catch (err) {
+      console.error('Failed to load MQTT status:', err);
+    }
+  }
+
+  handleLoadMqttDisplays = async (startAutoRefresh = false) => {
+    const { apiToken } = this.state;
+    const t = this.getTranslations();
+
+    this.setState({ mqttDisplaysLoading: true });
+
+    try {
+      const response = await fetch('/api/mqtt-displays', {
+        headers: {
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        this.setState({
+          mqttDisplays: data.displays || [],
+          mqttDisplaysLoading: false
+        });
+
+        // Start auto-refresh if requested and not already running
+        if (startAutoRefresh && !this.mqttDisplaysInterval) {
+          console.log('[MQTT] Starting auto-refresh interval');
+          this.mqttDisplaysInterval = setInterval(() => {
+            // Only refresh if we're on the MQTT tab
+            if (this.state.activeTab === 'mqtt') {
+              console.log('[MQTT] Auto-refreshing displays');
+              this.handleLoadMqttDisplays(false);
+            }
+          }, 10000); // Refresh every 10 seconds
+        }
+      } else {
+        throw new Error('Failed to load MQTT displays');
+      }
+    } catch (err) {
+      console.error('Failed to load MQTT displays:', err);
+      this.setState({
+        mqttDisplays: [],
+        mqttDisplaysLoading: false
+      });
+    }
+  }
+
+  handleMqttPowerCommand = async (hostname, powerOn) => {
+    const { apiToken } = this.state;
+    const t = this.getTranslations();
+
+    try {
+      const response = await fetch(`/api/mqtt-power-trigger/${hostname}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        },
+        body: JSON.stringify({
+          powerState: powerOn,
+          brightness: powerOn ? 255 : 0
+        })
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        this.setState({
+          mqttConfigMessage: t.mqttDisplaysPowerSuccess || 'Power command sent successfully.',
+          mqttConfigMessageType: 'success'
+        });
+        
+        // Reload displays after a short delay
+        setTimeout(() => {
+          this.handleLoadMqttDisplays();
+        }, 1000);
+      } else {
+        throw new Error('Failed to send power command');
+      }
+    } catch (err) {
+      console.error('Failed to send MQTT power command:', err);
+      this.setState({
+        mqttConfigMessage: `${t.errorPrefix} ${t.mqttDisplaysPowerError || 'Failed to send power command.'}`,
+        mqttConfigMessageType: 'error'
+      });
+    }
+  }
+
+  handleMqttBrightnessCommand = async (hostname, brightness) => {
+    const { apiToken } = this.state;
+    const t = this.getTranslations();
+
+    try {
+      const response = await fetch(`/api/mqtt-brightness/${hostname}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        },
+        body: JSON.stringify({ brightness })
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        console.log(`Brightness set to ${brightness} for ${hostname}`);
+      }
+    } catch (err) {
+      console.error('Failed to send brightness command:', err);
+    }
+  }
+
+  handleMqttKioskCommand = async (hostname, status) => {
+    const { apiToken } = this.state;
+    const t = this.getTranslations();
+
+    try {
+      const response = await fetch(`/api/mqtt-kiosk/${hostname}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        this.setState({
+          mqttConfigMessage: `Kiosk mode set to ${status}`,
+          mqttConfigMessageType: 'success'
+        });
+        setTimeout(() => this.handleLoadMqttDisplays(), 1000);
+      }
+    } catch (err) {
+      console.error('Failed to send kiosk command:', err);
+    }
+  }
+
+  handleMqttThemeCommand = async (hostname, theme) => {
+    const { apiToken } = this.state;
+
+    try {
+      const response = await fetch(`/api/mqtt-theme/${hostname}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        },
+        body: JSON.stringify({ theme })
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        this.setState({
+          mqttConfigMessage: `Theme set to ${theme}`,
+          mqttConfigMessageType: 'success'
+        });
+        setTimeout(() => this.handleLoadMqttDisplays(), 1000);
+      }
+    } catch (err) {
+      console.error('Failed to send theme command:', err);
+    }
+  }
+
+  handleMqttVolumeCommand = async (hostname, volume) => {
+    const { apiToken } = this.state;
+
+    try {
+      const response = await fetch(`/api/mqtt-volume/${hostname}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        },
+        body: JSON.stringify({ volume })
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        console.log(`Volume set to ${volume} for ${hostname}`);
+      }
+    } catch (err) {
+      console.error('Failed to send volume command:', err);
+    }
+  }
+
+  handleMqttPageZoomCommand = async (hostname, zoom) => {
+    const { apiToken } = this.state;
+
+    try {
+      const response = await fetch(`/api/mqtt-page-zoom/${hostname}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        },
+        body: JSON.stringify({ zoom })
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        console.log(`Page zoom set to ${zoom}% for ${hostname}`);
+      }
+    } catch (err) {
+      console.error('Failed to send page zoom command:', err);
+    }
+  }
+
+  handleMqttRefreshCommand = async (hostname) => {
+    const { apiToken } = this.state;
+    const t = this.getTranslations();
+
+    try {
+      const response = await fetch(`/api/mqtt-refresh/${hostname}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        this.setState({
+          connectedDisplaysMessage: `Refresh command sent to ${hostname}`,
+          connectedDisplaysMessageType: 'success',
+          mqttConfigMessage: 'Refresh command sent',
+          mqttConfigMessageType: 'success'
+        });
+        // Clear message after 3 seconds
+        setTimeout(() => {
+          this.setState({
+            connectedDisplaysMessage: null,
+            connectedDisplaysMessageType: null
+          });
+        }, 3000);
+      }
+    } catch (err) {
+      console.error('Failed to send refresh command:', err);
+      this.setState({
+        connectedDisplaysMessage: `Failed to send refresh command: ${err.message}`,
+        connectedDisplaysMessageType: 'error'
+      });
+    }
+  }
+
+  handleMqttRebootCommand = async (hostname) => {
+    const { apiToken } = this.state;
+    const t = this.getTranslations();
+
+    try {
+      const response = await fetch(`/api/mqtt-reboot/${hostname}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        this.setState({
+          connectedDisplaysMessage: `Reboot command sent to ${hostname}`,
+          connectedDisplaysMessageType: 'success',
+          mqttConfigMessage: `Reboot command sent to ${hostname}`,
+          mqttConfigMessageType: 'success'
+        });
+        // Clear message after 3 seconds
+        setTimeout(() => {
+          this.setState({
+            connectedDisplaysMessage: null,
+            connectedDisplaysMessageType: null
+          });
+        }, 3000);
+      }
+    } catch (err) {
+      console.error('Failed to send reboot command:', err);
+      this.setState({
+        connectedDisplaysMessage: `Failed to send reboot command: ${err.message}`,
+        connectedDisplaysMessageType: 'error'
+      });
+    }
+  }
+
+  handleMqttShutdownCommand = async (hostname) => {
+    const { apiToken } = this.state;
+    const t = this.getTranslations();
+
+    try {
+      const response = await fetch(`/api/mqtt-shutdown/${hostname}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        this.setState({
+          mqttConfigMessage: `Shutdown command sent to ${hostname}`,
+          mqttConfigMessageType: 'warning'
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send shutdown command:', err);
+    }
+  }
+
+  handleMqttRefreshAll = async () => {
+    const { apiToken } = this.state;
+    const t = this.getTranslations();
+
+    if (!window.confirm('Refresh all Touchkio displays?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/mqtt-refresh-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        this.setState({
+          connectedDisplaysMessage: data.message || 'Refresh command sent to all displays',
+          connectedDisplaysMessageType: 'success',
+          mqttConfigMessage: data.message || 'Refresh command sent to all displays',
+          mqttConfigMessageType: 'success'
+        });
+        // Clear message after 3 seconds
+        setTimeout(() => {
+          this.setState({
+            connectedDisplaysMessage: null,
+            connectedDisplaysMessageType: null
+          });
+        }, 3000);
+      }
+    } catch (err) {
+      console.error('Failed to send refresh all command:', err);
+      this.setState({
+        connectedDisplaysMessage: `Failed to send refresh all command: ${err.message}`,
+        connectedDisplaysMessageType: 'error'
+      });
+    }
+  }
+
+  handleMqttRebootAll = async () => {
+    const { apiToken } = this.state;
+    const t = this.getTranslations();
+
+    if (!window.confirm('⚠️ Reboot ALL Touchkio displays? This will restart all devices!')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/mqtt-reboot-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        this.setState({
+          connectedDisplaysMessage: data.message || 'Reboot command sent to all displays',
+          connectedDisplaysMessageType: 'warning',
+          mqttConfigMessage: data.message || 'Reboot command sent to all displays',
+          mqttConfigMessageType: 'warning'
+        });
+        // Clear message after 3 seconds
+        setTimeout(() => {
+          this.setState({
+            connectedDisplaysMessage: null,
+            connectedDisplaysMessageType: null
+          });
+        }, 3000);
+      }
+    } catch (err) {
+      console.error('Failed to send reboot-all command:', err);
+      this.setState({
+        connectedDisplaysMessage: `Failed to send reboot-all command: ${err.message}`,
+        connectedDisplaysMessageType: 'error',
+        mqttConfigMessage: 'Failed to send reboot-all command',
+        mqttConfigMessageType: 'error'
+      });
+    }
+  }
+
+  // Touchkio Modal Handlers
+  handleOpenTouchkioModal = (display) => {
+    this.setState({
+      showTouchkioModal: true,
+      touchkioModalDisplay: display,
+      touchkioModalMessage: null,
+      touchkioModalMessageType: null,
+      touchkioModalBrightness: undefined,
+      touchkioModalVolume: undefined,
+      touchkioModalZoom: undefined
+    });
+  }
+
+  handleCloseTouchkioModal = () => {
+    this.setState({
+      showTouchkioModal: false,
+      touchkioModalDisplay: null,
+      touchkioModalMessage: null,
+      touchkioModalMessageType: null,
+      touchkioModalBrightness: undefined,
+      touchkioModalVolume: undefined,
+      touchkioModalZoom: undefined
+    });
+  }
+
+  handleMqttPowerCommandModal = async (hostname, powerOn) => {
+    await this.handleMqttPowerCommand(hostname, powerOn);
+    this.setState({
+      touchkioModalMessage: `Power command sent: ${powerOn ? 'ON' : 'OFF'}`,
+      touchkioModalMessageType: 'success'
+    });
+    setTimeout(() => {
+      this.handleLoadMqttDisplays();
+      if (this.state.touchkioModalDisplay) {
+        const updatedDisplay = this.state.mqttDisplays.find(d => d.hostname === hostname);
+        if (updatedDisplay) {
+          this.setState({ touchkioModalDisplay: updatedDisplay });
+        }
+      }
+    }, 1000);
+  }
+
+  handleMqttBrightnessCommandModal = async (hostname, brightness) => {
+    await this.handleMqttBrightnessCommand(hostname, brightness);
+    this.setState({
+      touchkioModalMessage: `Brightness set to ${brightness}`,
+      touchkioModalMessageType: 'success'
+    });
+  }
+
+  handleMqttKioskCommandModal = async (hostname, status) => {
+    await this.handleMqttKioskCommand(hostname, status);
+    this.setState({
+      touchkioModalMessage: `Kiosk mode set to ${status}`,
+      touchkioModalMessageType: 'success'
+    });
+    setTimeout(() => {
+      this.handleLoadMqttDisplays();
+      if (this.state.touchkioModalDisplay) {
+        const updatedDisplay = this.state.mqttDisplays.find(d => d.hostname === hostname);
+        if (updatedDisplay) {
+          this.setState({ touchkioModalDisplay: updatedDisplay });
+        }
+      }
+    }, 1000);
+  }
+
+  handleMqttThemeCommandModal = async (hostname, theme) => {
+    await this.handleMqttThemeCommand(hostname, theme);
+    this.setState({
+      touchkioModalMessage: `Theme set to ${theme}`,
+      touchkioModalMessageType: 'success'
+    });
+    setTimeout(() => {
+      this.handleLoadMqttDisplays();
+      if (this.state.touchkioModalDisplay) {
+        const updatedDisplay = this.state.mqttDisplays.find(d => d.hostname === hostname);
+        if (updatedDisplay) {
+          this.setState({ touchkioModalDisplay: updatedDisplay });
+        }
+      }
+    }, 1000);
+  }
+
+  handleMqttVolumeCommandModal = async (hostname, volume) => {
+    await this.handleMqttVolumeCommand(hostname, volume);
+    this.setState({
+      touchkioModalMessage: `Volume set to ${volume}%`,
+      touchkioModalMessageType: 'success'
+    });
+  }
+
+  handleMqttPageZoomCommandModal = async (hostname, zoom) => {
+    await this.handleMqttPageZoomCommand(hostname, zoom);
+    this.setState({
+      touchkioModalMessage: `Page zoom set to ${zoom}%`,
+      touchkioModalMessageType: 'success'
+    });
+  }
+
+  handleMqttRefreshCommandModal = async (hostname) => {
+    await this.handleMqttRefreshCommand(hostname);
+    this.setState({
+      touchkioModalMessage: 'Refresh command sent',
+      touchkioModalMessageType: 'success'
+    });
+  }
+
+  handleMqttRebootCommandModal = async (hostname) => {
+    await this.handleMqttRebootCommand(hostname);
+    this.setState({
+      touchkioModalMessage: 'Reboot command sent',
+      touchkioModalMessageType: 'warning'
+    });
+  }
+
+  handleMqttShutdownCommandModal = async (hostname) => {
+    await this.handleMqttShutdownCommand(hostname);
+    this.setState({
+      touchkioModalMessage: 'Shutdown command sent',
+      touchkioModalMessageType: 'warning'
+    });
   }
 
   handleI18nSubmit = (e) => {
@@ -3305,6 +4008,7 @@ class Admin extends Component {
           { key: 'ratelimit', label: t.rateLimitTabLabel || 'Rate-Limits' },
           { key: 'backup', label: t.backupPayloadLabel || 'Backup' },
           { key: 'audit', label: t.auditTabLabel || 'Audit-Log' },
+          { key: 'mqtt', label: 'MQTT' },
           { key: 'connectedDisplays', label: t.connectedDisplaysSectionTitle || 'Displays' }
         ]
       },
@@ -5597,7 +6301,7 @@ class Admin extends Component {
               <div className="admin-form-divider"></div>
 
               <h3>{t.connectedDisplaysSectionTitle || 'Connected Displays'}</h3>
-              <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem' }}>
+              <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <button 
                   type="button" 
                   className="admin-secondary-button" 
@@ -5612,6 +6316,32 @@ class Admin extends Component {
                   onClick={() => this.handleOpenPowerManagementModal('__global__')}
                 >
                   {t.powerManagementGlobalButton || 'Global Standard'}
+                </button>
+                <button 
+                  type="button" 
+                  className="admin-secondary-button" 
+                  onClick={this.handleMqttRefreshAll}
+                  disabled={connectedDisplaysLoading || !connectedDisplays || connectedDisplays.filter(d => d.mqtt).length === 0}
+                  style={{ 
+                    background: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: 'rgba(59, 130, 246, 0.5)',
+                    color: '#3b82f6'
+                  }}
+                >
+                  Refresh All Touchkio
+                </button>
+                <button 
+                  type="button" 
+                  className="admin-secondary-button" 
+                  onClick={this.handleMqttRebootAll}
+                  disabled={connectedDisplaysLoading || !connectedDisplays || connectedDisplays.filter(d => d.mqtt).length === 0}
+                  style={{ 
+                    background: 'rgba(251, 191, 36, 0.2)',
+                    borderColor: 'rgba(251, 191, 36, 0.5)',
+                    color: '#fbbf24'
+                  }}
+                >
+                  Reboot All Touchkio
                 </button>
               </div>
 
@@ -5630,43 +6360,99 @@ class Admin extends Component {
                   <table>
                     <thead>
                       <tr>
-                        <th>{t.connectedDisplaysTableStatus || 'Status'}</th>
-                        <th>{t.connectedDisplaysTableDisplayType || 'Type'}</th>
-                        <th>{t.connectedDisplaysTableRoomName || 'Room Name'}</th>
-                        <th>{t.connectedDisplaysTableIpAddress || 'IP Address'}</th>
-                        <th>{t.connectedDisplaysTableConnectedAt || 'Connected'}</th>
-                        <th>{t.connectedDisplaysTablePowerManagement || 'Power'}</th>
+                        <th>Status</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Connection</th>
+                        <th>IP Address</th>
+                        <th>Details</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {connectedDisplays.map((display) => {
-                        const lastSeenTime = display.lastSeenAt ? new Date(display.lastSeenAt) : null;
-                        const now = new Date();
-                        const secondsSinceLastSeen = lastSeenTime ? Math.floor((now - lastSeenTime) / 1000) : null;
-                        const hasActiveSockets = display.sockets > 0;
+                        const hasSocketIO = display.socketIO && display.socketIO.connected;
+                        const hasMQTT = display.mqtt && display.mqtt.connected;
                         
-                        // Determine status:
-                        // - Active: Has active sockets AND last seen within 5 minutes
-                        // - Inactive: Has active sockets BUT last seen > 5 minutes (connection issues)
-                        // - Not Connected: No active sockets (disconnected)
+                        // Determine overall status
                         let status, statusColor, statusDotColor;
-                        if (hasActiveSockets && secondsSinceLastSeen !== null && secondsSinceLastSeen < 300) {
-                          status = t.connectedDisplaysStatusActive || 'Active';
-                          statusColor = '#86efac';
-                          statusDotColor = '#22c55e';
-                        } else if (hasActiveSockets) {
-                          status = t.connectedDisplaysStatusInactive || 'Inactive';
-                          statusColor = '#fcd34d';
-                          statusDotColor = '#f59e0b';
+                        
+                        if (hasSocketIO && hasMQTT) {
+                          // Both connections active
+                          const socketActive = display.socketIO.status === 'active';
+                          const mqttOn = display.mqtt.power === 'ON';
+                          
+                          if (socketActive && mqttOn) {
+                            status = 'Active';
+                            statusColor = '#86efac';
+                            statusDotColor = '#22c55e';
+                          } else {
+                            status = 'Partial';
+                            statusColor = '#fcd34d';
+                            statusDotColor = '#f59e0b';
+                          }
+                        } else if (hasSocketIO) {
+                          // Socket.IO only
+                          if (display.socketIO.status === 'active') {
+                            status = 'Active';
+                            statusColor = '#86efac';
+                            statusDotColor = '#22c55e';
+                          } else {
+                            status = 'Inactive';
+                            statusColor = '#fcd34d';
+                            statusDotColor = '#f59e0b';
+                          }
+                        } else if (hasMQTT) {
+                          // MQTT only
+                          if (display.mqtt.power === 'ON') {
+                            status = 'ON';
+                            statusColor = '#86efac';
+                            statusDotColor = '#22c55e';
+                          } else {
+                            status = 'OFF';
+                            statusColor = '#fca5a5';
+                            statusDotColor = '#ef4444';
+                          }
                         } else {
-                          status = t.connectedDisplaysStatusDisconnected || 'Not Connected';
+                          status = 'Disconnected';
                           statusColor = '#fca5a5';
                           statusDotColor = '#ef4444';
                         }
                         
+                        // Connection badges
+                        const connectionBadges = [];
+                        if (hasSocketIO) {
+                          connectionBadges.push(
+                            <span key="socket" style={{
+                              display: 'inline-block',
+                              padding: '0.125rem 0.5rem',
+                              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                              color: '#3b82f6',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              marginRight: '0.25rem'
+                            }}>
+                              Socket.IO
+                            </span>
+                          );
+                        }
+                        if (hasMQTT) {
+                          connectionBadges.push(
+                            <span key="mqtt" style={{
+                              display: 'inline-block',
+                              padding: '0.125rem 0.5rem',
+                              backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                              color: '#22c55e',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem'
+                            }}>
+                              MQTT
+                            </span>
+                          );
+                        }
+                        
                         return (
-                          <tr key={display.clientId}>
+                          <tr key={display.id}>
                             <td className="status-cell">
                               <span>
                                 <span style={{
@@ -5682,44 +6468,85 @@ class Admin extends Component {
                                 </span>
                               </span>
                             </td>
-                            <td>{display.displayType || 'unknown'}</td>
-                            <td>{display.roomAlias || '-'}</td>
-                            <td className="ip-address">{display.ipAddress || 'unknown'}</td>
-                            <td className="timestamp">
-                              {display.connectedAt ? new Date(display.connectedAt).toLocaleString() : '-'}
+                            <td><strong>{display.name}</strong></td>
+                            <td>{display.type || 'unknown'}</td>
+                            <td>{connectionBadges}</td>
+                            <td className="ip-address">{display.ipAddress || '-'}</td>
+                            <td style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                              {hasMQTT && (
+                                <div>
+                                  CPU: {display.mqtt.cpuUsage !== undefined ? `${display.mqtt.cpuUsage}%` : '-'} | 
+                                  Mem: {display.mqtt.memoryUsage !== undefined ? `${display.mqtt.memoryUsage}%` : '-'} | 
+                                  Temp: {display.mqtt.temperature !== undefined ? `${display.mqtt.temperature}°C` : '-'}
+                                </div>
+                              )}
+                              {hasSocketIO && (
+                                <div>
+                                  Connected: {display.socketIO.connectedAt ? new Date(display.socketIO.connectedAt).toLocaleTimeString() : '-'}
+                                </div>
+                              )}
                             </td>
                             <td>
-                              <button
-                                type="button"
-                                className="admin-secondary-button"
-                                onClick={() => this.handleOpenPowerManagementModal(display.clientId)}
-                                style={{
-                                  padding: '0.25rem 0.5rem',
-                                  fontSize: '0.875rem'
-                                }}
-                              >
-                                {t.connectedDisplaysPowerManagementButton || 'Configure'}
-                              </button>
-                            </td>
-                            <td>
-                              {!hasActiveSockets && (
+                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                 <button
                                   type="button"
-                                  className="admin-delete-button"
-                                  onClick={() => this.handleDeleteDisplay(display.clientId)}
+                                  className="admin-secondary-button"
+                                  onClick={() => this.handleOpenPowerManagementModal(display.id)}
                                   style={{
-                                    padding: '0.25rem 0.5rem',
+                                    padding: '0.5rem 0.75rem',
                                     fontSize: '0.875rem',
-                                    backgroundColor: '#ef4444',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
+                                    height: '36px'
                                   }}
+                                  title="Power Management"
                                 >
-                                  {t.connectedDisplaysDeleteButton || 'Delete'}
+                                  ⚡
                                 </button>
-                              )}
+                                {hasMQTT && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="admin-secondary-button"
+                                      onClick={() => this.handleMqttRefreshCommand(display.mqtt.hostname)}
+                                      style={{
+                                        padding: '0.5rem 0.75rem',
+                                        fontSize: '0.875rem',
+                                        height: '36px'
+                                      }}
+                                      title="Refresh Page"
+                                    >
+                                      🔄
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="admin-primary-button"
+                                      onClick={() => this.handleOpenTouchkioModal(display.mqtt)}
+                                      style={{
+                                        padding: '0.5rem 1rem',
+                                        fontSize: '0.875rem',
+                                        height: '36px'
+                                      }}
+                                    >
+                                      Details
+                                    </button>
+                                  </>
+                                )}
+                                {!hasSocketIO && !hasMQTT && (
+                                  <button
+                                    type="button"
+                                    className="admin-secondary-button"
+                                    onClick={() => this.handleDeleteDisplay(display.id)}
+                                    style={{
+                                      padding: '0.5rem 0.75rem',
+                                      fontSize: '0.875rem',
+                                      backgroundColor: '#ef4444',
+                                      color: 'white',
+                                      height: '36px'
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -5805,131 +6632,126 @@ class Admin extends Component {
                 </div>
               )}
 
-              {/* Power Management Modal */}
-              {showPowerManagementModal && (
-                <div className="admin-modal-overlay" onClick={this.handleClosePowerManagementModal}>
-                  <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-                    <div className="admin-modal-header">
-                      <h3>
-                        {powerManagementClientId === '__global__' 
-                          ? (t.powerManagementGlobalModalTitle || 'Global Power Management Standard')
-                          : (t.powerManagementModalTitle || 'Power Management Configuration')
-                        }
-                      </h3>
-                      <button 
-                        className="admin-modal-close" 
-                        onClick={this.handleClosePowerManagementModal}
-                      >
-                        ×
-                      </button>
-                    </div>
-                    
-                    <div className="admin-modal-body">
-                      <div className="admin-form-group">
-                        <label>{t.powerManagementModeLabel || 'Power Management Mode'}</label>
-                        <div className="admin-radio-group">
-                          <label className="admin-radio-label">
-                            <input
-                              type="radio"
-                              name="powerManagementMode"
-                              value="browser"
-                              checked={powerManagementMode === 'browser'}
-                              onChange={(e) => this.setState({ powerManagementMode: e.target.value })}
-                            />
-                            <span>{t.powerManagementModeBrowser || 'Browser (All devices)'}</span>
-                          </label>
-                          <label className="admin-radio-label">
-                            <input
-                              type="radio"
-                              name="powerManagementMode"
-                              value="dpms"
-                              checked={powerManagementMode === 'dpms'}
-                              onChange={(e) => this.setState({ powerManagementMode: e.target.value })}
-                            />
-                            <span>{t.powerManagementModeDpms || 'DPMS (Raspberry Pi only)'}</span>
-                          </label>
-                        </div>
-                        <small className="admin-help-text">
-                          {t.powerManagementModeHelp || 'Browser: Black screen (works on all devices). DPMS: True power off (requires Raspberry Pi setup).'}
-                        </small>
-                      </div>
+              </div>
+              )}
 
-                      <div className="admin-form-group">
-                        <label className="inline-label">
-                          <span className="label-text">{t.powerManagementScheduleEnabledLabel || 'Enable Schedule'}</span>
-                          <input
-                            type="checkbox"
-                            checked={powerManagementScheduleEnabled}
-                            onChange={(e) => this.setState({ powerManagementScheduleEnabled: e.target.checked })}
-                          />
-                        </label>
-                        <small>{t.powerManagementScheduleEnabledHelp || 'Turn display off during specified hours'}</small>
-                      </div>
+              {activeTab === 'mqtt' && (
+              <div className="admin-card" id="ops-mqtt">
 
-                      {powerManagementScheduleEnabled && (
-                        <>
-                          <div className="admin-form-group">
-                            <label htmlFor="powerManagementStartTime">{t.powerManagementStartTimeLabel || 'Start Time (Display OFF)'}</label>
-                            <input
-                              type="time"
-                              id="powerManagementStartTime"
-                              value={powerManagementStartTime}
-                              onChange={(e) => this.setState({ powerManagementStartTime: e.target.value })}
-                            />
-                            <small className="admin-help-text">{t.powerManagementStartTimeHelp || 'Time when display turns off (e.g., 20:00)'}</small>
-                          </div>
+              <h3>{t.mqttSectionTitle || 'MQTT Broker Configuration'}</h3>
+              
+              <form onSubmit={this.handleMqttConfigSubmit}>
+                <div className="admin-form-group">
+                  <label className="inline-label">
+                    <span className="label-text">{t.mqttEnabledLabel || 'MQTT Broker Enabled'}</span>
+                    <input
+                      type="checkbox"
+                      checked={this.state.mqttEnabled || false}
+                      onChange={(e) => this.setState({ mqttEnabled: e.target.checked })}
+                    />
+                  </label>
+                  <small>{t.mqttEnabledHelp || 'Connects to an external MQTT broker for Touchkio display control'}</small>
+                </div>
 
-                          <div className="admin-form-group">
-                            <label htmlFor="powerManagementEndTime">{t.powerManagementEndTimeLabel || 'End Time (Display ON)'}</label>
-                            <input
-                              type="time"
-                              id="powerManagementEndTime"
-                              value={powerManagementEndTime}
-                              onChange={(e) => this.setState({ powerManagementEndTime: e.target.value })}
-                            />
-                            <small className="admin-help-text">{t.powerManagementEndTimeHelp || 'Time when display turns on (e.g., 07:00)'}</small>
-                          </div>
+                <div className="admin-form-group">
+                  <label htmlFor="mqttBrokerUrl">{t.mqttBrokerUrlLabel || 'MQTT Broker URL'}</label>
+                  <input
+                    type="text"
+                    id="mqttBrokerUrl"
+                    value={this.state.mqttBrokerUrl || ''}
+                    onChange={(e) => this.setState({ mqttBrokerUrl: e.target.value })}
+                    placeholder={t.mqttBrokerUrlPlaceholder || 'mqtt://localhost:1883'}
+                  />
+                  <small>{t.mqttBrokerUrlHelp || 'URL of the MQTT broker (e.g., mqtt://localhost:1883)'}</small>
+                </div>
 
-                          <div className="admin-form-group">
-                            <label className="inline-label">
-                              <span className="label-text">{t.powerManagementWeekendModeLabel || 'Weekend Mode'}</span>
-                              <input
-                                type="checkbox"
-                                checked={powerManagementWeekendMode}
-                                onChange={(e) => this.setState({ powerManagementWeekendMode: e.target.checked })}
-                              />
-                            </label>
-                            <small>{t.powerManagementWeekendModeHelp || 'Turn display off all weekend (Saturday & Sunday)'}</small>
-                          </div>
-                        </>
-                      )}
+                <div className="admin-form-group">
+                  <label className="inline-label">
+                    <span className="label-text">{t.mqttAuthenticationLabel || 'Enable Authentication'}</span>
+                    <input
+                      type="checkbox"
+                      checked={this.state.mqttAuthentication || false}
+                      onChange={(e) => this.setState({ mqttAuthentication: e.target.checked })}
+                    />
+                  </label>
+                  <small>{t.mqttAuthenticationHelp || 'Requires username and password for MQTT connections'}</small>
+                </div>
 
-                      {powerManagementMessage && (
-                        <div className={`admin-message admin-message-${powerManagementMessageType}`}>
-                          {powerManagementMessage}
-                        </div>
-                      )}
+                {this.state.mqttAuthentication && (
+                  <>
+                    <div className="admin-form-group">
+                      <label htmlFor="mqttUsername">{t.mqttUsernameLabel || 'MQTT Username'}</label>
+                      <input
+                        type="text"
+                        id="mqttUsername"
+                        value={this.state.mqttUsername || ''}
+                        onChange={(e) => this.setState({ mqttUsername: e.target.value })}
+                        placeholder={t.mqttUsernamePlaceholder || 'Username'}
+                      />
                     </div>
 
-                    <div className="admin-modal-footer">
-                      <button 
-                        type="button" 
-                        className="admin-secondary-button" 
-                        onClick={this.handleClosePowerManagementModal}
-                      >
-                        {t.cancelButton || 'Cancel'}
-                      </button>
-                      <button 
-                        type="button" 
-                        className="admin-primary-button" 
-                        onClick={this.handleSavePowerManagement}
-                      >
-                        {t.saveButton || 'Save'}
-                      </button>
+                    <div className="admin-form-group">
+                      <label htmlFor="mqttPassword">{t.mqttPasswordLabel || 'MQTT Password'}</label>
+                      <input
+                        type="password"
+                        id="mqttPassword"
+                        value={this.state.mqttPassword || ''}
+                        onChange={(e) => this.setState({ mqttPassword: e.target.value })}
+                        placeholder={t.mqttPasswordPlaceholder || 'Password'}
+                      />
                     </div>
-                  </div>
+                  </>
+                )}
+
+                <div className="admin-form-group">
+                  <label className="inline-label">
+                    <span className="label-text">{t.mqttDiscoveryLabel || 'Home Assistant Discovery'}</span>
+                    <input
+                      type="checkbox"
+                      checked={this.state.mqttDiscovery === 'homeassistant'}
+                      onChange={(e) => this.setState({ mqttDiscovery: e.target.checked ? 'homeassistant' : '' })}
+                    />
+                  </label>
+                  <small>{t.mqttDiscoveryHelp || 'Enables Home Assistant MQTT Discovery protocol'}</small>
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="admin-submit-button"
+                  disabled={this.state.mqttConfigSaving}
+                >
+                  {this.state.mqttConfigSaving ? t.loading : (t.mqttSaveButton || 'Save MQTT Configuration')}
+                </button>
+              </form>
+
+              {this.state.mqttConfigMessage && (
+                <div className={`admin-message admin-message-${this.state.mqttConfigMessageType || 'error'}`}>
+                  {this.state.mqttConfigMessage}
                 </div>
               )}
+
+              <div className="admin-form-divider"></div>
+
+              <h3>{t.mqttStatusSectionTitle || 'MQTT Broker Status'}</h3>
+              <div className="admin-current-config">
+                <div className="config-grid">
+                  <div className="config-item">
+                    <span className="config-label">{t.mqttStatusLabel || 'Status:'}</span>
+                    <span className="config-value">
+                      {this.state.mqttStatus?.running ? 
+                        <span style={{ color: '#28a745' }}>{t.mqttStatusRunning || 'Running'}</span> : 
+                        <span style={{ color: '#dc3545' }}>{t.mqttStatusStopped || 'Stopped'}</span>
+                      }
+                    </span>
+                  </div>
+                  <div className="config-item">
+                    <span className="config-label">{t.mqttConnectedClientsLabel || 'Connected Clients:'}</span>
+                    <span className="config-value">{this.state.mqttStatus?.clients || 0}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-form-divider"></div>
 
               </div>
               )}
@@ -6498,6 +7320,489 @@ class Admin extends Component {
               )}
             </div>
           </div>
+
+          {/* Power Management Modal */}
+          {showPowerManagementModal && (
+            <div className="admin-modal-overlay" onClick={this.handleClosePowerManagementModal}>
+              <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="admin-modal-header">
+                  <h3>
+                    {powerManagementClientId === '__global__' 
+                      ? (t.powerManagementGlobalModalTitle || 'Global Power Management Standard')
+                      : (t.powerManagementModalTitle || 'Power Management Configuration')
+                    }
+                  </h3>
+                  <button 
+                    className="admin-modal-close" 
+                    onClick={this.handleClosePowerManagementModal}
+                  >
+                    ×
+              </button>
+            </div>
+            
+            <div className="admin-modal-body">
+              <div className="admin-form-group">
+                <label>{t.powerManagementModeLabel || 'Power Management Mode'}</label>
+                <div className="admin-radio-group">
+                  <label className="admin-radio-label">
+                    <input
+                      type="radio"
+                      name="powerManagementMode"
+                      value="browser"
+                      checked={powerManagementMode === 'browser'}
+                      onChange={(e) => this.setState({ powerManagementMode: e.target.value })}
+                    />
+                    <span>{t.powerManagementModeBrowser || 'Browser (All devices)'}</span>
+                  </label>
+                  <label className="admin-radio-label">
+                    <input
+                      type="radio"
+                      name="powerManagementMode"
+                      value="dpms"
+                      checked={powerManagementMode === 'dpms'}
+                      onChange={(e) => this.setState({ powerManagementMode: e.target.value })}
+                    />
+                    <span>{t.powerManagementModeDpms || 'DPMS (Raspberry Pi only)'}</span>
+                  </label>
+                  <label className="admin-radio-label">
+                    <input
+                      type="radio"
+                      name="powerManagementMode"
+                      value="mqtt"
+                      checked={powerManagementMode === 'mqtt'}
+                      onChange={(e) => this.setState({ powerManagementMode: e.target.value })}
+                    />
+                    <span>{t.powerManagementModeMqtt || 'MQTT (Touchkio Displays)'}</span>
+                  </label>
+                </div>
+                <small className="admin-help-text">
+                  {t.powerManagementModeHelp || 'Browser: Black screen (works on all devices). DPMS: True power off (requires Raspberry Pi setup). MQTT: Touchkio display control via MQTT.'}
+                </small>
+              </div>
+
+              {powerManagementMode === 'mqtt' && (
+                <div className="admin-form-group">
+                  <label htmlFor="powerManagementMqttHostname">{t.powerManagementMqttHostnameLabel || 'Touchkio Hostname'}</label>
+                  <input
+                    type="text"
+                    id="powerManagementMqttHostname"
+                    placeholder={t.powerManagementMqttHostnamePlaceholder || 'e.g., saturn'}
+                    value={this.state.powerManagementMqttHostname || ''}
+                    onChange={(e) => this.setState({ powerManagementMqttHostname: e.target.value })}
+                  />
+                  <small className="admin-help-text">{t.powerManagementMqttHostnameHelp || 'Hostname of the Raspberry Pi (e.g., "saturn", "jupiter")'}</small>
+                </div>
+              )}
+
+              <div className="admin-form-group">
+                <label className="inline-label">
+                  <span className="label-text">{t.powerManagementScheduleEnabledLabel || 'Enable Schedule'}</span>
+                  <input
+                    type="checkbox"
+                    checked={powerManagementScheduleEnabled}
+                    onChange={(e) => this.setState({ powerManagementScheduleEnabled: e.target.checked })}
+                  />
+                </label>
+                <small>{t.powerManagementScheduleEnabledHelp || 'Turn display off during specified hours'}</small>
+              </div>
+
+              {powerManagementScheduleEnabled && (
+                <>
+                  <div className="admin-form-group">
+                    <label htmlFor="powerManagementStartTime">{t.powerManagementStartTimeLabel || 'Start Time (Display OFF)'}</label>
+                    <input
+                      type="time"
+                      id="powerManagementStartTime"
+                      value={powerManagementStartTime}
+                      onChange={(e) => this.setState({ powerManagementStartTime: e.target.value })}
+                    />
+                    <small className="admin-help-text">{t.powerManagementStartTimeHelp || 'Time when display turns off (e.g., 20:00)'}</small>
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label htmlFor="powerManagementEndTime">{t.powerManagementEndTimeLabel || 'End Time (Display ON)'}</label>
+                    <input
+                      type="time"
+                      id="powerManagementEndTime"
+                      value={powerManagementEndTime}
+                      onChange={(e) => this.setState({ powerManagementEndTime: e.target.value })}
+                    />
+                    <small className="admin-help-text">{t.powerManagementEndTimeHelp || 'Time when display turns on (e.g., 07:00)'}</small>
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label className="inline-label">
+                      <span className="label-text">{t.powerManagementWeekendModeLabel || 'Weekend Mode'}</span>
+                      <input
+                        type="checkbox"
+                        checked={powerManagementWeekendMode}
+                        onChange={(e) => this.setState({ powerManagementWeekendMode: e.target.checked })}
+                      />
+                    </label>
+                    <small>{t.powerManagementWeekendModeHelp || 'Turn display off all weekend (Saturday & Sunday)'}</small>
+                  </div>
+                </>
+              )}
+
+              {powerManagementMessage && (
+                <div className={`admin-message admin-message-${powerManagementMessageType}`}>
+                  {powerManagementMessage}
+                </div>
+              )}
+            </div>
+
+            <div className="admin-modal-footer">
+              <button 
+                type="button" 
+                className="admin-secondary-button" 
+                onClick={this.handleClosePowerManagementModal}
+              >
+                {t.cancelButton || 'Cancel'}
+              </button>
+              <button 
+                type="button" 
+                className="admin-primary-button" 
+                onClick={this.handleSavePowerManagement}
+              >
+                {t.saveButton || 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Touchkio Display Modal */}
+      {this.state.showTouchkioModal && this.state.touchkioModalDisplay && (
+        <div className="admin-modal-overlay" onClick={this.handleCloseTouchkioModal}>
+          <div className="admin-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '950px', maxHeight: '90vh', overflowY: 'auto', background: '#1e293b', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <div className="admin-modal-header" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', padding: '1.5rem' }}>
+              <h3 style={{ margin: 0, color: '#f1f5f9', fontSize: '1.25rem' }}>Touchkio Display: {this.state.touchkioModalDisplay.hostname}</h3>
+              <button className="admin-modal-close" onClick={this.handleCloseTouchkioModal}>×</button>
+            </div>
+
+            <div className="admin-modal-body" style={{ padding: '1.5rem' }}>
+              {this.state.touchkioModalMessage && (
+                <div className={`admin-message admin-message-${this.state.touchkioModalMessageType}`} style={{ marginBottom: '1.5rem' }}>
+                  {this.state.touchkioModalMessage}
+                </div>
+              )}
+
+              {/* System Status Grid */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+                gap: '1rem',
+                marginBottom: '2rem'
+              }}>
+                <div style={{ 
+                  padding: '1.25rem', 
+                  background: '#2d3142',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Status</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: this.state.touchkioModalDisplay.power === 'ON' ? '#22c55e' : '#ef4444', marginBottom: '0.5rem' }}>
+                    {this.state.touchkioModalDisplay.power || 'UNKNOWN'}
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#cbd5e1' }}>
+                    Brightness: <strong>{this.state.touchkioModalDisplay.brightness || '-'}</strong>
+                  </div>
+                </div>
+
+                <div style={{ 
+                  padding: '1.25rem', 
+                  background: '#2d3142',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>System Resources</div>
+                  <div style={{ fontSize: '0.875rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <div>CPU: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.cpuUsage !== undefined ? `${this.state.touchkioModalDisplay.cpuUsage}%` : '-'}</strong></div>
+                    <div>Memory: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.memoryUsage !== undefined ? `${this.state.touchkioModalDisplay.memoryUsage}%` : '-'}</strong></div>
+                    <div>Temp: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.temperature !== undefined ? `${this.state.touchkioModalDisplay.temperature}°C` : '-'}</strong></div>
+                  </div>
+                </div>
+
+                <div style={{ 
+                  padding: '1.25rem', 
+                  background: '#2d3142',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Mode</div>
+                  <div style={{ fontSize: '0.875rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <div>Kiosk: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.kioskStatus || '-'}</strong></div>
+                    <div>Theme: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.theme || '-'}</strong></div>
+                    <div>Volume: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.volume !== undefined ? `${this.state.touchkioModalDisplay.volume}%` : '-'}</strong></div>
+                  </div>
+                </div>
+
+                <div style={{ 
+                  padding: '1.25rem', 
+                  background: '#2d3142',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Network</div>
+                  <div style={{ fontSize: '0.8rem', color: '#cbd5e1', wordBreak: 'break-all', marginBottom: '0.5rem' }}>
+                    {this.state.touchkioModalDisplay.networkAddress || '-'}
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#cbd5e1' }}>
+                    Uptime: <strong style={{ color: '#f1f5f9' }}>{this.state.touchkioModalDisplay.uptime !== undefined ? `${Math.floor(this.state.touchkioModalDisplay.uptime / 60)}h ${this.state.touchkioModalDisplay.uptime % 60}m` : '-'}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Control Sections in 2 Columns */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                
+                {/* Left Column */}
+                <div>
+                  {/* Display Controls */}
+                  <div style={{ 
+                    marginBottom: '1.5rem',
+                    padding: '1.25rem',
+                    background: '#2d3142',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px'
+                  }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Controls</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                      <button
+                        type="button"
+                        className="admin-primary-button"
+                        onClick={() => this.handleMqttPowerCommandModal(this.state.touchkioModalDisplay.hostname, true)}
+                        style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
+                      >
+                        Turn On
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-secondary-button"
+                        onClick={() => this.handleMqttPowerCommandModal(this.state.touchkioModalDisplay.hostname, false)}
+                        style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
+                      >
+                        Turn Off
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className="admin-secondary-button"
+                      onClick={() => this.handleMqttRefreshCommandModal(this.state.touchkioModalDisplay.hostname)}
+                      style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
+                    >
+                      Refresh Page
+                    </button>
+                  </div>
+
+                  {/* Brightness Control */}
+                  <div style={{ 
+                    marginBottom: '1.5rem',
+                    padding: '1.25rem',
+                    background: '#2d3142',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px'
+                  }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Brightness</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value={this.state.touchkioModalBrightness !== undefined ? this.state.touchkioModalBrightness : this.state.touchkioModalDisplay.brightness || 200}
+                        onChange={(e) => this.setState({ touchkioModalBrightness: parseInt(e.target.value, 10) })}
+                        onMouseUp={(e) => this.handleMqttBrightnessCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                        onTouchEnd={(e) => this.handleMqttBrightnessCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                        style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
+                      />
+                      <span style={{ minWidth: '50px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
+                        {this.state.touchkioModalBrightness !== undefined ? this.state.touchkioModalBrightness : this.state.touchkioModalDisplay.brightness || 200}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Volume Control */}
+                  <div style={{ 
+                    marginBottom: '1.5rem',
+                    padding: '1.25rem',
+                    background: '#2d3142',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px'
+                  }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Volume</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={this.state.touchkioModalVolume !== undefined ? this.state.touchkioModalVolume : this.state.touchkioModalDisplay.volume || 50}
+                        onChange={(e) => this.setState({ touchkioModalVolume: parseInt(e.target.value, 10) })}
+                        onMouseUp={(e) => this.handleMqttVolumeCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                        onTouchEnd={(e) => this.handleMqttVolumeCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                        style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
+                      />
+                      <span style={{ minWidth: '50px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
+                        {this.state.touchkioModalVolume !== undefined ? this.state.touchkioModalVolume : this.state.touchkioModalDisplay.volume || 50}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Page Zoom */}
+                  <div style={{ 
+                    padding: '1.25rem',
+                    background: '#2d3142',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px'
+                  }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Page Zoom</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <input
+                        type="range"
+                        min="25"
+                        max="400"
+                        step="5"
+                        value={this.state.touchkioModalZoom !== undefined ? this.state.touchkioModalZoom : this.state.touchkioModalDisplay.pageZoom || 100}
+                        onChange={(e) => this.setState({ touchkioModalZoom: parseInt(e.target.value, 10) })}
+                        onMouseUp={(e) => this.handleMqttPageZoomCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                        onTouchEnd={(e) => this.handleMqttPageZoomCommandModal(this.state.touchkioModalDisplay.hostname, parseInt(e.target.value, 10))}
+                        style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
+                      />
+                      <span style={{ minWidth: '60px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
+                        {this.state.touchkioModalZoom !== undefined ? this.state.touchkioModalZoom : this.state.touchkioModalDisplay.pageZoom || 100}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div>
+                  {/* Kiosk Mode */}
+                  <div style={{ 
+                    marginBottom: '1.5rem',
+                    padding: '1.25rem',
+                    background: '#2d3142',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px'
+                  }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Kiosk Mode</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      {['Fullscreen', 'Maximized', 'Framed', 'Minimized'].map(mode => (
+                        <button
+                          key={mode}
+                          type="button"
+                          className={this.state.touchkioModalDisplay.kioskStatus === mode ? 'admin-primary-button' : 'admin-secondary-button'}
+                          onClick={() => this.handleMqttKioskCommandModal(this.state.touchkioModalDisplay.hostname, mode)}
+                          style={{ 
+                            width: '100%',
+                            fontSize: '0.875rem',
+                            padding: '0.625rem'
+                          }}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Theme */}
+                  <div style={{ 
+                    marginBottom: '1.5rem',
+                    padding: '1.25rem',
+                    background: '#2d3142',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px'
+                  }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Theme</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        className={this.state.touchkioModalDisplay.theme === 'Light' ? 'admin-primary-button' : 'admin-secondary-button'}
+                        onClick={() => this.handleMqttThemeCommandModal(this.state.touchkioModalDisplay.hostname, 'Light')}
+                        style={{ 
+                          width: '100%',
+                          fontSize: '0.875rem',
+                          padding: '0.625rem'
+                        }}
+                      >
+                        Light
+                      </button>
+                      <button
+                        type="button"
+                        className={this.state.touchkioModalDisplay.theme === 'Dark' ? 'admin-primary-button' : 'admin-secondary-button'}
+                        onClick={() => this.handleMqttThemeCommandModal(this.state.touchkioModalDisplay.hostname, 'Dark')}
+                        style={{ 
+                          width: '100%',
+                          fontSize: '0.875rem',
+                          padding: '0.625rem'
+                        }}
+                      >
+                        Dark
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* System Controls */}
+                  <div style={{ 
+                    padding: '1.25rem',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '2px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '8px'
+                  }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#fca5a5', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>System Controls</h4>
+                    <button
+                      type="button"
+                      className="admin-secondary-button"
+                      onClick={() => {
+                        if (window.confirm(`Reboot ${this.state.touchkioModalDisplay.hostname}?`)) {
+                          this.handleMqttRebootCommandModal(this.state.touchkioModalDisplay.hostname);
+                        }
+                      }}
+                      style={{ 
+                        width: '100%',
+                        marginBottom: '0.5rem',
+                        background: 'rgba(251, 191, 36, 0.2)',
+                        borderColor: 'rgba(251, 191, 36, 0.5)',
+                        color: '#fbbf24',
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                        padding: '0.625rem'
+                      }}
+                    >
+                      Reboot Device
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-secondary-button"
+                      onClick={() => {
+                        if (window.confirm(`Shutdown ${this.state.touchkioModalDisplay.hostname}? This will turn off the device!`)) {
+                          this.handleMqttShutdownCommandModal(this.state.touchkioModalDisplay.hostname);
+                        }
+                      }}
+                      style={{ 
+                        width: '100%',
+                        background: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: 'rgba(239, 68, 68, 0.5)',
+                        color: '#ef4444',
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                        padding: '0.625rem'
+                      }}
+                    >
+                      Shutdown Device
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="admin-modal-footer" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', padding: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" className="admin-secondary-button" onClick={this.handleCloseTouchkioModal}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </>
       )}
 
