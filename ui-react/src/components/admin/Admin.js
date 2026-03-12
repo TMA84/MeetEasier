@@ -273,6 +273,15 @@ class Admin extends Component {
       connectedDisplaysMessage: null,
       connectedDisplaysMessageType: null,
       connectedDisplaysLoading: false,
+      showPowerManagementModal: false,
+      powerManagementClientId: null,
+      powerManagementMode: 'browser',
+      powerManagementScheduleEnabled: false,
+      powerManagementStartTime: '20:00',
+      powerManagementEndTime: '07:00',
+      powerManagementWeekendMode: false,
+      powerManagementMessage: null,
+      powerManagementMessageType: null,
       apiTokenConfigMessage: null,
       apiTokenConfigMessageType: null,
       currentApiTokenSource: 'default',
@@ -2865,6 +2874,111 @@ class Admin extends Component {
       });
   }
 
+  handleOpenPowerManagementModal = async (clientId) => {
+    const { apiToken } = this.state;
+    
+    try {
+      // Fetch current power management config for this display
+      const response = await fetch(`/api/power-management/${encodeURIComponent(clientId)}`);
+      const config = await response.json();
+      
+      this.setState({
+        showPowerManagementModal: true,
+        powerManagementClientId: clientId,
+        powerManagementMode: config.mode || 'browser',
+        powerManagementScheduleEnabled: config.schedule?.enabled || false,
+        powerManagementStartTime: config.schedule?.startTime || '20:00',
+        powerManagementEndTime: config.schedule?.endTime || '07:00',
+        powerManagementWeekendMode: config.schedule?.weekendMode || false,
+        powerManagementMessage: null
+      });
+    } catch (err) {
+      console.error('Error loading power management config:', err);
+      // Open modal with defaults
+      this.setState({
+        showPowerManagementModal: true,
+        powerManagementClientId: clientId,
+        powerManagementMode: 'browser',
+        powerManagementScheduleEnabled: false,
+        powerManagementStartTime: '20:00',
+        powerManagementEndTime: '07:00',
+        powerManagementWeekendMode: false,
+        powerManagementMessage: null
+      });
+    }
+  }
+
+  handleClosePowerManagementModal = () => {
+    this.setState({
+      showPowerManagementModal: false,
+      powerManagementClientId: null,
+      powerManagementMessage: null
+    });
+  }
+
+  handleSavePowerManagement = async () => {
+    const t = this.getTranslations();
+    const {
+      apiToken,
+      powerManagementClientId,
+      powerManagementMode,
+      powerManagementScheduleEnabled,
+      powerManagementStartTime,
+      powerManagementEndTime,
+      powerManagementWeekendMode
+    } = this.state;
+
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    try {
+      const response = await fetch(`/api/power-management/${encodeURIComponent(powerManagementClientId)}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          mode: powerManagementMode,
+          schedule: {
+            enabled: powerManagementScheduleEnabled,
+            startTime: powerManagementStartTime,
+            endTime: powerManagementEndTime,
+            weekendMode: powerManagementWeekendMode
+          }
+        })
+      });
+
+      if (response.status === 401) {
+        this.handleUnauthorizedAccess();
+        throw new Error(t.errorUnauthorized);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        this.setState({
+          powerManagementMessage: t.powerManagementSaveSuccess || 'Power management configuration saved successfully.',
+          powerManagementMessageType: 'success'
+        });
+        
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          this.handleClosePowerManagementModal();
+        }, 2000);
+      } else {
+        throw new Error(data.error || t.powerManagementSaveError);
+      }
+    } catch (err) {
+      this.setState({
+        powerManagementMessage: `${t.errorPrefix} ${err.message}`,
+        powerManagementMessageType: 'error'
+      });
+    }
+  }
+
   handleI18nSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
@@ -5409,6 +5523,7 @@ class Admin extends Component {
                         <th>{t.connectedDisplaysTableRoomName || 'Room Name'}</th>
                         <th>{t.connectedDisplaysTableIpAddress || 'IP Address'}</th>
                         <th>{t.connectedDisplaysTableConnectedAt || 'Connected'}</th>
+                        <th>{t.connectedDisplaysTablePowerManagement || 'Power'}</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -5458,6 +5573,19 @@ class Admin extends Component {
                             <td className="ip-address">{display.ipAddress || 'unknown'}</td>
                             <td className="timestamp">
                               {display.connectedAt ? new Date(display.connectedAt).toLocaleString() : '-'}
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="admin-secondary-button"
+                                onClick={() => this.handleOpenPowerManagementModal(display.clientId)}
+                                style={{
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.875rem'
+                                }}
+                              >
+                                {t.connectedDisplaysPowerManagementButton || 'Configure'}
+                              </button>
                             </td>
                             <td>
                               {!hasActiveSockets && (
@@ -5560,6 +5688,127 @@ class Admin extends Component {
               {systemMessage && (
                 <div className={`admin-message admin-message-${systemMessageType}`}>
                   {systemMessage}
+                </div>
+              )}
+
+              {/* Power Management Modal */}
+              {showPowerManagementModal && (
+                <div className="admin-modal-overlay" onClick={this.handleClosePowerManagementModal}>
+                  <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                    <div className="admin-modal-header">
+                      <h3>{t.powerManagementModalTitle || 'Power Management Configuration'}</h3>
+                      <button 
+                        className="admin-modal-close" 
+                        onClick={this.handleClosePowerManagementModal}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    
+                    <div className="admin-modal-body">
+                      <div className="admin-form-group">
+                        <label>{t.powerManagementModeLabel || 'Power Management Mode'}</label>
+                        <div className="admin-radio-group">
+                          <label className="admin-radio-label">
+                            <input
+                              type="radio"
+                              name="powerManagementMode"
+                              value="browser"
+                              checked={powerManagementMode === 'browser'}
+                              onChange={(e) => this.setState({ powerManagementMode: e.target.value })}
+                            />
+                            <span>{t.powerManagementModeBrowser || 'Browser (All devices)'}</span>
+                          </label>
+                          <label className="admin-radio-label">
+                            <input
+                              type="radio"
+                              name="powerManagementMode"
+                              value="dpms"
+                              checked={powerManagementMode === 'dpms'}
+                              onChange={(e) => this.setState({ powerManagementMode: e.target.value })}
+                            />
+                            <span>{t.powerManagementModeDpms || 'DPMS (Raspberry Pi only)'}</span>
+                          </label>
+                        </div>
+                        <small className="admin-help-text">
+                          {t.powerManagementModeHelp || 'Browser: Black screen (works on all devices). DPMS: True power off (requires Raspberry Pi setup).'}
+                        </small>
+                      </div>
+
+                      <div className="admin-form-group">
+                        <label className="inline-label">
+                          <span className="label-text">{t.powerManagementScheduleEnabledLabel || 'Enable Schedule'}</span>
+                          <input
+                            type="checkbox"
+                            checked={powerManagementScheduleEnabled}
+                            onChange={(e) => this.setState({ powerManagementScheduleEnabled: e.target.checked })}
+                          />
+                        </label>
+                        <small>{t.powerManagementScheduleEnabledHelp || 'Turn display off during specified hours'}</small>
+                      </div>
+
+                      {powerManagementScheduleEnabled && (
+                        <>
+                          <div className="admin-form-group">
+                            <label htmlFor="powerManagementStartTime">{t.powerManagementStartTimeLabel || 'Start Time (Display OFF)'}</label>
+                            <input
+                              type="time"
+                              id="powerManagementStartTime"
+                              value={powerManagementStartTime}
+                              onChange={(e) => this.setState({ powerManagementStartTime: e.target.value })}
+                            />
+                            <small className="admin-help-text">{t.powerManagementStartTimeHelp || 'Time when display turns off (e.g., 20:00)'}</small>
+                          </div>
+
+                          <div className="admin-form-group">
+                            <label htmlFor="powerManagementEndTime">{t.powerManagementEndTimeLabel || 'End Time (Display ON)'}</label>
+                            <input
+                              type="time"
+                              id="powerManagementEndTime"
+                              value={powerManagementEndTime}
+                              onChange={(e) => this.setState({ powerManagementEndTime: e.target.value })}
+                            />
+                            <small className="admin-help-text">{t.powerManagementEndTimeHelp || 'Time when display turns on (e.g., 07:00)'}</small>
+                          </div>
+
+                          <div className="admin-form-group">
+                            <label className="inline-label">
+                              <span className="label-text">{t.powerManagementWeekendModeLabel || 'Weekend Mode'}</span>
+                              <input
+                                type="checkbox"
+                                checked={powerManagementWeekendMode}
+                                onChange={(e) => this.setState({ powerManagementWeekendMode: e.target.checked })}
+                              />
+                            </label>
+                            <small>{t.powerManagementWeekendModeHelp || 'Turn display off all weekend (Saturday & Sunday)'}</small>
+                          </div>
+                        </>
+                      )}
+
+                      {powerManagementMessage && (
+                        <div className={`admin-message admin-message-${powerManagementMessageType}`}>
+                          {powerManagementMessage}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="admin-modal-footer">
+                      <button 
+                        type="button" 
+                        className="admin-secondary-button" 
+                        onClick={this.handleClosePowerManagementModal}
+                      >
+                        {t.cancelButton || 'Cancel'}
+                      </button>
+                      <button 
+                        type="button" 
+                        className="admin-primary-button" 
+                        onClick={this.handleSavePowerManagement}
+                      >
+                        {t.saveButton || 'Save'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
