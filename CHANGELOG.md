@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2025-03-12
+
+### Changed
+- **Major Admin Panel Refactoring**
+  - Extracted 19 components (2 modals + 17 tabs) from monolithic Admin.js
+  - Reduced Admin.js from 7816 to 6132 lines (21.5% reduction)
+  - Created modular component structure for better maintainability
+  - Extracted PowerManagementModal and TouchkioModal components
+  - Extracted all admin tabs: DevicesTab, MqttTab, AuditTab, BackupTab, SystemTab, TranslationApiTab, MaintenanceTab, OAuthTab, SearchTab, RateLimitTab, ApiTokenTab, DisplayTab, WiFiTab, LogoTab, BookingTab, ColorsTab, TranslationsTab
+
+- **Business Logic Separation**
+  - Created helpers/ directory with color and translation utilities
+  - Created services/ directory with centralized API layer
+  - Extracted 495 lines of helper functions and API service code
+  - Centralized 40+ API endpoints in adminApi.js service
+  - Added colorHelpers.js for hex/HSL color conversions
+  - Added translationHelpers.js for language utilities and override state converters
+
+### Improved
+- Better code organization and separation of concerns
+- Improved maintainability with smaller, focused components
+- Reusable components and utilities across the application
+- Easier testing and debugging with isolated components
+- Modern React patterns and best practices
+- Total: ~5182 lines extracted into reusable modules
+
 ## [Unreleased]
 
 ### Added
