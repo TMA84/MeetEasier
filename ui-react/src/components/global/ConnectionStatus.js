@@ -62,14 +62,14 @@ const ConnectionStatus = () => {
         {status.isOnline ? (
           <>
             <span className="connection-icon">✓</span>
-            <span className="connection-text">Verbindung wiederhergestellt</span>
+            <span className="connection-text">Verbunden</span>
           </>
         ) : (
           <>
             <span className="connection-icon">⚠</span>
             <span className="connection-text">
-              Keine Verbindung zum Server
-              {status.retryCount > 0 && ` (Versuch ${status.retryCount})`}
+              Offline
+              {status.retryCount > 0 && ` (${status.retryCount})`}
             </span>
           </>
         )}
