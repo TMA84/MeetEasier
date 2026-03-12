@@ -896,6 +896,19 @@ module.exports = function(app) {
 		});
 	});
 
+	// Health check endpoint for connection monitoring
+	app.head('/api/health', function(req, res) {
+		res.status(200).end();
+	});
+
+	app.get('/api/health', function(req, res) {
+		res.status(200).json({
+			status: 'ok',
+			timestamp: new Date().toISOString(),
+			uptime: process.uptime()
+		});
+	});
+
 	app.get('/api/graph/webhook', function(req, res) {
 		if (!config.graphWebhook.enabled) {
 			return res.status(503).json({

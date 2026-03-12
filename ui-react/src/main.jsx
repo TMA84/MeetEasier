@@ -1,27 +1,85 @@
-import React from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import './index.css';
+import { getConnectionMonitor } from './utils/connectionMonitor';
+import ConnectionStatus from './components/global/ConnectionStatus';
 
+// Eager loading for frequently used components
 import FlightboardLayout from './layouts/FlightboardLayout';
 import SingleRoomLayout from './layouts/SingleRoomLayout';
-import WiFiInfoLayout from './layouts/WiFiInfoLayout';
-import AdminLayout from './layouts/AdminLayout';
 import NotFound from './components/global/NotFound';
+
+// Lazy loading for less frequently used components
+const WiFiInfoLayout = lazy(() => import('./layouts/WiFiInfoLayout'));
+const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div style={{
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    fontSize: '1.5rem',
+    color: '#666'
+  }}>
+    Loading...
+  </div>
+);
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/service-worker.js')
+      .then((registration) => {
+        console.log('[ServiceWorker] Registered successfully:', registration.scope);
+        
+        // Check for updates every hour
+        setInterval(() => {
+          registration.update();
+        }, 60 * 60 * 1000);
+      })
+      .catch((error) => {
+        console.error('[ServiceWorker] Registration failed:', error);
+      });
+  });
+}
+
+// App wrapper component to initialize connection monitor
+const App = () => {
+  useEffect(() => {
+    // Initialize connection monitor
+    getConnectionMonitor({
+      checkInterval: 5000,
+      maxRetries: 60
+    });
+  }, []);
+
+  return (
+    <>
+      <ConnectionStatus />
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          <Route path="/" element={<FlightboardLayout />} />
+          <Route path="/single-room/:name" element={<SingleRoomLayout />} />
+          <Route path="/room-minimal/:name" element={<SingleRoomLayout />} />
+          <Route path="/wifi-info" element={<WiFiInfoLayout />} />
+          <Route path="/admin" element={<AdminLayout />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+    </>
+  );
+};
 
 const container = document.getElementById('app');
 const root = createRoot(container);
 
 root.render(
   <BrowserRouter>
-    <Routes>
-      <Route path="/" element={<FlightboardLayout />} />
-      <Route path="/single-room/:name" element={<SingleRoomLayout />} />
-      <Route path="/room-minimal/:name" element={<SingleRoomLayout />} />
-      <Route path="/wifi-info" element={<WiFiInfoLayout />} />
-      <Route path="/admin" element={<AdminLayout />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <App />
   </BrowserRouter>
 );
