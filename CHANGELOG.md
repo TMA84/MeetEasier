@@ -57,8 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Extracted MqttTab into separate component (`ui-react/src/components/admin/tabs/MqttTab.js`)
   - Extracted AuditTab into separate component (`ui-react/src/components/admin/tabs/AuditTab.js`)
   - Extracted BackupTab into separate component (`ui-react/src/components/admin/tabs/BackupTab.js`)
+  - Extracted SystemTab into separate component (`ui-react/src/components/admin/tabs/SystemTab.js`)
   - Created AdminContext for future state management (`ui-react/src/components/admin/AdminContext.js`)
-  - Reduced Admin.js from 7816 to 6947 lines (869 lines removed, 11.1% reduction)
+  - Reduced Admin.js from 7816 to 6840 lines (976 lines removed, 12.5% reduction)
   - Improved code maintainability and testability
   - Better separation of concerns between UI and business logic
   - Created directory structure for continued tab extraction (`tabs/`, `shared/`)
