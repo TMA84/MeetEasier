@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned Features
+- **MQTT-based Power Management** for Touchkio displays
+  - Third power management mode alongside Browser and DPMS
+  - Real-time control via MQTT broker
+  - Bidirectional communication with status feedback
+  - Configurable MQTT broker, topics, and authentication
+  - Automatic Touchkio display detection
+  - Better scalability for large deployments (20+ displays)
+  - Integration with Home Assistant, Node-RED, etc.
+
 ## [1.5.3] - 2026-03-12
 
 ### Added
