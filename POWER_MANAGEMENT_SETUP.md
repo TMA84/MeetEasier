@@ -283,3 +283,111 @@ Für die Verwaltung von 20+ Raspberry Pis empfehlen wir:
 3. **Image-basiertes Deployment** mit vorinstalliertem Skript
 
 Beispiel Ansible Playbook auf Anfrage verfügbar.
+
+## Alternative: MQTT-basiertes Power Management (Touchkio)
+
+Wenn Sie **Touchkio** auf Ihren Raspberry Pis verwenden, können Sie das Display über MQTT steuern. Dies ist eine elegantere Lösung als DPMS, da Touchkio bereits MQTT-Integration bietet.
+
+### Vorteile von MQTT:
+- ✅ Zentrale Steuerung über MQTT Broker
+- ✅ Echtzeit-Updates (keine Polling-Verzögerung)
+- ✅ Bidirektionale Kommunikation (Status-Feedback)
+- ✅ Geringerer Netzwerk-Traffic
+- ✅ Bessere Skalierbarkeit für viele Displays
+- ✅ Integration mit Home Assistant, Node-RED, etc.
+
+### Architektur:
+
+```
+MeetEasier Server
+       ↓
+  MQTT Broker (z.B. Mosquitto)
+       ↓
+  Touchkio Displays (Raspberry Pi)
+```
+
+### Geplante Features (v1.6.0):
+
+1. **MQTT-Modus** als dritte Power Management Option:
+   - Browser-Modus (alle Geräte)
+   - DPMS-Modus (Raspberry Pi mit vcgencmd)
+   - **MQTT-Modus** (Touchkio Displays)
+
+2. **MQTT-Konfiguration im Admin-Panel**:
+   - MQTT Broker URL
+   - Authentifizierung (Username/Password)
+   - Topic-Struktur konfigurierbar
+   - TLS/SSL Support
+
+3. **Automatische Erkennung**:
+   - System erkennt Touchkio-Displays automatisch
+   - Empfiehlt MQTT-Modus für Touchkio
+
+4. **Topic-Struktur** (Vorschlag):
+   ```
+   meeteasier/displays/{clientId}/power/command  → "on" / "off"
+   meeteasier/displays/{clientId}/power/state    ← "on" / "off"
+   meeteasier/displays/{clientId}/status         ← "online" / "offline"
+   ```
+
+### Temporäre Lösung (bis v1.6.0):
+
+Sie können bereits jetzt MQTT mit einem eigenen Skript nutzen:
+
+```bash
+#!/bin/bash
+# meeteasier-mqtt-bridge.sh
+
+MQTT_BROKER="mqtt://your-broker:1883"
+MQTT_USER="meeteasier"
+MQTT_PASS="your-password"
+SERVER_URL="https://meeteasier.your-domain.com"
+ROOM_NAME="Saturn"
+
+# Subscribe to power commands
+mosquitto_sub -h $MQTT_BROKER -u $MQTT_USER -P $MQTT_PASS \
+  -t "meeteasier/displays/+/power/command" | while read -r msg; do
+  
+  # Parse message and control Touchkio
+  if [ "$msg" = "off" ]; then
+    # Touchkio-spezifischer Befehl zum Ausschalten
+    touchkio-cli display off
+  else
+    touchkio-cli display on
+  fi
+done &
+
+# Fetch schedule from MeetEasier and publish MQTT commands
+while true; do
+  LOCAL_IP=$(hostname -I | awk '{print $1}')
+  CLIENT_ID="${LOCAL_IP}_${ROOM_NAME}"
+  
+  CONFIG=$(curl -s "$SERVER_URL/api/power-management/$CLIENT_ID")
+  
+  # Parse and determine if display should be on/off
+  # ... (similar logic as DPMS script)
+  
+  # Publish command
+  mosquitto_pub -h $MQTT_BROKER -u $MQTT_USER -P $MQTT_PASS \
+    -t "meeteasier/displays/$CLIENT_ID/power/command" \
+    -m "off"  # or "on"
+  
+  sleep 60
+done
+```
+
+### Interesse an MQTT-Integration?
+
+Wenn Sie MQTT-basiertes Power Management benötigen, können wir dies priorisieren. Bitte erstellen Sie ein GitHub Issue mit:
+- Touchkio Version
+- MQTT Broker (Mosquitto, HiveMQ, etc.)
+- Gewünschte Topic-Struktur
+- Anzahl der Displays
+
+**Geschätzte Entwicklungszeit**: 2-3 Tage für vollständige MQTT-Integration
+
+### Weitere Informationen:
+
+- **Touchkio Dokumentation**: https://touchkio.com/docs
+- **MQTT Protokoll**: https://mqtt.org/
+- **Mosquitto Broker**: https://mosquitto.org/
