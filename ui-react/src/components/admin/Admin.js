@@ -10,6 +10,16 @@ import BackupTab from './tabs/BackupTab.js';
 import SystemTab from './tabs/SystemTab.js';
 import TranslationApiTab from './tabs/TranslationApiTab.js';
 import MaintenanceTab from './tabs/MaintenanceTab.js';
+import OAuthTab from './tabs/OAuthTab.js';
+import SearchTab from './tabs/SearchTab.js';
+import RateLimitTab from './tabs/RateLimitTab.js';
+import ApiTokenTab from './tabs/ApiTokenTab.js';
+import DisplayTab from './tabs/DisplayTab.js';
+import WiFiTab from './tabs/WiFiTab.js';
+import LogoTab from './tabs/LogoTab.js';
+import BookingTab from './tabs/BookingTab.js';
+import ColorsTab from './tabs/ColorsTab.js';
+import TranslationsTab from './tabs/TranslationsTab.js';
 
 const QUICK_ADMIN_TRANSLATION_GROUPS = [
   {
@@ -5262,148 +5272,31 @@ class Admin extends Component {
               <h2>{t.operationsSectionTitle}</h2>
 
               {activeTab === 'apiToken' && (
-              <div className="admin-card" id="ops-api-token">
-
-              <h3>{t.apiTokenConfigSectionTitle || 'API Tokens'}</h3>
-              <div className="admin-current-config">
-                <h3>{t.currentConfigTitle}</h3>
-                <div className="config-grid">
-                  <div className="config-item">
-                    <span className="config-label">{t.apiTokenSourceLabel || 'Token Source'}</span>
-                    <span className="config-value">{apiTokenSourceLabelMap[currentApiTokenSource] || currentApiTokenSource || '-'}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.apiTokenDefaultActiveLabel || 'Default Token Active'}</span>
-                    <span className="config-value">{booleanLabel(currentApiTokenIsDefault)}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.apiTokenDefaultValueLabel || 'Default Token'}</span>
-                    <span className="config-value">{t.apiTokenDefaultValue || 'change-me-admin-token'}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.lastUpdatedLabel}</span>
-                    <span className="config-value">{apiTokenConfigLastUpdated || '-'}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.wifiApiTokenSourceLabel || 'WiFi Token Source'}</span>
-                    <span className="config-value">{apiTokenSourceLabelMap[currentWifiApiTokenSource] || currentWifiApiTokenSource || '-'}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.wifiApiTokenConfiguredLabel || 'WiFi Token Configured'}</span>
-                    <span className="config-value">{booleanLabel(currentWifiApiTokenConfigured)}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.wifiApiTokenLastUpdatedLabel || 'WiFi Token Last Updated'}</span>
-                    <span className="config-value">{wifiApiTokenConfigLastUpdated || '-'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {!apiTokenLocked && (
-                <form onSubmit={this.handleApiTokenSubmit}>
-                  <div className="admin-form-group">
-                    <label htmlFor="newApiToken">{t.apiTokenNewLabel || 'New API Token'}</label>
-                    <input
-                      type="password"
-                      id="newApiToken"
-                      value={newApiToken}
-                      onChange={(e) => this.setState({ newApiToken: e.target.value })}
-                      placeholder={t.apiTokenMinLengthPlaceholder || 'At least 8 characters'}
-                      autoComplete="new-password"
-                    />
-                  </div>
-
-                  <div className="admin-form-group">
-                    <label htmlFor="newApiTokenConfirm">{t.apiTokenNewConfirmLabel || 'Confirm New API Token'}</label>
-                    <input
-                      type="password"
-                      id="newApiTokenConfirm"
-                      value={newApiTokenConfirm}
-                      onChange={(e) => this.setState({ newApiTokenConfirm: e.target.value })}
-                      placeholder={t.apiTokenConfirmPlaceholder || 'Repeat new token'}
-                      autoComplete="new-password"
-                    />
-                    <small>{t.apiTokenConfigHelp || 'After saving, use the new token for future logins.'}</small>
-                  </div>
-
-                  <button 
-                    type="submit" 
-                    className="admin-submit-button"
-                    disabled={!newApiToken || !newApiTokenConfirm || newApiToken !== newApiTokenConfirm}
-                  >
-                    {t.apiTokenConfigSaveButton || 'Save API Token'}
-                  </button>
-                </form>
-              )}
-
-              {apiTokenLocked && (
-                <div className="admin-locked-message">
-                  <p>{t.adminApiTokenConfiguredViaEnv || 'Admin API token is configured via environment (.env).'}</p>
-                </div>
-              )}
-
-              {apiTokenConfigMessage && (
-                <div className={`admin-message admin-message-${apiTokenConfigMessageType || 'error'}`}>
-                  {apiTokenConfigMessage}
-                </div>
-              )}
-
-              <div className="admin-form-divider"></div>
-
-              <h3>{t.wifiApiTokenConfigSectionTitle || 'WiFi API Token'}</h3>
-
-              {!wifiApiTokenLocked && (
-                <form onSubmit={this.handleWiFiApiTokenSubmit}>
-                  <div className="admin-form-group">
-                    <label htmlFor="newWifiApiToken">{t.wifiApiTokenNewLabel || 'New WiFi API Token'}</label>
-                    <input
-                      type="password"
-                      id="newWifiApiToken"
-                      value={newWifiApiToken}
-                      onChange={(e) => this.setState({ newWifiApiToken: e.target.value })}
-                      placeholder={t.apiTokenMinLengthPlaceholder || 'At least 8 characters'}
-                      autoComplete="new-password"
-                    />
-                  </div>
-
-                  <div className="admin-form-group">
-                    <label htmlFor="newWifiApiTokenConfirm">{t.wifiApiTokenNewConfirmLabel || 'Confirm New WiFi API Token'}</label>
-                    <input
-                      type="password"
-                      id="newWifiApiTokenConfirm"
-                      value={newWifiApiTokenConfirm}
-                      onChange={(e) => this.setState({ newWifiApiTokenConfirm: e.target.value })}
-                      placeholder={t.apiTokenConfirmPlaceholder || 'Repeat new token'}
-                      autoComplete="new-password"
-                    />
-                    <small>{t.wifiApiTokenConfigHelp || 'Use this token for external WiFi API integrations.'}</small>
-                  </div>
-
-                  <button 
-                    type="submit" 
-                    className="admin-submit-button"
-                    disabled={!newWifiApiToken || !newWifiApiTokenConfirm || newWifiApiToken !== newWifiApiTokenConfirm}
-                  >
-                    {t.wifiApiTokenConfigSaveButton || 'Save WiFi API Token'}
-                  </button>
-                </form>
-              )}
-
-              {wifiApiTokenLocked && (
-                <div className="admin-locked-message">
-                  <p>{t.wifiApiTokenConfiguredViaEnv || 'WiFi API token is configured via environment (.env).'}</p>
-                </div>
-              )}
-
-              {wifiApiTokenConfigMessage && (
-                <div className={`admin-message admin-message-${wifiApiTokenConfigMessageType || 'error'}`}>
-                  {wifiApiTokenConfigMessage}
-                </div>
-              )}
-
-              <div className="admin-form-divider"></div>
-
-              </div>
+                <ApiTokenTab
+                  apiTokenLocked={apiTokenLocked}
+                  wifiApiTokenLocked={wifiApiTokenLocked}
+                  t={t}
+                  apiTokenSourceLabelMap={apiTokenSourceLabelMap}
+                  currentApiTokenSource={currentApiTokenSource}
+                  currentApiTokenIsDefault={currentApiTokenIsDefault}
+                  apiTokenConfigLastUpdated={apiTokenConfigLastUpdated}
+                  currentWifiApiTokenSource={currentWifiApiTokenSource}
+                  currentWifiApiTokenConfigured={currentWifiApiTokenConfigured}
+                  wifiApiTokenConfigLastUpdated={wifiApiTokenConfigLastUpdated}
+                  newApiToken={newApiToken}
+                  newApiTokenConfirm={newApiTokenConfirm}
+                  newWifiApiToken={newWifiApiToken}
+                  newWifiApiTokenConfirm={newWifiApiTokenConfirm}
+                  apiTokenConfigMessage={apiTokenConfigMessage}
+                  apiTokenConfigMessageType={apiTokenConfigMessageType}
+                  wifiApiTokenConfigMessage={wifiApiTokenConfigMessage}
+                  wifiApiTokenConfigMessageType={wifiApiTokenConfigMessageType}
+                  booleanLabel={booleanLabel}
+                  onApiTokenChange={(field, value) => this.setState({ [field]: value })}
+                  onApiTokenSubmit={this.handleApiTokenSubmit}
+                  onWifiApiTokenChange={(field, value) => this.setState({ [field]: value })}
+                  onWifiApiTokenSubmit={this.handleWiFiApiTokenSubmit}
+                />
               )}
 
               {activeTab === 'system' && (
@@ -5458,246 +5351,40 @@ class Admin extends Component {
               )}
 
               {activeTab === 'oauth' && (
-              <div className="admin-card" id="ops-oauth">
-
-              {!oauthLocked && (
-                <>
-                  <h3>{t.oauthSectionTitle || 'OAuth Configuration'}</h3>
-                  <div className="admin-current-config">
-                    <h3>{t.currentConfigTitle}</h3>
-                    <div className="config-grid">
-                      <div className="config-item">
-                        <span className="config-label">{t.oauthClientIdLabel || 'Client ID'}</span>
-                        <span className="config-value">{currentOauthClientId || '-'}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">{t.oauthTenantIdLabel || 'Tenant ID'}</span>
-                        <span className="config-value">{currentOauthAuthority || '-'}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">{t.oauthClientSecretLabel || 'Client Secret'}</span>
-                        <span className="config-value">{currentOauthHasClientSecret ? (t.oauthClientSecretConfigured || 'Configured') : (t.oauthClientSecretNotConfigured || 'Not configured')}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">{t.lastUpdatedLabel}</span>
-                        <span className="config-value">{oauthLastUpdated || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <form onSubmit={this.handleOAuthSubmit}>
-                    <div className="admin-form-group">
-                      <label htmlFor="oauthClientId">{t.oauthClientIdInputLabel || 'OAuth Client ID'}</label>
-                      <input
-                        type="text"
-                        id="oauthClientId"
-                        value={oauthClientId}
-                        onChange={(e) => this.setState({ oauthClientId: e.target.value, oauthFormDirty: true })}
-                        placeholder={t.oauthClientIdPlaceholder || 'Application (client) ID'}
-                      />
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="oauthAuthority">{t.oauthTenantIdInputLabel || 'OAuth Tenant ID'}</label>
-                      <input
-                        type="text"
-                        id="oauthAuthority"
-                        value={oauthAuthority}
-                        onChange={(e) => this.setState({ oauthAuthority: e.target.value, oauthFormDirty: true })}
-                        placeholder={t.oauthTenantIdPlaceholder || 'Directory (tenant) ID'}
-                      />
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="oauthClientSecret">{t.oauthClientSecretInputLabel || 'OAuth Client Secret'}</label>
-                      <input
-                        type="password"
-                        id="oauthClientSecret"
-                        value={oauthClientSecret}
-                        onChange={(e) => this.setState({ oauthClientSecret: e.target.value, oauthFormDirty: true })}
-                        placeholder={t.oauthClientSecretPlaceholder || 'Leave empty to keep existing secret'}
-                        autoComplete="new-password"
-                      />
-                      <small>{t.oauthClientSecretHelp || 'Secret is encrypted before it is written to disk.'}</small>
-                    </div>
-
-                    <button 
-                      type="submit" 
-                      className="admin-submit-button"
-                      disabled={
-                        oauthClientId === currentOauthClientId &&
-                        oauthAuthority === currentOauthAuthority &&
-                        oauthClientSecret === ''
-                      }
-                    >
-                      {t.oauthSaveButton || 'Save OAuth Configuration'}
-                    </button>
-                  </form>
-
-                  {oauthMessage && (
-                    <div className={`admin-message admin-message-${oauthMessageType}`}>
-                      {oauthMessage}
-                    </div>
-                  )}
-
-                  <div className="admin-form-divider"></div>
-
-                  {!systemLocked && (
-                    <>
-                      <h3>{t.graphRuntimeSectionTitle || 'Graph Runtime Configuration'}</h3>
-                      <div className="admin-current-config">
-                        <h3>{t.currentConfigTitle}</h3>
-                        <div className="config-grid">
-                          <div className="config-item">
-                            <span className="config-label">{t.graphWebhookEnabledLabel || 'Graph Webhook Enabled'}</span>
-                            <span className="config-value">{booleanLabel(currentSystemGraphWebhookEnabled)}</span>
-                          </div>
-                          <div className="config-item">
-                            <span className="config-label">{t.graphWebhookClientStateLabel || 'Graph Webhook Client State'}</span>
-                            <span className="config-value">{currentSystemGraphWebhookClientState || '-'}</span>
-                          </div>
-                          <div className="config-item">
-                            <span className="config-label">{t.graphWebhookAllowedIpsLabel || 'Graph Webhook Allowed IPs'}</span>
-                            <span className="config-value">{currentSystemGraphWebhookAllowedIps || '-'}</span>
-                          </div>
-                          <div className="config-item">
-                            <span className="config-label">{t.graphFetchTimeoutLabel || 'Graph Fetch Timeout (ms)'}</span>
-                            <span className="config-value">{currentSystemGraphFetchTimeoutMs}</span>
-                          </div>
-                          <div className="config-item">
-                            <span className="config-label">{t.graphFetchRetryAttemptsLabel || 'Graph Fetch Retry Attempts'}</span>
-                            <span className="config-value">{currentSystemGraphFetchRetryAttempts}</span>
-                          </div>
-                          <div className="config-item">
-                            <span className="config-label">{t.graphFetchRetryBaseLabel || 'Graph Fetch Retry Base (ms)'}</span>
-                            <span className="config-value">{currentSystemGraphFetchRetryBaseMs}</span>
-                          </div>
-                          <div className="config-item">
-                            <span className="config-label">{t.lastUpdatedLabel}</span>
-                            <span className="config-value">{systemLastUpdated || '-'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <form onSubmit={this.handleGraphRuntimeSubmit}>
-                        <div className="admin-form-group">
-                          <label className="inline-label">
-                            <span className="label-text">{t.graphWebhookEnabledLabel || 'Graph Webhook Enabled'}</span>
-                            <input
-                              type="checkbox"
-                              checked={systemGraphWebhookEnabled}
-                              onChange={(e) => this.setState({ systemGraphWebhookEnabled: e.target.checked })}
-                            />
-                          </label>
-                          <small>{t.graphWebhookEnabledHelp || 'Enable Microsoft Graph webhook endpoint handling.'}</small>
-                        </div>
-
-                        <div className="admin-form-group">
-                          <label htmlFor="systemGraphWebhookClientState">{t.graphWebhookClientStateLabel || 'Graph Webhook Client State'}</label>
-                          <input
-                            type="text"
-                            id="systemGraphWebhookClientState"
-                            value={systemGraphWebhookClientState}
-                            onChange={(e) => this.setState({ systemGraphWebhookClientState: e.target.value })}
-                            placeholder={t.graphWebhookClientStatePlaceholder || 'Shared secret value for webhook notifications'}
-                          />
-                        </div>
-
-                        <div className="admin-form-group">
-                          <label htmlFor="systemGraphWebhookAllowedIps">{t.graphWebhookAllowedIpsLabel || 'Graph Webhook Allowed IPs'}</label>
-                          <input
-                            type="text"
-                            id="systemGraphWebhookAllowedIps"
-                            value={systemGraphWebhookAllowedIps}
-                            onChange={(e) => this.setState({ systemGraphWebhookAllowedIps: e.target.value })}
-                            placeholder={t.graphWebhookAllowedIpsPlaceholder || 'Comma-separated IP addresses'}
-                          />
-                        </div>
-
-                        <div className="admin-form-group">
-                          <label htmlFor="systemGraphFetchTimeoutMs">{t.graphFetchTimeoutLabel || 'Graph Fetch Timeout (ms)'}</label>
-                          <input
-                            type="number"
-                            id="systemGraphFetchTimeoutMs"
-                            value={systemGraphFetchTimeoutMs}
-                            onChange={(e) => this.setState({ systemGraphFetchTimeoutMs: e.target.value })}
-                            min="1000"
-                            step="100"
-                          />
-                        </div>
-
-                        <div className="admin-form-group">
-                          <label htmlFor="systemGraphFetchRetryAttempts">{t.graphFetchRetryAttemptsLabel || 'Graph Fetch Retry Attempts'}</label>
-                          <input
-                            type="number"
-                            id="systemGraphFetchRetryAttempts"
-                            value={systemGraphFetchRetryAttempts}
-                            onChange={(e) => this.setState({ systemGraphFetchRetryAttempts: e.target.value })}
-                            min="0"
-                            step="1"
-                          />
-                        </div>
-
-                        <div className="admin-form-group">
-                          <label htmlFor="systemGraphFetchRetryBaseMs">{t.graphFetchRetryBaseLabel || 'Graph Fetch Retry Base (ms)'}</label>
-                          <input
-                            type="number"
-                            id="systemGraphFetchRetryBaseMs"
-                            value={systemGraphFetchRetryBaseMs}
-                            onChange={(e) => this.setState({ systemGraphFetchRetryBaseMs: e.target.value })}
-                            min="50"
-                            step="50"
-                          />
-                        </div>
-
-                        <button 
-                          type="submit" 
-                          className="admin-submit-button"
-                          disabled={
-                            systemGraphWebhookEnabled === currentSystemGraphWebhookEnabled &&
-                            systemGraphWebhookClientState === currentSystemGraphWebhookClientState &&
-                            systemGraphWebhookAllowedIps === currentSystemGraphWebhookAllowedIps &&
-                            parseInt(systemGraphFetchTimeoutMs, 10) === currentSystemGraphFetchTimeoutMs &&
-                            parseInt(systemGraphFetchRetryAttempts, 10) === currentSystemGraphFetchRetryAttempts &&
-                            parseInt(systemGraphFetchRetryBaseMs, 10) === currentSystemGraphFetchRetryBaseMs
-                          }
-                        >
-                          {t.graphRuntimeSaveButton || 'Save Graph Runtime Configuration'}
-                        </button>
-                      </form>
-
-                      {graphRuntimeMessage && (
-                        <div className={`admin-message admin-message-${graphRuntimeMessageType}`}>
-                          {graphRuntimeMessage}
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {systemLocked && (
-                    <>
-                      <h3>{t.graphRuntimeSectionTitle || 'Graph Runtime Configuration'}</h3>
-                      <div className="admin-locked-message">
-                        <p>{t.configuredViaEnv}</p>
-                      </div>
-                    </>
-                  )}
-
-                  <div className="admin-form-divider"></div>
-                </>
-              )}
-
-              {oauthLocked && (
-                <>
-                  <h3>{t.oauthSectionTitle || 'OAuth Configuration'}</h3>
-                  <div className="admin-locked-message">
-                    <p>{t.configuredViaEnv}</p>
-                  </div>
-                  <div className="admin-form-divider"></div>
-                </>
-              )}
-
-              </div>
+                <OAuthTab
+                  oauthLocked={oauthLocked}
+                  systemLocked={systemLocked}
+                  t={t}
+                  currentOauthClientId={currentOauthClientId}
+                  currentOauthAuthority={currentOauthAuthority}
+                  currentOauthHasClientSecret={currentOauthHasClientSecret}
+                  oauthLastUpdated={oauthLastUpdated}
+                  oauthClientId={oauthClientId}
+                  oauthAuthority={oauthAuthority}
+                  oauthClientSecret={oauthClientSecret}
+                  oauthMessage={oauthMessage}
+                  oauthMessageType={oauthMessageType}
+                  currentSystemGraphWebhookEnabled={currentSystemGraphWebhookEnabled}
+                  currentSystemGraphWebhookClientState={currentSystemGraphWebhookClientState}
+                  currentSystemGraphWebhookAllowedIps={currentSystemGraphWebhookAllowedIps}
+                  currentSystemGraphFetchTimeoutMs={currentSystemGraphFetchTimeoutMs}
+                  currentSystemGraphFetchRetryAttempts={currentSystemGraphFetchRetryAttempts}
+                  currentSystemGraphFetchRetryBaseMs={currentSystemGraphFetchRetryBaseMs}
+                  systemLastUpdated={systemLastUpdated}
+                  systemGraphWebhookEnabled={systemGraphWebhookEnabled}
+                  systemGraphWebhookClientState={systemGraphWebhookClientState}
+                  systemGraphWebhookAllowedIps={systemGraphWebhookAllowedIps}
+                  systemGraphFetchTimeoutMs={systemGraphFetchTimeoutMs}
+                  systemGraphFetchRetryAttempts={systemGraphFetchRetryAttempts}
+                  systemGraphFetchRetryBaseMs={systemGraphFetchRetryBaseMs}
+                  graphRuntimeMessage={graphRuntimeMessage}
+                  graphRuntimeMessageType={graphRuntimeMessageType}
+                  booleanLabel={booleanLabel}
+                  onOAuthChange={(field, value) => this.setState({ [field]: value, oauthFormDirty: true })}
+                  onOAuthSubmit={this.handleOAuthSubmit}
+                  onGraphRuntimeChange={(field, value) => this.setState({ [field]: value })}
+                  onGraphRuntimeSubmit={this.handleGraphRuntimeSubmit}
+                />
               )}
 
               {activeTab === 'maintenance' && (
@@ -5719,302 +5406,52 @@ class Admin extends Component {
               )}
 
               {activeTab === 'search' && (
-              <div className="admin-card" id="ops-search">
-
-              <div className="admin-form-divider"></div>
-
-              {!searchLocked && (
-                <>
-                  <h3>Search Configuration</h3>
-                  <div className="admin-current-config">
-                    <h3>{t.currentConfigTitle}</h3>
-                    <div className="config-grid">
-                      <div className="config-item">
-                        <span className="config-label">Use Microsoft Graph API</span>
-                        <span className="config-value">{booleanLabel(currentSearchUseGraphAPI)}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">Max days</span>
-                        <span className="config-value">{currentSearchMaxDays}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">Max room lists</span>
-                        <span className="config-value">{currentSearchMaxRoomLists}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">Max rooms</span>
-                        <span className="config-value">{currentSearchMaxRooms}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">Max items</span>
-                        <span className="config-value">{currentSearchMaxItems}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">Poll interval (ms)</span>
-                        <span className="config-value">{currentSearchPollIntervalMs}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">{t.lastUpdatedLabel}</span>
-                        <span className="config-value">{searchLastUpdated || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <form onSubmit={this.handleSearchSubmit}>
-                    <div className="admin-form-group">
-                      <label className="inline-label">
-                        <span className="label-text">Use Microsoft Graph API</span>
-                        <input
-                          type="checkbox"
-                          checked={searchUseGraphAPI}
-                          onChange={(e) => this.setState({ searchUseGraphAPI: e.target.checked })}
-                        />
-                      </label>
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="searchMaxDays">Max days</label>
-                      <input
-                        id="searchMaxDays"
-                        type="number"
-                        min="1"
-                        value={searchMaxDays}
-                        onChange={(e) => this.setState({ searchMaxDays: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
-                      />
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="searchMaxRoomLists">Max room lists</label>
-                      <input
-                        id="searchMaxRoomLists"
-                        type="number"
-                        min="1"
-                        value={searchMaxRoomLists}
-                        onChange={(e) => this.setState({ searchMaxRoomLists: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
-                      />
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="searchMaxRooms">Max rooms</label>
-                      <input
-                        id="searchMaxRooms"
-                        type="number"
-                        min="1"
-                        value={searchMaxRooms}
-                        onChange={(e) => this.setState({ searchMaxRooms: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
-                      />
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="searchMaxItems">Max items</label>
-                      <input
-                        id="searchMaxItems"
-                        type="number"
-                        min="1"
-                        value={searchMaxItems}
-                        onChange={(e) => this.setState({ searchMaxItems: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
-                      />
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="searchPollIntervalMs">Poll interval (ms)</label>
-                      <input
-                        id="searchPollIntervalMs"
-                        type="number"
-                        min="5000"
-                        step="1000"
-                        value={searchPollIntervalMs}
-                        onChange={(e) => this.setState({ searchPollIntervalMs: Math.max(parseInt(e.target.value, 10) || 5000, 5000) })}
-                      />
-                      <small>Minimum: 5000 ms</small>
-                    </div>
-
-                    <button 
-                      type="submit" 
-                      className="admin-submit-button"
-                      disabled={
-                        searchUseGraphAPI === currentSearchUseGraphAPI &&
-                        parseInt(searchMaxDays, 10) === currentSearchMaxDays &&
-                        parseInt(searchMaxRoomLists, 10) === currentSearchMaxRoomLists &&
-                        parseInt(searchMaxRooms, 10) === currentSearchMaxRooms &&
-                        parseInt(searchMaxItems, 10) === currentSearchMaxItems &&
-                        parseInt(searchPollIntervalMs, 10) === currentSearchPollIntervalMs
-                      }
-                    >
-                      Save Search Configuration
-                    </button>
-                  </form>
-
-                  {searchMessage && (
-                    <div className={`admin-message admin-message-${searchMessageType}`}>
-                      {searchMessage}
-                    </div>
-                  )}
-
-                  <div className="admin-form-divider"></div>
-                </>
-              )}
-
-              {searchLocked && (
-                <>
-                  <h3>Search Configuration</h3>
-                  <div className="admin-locked-message">
-                    <p>{t.configuredViaEnv}</p>
-                  </div>
-                  <div className="admin-form-divider"></div>
-                </>
-              )}
-
-              </div>
+                <SearchTab
+                  searchLocked={searchLocked}
+                  t={t}
+                  currentSearchUseGraphAPI={currentSearchUseGraphAPI}
+                  currentSearchMaxDays={currentSearchMaxDays}
+                  currentSearchMaxRoomLists={currentSearchMaxRoomLists}
+                  currentSearchMaxRooms={currentSearchMaxRooms}
+                  currentSearchMaxItems={currentSearchMaxItems}
+                  currentSearchPollIntervalMs={currentSearchPollIntervalMs}
+                  searchLastUpdated={searchLastUpdated}
+                  searchUseGraphAPI={searchUseGraphAPI}
+                  searchMaxDays={searchMaxDays}
+                  searchMaxRoomLists={searchMaxRoomLists}
+                  searchMaxRooms={searchMaxRooms}
+                  searchMaxItems={searchMaxItems}
+                  searchPollIntervalMs={searchPollIntervalMs}
+                  searchMessage={searchMessage}
+                  searchMessageType={searchMessageType}
+                  booleanLabel={booleanLabel}
+                  onSearchChange={(field, value) => this.setState({ [field]: value })}
+                  onSearchSubmit={this.handleSearchSubmit}
+                />
               )}
 
               {activeTab === 'ratelimit' && (
-              <div className="admin-card" id="ops-ratelimit">
-
-              {!rateLimitLocked && (
-                <>
-                  <h3>Rate Limit Configuration</h3>
-                  <div className="admin-current-config">
-                    <h3>{t.currentConfigTitle}</h3>
-                    <div className="config-grid">
-                      <div className="config-item">
-                        <span className="config-label">API window (ms)</span>
-                        <span className="config-value">{currentRateLimitApiWindowMs}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">API max</span>
-                        <span className="config-value">{currentRateLimitApiMax}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">Write window (ms)</span>
-                        <span className="config-value">{currentRateLimitWriteWindowMs}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">Write max</span>
-                        <span className="config-value">{currentRateLimitWriteMax}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">Auth window (ms)</span>
-                        <span className="config-value">{currentRateLimitAuthWindowMs}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">Auth max</span>
-                        <span className="config-value">{currentRateLimitAuthMax}</span>
-                      </div>
-                      <div className="config-item">
-                        <span className="config-label">{t.lastUpdatedLabel}</span>
-                        <span className="config-value">{rateLimitLastUpdated || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <form onSubmit={this.handleRateLimitSubmit}>
-                    <div className="admin-form-group">
-                      <label htmlFor="rateLimitApiWindowMs">API window (ms)</label>
-                      <input
-                        id="rateLimitApiWindowMs"
-                        type="number"
-                        min="1000"
-                        step="1000"
-                        value={rateLimitApiWindowMs}
-                        onChange={(e) => this.setState({ rateLimitApiWindowMs: Math.max(parseInt(e.target.value, 10) || 1000, 1000) })}
-                      />
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="rateLimitApiMax">API max requests</label>
-                      <input
-                        id="rateLimitApiMax"
-                        type="number"
-                        min="1"
-                        value={rateLimitApiMax}
-                        onChange={(e) => this.setState({ rateLimitApiMax: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
-                      />
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="rateLimitWriteWindowMs">Write window (ms)</label>
-                      <input
-                        id="rateLimitWriteWindowMs"
-                        type="number"
-                        min="1000"
-                        step="1000"
-                        value={rateLimitWriteWindowMs}
-                        onChange={(e) => this.setState({ rateLimitWriteWindowMs: Math.max(parseInt(e.target.value, 10) || 1000, 1000) })}
-                      />
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="rateLimitWriteMax">Write max requests</label>
-                      <input
-                        id="rateLimitWriteMax"
-                        type="number"
-                        min="1"
-                        value={rateLimitWriteMax}
-                        onChange={(e) => this.setState({ rateLimitWriteMax: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
-                      />
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="rateLimitAuthWindowMs">Auth window (ms)</label>
-                      <input
-                        id="rateLimitAuthWindowMs"
-                        type="number"
-                        min="1000"
-                        step="1000"
-                        value={rateLimitAuthWindowMs}
-                        onChange={(e) => this.setState({ rateLimitAuthWindowMs: Math.max(parseInt(e.target.value, 10) || 1000, 1000) })}
-                      />
-                    </div>
-
-                    <div className="admin-form-group">
-                      <label htmlFor="rateLimitAuthMax">Auth max requests</label>
-                      <input
-                        id="rateLimitAuthMax"
-                        type="number"
-                        min="1"
-                        value={rateLimitAuthMax}
-                        onChange={(e) => this.setState({ rateLimitAuthMax: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
-                      />
-                    </div>
-
-                    <button 
-                      type="submit" 
-                      className="admin-submit-button"
-                      disabled={
-                        parseInt(rateLimitApiWindowMs, 10) === currentRateLimitApiWindowMs &&
-                        parseInt(rateLimitApiMax, 10) === currentRateLimitApiMax &&
-                        parseInt(rateLimitWriteWindowMs, 10) === currentRateLimitWriteWindowMs &&
-                        parseInt(rateLimitWriteMax, 10) === currentRateLimitWriteMax &&
-                        parseInt(rateLimitAuthWindowMs, 10) === currentRateLimitAuthWindowMs &&
-                        parseInt(rateLimitAuthMax, 10) === currentRateLimitAuthMax
-                      }
-                    >
-                      Save Rate Limit Configuration
-                    </button>
-                  </form>
-
-                  {rateLimitMessage && (
-                    <div className={`admin-message admin-message-${rateLimitMessageType}`}>
-                      {rateLimitMessage}
-                    </div>
-                  )}
-
-                  <div className="admin-form-divider"></div>
-                </>
-              )}
-
-              {rateLimitLocked && (
-                <>
-                  <h3>Rate Limit Configuration</h3>
-                  <div className="admin-locked-message">
-                    <p>{t.configuredViaEnv}</p>
-                  </div>
-                  <div className="admin-form-divider"></div>
-                </>
-              )}
-
-              </div>
+                <RateLimitTab
+                  rateLimitLocked={rateLimitLocked}
+                  t={t}
+                  currentRateLimitApiWindowMs={currentRateLimitApiWindowMs}
+                  currentRateLimitApiMax={currentRateLimitApiMax}
+                  currentRateLimitWriteWindowMs={currentRateLimitWriteWindowMs}
+                  currentRateLimitWriteMax={currentRateLimitWriteMax}
+                  currentRateLimitAuthWindowMs={currentRateLimitAuthWindowMs}
+                  currentRateLimitAuthMax={currentRateLimitAuthMax}
+                  rateLimitLastUpdated={rateLimitLastUpdated}
+                  rateLimitApiWindowMs={rateLimitApiWindowMs}
+                  rateLimitApiMax={rateLimitApiMax}
+                  rateLimitWriteWindowMs={rateLimitWriteWindowMs}
+                  rateLimitWriteMax={rateLimitWriteMax}
+                  rateLimitAuthWindowMs={rateLimitAuthWindowMs}
+                  rateLimitAuthMax={rateLimitAuthMax}
+                  rateLimitMessage={rateLimitMessage}
+                  rateLimitMessageType={rateLimitMessageType}
+                  onRateLimitChange={(field, value) => this.setState({ [field]: value })}
+                  onRateLimitSubmit={this.handleRateLimitSubmit}
+                />
               )}
 
               {activeTab === 'backup' && (
