@@ -2010,6 +2010,108 @@ module.exports = function(app) {
 		}
 	});
 
+	// Get power management configuration (protected - requires token)
+	app.get('/api/power-management', checkApiToken, function(req, res) {
+		try {
+			const config = configManager.getPowerManagementConfig();
+			res.json(config);
+		} catch (err) {
+			console.error('Error retrieving power management config:', err);
+			res.status(500).json({ error: 'Failed to retrieve power management configuration' });
+		}
+	});
+
+	// Get power management configuration for specific display (public - for displays)
+	app.get('/api/power-management/:clientId', function(req, res) {
+		try {
+			const { clientId } = req.params;
+			const config = configManager.getPowerManagementConfigForDisplay(clientId);
+			
+			if (!config) {
+				return res.json({ 
+					mode: 'browser',
+					schedule: {
+						enabled: false,
+						startTime: '20:00',
+						endTime: '07:00',
+						weekendMode: false
+					}
+				});
+			}
+			
+			res.json(config);
+		} catch (err) {
+			console.error('Error retrieving power management config for display:', err);
+			res.status(500).json({ error: 'Failed to retrieve power management configuration' });
+		}
+	});
+
+	// Update power management configuration for a display (protected - requires token)
+	app.post('/api/power-management/:clientId', checkApiToken, function(req, res) {
+		try {
+			const { clientId } = req.params;
+			const { mode, schedule } = req.body;
+
+			if (!mode || !['dpms', 'browser'].includes(mode)) {
+				return res.status(400).json({ error: 'Invalid mode. Must be "dpms" or "browser"' });
+			}
+
+			const config = configManager.updatePowerManagementConfig(clientId, {
+				mode,
+				schedule: schedule || {
+					enabled: false,
+					startTime: '20:00',
+					endTime: '07:00',
+					weekendMode: false
+				}
+			});
+
+			appendAuditLog({
+				event: 'config.power-management.update',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				clientId,
+				config
+			});
+
+			res.json({ 
+				success: true, 
+				config,
+				message: 'Power management configuration updated'
+			});
+		} catch (err) {
+			console.error('Error updating power management config:', err);
+			res.status(500).json({ error: 'Failed to update power management configuration' });
+		}
+	});
+
+	// Delete power management configuration for a display (protected - requires token)
+	app.delete('/api/power-management/:clientId', checkApiToken, function(req, res) {
+		try {
+			const { clientId } = req.params;
+			configManager.deletePowerManagementConfig(clientId);
+
+			appendAuditLog({
+				event: 'config.power-management.delete',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				clientId
+			});
+
+			res.json({ 
+				success: true,
+				message: 'Power management configuration deleted'
+			});
+		} catch (err) {
+			console.error('Error deleting power management config:', err);
+			res.status(500).json({ error: 'Failed to delete power management configuration' });
+		}
+	});
+
 	// Update WiFi configuration and regenerate QR code (protected - requires token)
 	app.post('/api/wifi', checkWiFiApiToken, async function(req, res) {
 		try {

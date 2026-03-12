@@ -24,6 +24,7 @@ const oauthConfigPath = path.join(__dirname, '../data/oauth-config.json');
 const systemConfigPath = path.join(__dirname, '../data/system-config.json');
 const translationApiConfigPath = path.join(__dirname, '../data/translation-api-config.json');
 const apiTokenConfigPath = path.join(__dirname, '../data/api-token-config.json');
+const powerManagementConfigPath = path.join(__dirname, '../data/power-management-config.json');
 const apiTokenEncryptionKeyPath = path.join(__dirname, '../data/.api-token-key');
 const qrPath = path.join(__dirname, '../static/img/wifi-qr.png');
 
@@ -2073,6 +2074,100 @@ function applyRuntimeConfigOverrides() {
 
 applyRuntimeConfigOverrides();
 
+/**
+ * Get power management configuration
+ */
+function getPowerManagementConfig() {
+	try {
+		if (!fs.existsSync(powerManagementConfigPath)) {
+			return {
+				displays: {},
+				lastUpdated: null
+			};
+		}
+		const data = fs.readFileSync(powerManagementConfigPath, 'utf8');
+		return JSON.parse(data);
+	} catch (error) {
+		console.error('[ConfigManager] Error reading power management config:', error);
+		return {
+			displays: {},
+			lastUpdated: null
+		};
+	}
+}
+
+/**
+ * Update power management configuration for a specific display
+ * @param {string} clientId - Display client ID
+ * @param {object} config - Power management configuration
+ * @param {string} config.mode - 'dpms' or 'browser'
+ * @param {object} config.schedule - Schedule configuration
+ * @param {string} config.schedule.startTime - Start time (HH:MM)
+ * @param {string} config.schedule.endTime - End time (HH:MM)
+ * @param {boolean} config.schedule.weekendMode - Enable weekend mode
+ */
+function updatePowerManagementConfig(clientId, displayConfig) {
+	try {
+		const config = getPowerManagementConfig();
+		
+		config.displays[clientId] = {
+			mode: displayConfig.mode || 'browser',
+			schedule: {
+				enabled: displayConfig.schedule?.enabled || false,
+				startTime: displayConfig.schedule?.startTime || '20:00',
+				endTime: displayConfig.schedule?.endTime || '07:00',
+				weekendMode: displayConfig.schedule?.weekendMode || false
+			},
+			lastUpdated: new Date().toISOString()
+		};
+		
+		config.lastUpdated = new Date().toISOString();
+		
+		fs.writeFileSync(powerManagementConfigPath, JSON.stringify(config, null, 2));
+		
+		// Broadcast update to specific display
+		if (io) {
+			io.emit('power-management-update', {
+				clientId,
+				config: config.displays[clientId]
+			});
+		}
+		
+		return config.displays[clientId];
+	} catch (error) {
+		console.error('[ConfigManager] Error updating power management config:', error);
+		throw error;
+	}
+}
+
+/**
+ * Get power management configuration for a specific display
+ */
+function getPowerManagementConfigForDisplay(clientId) {
+	const config = getPowerManagementConfig();
+	return config.displays[clientId] || null;
+}
+
+/**
+ * Delete power management configuration for a specific display
+ */
+function deletePowerManagementConfig(clientId) {
+	try {
+		const config = getPowerManagementConfig();
+		
+		if (config.displays[clientId]) {
+			delete config.displays[clientId];
+			config.lastUpdated = new Date().toISOString();
+			fs.writeFileSync(powerManagementConfigPath, JSON.stringify(config, null, 2));
+		}
+		
+		return true;
+	} catch (error) {
+		console.error('[ConfigManager] Error deleting power management config:', error);
+		throw error;
+	}
+}
+
 module.exports = {
 	setSocketIO,
 	getWiFiConfig,
@@ -2095,6 +2190,8 @@ module.exports = {
 	getColorsConfig,
 	getMaintenanceConfig,
 	getI18nConfig,
+	getPowerManagementConfig,
+	getPowerManagementConfigForDisplay,
 	updateWiFiConfig,
 	updateLogoConfig,
 	updateSidebarConfig,
@@ -2109,5 +2206,8 @@ module.exports = {
 	updateColorsConfig,
 	updateMaintenanceConfig,
 	updateI18nConfig,
+	updatePowerManagementConfig,
+	deletePowerManagementConfig,
 	generateQRCode
 };
+
