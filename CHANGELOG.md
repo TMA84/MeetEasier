@@ -48,6 +48,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Power Management button now available for all displays (not just Socket.IO)
 - Removed emojis from UI for more professional appearance
 - Modals now rendered outside tab conditions for global accessibility
+
+### Refactored
+- **Admin Component Modularization**
+  - Extracted PowerManagementModal into separate component (`ui-react/src/components/admin/modals/PowerManagementModal.js`)
+  - Extracted TouchkioModal into separate component (`ui-react/src/components/admin/modals/TouchkioModal.js`)
+  - Extracted DevicesTab into separate component (`ui-react/src/components/admin/tabs/DevicesTab.js`)
+  - Extracted MqttTab into separate component (`ui-react/src/components/admin/tabs/MqttTab.js`)
+  - Extracted AuditTab into separate component (`ui-react/src/components/admin/tabs/AuditTab.js`)
+  - Extracted BackupTab into separate component (`ui-react/src/components/admin/tabs/BackupTab.js`)
+  - Created AdminContext for future state management (`ui-react/src/components/admin/AdminContext.js`)
+  - Reduced Admin.js from 7816 to 6947 lines (869 lines removed, 11.1% reduction)
+  - Improved code maintainability and testability
+  - Better separation of concerns between UI and business logic
+  - Created directory structure for continued tab extraction (`tabs/`, `shared/`)
+  - Incremental refactoring approach allows continued extraction of remaining tabs
+
 - Cache control headers: no-cache for HTML, 1-year cache for assets
 
 ### Fixed
