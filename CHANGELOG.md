@@ -7,32 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.7.0] - 2025-03-12
 
-### Changed
-- **Major Admin Panel Refactoring**
-  - Extracted 19 components (2 modals + 17 tabs) from monolithic Admin.js
-  - Reduced Admin.js from 7816 to 6132 lines (21.5% reduction)
-  - Created modular component structure for better maintainability
-  - Extracted PowerManagementModal and TouchkioModal components
-  - Extracted all admin tabs: DevicesTab, MqttTab, AuditTab, BackupTab, SystemTab, TranslationApiTab, MaintenanceTab, OAuthTab, SearchTab, RateLimitTab, ApiTokenTab, DisplayTab, WiFiTab, LogoTab, BookingTab, ColorsTab, TranslationsTab
-
-- **Business Logic Separation**
-  - Created helpers/ directory with color and translation utilities
-  - Created services/ directory with centralized API layer
-  - Extracted 495 lines of helper functions and API service code
-  - Centralized 40+ API endpoints in adminApi.js service
-  - Added colorHelpers.js for hex/HSL color conversions
-  - Added translationHelpers.js for language utilities and override state converters
-
-### Improved
-- Better code organization and separation of concerns
-- Improved maintainability with smaller, focused components
-- Reusable components and utilities across the application
-- Easier testing and debugging with isolated components
-- Modern React patterns and best practices
-- Total: ~5182 lines extracted into reusable modules
-
-## [Unreleased]
-
 ### Added
 - **Unified Display Management**
   - New "Displays" tab merging Socket.IO and MQTT displays in one view
@@ -69,11 +43,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Visual confirmation for all operations
 
 ### Changed
+- **Major Admin Panel Refactoring**
+  - Extracted 19 components (2 modals + 17 tabs) from monolithic Admin.js
+  - Reduced Admin.js from 7816 to 6132 lines (21.5% reduction)
+  - Created modular component structure for better maintainability
+  - Extracted PowerManagementModal and TouchkioModal components
+  - Extracted all admin tabs: DevicesTab, MqttTab, AuditTab, BackupTab, SystemTab, TranslationApiTab, MaintenanceTab, OAuthTab, SearchTab, RateLimitTab, ApiTokenTab, DisplayTab, WiFiTab, LogoTab, BookingTab, ColorsTab, TranslationsTab
+
+- **Business Logic Separation**
+  - Created helpers/ directory with color and translation utilities
+  - Created services/ directory with centralized API layer
+  - Extracted 495 lines of helper functions and API service code
+  - Centralized 40+ API endpoints in adminApi.js service
+  - Added colorHelpers.js for hex/HSL color conversions
+  - Added translationHelpers.js for language utilities and override state converters
+
 - Moved display tracking settings from MQTT tab to Displays tab
 - Removed duplicate Touchkio displays list from MQTT tab
 - Power Management button now available for all displays (not just Socket.IO)
 - Removed emojis from UI for more professional appearance
 - Modals now rendered outside tab conditions for global accessibility
+
+### Improved
+- Better code organization and separation of concerns
+- Improved maintainability with smaller, focused components
+- Reusable components and utilities across the application
+- Easier testing and debugging with isolated components
+- Modern React patterns and best practices
+- Total: ~5182 lines extracted into reusable modules
+
+## [Unreleased]
 
 ### Refactored
 - **Admin Component Modularization**
