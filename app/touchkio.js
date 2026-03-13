@@ -151,6 +151,22 @@ function subscribeTouchkioStates() {
           const errorData = JSON.parse(payloadStr);
           displayState.errors = errorData;
           displayState.lastErrorUpdate = new Date().toISOString();
+          
+          // Check for unsupported hardware features
+          Object.values(errorData).forEach(logs => {
+            logs.forEach(log => {
+              const msg = Object.values(log)[0];
+              if (typeof msg === 'string') {
+                if (msg.includes('Display Status [unsupported]')) {
+                  displayState.powerUnsupported = true;
+                }
+                if (msg.includes('Display Brightness [unsupported]')) {
+                  displayState.brightnessUnsupported = true;
+                }
+              }
+            });
+          });
+          
           // Only log if there are actual errors, not just info messages
           const hasErrors = Object.values(errorData).some(logs => 
             logs.some(log => Object.keys(log)[0] === 'ERROR')

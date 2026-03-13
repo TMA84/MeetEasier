@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.15] - 2026-03-13
+
+### Fixed
+- **False "OFF" Power Status for Unsupported HDMI Displays**
+  - Touchkio sends "OFF" as default power status when hardware doesn't support DDC/CI or CEC
+  - Backend now parses Touchkio error logs to detect "Display Status [unsupported]" messages
+  - Sets `powerUnsupported` flag and strips false "OFF" power value from API response
+  - Modal now correctly shows "UNSUPPORTED" instead of "OFF" for these displays
+  - DevicesTab shows green "Active" dot (via Socket.IO fallback) instead of orange "Partial"
+  - MQTT-only displays with unsupported power show "Connected" (gray) instead of "OFF" (red)
+
 ## [1.7.14] - 2026-03-13
 
 ### Fixed
