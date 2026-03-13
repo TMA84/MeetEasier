@@ -5,6 +5,7 @@ const PowerManagementModal = ({
   clientId,
   mode,
   mqttHostname,
+  hasMqtt,
   scheduleEnabled,
   startTime,
   endTime,
@@ -21,6 +22,12 @@ const PowerManagementModal = ({
   onWeekendModeChange
 }) => {
   if (!show) return null;
+
+  // For global config, show all modes
+  const isGlobal = clientId === '__global__';
+  
+  // For specific displays, only show MQTT if available
+  const showMqttOption = isGlobal || hasMqtt;
 
   return (
     <div className="admin-modal-overlay" onClick={onClose}>
@@ -63,19 +70,23 @@ const PowerManagementModal = ({
                 />
                 <span>DPMS (Raspberry Pi only)</span>
               </label>
-              <label className="admin-radio-label">
-                <input
-                  type="radio"
-                  name="powerManagementMode"
-                  value="mqtt"
-                  checked={mode === 'mqtt'}
-                  onChange={(e) => onModeChange(e.target.value)}
-                />
-                <span>MQTT (Touchkio Displays)</span>
-              </label>
+              {showMqttOption && (
+                <label className="admin-radio-label">
+                  <input
+                    type="radio"
+                    name="powerManagementMode"
+                    value="mqtt"
+                    checked={mode === 'mqtt'}
+                    onChange={(e) => onModeChange(e.target.value)}
+                  />
+                  <span>MQTT (Touchkio Displays){hasMqtt && !isGlobal ? ' ✓' : ''}</span>
+                </label>
+              )}
             </div>
             <small>
-              Browser: Black screen (works on all devices). DPMS: True power off (requires Raspberry Pi setup). MQTT: Touchkio display control via MQTT.
+              Browser: Black screen (works on all devices). DPMS: True power off (requires Raspberry Pi setup).
+              {showMqttOption && ' MQTT: Touchkio display control via MQTT.'}
+              {!showMqttOption && ' MQTT: Not available (display not connected via MQTT).'}
             </small>
           </div>
 
@@ -88,8 +99,14 @@ const PowerManagementModal = ({
                 placeholder="e.g., saturn"
                 value={mqttHostname}
                 onChange={(e) => onMqttHostnameChange(e.target.value)}
+                readOnly={hasMqtt && !isGlobal}
               />
-              <small>Hostname of the Raspberry Pi (e.g., "saturn", "jupiter")</small>
+              <small>
+                {hasMqtt && !isGlobal 
+                  ? 'Hostname automatically detected from MQTT connection' 
+                  : 'Hostname of the Raspberry Pi (e.g., "saturn", "jupiter")'
+                }
+              </small>
             </div>
           )}
 
