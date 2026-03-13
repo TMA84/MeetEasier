@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.4] - 2026-03-13
+
+### Fixed
+- **Corrected MQTT Topic Formats**
+  - Fixed display power command topic: `homeassistant/light/{deviceId}/display/power/set` (not `/display/set`)
+  - Fixed status subscriptions: using `/status` instead of `/state` (matches actual Touchkio behavior)
+  - All status topics now correctly subscribe to `/status` endpoints
+  - Command topics remain on `/set` endpoints as per Touchkio specification
+
 ## [1.7.3] - 2026-03-13
 
 ### Added

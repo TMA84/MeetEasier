@@ -1,122 +1,185 @@
 # Touchkio Complete MQTT Topics
 
-Basierend auf dem Touchkio Source Code (`touchkio/js/integration.js`)
+Basierend auf dem Touchkio Source Code (`touchkio/js/integration.js`) und echten MQTT Logs
+
+## Wichtig: Status vs State
+
+Touchkio verwendet **zwei verschiedene Topic-Formate**:
+- **Status Topics:** `/status` (was das Display sendet)
+- **State Topics:** `/state` (was in der Config definiert ist)
+- **Command Topics:** `/set` (was das Display empfängt)
+
+In der Praxis sendet Touchkio auf `/status` Topics!
 
 ## Vollständige Topic-Liste
 
 ### Display Control (Light Entity)
 ```
+# Config
 homeassistant/light/{deviceId}/display/config
-homeassistant/light/{deviceId}/display/power/set          → Command: "ON" oder "OFF"
-homeassistant/light/{deviceId}/display/power/state        → Status: "ON" oder "OFF"
-homeassistant/light/{deviceId}/display/brightness/set     → Command: 0-100
-homeassistant/light/{deviceId}/display/brightness/state   → Status: 0-100
+
+# Status (Display → Server)
+homeassistant/light/{deviceId}/display/status                    → "ON" oder "OFF"
+homeassistant/light/{deviceId}/display/brightness/status         → 0-100
+
+# Commands (Server → Display)
+homeassistant/light/{deviceId}/display/power/set                 → "ON" oder "OFF"
+homeassistant/light/{deviceId}/display/brightness/set            → 0-100
 ```
 
 ### Kiosk Mode (Select Entity)
 ```
+# Config
 homeassistant/select/{deviceId}/kiosk/config
-homeassistant/select/{deviceId}/kiosk/set                 → Command: "Framed", "Fullscreen", "Maximized", "Minimized", "Terminated"
-homeassistant/select/{deviceId}/kiosk/state               → Status: current mode
+
+# Status (Display → Server)
+homeassistant/select/{deviceId}/kiosk/status                     → "Framed", "Fullscreen", "Maximized", "Minimized", "Terminated"
+
+# Commands (Server → Display)
+homeassistant/select/{deviceId}/kiosk/set                        → "Framed", "Fullscreen", "Maximized", "Minimized"
 ```
 
 ### Theme (Select Entity) ✅ VERFÜGBAR!
 ```
+# Config
 homeassistant/select/{deviceId}/theme/config
-homeassistant/select/{deviceId}/theme/set                 → Command: "Light", "Dark"
-homeassistant/select/{deviceId}/theme/state               → Status: current theme
+
+# Status (Display → Server)
+homeassistant/select/{deviceId}/theme/status                     → "Light", "Dark"
+
+# Commands (Server → Display)
+homeassistant/select/{deviceId}/theme/set                        → "Light", "Dark"
 ```
 
 ### Volume (Number Entity) ✅ VERFÜGBAR!
 ```
+# Config
 homeassistant/number/{deviceId}/volume/config
-homeassistant/number/{deviceId}/volume/set                → Command: 0-100
-homeassistant/number/{deviceId}/volume/state              → Status: 0-100
+
+# Status (Display → Server)
+homeassistant/number/{deviceId}/volume/status                    → 0-100
+
+# Commands (Server → Display)
+homeassistant/number/{deviceId}/volume/set                       → 0-100
 ```
 
 ### Keyboard (Switch Entity) ✅ VERFÜGBAR!
 ```
+# Config
 homeassistant/switch/{deviceId}/keyboard/config
-homeassistant/switch/{deviceId}/keyboard/set              → Command: "ON", "OFF"
-homeassistant/switch/{deviceId}/keyboard/state            → Status: "ON", "OFF"
+
+# Status (Display → Server)
+homeassistant/switch/{deviceId}/keyboard/status                  → "ON", "OFF"
+
+# Commands (Server → Display)
+homeassistant/switch/{deviceId}/keyboard/set                     → "ON", "OFF"
 ```
 
 ### Page Number (Number Entity) ✅ VERFÜGBAR!
 ```
+# Config
 homeassistant/number/{deviceId}/page_number/config
-homeassistant/number/{deviceId}/page_number/set           → Command: page number (int)
-homeassistant/number/{deviceId}/page_number/state         → Status: current page
+
+# Status (Display → Server)
+homeassistant/number/{deviceId}/page_number/status              → page number (int)
+
+# Commands (Server → Display)
+homeassistant/number/{deviceId}/page_number/set                 → page number (int)
 ```
 
 ### Page Zoom (Number Entity) ✅ VERFÜGBAR!
 ```
+# Config
 homeassistant/number/{deviceId}/page_zoom/config
-homeassistant/number/{deviceId}/page_zoom/set             → Command: 25-400 (zoom percentage)
-homeassistant/number/{deviceId}/page_zoom/state           → Status: current zoom
+
+# Status (Display → Server)
+homeassistant/number/{deviceId}/page_zoom/status                → 25-400 (zoom percentage)
+
+# Commands (Server → Display)
+homeassistant/number/{deviceId}/page_zoom/set                   → 25-400 (zoom percentage)
 ```
 
 ### Page URL (Text Entity) ✅ VERFÜGBAR!
 ```
+# Config
 homeassistant/text/{deviceId}/page_url/config
-homeassistant/text/{deviceId}/page_url/set                → Command: URL string (https://...)
-homeassistant/text/{deviceId}/page_url/state              → Status: current URL
+
+# Status (Display → Server)
+homeassistant/text/{deviceId}/page_url/status                   → URL string
+
+# Commands (Server → Display)
+homeassistant/text/{deviceId}/page_url/set                      → URL string (https://...)
 ```
 
 ### Buttons
 ```
+# Refresh
 homeassistant/button/{deviceId}/refresh/config
-homeassistant/button/{deviceId}/refresh/execute           → Command: "PRESS"
+homeassistant/button/{deviceId}/refresh/execute                 → "PRESS"
 
+# Reboot
 homeassistant/button/{deviceId}/reboot/config
-homeassistant/button/{deviceId}/reboot/execute            → Command: "PRESS"
+homeassistant/button/{deviceId}/reboot/execute                  → "PRESS"
 
+# Shutdown
 homeassistant/button/{deviceId}/shutdown/config
-homeassistant/button/{deviceId}/shutdown/execute          → Command: "PRESS"
+homeassistant/button/{deviceId}/shutdown/execute                → "PRESS"
 ```
 
 ### Update (Update Entity)
 ```
 homeassistant/update/{deviceId}/app/config
-homeassistant/update/{deviceId}/app/install               → Command: "update" or "update early"
-homeassistant/update/{deviceId}/app/version/state         → Status: version string
+homeassistant/update/{deviceId}/app/install                     → "update" or "update early"
+homeassistant/update/{deviceId}/app/version/status              → version string
 ```
 
 ### Sensors (Read-Only)
 ```
+# Hostname
 homeassistant/sensor/{deviceId}/host_name/config
-homeassistant/sensor/{deviceId}/host_name/state           → Hostname (e.g., "piosk")
+homeassistant/sensor/{deviceId}/host_name/status                → Hostname (e.g., "piosk")
 
+# Model
 homeassistant/sensor/{deviceId}/model/config
-homeassistant/sensor/{deviceId}/model/state               → Model (e.g., "Raspberry Pi 4 Model B Rev 1.5")
-homeassistant/sensor/{deviceId}/model/attributes          → JSON with model details
+homeassistant/sensor/{deviceId}/model/status                    → Model (e.g., "Raspberry Pi 4 Model B Rev 1.5")
+homeassistant/sensor/{deviceId}/model/attributes                → JSON with model details
 
+# Serial Number
 homeassistant/sensor/{deviceId}/serial_number/config
-homeassistant/sensor/{deviceId}/serial_number/state       → Serial number
+homeassistant/sensor/{deviceId}/serial_number/status            → Serial number
 
+# Memory Size
 homeassistant/sensor/{deviceId}/memory_size/config
-homeassistant/sensor/{deviceId}/memory_size/state         → Memory size in GiB
+homeassistant/sensor/{deviceId}/memory_size/status              → Memory size in GiB
 
+# CPU Usage
 homeassistant/sensor/{deviceId}/processor_usage/config
-homeassistant/sensor/{deviceId}/processor_usage/state     → CPU usage %
+homeassistant/sensor/{deviceId}/processor_usage/status          → CPU usage %
 
+# Memory Usage
 homeassistant/sensor/{deviceId}/memory_usage/config
-homeassistant/sensor/{deviceId}/memory_usage/state        → Memory usage %
+homeassistant/sensor/{deviceId}/memory_usage/status             → Memory usage %
 
+# Temperature
 homeassistant/sensor/{deviceId}/processor_temperature/config
-homeassistant/sensor/{deviceId}/processor_temperature/state → Temperature °C
+homeassistant/sensor/{deviceId}/processor_temperature/status    → Temperature °C
 
+# Uptime
 homeassistant/sensor/{deviceId}/up_time/config
-homeassistant/sensor/{deviceId}/up_time/state             → Uptime in minutes
+homeassistant/sensor/{deviceId}/up_time/status                  → Uptime in minutes
 
+# Heartbeat
 homeassistant/sensor/{deviceId}/heartbeat/config
-homeassistant/sensor/{deviceId}/heartbeat/state           → Heartbeat timestamp
+homeassistant/sensor/{deviceId}/heartbeat/status                → Heartbeat timestamp
 
+# Last Active
 homeassistant/sensor/{deviceId}/last_active/config
-homeassistant/sensor/{deviceId}/last_active/state         → Last activity in minutes
+homeassistant/sensor/{deviceId}/last_active/status              → Last activity in minutes
 
+# Package Upgrades
 homeassistant/sensor/{deviceId}/package_upgrades/config
-homeassistant/sensor/{deviceId}/package_upgrades/state    → Number of available updates
-homeassistant/sensor/{deviceId}/package_upgrades/attributes → JSON with package list
+homeassistant/sensor/{deviceId}/package_upgrades/status         → Number of available updates
+homeassistant/sensor/{deviceId}/package_upgrades/attributes     → JSON with package list
 ```
 
 ## Wichtige Erkenntnisse
