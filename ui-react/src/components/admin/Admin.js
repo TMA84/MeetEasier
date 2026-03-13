@@ -609,6 +609,19 @@ class Admin extends Component {
         this.mqttDisplaysInterval = null;
       }
     }
+
+    // Update touchkioModalDisplay when mqttDisplays changes and modal is open
+    if (this.state.showTouchkioModal && this.state.touchkioModalDisplay && 
+        this.state.mqttDisplays !== prevState.mqttDisplays) {
+      const currentHostname = this.state.touchkioModalDisplay.mqtt?.hostname || 
+                             this.state.touchkioModalDisplay.hostname;
+      const updatedDisplay = this.state.mqttDisplays.find(d => 
+        (d.mqtt?.hostname || d.hostname) === currentHostname
+      );
+      if (updatedDisplay) {
+        this.setState({ touchkioModalDisplay: updatedDisplay });
+      }
+    }
   }
 
   startConnectedDisplaysAutoRefresh = () => {
