@@ -97,17 +97,17 @@ const DevicesTab = ({
           <p>{t.connectedDisplaysEmpty || 'No displays connected.'}</p>
         </div>
       ) : (
-        <div className="admin-displays-table-wrapper">
-          <table>
+        <div className="admin-displays-table-wrapper" style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', tableLayout: 'auto' }}>
             <thead>
               <tr>
-                <th>Status</th>
+                <th style={{ width: '40px', textAlign: 'center' }}>Status</th>
                 <th>Name</th>
                 <th>Type</th>
                 <th>Connection</th>
                 <th>IP Address</th>
                 <th>Details</th>
-                <th>Actions</th>
+                <th style={{ minWidth: '200px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -168,7 +168,8 @@ const DevicesTab = ({
                       color: '#3b82f6',
                       borderRadius: '4px',
                       fontSize: '0.75rem',
-                      marginRight: '0.25rem'
+                      marginRight: '0.25rem',
+                      whiteSpace: 'nowrap'
                     }}>
                       Socket.IO
                     </span>
@@ -182,7 +183,8 @@ const DevicesTab = ({
                       backgroundColor: 'rgba(34, 197, 94, 0.2)',
                       color: '#22c55e',
                       borderRadius: '4px',
-                      fontSize: '0.75rem'
+                      fontSize: '0.75rem',
+                      whiteSpace: 'nowrap'
                     }}>
                       MQTT
                     </span>
@@ -191,26 +193,23 @@ const DevicesTab = ({
                 
                 return (
                   <tr key={display.id}>
-                    <td className="status-cell">
-                      <span>
-                        <span style={{
+                    <td className="status-cell" style={{ textAlign: 'center', padding: '0.5rem' }}>
+                      <span 
+                        style={{
                           display: 'inline-block',
-                          width: '8px',
-                          height: '8px',
+                          width: '12px',
+                          height: '12px',
                           borderRadius: '50%',
                           backgroundColor: statusDotColor,
-                          marginRight: '0.5rem'
-                        }}></span>
-                        <span style={{ color: statusColor }}>
-                          {status}
-                        </span>
-                      </span>
+                        }}
+                        title={status}
+                      ></span>
                     </td>
                     <td><strong>{display.name}</strong></td>
                     <td>{display.type || 'unknown'}</td>
                     <td>{connectionBadges}</td>
                     <td className="ip-address">{display.ipAddress || '-'}</td>
-                    <td style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                    <td style={{ fontSize: '0.85rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
                       {hasMQTT && (
                         <div>
                           CPU: {display.mqtt.cpuUsage !== undefined ? `${display.mqtt.cpuUsage}%` : '-'} | 
@@ -225,7 +224,7 @@ const DevicesTab = ({
                       )}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'nowrap' }}>
                         <button
                           type="button"
                           className="admin-secondary-button"
