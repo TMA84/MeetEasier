@@ -2813,7 +2813,9 @@ module.exports = function(app) {
 					temperature: mqtt.temperature,
 					networkAddress: mqtt.networkAddress,
 					uptime: mqtt.uptime,
-					lastUpdate: mqtt.lastUpdate
+					lastUpdate: mqtt.lastUpdate,
+					errors: mqtt.errors,
+					lastErrorUpdate: mqtt.lastErrorUpdate
 				};
 				
 				if (existingDisplay) {

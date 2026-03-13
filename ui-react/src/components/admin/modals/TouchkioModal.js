@@ -130,6 +130,52 @@ const TouchkioModal = ({
             </div>
           </div>
 
+          {/* Error Log Section */}
+          {displayData.errors && Object.keys(displayData.errors).length > 0 && (
+            <div style={{ 
+              marginBottom: '2rem',
+              padding: '1.25rem',
+              background: 'rgba(239, 68, 68, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(239, 68, 68, 0.3)'
+            }}>
+              <div style={{ fontSize: '0.75rem', color: '#fca5a5', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                Recent Errors & Logs
+              </div>
+              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                {Object.entries(displayData.errors).map(([timestamp, logs]) => (
+                  <div key={timestamp} style={{ marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.25rem' }}>{timestamp}</div>
+                    {logs.map((log, idx) => {
+                      const logType = Object.keys(log)[0];
+                      const logMessage = log[logType];
+                      const isError = logType === 'ERROR';
+                      const isWarning = logType === 'WARN';
+                      
+                      return (
+                        <div 
+                          key={idx} 
+                          style={{ 
+                            fontSize: '0.75rem', 
+                            color: isError ? '#fca5a5' : isWarning ? '#fbbf24' : '#cbd5e1',
+                            marginBottom: '0.25rem',
+                            paddingLeft: '0.5rem',
+                            borderLeft: `2px solid ${isError ? '#ef4444' : isWarning ? '#f59e0b' : '#475569'}`,
+                            fontFamily: 'monospace',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word'
+                          }}
+                        >
+                          <strong>[{logType}]</strong> {logMessage.length > 200 ? logMessage.substring(0, 200) + '...' : logMessage}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Page URL Section */}
           <div style={{ 
             marginBottom: '2rem',
@@ -336,23 +382,30 @@ const TouchkioModal = ({
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '8px'
               }}>
-                <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Kiosk Mode</h4>
+                <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Kiosk Mode</h4>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.75rem' }}>
+                  Current: <span style={{ color: displayData.kioskStatus ? '#3b82f6' : '#94a3b8', fontWeight: 600 }}>{displayData.kioskStatus || 'unknown'}</span>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                  {['Fullscreen', 'Maximized', 'Framed', 'Minimized'].map(mode => (
-                    <button
-                      key={mode}
-                      type="button"
-                      className={displayData.kioskStatus === mode ? 'admin-primary-button' : 'admin-secondary-button'}
-                      onClick={() => onKioskCommand(hostname, mode)}
-                      style={{ 
-                        width: '100%',
-                        fontSize: '0.875rem',
-                        padding: '0.625rem'
-                      }}
-                    >
-                      {mode}
-                    </button>
-                  ))}
+                  {['Fullscreen', 'Maximized', 'Framed', 'Minimized'].map(mode => {
+                    const isActive = displayData.kioskStatus === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        className={isActive ? 'admin-primary-button' : 'admin-secondary-button'}
+                        onClick={() => onKioskCommand(hostname, mode)}
+                        style={{ 
+                          width: '100%',
+                          fontSize: '0.875rem',
+                          padding: '0.625rem',
+                          ...(isActive ? { boxShadow: '0 0 8px rgba(59, 130, 246, 0.4)' } : {})
+                        }}
+                      >
+                        {isActive ? `✓ ${mode}` : mode}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -364,32 +417,30 @@ const TouchkioModal = ({
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '8px'
               }}>
-                <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Theme</h4>
+                <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Theme</h4>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.75rem' }}>
+                  Current: <span style={{ color: displayData.theme ? '#3b82f6' : '#94a3b8', fontWeight: 600 }}>{displayData.theme || 'unknown'}</span>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    className={displayData.theme === 'Light' ? 'admin-primary-button' : 'admin-secondary-button'}
-                    onClick={() => onThemeCommand(hostname, 'Light')}
-                    style={{ 
-                      width: '100%',
-                      fontSize: '0.875rem',
-                      padding: '0.625rem'
-                    }}
-                  >
-                    Light
-                  </button>
-                  <button
-                    type="button"
-                    className={displayData.theme === 'Dark' ? 'admin-primary-button' : 'admin-secondary-button'}
-                    onClick={() => onThemeCommand(hostname, 'Dark')}
-                    style={{ 
-                      width: '100%',
-                      fontSize: '0.875rem',
-                      padding: '0.625rem'
-                    }}
-                  >
-                    Dark
-                  </button>
+                  {['Light', 'Dark'].map(theme => {
+                    const isActive = displayData.theme === theme;
+                    return (
+                      <button
+                        key={theme}
+                        type="button"
+                        className={isActive ? 'admin-primary-button' : 'admin-secondary-button'}
+                        onClick={() => onThemeCommand(hostname, theme)}
+                        style={{ 
+                          width: '100%',
+                          fontSize: '0.875rem',
+                          padding: '0.625rem',
+                          ...(isActive ? { boxShadow: '0 0 8px rgba(59, 130, 246, 0.4)' } : {})
+                        }}
+                      >
+                        {isActive ? `✓ ${theme}` : theme}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
