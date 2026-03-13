@@ -257,7 +257,7 @@ const DevicesTab = ({
                             <button
                               type="button"
                               className="admin-primary-button"
-                              onClick={() => onOpenTouchkioModal(display.mqtt)}
+                              onClick={() => onOpenTouchkioModal(display)}
                               style={{
                                 padding: '0.5rem 1rem',
                                 fontSize: '0.875rem',

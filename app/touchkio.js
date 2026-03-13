@@ -1,6 +1,6 @@
 /**
- * MQTT Power Management Bridge
- * Bridges MeetEasier power management with Touchkio MQTT controls
+ * Touchkio Display Controller
+ * Manages Touchkio displays via MQTT (power, brightness, volume, kiosk mode, etc.)
  */
 
 const mqttClient = require('./mqtt-client');
@@ -10,14 +10,14 @@ const configManager = require('./config-manager');
 const displayStates = new Map();
 
 /**
- * Initialize power management bridge
+ * Initialize Touchkio controller
  */
 function init() {
-  console.log('[MQTT-Bridge] Initializing power management bridge');
+  console.log('[Touchkio] Initializing display controller');
   
   // Wait for MQTT client to connect before subscribing
   mqttClient.onConnect(() => {
-    console.log('[MQTT-Bridge] MQTT connected, subscribing to Touchkio topics');
+    console.log('[Touchkio] MQTT connected, subscribing to display topics');
     subscribeTouchkioStates();
   });
   
@@ -51,10 +51,10 @@ function subscribeTouchkioStates() {
         displayState.brightness = state.brightness;
         displayState.lastUpdate = new Date().toISOString();
         
-        console.log(`[MQTT-Bridge] Display power state updated: ${hostname} = ${state.state}`);
+        console.log(`[Touchkio] Display power state updated: ${hostname} = ${state.state}`);
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse display state:', error);
+      console.error('[Touchkio] Failed to parse display state:', error);
     }
   });
   
@@ -70,10 +70,10 @@ function subscribeTouchkioStates() {
         }
         const displayState = displayStates.get(hostname);
         displayState.kioskStatus = payload;
-        console.log(`[MQTT-Bridge] Kiosk status updated: ${hostname} = ${payload}`);
+        console.log(`[Touchkio] Kiosk status updated: ${hostname} = ${payload}`);
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse kiosk state:', error);
+      console.error('[Touchkio] Failed to parse kiosk state:', error);
     }
   });
   
@@ -89,10 +89,10 @@ function subscribeTouchkioStates() {
         }
         const displayState = displayStates.get(hostname);
         displayState.theme = payload;
-        console.log(`[MQTT-Bridge] Theme updated: ${hostname} = ${payload}`);
+        console.log(`[Touchkio] Theme updated: ${hostname} = ${payload}`);
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse theme state:', error);
+      console.error('[Touchkio] Failed to parse theme state:', error);
     }
   });
   
@@ -108,10 +108,10 @@ function subscribeTouchkioStates() {
         }
         const displayState = displayStates.get(hostname);
         displayState.volume = parseInt(payload, 10);
-        console.log(`[MQTT-Bridge] Volume updated: ${hostname} = ${payload}`);
+        console.log(`[Touchkio] Volume updated: ${hostname} = ${payload}`);
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse volume state:', error);
+      console.error('[Touchkio] Failed to parse volume state:', error);
     }
   });
   
@@ -127,10 +127,10 @@ function subscribeTouchkioStates() {
         }
         const displayState = displayStates.get(hostname);
         displayState.keyboardVisible = payload === 'ON';
-        console.log(`[MQTT-Bridge] Keyboard visibility updated: ${hostname} = ${payload}`);
+        console.log(`[Touchkio] Keyboard visibility updated: ${hostname} = ${payload}`);
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse keyboard state:', error);
+      console.error('[Touchkio] Failed to parse keyboard state:', error);
     }
   });
   
@@ -146,10 +146,10 @@ function subscribeTouchkioStates() {
         }
         const displayState = displayStates.get(hostname);
         displayState.pageZoom = parseInt(payload, 10);
-        console.log(`[MQTT-Bridge] Page zoom updated: ${hostname} = ${payload}%`);
+        console.log(`[Touchkio] Page zoom updated: ${hostname} = ${payload}%`);
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse page zoom state:', error);
+      console.error('[Touchkio] Failed to parse page zoom state:', error);
     }
   });
   
@@ -165,10 +165,10 @@ function subscribeTouchkioStates() {
         }
         const displayState = displayStates.get(hostname);
         displayState.pageUrl = payload;
-        console.log(`[MQTT-Bridge] Page URL updated: ${hostname} = ${payload}`);
+        console.log(`[Touchkio] Page URL updated: ${hostname} = ${payload}`);
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse page URL state:', error);
+      console.error('[Touchkio] Failed to parse page URL state:', error);
     }
   });
   
@@ -186,7 +186,7 @@ function subscribeTouchkioStates() {
         displayState.cpuUsage = parseFloat(payload);
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse CPU usage:', error);
+      console.error('[Touchkio] Failed to parse CPU usage:', error);
     }
   });
   
@@ -203,7 +203,7 @@ function subscribeTouchkioStates() {
         displayState.memoryUsage = parseFloat(payload);
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse memory usage:', error);
+      console.error('[Touchkio] Failed to parse memory usage:', error);
     }
   });
   
@@ -220,7 +220,7 @@ function subscribeTouchkioStates() {
         displayState.temperature = parseFloat(payload);
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse temperature:', error);
+      console.error('[Touchkio] Failed to parse temperature:', error);
     }
   });
   
@@ -237,7 +237,7 @@ function subscribeTouchkioStates() {
         displayState.networkAddress = payload;
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse network address:', error);
+      console.error('[Touchkio] Failed to parse network address:', error);
     }
   });
   
@@ -254,7 +254,7 @@ function subscribeTouchkioStates() {
         displayState.uptime = parseFloat(payload);
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Failed to parse uptime:', error);
+      console.error('[Touchkio] Failed to parse uptime:', error);
     }
   });
 }
@@ -276,7 +276,7 @@ function sendPowerCommand(hostname, powerState, brightness = 255) {
   const success = mqttClient.publish(topic, payload, { qos: 1, retain: false });
   
   if (success) {
-    console.log(`[MQTT-Bridge] Sent power command to ${hostname}: ${powerState ? 'ON' : 'OFF'}`);
+    console.log(`[Touchkio] Sent power command to ${hostname}: ${powerState ? 'ON' : 'OFF'}`);
   }
   
   return success;
@@ -292,7 +292,7 @@ function sendBrightnessCommand(hostname, brightness) {
   const success = mqttClient.publish(topic, value.toString(), { qos: 1, retain: false });
   
   if (success) {
-    console.log(`[MQTT-Bridge] Sent brightness command to ${hostname}: ${value}`);
+    console.log(`[Touchkio] Sent brightness command to ${hostname}: ${value}`);
   }
   
   return success;
@@ -306,7 +306,7 @@ function sendBrightnessCommand(hostname, brightness) {
 function sendKioskCommand(hostname, status) {
   const validStatuses = ['Framed', 'Fullscreen', 'Maximized', 'Minimized'];
   if (!validStatuses.includes(status)) {
-    console.error(`[MQTT-Bridge] Invalid kiosk status: ${status}`);
+    console.error(`[Touchkio] Invalid kiosk status: ${status}`);
     return false;
   }
   
@@ -314,7 +314,7 @@ function sendKioskCommand(hostname, status) {
   const success = mqttClient.publish(topic, status, { qos: 1, retain: false });
   
   if (success) {
-    console.log(`[MQTT-Bridge] Sent kiosk command to ${hostname}: ${status}`);
+    console.log(`[Touchkio] Sent kiosk command to ${hostname}: ${status}`);
   }
   
   return success;
@@ -328,7 +328,7 @@ function sendKioskCommand(hostname, status) {
 function sendThemeCommand(hostname, theme) {
   const validThemes = ['Light', 'Dark'];
   if (!validThemes.includes(theme)) {
-    console.error(`[MQTT-Bridge] Invalid theme: ${theme}`);
+    console.error(`[Touchkio] Invalid theme: ${theme}`);
     return false;
   }
   
@@ -336,7 +336,7 @@ function sendThemeCommand(hostname, theme) {
   const success = mqttClient.publish(topic, theme, { qos: 1, retain: false });
   
   if (success) {
-    console.log(`[MQTT-Bridge] Sent theme command to ${hostname}: ${theme}`);
+    console.log(`[Touchkio] Sent theme command to ${hostname}: ${theme}`);
   }
   
   return success;
@@ -354,7 +354,7 @@ function sendVolumeCommand(hostname, volume) {
   const success = mqttClient.publish(topic, value.toString(), { qos: 1, retain: false });
   
   if (success) {
-    console.log(`[MQTT-Bridge] Sent volume command to ${hostname}: ${value}`);
+    console.log(`[Touchkio] Sent volume command to ${hostname}: ${value}`);
   }
   
   return success;
@@ -372,7 +372,7 @@ function sendKeyboardCommand(hostname, visible) {
   const success = mqttClient.publish(topic, value, { qos: 1, retain: false });
   
   if (success) {
-    console.log(`[MQTT-Bridge] Sent keyboard command to ${hostname}: ${value}`);
+    console.log(`[Touchkio] Sent keyboard command to ${hostname}: ${value}`);
   }
   
   return success;
@@ -390,7 +390,7 @@ function sendPageZoomCommand(hostname, zoom) {
   const success = mqttClient.publish(topic, value.toString(), { qos: 1, retain: false });
   
   if (success) {
-    console.log(`[MQTT-Bridge] Sent page zoom command to ${hostname}: ${value}%`);
+    console.log(`[Touchkio] Sent page zoom command to ${hostname}: ${value}%`);
   }
   
   return success;
@@ -407,7 +407,7 @@ function sendPageUrlCommand(hostname, url) {
   const success = mqttClient.publish(topic, url, { qos: 1, retain: false });
   
   if (success) {
-    console.log(`[MQTT-Bridge] Sent page URL command to ${hostname}: ${url}`);
+    console.log(`[Touchkio] Sent page URL command to ${hostname}: ${url}`);
   }
   
   return success;
@@ -422,7 +422,7 @@ function sendRefreshCommand(hostname) {
   const success = mqttClient.publish(topic, 'PRESS', { qos: 1, retain: false });
   
   if (success) {
-    console.log(`[MQTT-Bridge] Sent refresh command to ${hostname}`);
+    console.log(`[Touchkio] Sent refresh command to ${hostname}`);
   }
   
   return success;
@@ -437,7 +437,7 @@ function sendRebootCommand(hostname) {
   const success = mqttClient.publish(topic, 'PRESS', { qos: 1, retain: false });
   
   if (success) {
-    console.log(`[MQTT-Bridge] Sent reboot command to ${hostname}`);
+    console.log(`[Touchkio] Sent reboot command to ${hostname}`);
   }
   
   return success;
@@ -452,7 +452,7 @@ function sendShutdownCommand(hostname) {
   const success = mqttClient.publish(topic, 'PRESS', { qos: 1, retain: false });
   
   if (success) {
-    console.log(`[MQTT-Bridge] Sent shutdown command to ${hostname}`);
+    console.log(`[Touchkio] Sent shutdown command to ${hostname}`);
   }
   
   return success;
@@ -547,11 +547,11 @@ function startScheduleChecker() {
         });
       }
     } catch (error) {
-      console.error('[MQTT-Bridge] Schedule check error:', error);
+      console.error('[Touchkio] Schedule check error:', error);
     }
   }, 60000); // Every minute
   
-  console.log('[MQTT-Bridge] Schedule checker started (60s interval)');
+  console.log('[Touchkio] Schedule checker started (60s interval)');
 }
 
 /**
@@ -580,7 +580,7 @@ function triggerPowerCommand(clientId) {
     checkDisplaySchedule(clientId, config);
     return true;
   } catch (error) {
-    console.error('[MQTT-Bridge] Failed to trigger power command:', error);
+    console.error('[Touchkio] Failed to trigger power command:', error);
     return false;
   }
 }

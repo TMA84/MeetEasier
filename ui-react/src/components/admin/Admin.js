@@ -3697,7 +3697,7 @@ class Admin extends Component {
     setTimeout(() => {
       this.handleLoadMqttDisplays();
       if (this.state.touchkioModalDisplay) {
-        const updatedDisplay = this.state.mqttDisplays.find(d => d.hostname === hostname);
+        const updatedDisplay = this.state.mqttDisplays.find(d => d.mqtt?.hostname === hostname);
         if (updatedDisplay) {
           this.setState({ touchkioModalDisplay: updatedDisplay });
         }
@@ -3722,7 +3722,7 @@ class Admin extends Component {
     setTimeout(() => {
       this.handleLoadMqttDisplays();
       if (this.state.touchkioModalDisplay) {
-        const updatedDisplay = this.state.mqttDisplays.find(d => d.hostname === hostname);
+        const updatedDisplay = this.state.mqttDisplays.find(d => d.mqtt?.hostname === hostname);
         if (updatedDisplay) {
           this.setState({ touchkioModalDisplay: updatedDisplay });
         }
@@ -3739,7 +3739,7 @@ class Admin extends Component {
     setTimeout(() => {
       this.handleLoadMqttDisplays();
       if (this.state.touchkioModalDisplay) {
-        const updatedDisplay = this.state.mqttDisplays.find(d => d.hostname === hostname);
+        const updatedDisplay = this.state.mqttDisplays.find(d => d.mqtt?.hostname === hostname);
         if (updatedDisplay) {
           this.setState({ touchkioModalDisplay: updatedDisplay });
         }
@@ -3761,6 +3761,47 @@ class Admin extends Component {
       touchkioModalMessage: `Page zoom set to ${zoom}%`,
       touchkioModalMessageType: 'success'
     });
+  }
+
+  handleMqttPageUrlCommandModal = async (hostname, url) => {
+    const { apiToken } = this.state;
+    
+    try {
+      const response = await fetch(`/api/mqtt-page-url/${hostname}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url })
+      });
+
+      if (response.ok) {
+        this.setState({
+          touchkioModalMessage: 'Page URL updated successfully',
+          touchkioModalMessageType: 'success'
+        });
+        
+        // Reload displays to get updated URL
+        setTimeout(() => {
+          this.handleLoadMqttDisplays();
+          if (this.state.touchkioModalDisplay) {
+            const updatedDisplay = this.state.mqttDisplays.find(d => d.mqtt?.hostname === hostname);
+            if (updatedDisplay) {
+              this.setState({ touchkioModalDisplay: updatedDisplay });
+            }
+          }
+        }, 1000);
+      } else {
+        throw new Error('Failed to update page URL');
+      }
+    } catch (err) {
+      console.error('Failed to send page URL command:', err);
+      this.setState({
+        touchkioModalMessage: 'Failed to update page URL',
+        touchkioModalMessageType: 'error'
+      });
+    }
   }
 
   handleMqttRefreshCommandModal = async (hostname) => {
@@ -6098,19 +6139,22 @@ class Admin extends Component {
         onBrightnessChange={(value, apply) => {
           this.setState({ touchkioModalBrightness: value });
           if (apply) {
-            this.handleMqttBrightnessCommandModal(this.state.touchkioModalDisplay.hostname, value);
+            const hostname = this.state.touchkioModalDisplay.mqtt?.hostname || this.state.touchkioModalDisplay.hostname;
+            this.handleMqttBrightnessCommandModal(hostname, value);
           }
         }}
         onVolumeChange={(value, apply) => {
           this.setState({ touchkioModalVolume: value });
           if (apply) {
-            this.handleMqttVolumeCommandModal(this.state.touchkioModalDisplay.hostname, value);
+            const hostname = this.state.touchkioModalDisplay.mqtt?.hostname || this.state.touchkioModalDisplay.hostname;
+            this.handleMqttVolumeCommandModal(hostname, value);
           }
         }}
         onZoomChange={(value, apply) => {
           this.setState({ touchkioModalZoom: value });
           if (apply) {
-            this.handleMqttPageZoomCommandModal(this.state.touchkioModalDisplay.hostname, value);
+            const hostname = this.state.touchkioModalDisplay.mqtt?.hostname || this.state.touchkioModalDisplay.hostname;
+            this.handleMqttPageZoomCommandModal(hostname, value);
           }
         }}
         onPowerCommand={this.handleMqttPowerCommandModal}
@@ -6119,6 +6163,7 @@ class Admin extends Component {
         onThemeCommand={this.handleMqttThemeCommandModal}
         onRebootCommand={this.handleMqttRebootCommandModal}
         onShutdownCommand={this.handleMqttShutdownCommandModal}
+        onPageUrlChange={this.handleMqttPageUrlCommandModal}
       />
       </>
       )}

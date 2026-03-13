@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-03-13
+
+### Fixed
+- **Touchkio Modal Hostname Resolution**
+  - Fixed undefined hostname in MQTT commands (was sending `touchkio/rpi_undefined/...`)
+  - Corrected hostname extraction from display object structure (`display.mqtt.hostname`)
+  - Fixed all modal command handlers (power, brightness, theme, kiosk, volume, zoom, URL)
+  - Fixed display lookup after command execution
+  - All MQTT topics now use correct hostname format
+
+### Added
+- **Touchkio URL Management**
+  - Display and edit page URL for Touchkio displays in admin panel
+  - Shows all Touchkio displays, even without assigned room or URL
+  - Inline URL editor in Touchkio modal
+  - "Set URL" / "Edit URL" functionality
+  - Automatic URL application to displays via MQTT
+
+### Changed
+- **Module Renaming**
+  - Renamed `mqtt-power-bridge.js` to `touchkio.js` for clarity
+  - Updated all references and log prefixes
+  - Better reflects the module's purpose (Touchkio display management)
+
 ## [1.7.0] - 2025-03-12
 
 ### Added

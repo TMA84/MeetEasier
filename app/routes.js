@@ -2289,7 +2289,7 @@ module.exports = function(app) {
 	// Get MQTT display states (protected - requires token)
 	app.get('/api/mqtt-displays', checkApiToken, function(req, res) {
 		try {
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			const displays = mqttPowerBridge.getDisplayStates();
 			res.json({ displays });
 		} catch (err) {
@@ -2303,7 +2303,7 @@ module.exports = function(app) {
 		try {
 			const { hostname } = req.params;
 			const { powerState, brightness } = req.body;
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			// Send power command directly to hostname
 			const success = mqttPowerBridge.sendPowerCommand(
@@ -2331,7 +2331,7 @@ module.exports = function(app) {
 		try {
 			const { hostname } = req.params;
 			const { brightness } = req.body;
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			const success = mqttPowerBridge.sendBrightnessCommand(hostname, brightness);
 
@@ -2351,7 +2351,7 @@ module.exports = function(app) {
 		try {
 			const { hostname } = req.params;
 			const { status } = req.body;
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			const success = mqttPowerBridge.sendKioskCommand(hostname, status);
 
@@ -2371,7 +2371,7 @@ module.exports = function(app) {
 		try {
 			const { hostname } = req.params;
 			const { theme } = req.body;
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			const success = mqttPowerBridge.sendThemeCommand(hostname, theme);
 
@@ -2391,7 +2391,7 @@ module.exports = function(app) {
 		try {
 			const { hostname } = req.params;
 			const { volume } = req.body;
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			const success = mqttPowerBridge.sendVolumeCommand(hostname, volume);
 
@@ -2411,7 +2411,7 @@ module.exports = function(app) {
 		try {
 			const { hostname } = req.params;
 			const { visible } = req.body;
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			const success = mqttPowerBridge.sendKeyboardCommand(hostname, visible);
 
@@ -2431,7 +2431,7 @@ module.exports = function(app) {
 		try {
 			const { hostname } = req.params;
 			const { zoom } = req.body;
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			const success = mqttPowerBridge.sendPageZoomCommand(hostname, zoom);
 
@@ -2451,7 +2451,7 @@ module.exports = function(app) {
 		try {
 			const { hostname } = req.params;
 			const { url } = req.body;
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			const success = mqttPowerBridge.sendPageUrlCommand(hostname, url);
 
@@ -2470,7 +2470,7 @@ module.exports = function(app) {
 	app.post('/api/mqtt-refresh/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			const success = mqttPowerBridge.sendRefreshCommand(hostname);
 
@@ -2489,7 +2489,7 @@ module.exports = function(app) {
 	app.post('/api/mqtt-reboot/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			const success = mqttPowerBridge.sendRebootCommand(hostname);
 
@@ -2508,7 +2508,7 @@ module.exports = function(app) {
 	app.post('/api/mqtt-shutdown/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			const success = mqttPowerBridge.sendShutdownCommand(hostname);
 
@@ -2526,7 +2526,7 @@ module.exports = function(app) {
 	// Trigger refresh command for ALL displays (protected - requires token)
 	app.post('/api/mqtt-refresh-all', checkApiToken, function(req, res) {
 		try {
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			const displays = mqttPowerBridge.getAllDisplays();
 			
 			let successCount = 0;
@@ -2557,7 +2557,7 @@ module.exports = function(app) {
 	// Trigger reboot command for ALL displays (protected - requires token)
 	app.post('/api/mqtt-reboot-all', checkApiToken, function(req, res) {
 		try {
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			const displays = mqttPowerBridge.getAllDisplays();
 			
 			let successCount = 0;
@@ -2721,7 +2721,7 @@ module.exports = function(app) {
 	app.get('/api/displays', checkApiToken, function(req, res) {
 		try {
 			const socketController = require('./socket-controller');
-			const mqttPowerBridge = require('./mqtt-power-bridge');
+			const mqttPowerBridge = require('./touchkio');
 			
 			// Get Socket.IO connected displays
 			const socketDisplays = typeof socketController.getConnectedDisplayClients === 'function'
@@ -2797,6 +2797,7 @@ module.exports = function(app) {
 					kioskStatus: mqtt.kioskStatus,
 					theme: mqtt.theme,
 					volume: mqtt.volume,
+					pageUrl: mqtt.pageUrl,
 					cpuUsage: mqtt.cpuUsage,
 					memoryUsage: mqtt.memoryUsage,
 					temperature: mqtt.temperature,

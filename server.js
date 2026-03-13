@@ -235,7 +235,7 @@ const theserver = app.listen(port, function() {
 
 	// Initialize MQTT Client
 	const mqttClient = require('./app/mqtt-client');
-	const mqttPowerBridge = require('./app/mqtt-power-bridge');
+	const mqttPowerBridge = require('./app/touchkio');
 	
 	try {
 		mqttClient.init();

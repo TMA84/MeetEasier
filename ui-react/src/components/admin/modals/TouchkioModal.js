@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const TouchkioModal = ({
   show,
@@ -17,15 +17,43 @@ const TouchkioModal = ({
   onKioskCommand,
   onThemeCommand,
   onRebootCommand,
-  onShutdownCommand
+  onShutdownCommand,
+  onPageUrlChange
 }) => {
+  const [editingUrl, setEditingUrl] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+
   if (!show || !display) return null;
+
+  // Get pageUrl from either mqtt object or direct property
+  const currentPageUrl = display.mqtt?.pageUrl || display.pageUrl || '';
+
+  const handleStartEditUrl = () => {
+    setUrlInput(currentPageUrl);
+    setEditingUrl(true);
+  };
+
+  const handleSaveUrl = () => {
+    if (onPageUrlChange) {
+      onPageUrlChange(displayData.hostname, urlInput);
+    }
+    setEditingUrl(false);
+  };
+
+  const handleCancelEditUrl = () => {
+    setEditingUrl(false);
+    setUrlInput('');
+  };
+
+  // Get display data from either mqtt object or direct properties
+  const displayData = display.mqtt || display;
+  const hostname = displayData.hostname;
 
   return (
     <div className="admin-modal-overlay" onClick={onClose}>
       <div className="admin-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '950px', maxHeight: '90vh', overflowY: 'auto', background: '#1e293b', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
         <div className="admin-modal-header" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', padding: '1.5rem' }}>
-          <h3 style={{ margin: 0, color: '#f1f5f9', fontSize: '1.25rem' }}>Touchkio Display: {display.hostname}</h3>
+          <h3 style={{ margin: 0, color: '#f1f5f9', fontSize: '1.25rem' }}>Touchkio Display: {displayData.hostname}</h3>
           <button className="admin-modal-close" onClick={onClose}>×</button>
         </div>
 
@@ -50,11 +78,11 @@ const TouchkioModal = ({
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Status</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: display.power === 'ON' ? '#22c55e' : '#ef4444', marginBottom: '0.5rem' }}>
-                {display.power || 'UNKNOWN'}
+              <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: displayData.power === 'ON' ? '#22c55e' : '#ef4444', marginBottom: '0.5rem' }}>
+                {displayData.power || 'UNKNOWN'}
               </div>
               <div style={{ fontSize: '0.875rem', color: '#cbd5e1' }}>
-                Brightness: <strong>{display.brightness || '-'}</strong>
+                Brightness: <strong>{displayData.brightness || '-'}</strong>
               </div>
             </div>
 
@@ -66,9 +94,9 @@ const TouchkioModal = ({
             }}>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>System Resources</div>
               <div style={{ fontSize: '0.875rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <div>CPU: <strong style={{ color: '#f1f5f9' }}>{display.cpuUsage !== undefined ? `${display.cpuUsage}%` : '-'}</strong></div>
-                <div>Memory: <strong style={{ color: '#f1f5f9' }}>{display.memoryUsage !== undefined ? `${display.memoryUsage}%` : '-'}</strong></div>
-                <div>Temp: <strong style={{ color: '#f1f5f9' }}>{display.temperature !== undefined ? `${display.temperature}°C` : '-'}</strong></div>
+                <div>CPU: <strong style={{ color: '#f1f5f9' }}>{displayData.cpuUsage !== undefined ? `${displayData.cpuUsage}%` : '-'}</strong></div>
+                <div>Memory: <strong style={{ color: '#f1f5f9' }}>{displayData.memoryUsage !== undefined ? `${displayData.memoryUsage}%` : '-'}</strong></div>
+                <div>Temp: <strong style={{ color: '#f1f5f9' }}>{displayData.temperature !== undefined ? `${displayData.temperature}°C` : '-'}</strong></div>
               </div>
             </div>
 
@@ -80,9 +108,9 @@ const TouchkioModal = ({
             }}>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Mode</div>
               <div style={{ fontSize: '0.875rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <div>Kiosk: <strong style={{ color: '#f1f5f9' }}>{display.kioskStatus || '-'}</strong></div>
-                <div>Theme: <strong style={{ color: '#f1f5f9' }}>{display.theme || '-'}</strong></div>
-                <div>Volume: <strong style={{ color: '#f1f5f9' }}>{display.volume !== undefined ? `${display.volume}%` : '-'}</strong></div>
+                <div>Kiosk: <strong style={{ color: '#f1f5f9' }}>{displayData.kioskStatus || '-'}</strong></div>
+                <div>Theme: <strong style={{ color: '#f1f5f9' }}>{displayData.theme || '-'}</strong></div>
+                <div>Volume: <strong style={{ color: '#f1f5f9' }}>{displayData.volume !== undefined ? `${displayData.volume}%` : '-'}</strong></div>
               </div>
             </div>
 
@@ -94,12 +122,87 @@ const TouchkioModal = ({
             }}>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Network</div>
               <div style={{ fontSize: '0.8rem', color: '#cbd5e1', wordBreak: 'break-all', marginBottom: '0.5rem' }}>
-                {display.networkAddress || '-'}
+                {displayData.networkAddress || '-'}
               </div>
               <div style={{ fontSize: '0.875rem', color: '#cbd5e1' }}>
-                Uptime: <strong style={{ color: '#f1f5f9' }}>{display.uptime !== undefined ? `${Math.floor(display.uptime / 60)}h ${display.uptime % 60}m` : '-'}</strong>
+                Uptime: <strong style={{ color: '#f1f5f9' }}>{displayData.uptime !== undefined ? `${Math.floor(displayData.uptime / 60)}h ${displayData.uptime % 60}m` : '-'}</strong>
               </div>
             </div>
+          </div>
+
+          {/* Page URL Section */}
+          <div style={{ 
+            marginBottom: '2rem',
+            padding: '1.25rem',
+            background: '#2d3142',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+              Page URL
+            </div>
+            {!editingUrl ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ 
+                  flex: 1, 
+                  fontSize: '0.875rem', 
+                  color: currentPageUrl ? '#cbd5e1' : '#94a3b8',
+                  fontStyle: currentPageUrl ? 'normal' : 'italic',
+                  wordBreak: 'break-all',
+                  padding: '0.5rem',
+                  background: '#1e293b',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(255, 255, 255, 0.05)'
+                }}>
+                  {currentPageUrl || 'No URL configured'}
+                </div>
+                <button
+                  type="button"
+                  className="admin-secondary-button"
+                  onClick={handleStartEditUrl}
+                  style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', whiteSpace: 'nowrap' }}
+                >
+                  {currentPageUrl ? 'Edit URL' : 'Set URL'}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <input
+                  type="text"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="https://example.com/room/display"
+                  style={{
+                    width: '100%',
+                    padding: '0.625rem',
+                    fontSize: '0.875rem',
+                    background: '#1e293b',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '4px',
+                    color: '#f1f5f9',
+                    marginBottom: '0.75rem'
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="admin-primary-button"
+                    onClick={handleSaveUrl}
+                    style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                  >
+                    Save & Apply
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-secondary-button"
+                    onClick={handleCancelEditUrl}
+                    style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Control Sections in 2 Columns */}
@@ -120,7 +223,7 @@ const TouchkioModal = ({
                   <button
                     type="button"
                     className="admin-primary-button"
-                    onClick={() => onPowerCommand(display.hostname, true)}
+                    onClick={() => onPowerCommand(hostname, true)}
                     style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
                   >
                     Turn On
@@ -128,7 +231,7 @@ const TouchkioModal = ({
                   <button
                     type="button"
                     className="admin-secondary-button"
-                    onClick={() => onPowerCommand(display.hostname, false)}
+                    onClick={() => onPowerCommand(hostname, false)}
                     style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
                   >
                     Turn Off
@@ -137,7 +240,7 @@ const TouchkioModal = ({
                 <button
                   type="button"
                   className="admin-secondary-button"
-                  onClick={() => onRefreshCommand(display.hostname)}
+                  onClick={() => onRefreshCommand(hostname)}
                   style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
                 >
                   Refresh Page
@@ -158,14 +261,14 @@ const TouchkioModal = ({
                     type="range"
                     min="0"
                     max="255"
-                    value={brightness !== undefined ? brightness : display.brightness || 200}
+                    value={brightness !== undefined ? brightness : displayData.brightness || 200}
                     onChange={(e) => onBrightnessChange(parseInt(e.target.value, 10), false)}
                     onMouseUp={(e) => onBrightnessChange(parseInt(e.target.value, 10), true)}
                     onTouchEnd={(e) => onBrightnessChange(parseInt(e.target.value, 10), true)}
                     style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
                   />
                   <span style={{ minWidth: '50px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
-                    {brightness !== undefined ? brightness : display.brightness || 200}
+                    {brightness !== undefined ? brightness : displayData.brightness || 200}
                   </span>
                 </div>
               </div>
@@ -184,14 +287,14 @@ const TouchkioModal = ({
                     type="range"
                     min="0"
                     max="100"
-                    value={volume !== undefined ? volume : display.volume || 50}
+                    value={volume !== undefined ? volume : displayData.volume || 50}
                     onChange={(e) => onVolumeChange(parseInt(e.target.value, 10), false)}
                     onMouseUp={(e) => onVolumeChange(parseInt(e.target.value, 10), true)}
                     onTouchEnd={(e) => onVolumeChange(parseInt(e.target.value, 10), true)}
                     style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
                   />
                   <span style={{ minWidth: '50px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
-                    {volume !== undefined ? volume : display.volume || 50}%
+                    {volume !== undefined ? volume : displayData.volume || 50}%
                   </span>
                 </div>
               </div>
@@ -210,14 +313,14 @@ const TouchkioModal = ({
                     min="25"
                     max="400"
                     step="5"
-                    value={zoom !== undefined ? zoom : display.pageZoom || 100}
+                    value={zoom !== undefined ? zoom : displayData.pageZoom || 100}
                     onChange={(e) => onZoomChange(parseInt(e.target.value, 10), false)}
                     onMouseUp={(e) => onZoomChange(parseInt(e.target.value, 10), true)}
                     onTouchEnd={(e) => onZoomChange(parseInt(e.target.value, 10), true)}
                     style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
                   />
                   <span style={{ minWidth: '60px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
-                    {zoom !== undefined ? zoom : display.pageZoom || 100}%
+                    {zoom !== undefined ? zoom : displayData.pageZoom || 100}%
                   </span>
                 </div>
               </div>
@@ -239,8 +342,8 @@ const TouchkioModal = ({
                     <button
                       key={mode}
                       type="button"
-                      className={display.kioskStatus === mode ? 'admin-primary-button' : 'admin-secondary-button'}
-                      onClick={() => onKioskCommand(display.hostname, mode)}
+                      className={displayData.kioskStatus === mode ? 'admin-primary-button' : 'admin-secondary-button'}
+                      onClick={() => onKioskCommand(hostname, mode)}
                       style={{ 
                         width: '100%',
                         fontSize: '0.875rem',
@@ -265,8 +368,8 @@ const TouchkioModal = ({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                   <button
                     type="button"
-                    className={display.theme === 'Light' ? 'admin-primary-button' : 'admin-secondary-button'}
-                    onClick={() => onThemeCommand(display.hostname, 'Light')}
+                    className={displayData.theme === 'Light' ? 'admin-primary-button' : 'admin-secondary-button'}
+                    onClick={() => onThemeCommand(hostname, 'Light')}
                     style={{ 
                       width: '100%',
                       fontSize: '0.875rem',
@@ -277,8 +380,8 @@ const TouchkioModal = ({
                   </button>
                   <button
                     type="button"
-                    className={display.theme === 'Dark' ? 'admin-primary-button' : 'admin-secondary-button'}
-                    onClick={() => onThemeCommand(display.hostname, 'Dark')}
+                    className={displayData.theme === 'Dark' ? 'admin-primary-button' : 'admin-secondary-button'}
+                    onClick={() => onThemeCommand(hostname, 'Dark')}
                     style={{ 
                       width: '100%',
                       fontSize: '0.875rem',
@@ -302,8 +405,8 @@ const TouchkioModal = ({
                   type="button"
                   className="admin-secondary-button"
                   onClick={() => {
-                    if (window.confirm(`Reboot ${display.hostname}?`)) {
-                      onRebootCommand(display.hostname);
+                    if (window.confirm(`Reboot ${hostname}?`)) {
+                      onRebootCommand(hostname);
                     }
                   }}
                   style={{ 
@@ -323,8 +426,8 @@ const TouchkioModal = ({
                   type="button"
                   className="admin-secondary-button"
                   onClick={() => {
-                    if (window.confirm(`Shutdown ${display.hostname}? This will turn off the device!`)) {
-                      onShutdownCommand(display.hostname);
+                    if (window.confirm(`Shutdown ${hostname}? This will turn off the device!`)) {
+                      onShutdownCommand(hostname);
                     }
                   }}
                   style={{ 
