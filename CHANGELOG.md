@@ -7,47 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.7.10] - 2026-03-13
+## [1.7.11] - 2026-03-13
 
 ### Added
-- **Touchkio Modal Auto-Refresh**
-  - Modal now auto-refreshes display data every 5 seconds
-  - Keeps status, metrics, and settings current without manual refresh
-  - Automatically updates display state in modal when changes occur
-  - Auto-refresh pauses when user is editing page URL to prevent interference
+- **Automatic MQTT Detection for Power Management**
+  - Power Management modal now automatically detects if a display supports MQTT
+  - MQTT option only shown when display has active MQTT connection
+  - Auto-selects MQTT mode for displays with MQTT connection
+  - Auto-fills Device ID from display data (prioritizes deviceId over hostname)
+  - Device ID field becomes read-only when auto-detected
+  - Visual indicator (✓) shows when MQTT is available
+  - Global Standard checks if any MQTT displays are present
 
-### Fixed
-- **Page URL Command Targeting**
-  - Fixed page URL commands always being sent to wrong display (rpi_1A4187)
-  - Modal now uses deviceId when available for accurate device targeting
-  - Added fallback to hostname if deviceId not available
-  - Improved hostname to deviceId mapping with better logging
-  - Backend now handles both deviceId and hostname formats
-
-- **Displays Table Layout**
-  - Fixed horizontal scrolling issues in displays table
-  - Status column now shows only colored dot (12px) with tooltip
-  - Removed status text to save space
-  - Fixed table width and layout constraints
-  - Connection badges and action buttons now prevent wrapping
+- **Server-Side MQTT Power Management**
+  - Server now sends MQTT power commands at scheduled times (not browser)
+  - Schedule checker processes all connected MQTT displays every minute
+  - Supports both display-specific and global standard configurations
+  - Global standard applies to all MQTT displays without specific config
+  - Automatic fallback from display config to global config
+  - Uses Device ID (rpi_XXXXXX) for reliable display identification
 
 ### Changed
-- **Error Display Improvements**
-  - Moved error section to bottom of Touchkio modal
-  - Show only ERROR entries (filtered out INFO and WARN logs)
-  - Display only errors from last hour (reduced noise)
-  - Cleaner, more focused error reporting
+- **Power Management Uses Device ID Instead of Hostname**
+  - Changed from hostname to Device ID (e.g., "rpi_1A4187") for MQTT identification
+  - Device ID is more stable and unique than hostname
+  - Modal label changed from "Touchkio Hostname" to "Touchkio Device ID"
+  - Placeholder changed from "e.g., saturn" to "e.g., rpi_1A4187"
+  - Auto-fill prioritizes deviceId over hostname for improved reliability
+  - Schedule checker uses deviceId for config lookup (with hostname fallback)
+  - Backend supports both deviceId and hostname for backward compatibility
 
-- **Displays Table UI**
-  - Status column: fixed width (40px), centered, dot only with tooltip
-  - Actions column: minimum width (200px) to prevent button wrapping
-  - Details column: nowrap to keep metrics on one line
-  - Connection badges: nowrap to prevent text wrapping
-  - Better responsive layout without horizontal scrolling
+- **Global MQTT Configuration Simplified**
+  - Device ID field hidden for Global Standard (not needed)
+  - Added informational message: "Global MQTT mode will apply to all connected Touchkio displays automatically"
+  - Eliminates confusion about what to enter for global config
+  - Cleaner UI with conditional field rendering
+
+- **Displays Table Layout Improvements**
+  - Separated Type and Connection into distinct columns
+  - IP address now shown under display name (with deviceId/hostname)
+  - Connection badges displayed vertically in dedicated column
+  - Improved column widths: Name 20%, Type 12%, Connection 12%, Metrics 18%, Actions 28%
+  - Better visual hierarchy and information organization
+
+- **Touchkio Error Logging Optimization**
+  - Reduced console log noise by only logging when actual ERROR-level entries are detected
+  - INFO and WARN messages no longer trigger console logs
+  - Improves server log readability and reduces unnecessary log volume
 
 ### Fixed
-- **Page URL Command Targeting**
-  - Fixed page URL commands always being sent to wrong display (rpi_1A4187)
+- **Power Management Schedule Execution**
+  - Fixed MQTT power commands now sent by server instead of browser
+  - Schedule checker now properly handles global standard for all MQTT displays
+  - Improved display identification using hostname, deviceId, or network address
+
+## [1.7.10] - 2026-03-13
   - Modal now uses deviceId when available for accurate device targeting
   - Added fallback to hostname if deviceId not available
   - Improved hostname to deviceId mapping with better logging

@@ -90,23 +90,31 @@ const PowerManagementModal = ({
             </small>
           </div>
 
-          {mode === 'mqtt' && (
+          {mode === 'mqtt' && !isGlobal && (
             <div className="admin-form-group">
-              <label htmlFor="powerManagementMqttHostname">Touchkio Hostname</label>
+              <label htmlFor="powerManagementMqttHostname">Touchkio Device ID</label>
               <input
                 type="text"
                 id="powerManagementMqttHostname"
-                placeholder="e.g., saturn"
+                placeholder="e.g., rpi_1A4187"
                 value={mqttHostname}
                 onChange={(e) => onMqttHostnameChange(e.target.value)}
-                readOnly={hasMqtt && !isGlobal}
+                readOnly={hasMqtt}
               />
               <small>
-                {hasMqtt && !isGlobal 
-                  ? 'Hostname automatically detected from MQTT connection' 
-                  : 'Hostname of the Raspberry Pi (e.g., "saturn", "jupiter")'
+                {hasMqtt 
+                  ? 'Device ID automatically detected from MQTT connection' 
+                  : 'Device ID of the Touchkio display (e.g., "rpi_1A4187")'
                 }
               </small>
+            </div>
+          )}
+
+          {mode === 'mqtt' && isGlobal && (
+            <div className="admin-form-group">
+              <div className="admin-message admin-message-info">
+                Global MQTT mode will apply to all connected Touchkio displays automatically. No hostname configuration needed.
+              </div>
             </div>
           )}
 

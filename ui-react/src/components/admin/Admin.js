@@ -3025,9 +3025,10 @@ class Admin extends Component {
       }
       
       // Auto-fill MQTT hostname from display data if available
+      // Prefer deviceId over hostname for reliability
       let mqttHostname = config.mqttHostname || '';
       if (hasMqtt && !mqttHostname && display && display.mqtt) {
-        mqttHostname = display.mqtt.hostname || display.mqtt.deviceId || '';
+        mqttHostname = display.mqtt.deviceId || display.mqtt.hostname || '';
       }
       
       this.setState({
@@ -3049,7 +3050,7 @@ class Admin extends Component {
         showPowerManagementModal: true,
         powerManagementClientId: clientId,
         powerManagementMode: hasMqtt && clientId !== '__global__' ? 'mqtt' : 'browser',
-        powerManagementMqttHostname: display?.mqtt?.hostname || display?.mqtt?.deviceId || '',
+        powerManagementMqttHostname: display?.mqtt?.deviceId || display?.mqtt?.hostname || '',
         powerManagementScheduleEnabled: false,
         powerManagementStartTime: '20:00',
         powerManagementEndTime: '07:00',

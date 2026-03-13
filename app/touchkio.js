@@ -488,6 +488,8 @@ function isTimeInRange(currentTime, startTime, endTime) {
 
 /**
  * Check schedule for a specific display
+ * @param {string} clientId - Display identifier (deviceId or hostname)
+ * @param {object} config - Power management configuration
  */
 function checkDisplaySchedule(clientId, config) {
   // Only process MQTT mode
@@ -516,23 +518,15 @@ function checkDisplaySchedule(clientId, config) {
     shouldBeOff = isTimeInRange(currentTime, startTime, endTime);
   }
   
-  // Use mqttHostname from config, or extract from clientId
-  let hostname = config.mqttHostname;
+  // Use mqttHostname from config (which should be deviceId), or use clientId directly
+  // clientId is already deviceId when called from startScheduleChecker
+  let deviceIdOrHostname = config.mqttHostname || clientId;
   
-  if (!hostname) {
-    // Extract hostname from clientId (format: IP_hostname or just hostname)
-    hostname = clientId;
-    if (clientId.includes('_')) {
-      const parts = clientId.split('_');
-      hostname = parts[parts.length - 1]; // Take last part as hostname
-    }
-  }
-  
-  // Send command to Touchkio
+  // Send command to Touchkio (getDeviceIdFromHostname handles both deviceId and hostname)
   if (shouldBeOff) {
-    sendPowerCommand(hostname, false);
+    sendPowerCommand(deviceIdOrHostname, false);
   } else {
-    sendPowerCommand(hostname, true, 100);
+    sendPowerCommand(deviceIdOrHostname, true, 100);
   }
 }
 
@@ -552,14 +546,12 @@ function startScheduleChecker() {
       
       // Check each MQTT display
       mqttDisplays.forEach(([deviceId, state]) => {
-        const hostname = state.hostname || deviceId;
-        
         // Check if display has specific config
         let displayConfig = null;
         if (powerConfig.displays) {
-          // Try to find config by various identifiers
-          displayConfig = powerConfig.displays[hostname] || 
-                         powerConfig.displays[deviceId] ||
+          // Try to find config by various identifiers (prefer deviceId)
+          displayConfig = powerConfig.displays[deviceId] ||
+                         powerConfig.displays[state.hostname] ||
                          powerConfig.displays[state.networkAddress];
         }
         
@@ -568,9 +560,8 @@ function startScheduleChecker() {
         
         // Only process if mode is MQTT and schedule is enabled
         if (configToUse.mode === 'mqtt' && configToUse.schedule?.enabled) {
-          // Create a pseudo clientId for logging
-          const clientId = hostname;
-          checkDisplaySchedule(clientId, configToUse);
+          // Use deviceId as clientId for consistent identification
+          checkDisplaySchedule(deviceId, configToUse);
         }
       });
       
