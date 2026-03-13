@@ -119,8 +119,8 @@ const DevicesTab = ({
                 
                 if (hasSocketIO && hasMQTT) {
                   const socketActive = display.socketIO.status === 'active';
-                  // If MQTT power is undefined or null, fall back to Socket.IO status
-                  const mqttPowerKnown = display.mqtt.power === 'ON' || display.mqtt.power === 'OFF';
+                  // If MQTT power is unsupported or not reported, fall back to Socket.IO status
+                  const mqttPowerKnown = !display.mqtt.powerUnsupported && (display.mqtt.power === 'ON' || display.mqtt.power === 'OFF');
                   
                   if (!mqttPowerKnown) {
                     // MQTT doesn't report power - use Socket.IO status only
@@ -158,7 +158,11 @@ const DevicesTab = ({
                   }
                 } else if (hasMQTT) {
                   // Only show ON/OFF if MQTT actually reports power status
-                  if (display.mqtt.power === 'ON') {
+                  if (display.mqtt.powerUnsupported) {
+                    status = 'Connected';
+                    statusColor = '#cbd5e1';
+                    statusDotColor = '#94a3b8';
+                  } else if (display.mqtt.power === 'ON') {
                     status = 'ON';
                     statusColor = '#86efac';
                     statusDotColor = '#22c55e';
