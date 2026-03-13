@@ -151,7 +151,13 @@ function subscribeTouchkioStates() {
           const errorData = JSON.parse(payloadStr);
           displayState.errors = errorData;
           displayState.lastErrorUpdate = new Date().toISOString();
-          console.log(`[Touchkio] Errors updated: ${deviceId}`);
+          // Only log if there are actual errors, not just info messages
+          const hasErrors = Object.values(errorData).some(logs => 
+            logs.some(log => Object.keys(log)[0] === 'ERROR')
+          );
+          if (hasErrors) {
+            console.log(`[Touchkio] Errors detected for ${deviceId}`);
+          }
         } catch (e) {
           console.error(`[Touchkio] Failed to parse error data for ${deviceId}:`, e);
         }
