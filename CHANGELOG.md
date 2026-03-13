@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.6] - 2026-03-13
+
+### Changed
+- **Optimized MQTT Subscriptions**
+  - Reduced from 15 individual subscriptions to 2 wildcard subscriptions
+  - `homeassistant/#` - All Home Assistant topics
+  - `touchkio/#` - All Touchkio legacy topics
+  - Significantly reduces MQTT broker load
+  - Improves connection stability on production systems
+  - Topic routing now handled in message handler
+
+### Fixed
+- **Fixed Touchkio Command Topics**
+  - All command topics now use correct `touchkio/{deviceId}/...` format
+  - Fixed: power, brightness, kiosk, theme, volume, keyboard, page zoom, page URL commands
+  - Commands now properly reach Touchkio displays
+  - Status subscriptions remain on Home Assistant format for proper state tracking
+- MQTT connection issues on production systems with subscription limits
+
 ## [1.7.5] - 2026-03-13
 
 ### Added
