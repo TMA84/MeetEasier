@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.5] - 2026-03-13
+
+### Added
+- **Automatic Room Detection from Page URL**
+  - Extracts room name from Touchkio page URL (e.g., `/single-room/venus` → room: "venus")
+  - Subscribes to both Home Assistant and Touchkio legacy page URL topics
+  - Subscribes to network address topic for IP tracking
+  - Room name automatically displayed in admin panel
+
+### Changed
+- Enhanced display state tracking with room and network address information
+
 ## [1.7.4] - 2026-03-13
 
 ### Fixed
