@@ -205,16 +205,30 @@ const DevicesTab = ({
                         title={status}
                       ></span>
                     </td>
-                    <td><strong>{display.name}</strong></td>
-                    <td>{display.type || 'unknown'}</td>
+                    <td>
+                      <div>
+                        <strong>{display.name}</strong>
+                        {(display.mqtt?.deviceId || display.mqtt?.hostname) && (
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.125rem' }}>
+                            {display.mqtt?.deviceId || display.mqtt?.hostname}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      {display.type === 'single-room' && display.mqtt?.room 
+                        ? `single-room (${display.mqtt.room})`
+                        : (display.type || 'unknown')
+                      }
+                    </td>
                     <td>{connectionBadges}</td>
                     <td className="ip-address">{display.ipAddress || '-'}</td>
                     <td style={{ fontSize: '0.85rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
                       {hasMQTT && (
                         <div>
-                          CPU: {display.mqtt.cpuUsage !== undefined ? `${display.mqtt.cpuUsage}%` : '-'} | 
-                          Mem: {display.mqtt.memoryUsage !== undefined ? `${display.mqtt.memoryUsage}%` : '-'} | 
-                          Temp: {display.mqtt.temperature !== undefined ? `${display.mqtt.temperature}°C` : '-'}
+                          CPU: {display.mqtt.cpuUsage !== undefined ? `${display.mqtt.cpuUsage.toFixed(2)}%` : '-'} | 
+                          Mem: {display.mqtt.memoryUsage !== undefined ? `${display.mqtt.memoryUsage.toFixed(2)}%` : '-'} | 
+                          Temp: {display.mqtt.temperature !== undefined ? `${display.mqtt.temperature.toFixed(2)}°C` : '-'}
                         </div>
                       )}
                       {hasSocketIO && (
