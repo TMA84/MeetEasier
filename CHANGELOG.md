@@ -14,6 +14,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Modal now auto-refreshes display data every 5 seconds
   - Keeps status, metrics, and settings current without manual refresh
   - Automatically updates display state in modal when changes occur
+  - Auto-refresh pauses when user is editing page URL to prevent interference
+
+### Fixed
+- **Page URL Command Targeting**
+  - Fixed page URL commands always being sent to wrong display (rpi_1A4187)
+  - Modal now uses deviceId when available for accurate device targeting
+  - Added fallback to hostname if deviceId not available
+  - Improved hostname to deviceId mapping with better logging
+  - Backend now handles both deviceId and hostname formats
+
+- **Displays Table Layout**
+  - Fixed horizontal scrolling issues in displays table
+  - Status column now shows only colored dot (12px) with tooltip
+  - Removed status text to save space
+  - Fixed table width and layout constraints
+  - Connection badges and action buttons now prevent wrapping
+
+### Changed
+- **Error Display Improvements**
+  - Moved error section to bottom of Touchkio modal
+  - Show only ERROR entries (filtered out INFO and WARN logs)
+  - Display only errors from last hour (reduced noise)
+  - Cleaner, more focused error reporting
+
+- **Displays Table UI**
+  - Status column: fixed width (40px), centered, dot only with tooltip
+  - Actions column: minimum width (200px) to prevent button wrapping
+  - Details column: nowrap to keep metrics on one line
+  - Connection badges: nowrap to prevent text wrapping
+  - Better responsive layout without horizontal scrolling
 
 ### Fixed
 - **Page URL Command Targeting**
