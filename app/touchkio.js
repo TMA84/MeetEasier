@@ -294,7 +294,7 @@ function subscribeTouchkioStates() {
     }
   });
   
-  // Subscribe to page URL status
+  // Subscribe to page URL status (Home Assistant format)
   mqttClient.subscribe('homeassistant/text/+/page_url/status', (payload, client) => {
     try {
       const topic = client ? client.topic : 'unknown';
@@ -306,12 +306,72 @@ function subscribeTouchkioStates() {
         }
         
         const displayState = displayStates.get(deviceId);
-        displayState.pageUrl = payload.toString().trim();
+        const url = payload.toString().trim();
+        displayState.pageUrl = url;
         
-        console.log(`[Touchkio] Page URL updated: ${deviceId} = ${displayState.pageUrl}`);
+        // Extract room name from URL (e.g., https://meeteasier.vsti.cloud/single-room/venus -> venus)
+        const roomMatch = url.match(/\/single-room\/([^/?#]+)/);
+        if (roomMatch) {
+          displayState.room = roomMatch[1];
+          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${url} (room: ${displayState.room})`);
+        } else {
+          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${url}`);
+        }
       }
     } catch (error) {
       console.error('[Touchkio] Failed to parse page URL:', error);
+    }
+  });
+  
+  // Subscribe to page URL status (Touchkio legacy format)
+  mqttClient.subscribe('touchkio/+/page_url/state', (payload, client) => {
+    try {
+      const topic = client ? client.topic : 'unknown';
+      const match = topic.match(/touchkio\/(rpi_[^/]+)/);
+      
+      if (match) {
+        const deviceId = match[1];
+        if (!displayStates.has(deviceId)) {
+          displayStates.set(deviceId, { deviceId });
+        }
+        
+        const displayState = displayStates.get(deviceId);
+        const url = payload.toString().trim();
+        displayState.pageUrl = url;
+        
+        // Extract room name from URL
+        const roomMatch = url.match(/\/single-room\/([^/?#]+)/);
+        if (roomMatch) {
+          displayState.room = roomMatch[1];
+          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${url} (room: ${displayState.room})`);
+        } else {
+          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${url}`);
+        }
+      }
+    } catch (error) {
+      console.error('[Touchkio] Failed to parse page URL (legacy):', error);
+    }
+  });
+  
+  // Subscribe to network address (Touchkio format)
+  mqttClient.subscribe('touchkio/+/network_address/state', (payload, client) => {
+    try {
+      const topic = client ? client.topic : 'unknown';
+      const match = topic.match(/touchkio\/(rpi_[^/]+)/);
+      
+      if (match) {
+        const deviceId = match[1];
+        if (!displayStates.has(deviceId)) {
+          displayStates.set(deviceId, { deviceId });
+        }
+        
+        const displayState = displayStates.get(deviceId);
+        displayState.networkAddress = payload.toString().trim();
+        
+        console.log(`[Touchkio] Network address updated: ${deviceId} = ${displayState.networkAddress}`);
+      }
+    } catch (error) {
+      console.error('[Touchkio] Failed to parse network address:', error);
     }
   });
 }
