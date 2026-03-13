@@ -43,335 +43,123 @@ function extractDeviceId(topic) {
  * Subscribe to Touchkio display state topics (Home Assistant format)
  */
 function subscribeTouchkioStates() {
-  // Subscribe to hostname sensor to map deviceId to hostname
-  mqttClient.subscribe('homeassistant/sensor/+/host_name/status', (payload, client) => {
+  // Subscribe to all Home Assistant topics with a single wildcard
+  mqttClient.subscribe('homeassistant/#', (payload, client) => {
     try {
       const topic = client ? client.topic : 'unknown';
       const deviceId = extractDeviceId(topic);
       
-      if (deviceId) {
-        const hostname = payload.toString().trim();
-        deviceIdToHostname.set(deviceId, hostname);
-        
-        // Initialize display state if not exists
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, {});
-        }
-        
-        const displayState = displayStates.get(deviceId);
-        displayState.hostname = hostname;
-        displayState.deviceId = deviceId;
-        
-        console.log(`[Touchkio] Hostname mapped: ${deviceId} -> ${hostname}`);
+      if (!deviceId) return;
+      
+      // Initialize display state if not exists
+      if (!displayStates.has(deviceId)) {
+        displayStates.set(deviceId, { deviceId });
       }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse hostname:', error);
-    }
-  });
-  
-  // Subscribe to display power and brightness status
-  mqttClient.subscribe('homeassistant/light/+/display/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
       
-      if (deviceId) {
-        // Initialize display state if not exists
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
+      const displayState = displayStates.get(deviceId);
+      const payloadStr = payload.toString().trim();
+      
+      // Route based on topic pattern
+      if (topic.includes('/host_name/status')) {
+        displayState.hostname = payloadStr;
+        deviceIdToHostname.set(deviceId, payloadStr);
+        console.log(`[Touchkio] Hostname mapped: ${deviceId} -> ${payloadStr}`);
         
-        const displayState = displayStates.get(deviceId);
-        displayState.power = payload.toString().trim();
+      } else if (topic.includes('/display/status')) {
+        displayState.power = payloadStr;
         displayState.lastUpdate = new Date().toISOString();
+        console.log(`[Touchkio] Display power updated: ${deviceId} = ${payloadStr}`);
         
-        console.log(`[Touchkio] Display power updated: ${deviceId} = ${displayState.power}`);
-      }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse display status:', error);
-    }
-  });
-  
-  // Subscribe to brightness status
-  mqttClient.subscribe('homeassistant/light/+/display/brightness/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
-      
-      if (deviceId) {
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
-        
-        const displayState = displayStates.get(deviceId);
+      } else if (topic.includes('/display/brightness/status')) {
         displayState.brightness = parseInt(payload, 10);
-        
         console.log(`[Touchkio] Brightness updated: ${deviceId} = ${displayState.brightness}`);
-      }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse brightness:', error);
-    }
-  });
-  
-  // Subscribe to kiosk status (Home Assistant select entity)
-  mqttClient.subscribe('homeassistant/select/+/kiosk/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
-      
-      if (deviceId) {
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
+        
+      } else if (topic.includes('/kiosk/status')) {
+        displayState.kioskStatus = payloadStr;
+        console.log(`[Touchkio] Kiosk status updated: ${deviceId} = ${payloadStr}`);
+        
+      } else if (topic.includes('/theme/status')) {
+        displayState.theme = payloadStr;
+        console.log(`[Touchkio] Theme updated: ${deviceId} = ${payloadStr}`);
+        
+      } else if (topic.includes('/volume/status')) {
+        displayState.volume = parseInt(payload, 10);
+        console.log(`[Touchkio] Volume updated: ${deviceId} = ${displayState.volume}`);
+        
+      } else if (topic.includes('/keyboard/status')) {
+        displayState.keyboardVisible = payloadStr === 'ON';
+        console.log(`[Touchkio] Keyboard visibility updated: ${deviceId} = ${displayState.keyboardVisible}`);
+        
+      } else if (topic.includes('/page_zoom/status')) {
+        displayState.pageZoom = parseInt(payload, 10);
+        console.log(`[Touchkio] Page zoom updated: ${deviceId} = ${displayState.pageZoom}%`);
+        
+      } else if (topic.includes('/page_url/status')) {
+        displayState.pageUrl = payloadStr;
+        // Extract room name from URL
+        const roomMatch = payloadStr.match(/\/single-room\/([^/?#]+)/);
+        if (roomMatch) {
+          displayState.room = roomMatch[1];
+          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${payloadStr} (room: ${displayState.room})`);
+        } else {
+          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${payloadStr}`);
         }
         
-        const displayState = displayStates.get(deviceId);
-        displayState.kioskStatus = payload.toString().trim();
-        
-        console.log(`[Touchkio] Kiosk status updated: ${deviceId} = ${displayState.kioskStatus}`);
-      }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse kiosk status:', error);
-    }
-  });
-  
-  // Subscribe to CPU usage
-  mqttClient.subscribe('homeassistant/sensor/+/processor_usage/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
-      
-      if (deviceId) {
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
-        
-        const displayState = displayStates.get(deviceId);
+      } else if (topic.includes('/processor_usage/status')) {
         displayState.cpuUsage = parseFloat(payload);
-      }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse CPU usage:', error);
-    }
-  });
-  
-  // Subscribe to memory usage
-  mqttClient.subscribe('homeassistant/sensor/+/memory_usage/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
-      
-      if (deviceId) {
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
         
-        const displayState = displayStates.get(deviceId);
+      } else if (topic.includes('/memory_usage/status')) {
         displayState.memoryUsage = parseFloat(payload);
-      }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse memory usage:', error);
-    }
-  });
-  
-  // Subscribe to temperature
-  mqttClient.subscribe('homeassistant/sensor/+/processor_temperature/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
-      
-      if (deviceId) {
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
         
-        const displayState = displayStates.get(deviceId);
+      } else if (topic.includes('/processor_temperature/status')) {
         displayState.temperature = parseFloat(payload);
-      }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse temperature:', error);
-    }
-  });
-  
-  // Subscribe to uptime
-  mqttClient.subscribe('homeassistant/sensor/+/up_time/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
-      
-      if (deviceId) {
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
         
-        const displayState = displayStates.get(deviceId);
+      } else if (topic.includes('/up_time/status')) {
         displayState.uptime = parseFloat(payload);
       }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse uptime:', error);
-    }
-  });
-  
-  // Subscribe to theme status
-  mqttClient.subscribe('homeassistant/select/+/theme/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
       
-      if (deviceId) {
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
-        
-        const displayState = displayStates.get(deviceId);
-        displayState.theme = payload.toString().trim();
-        
-        console.log(`[Touchkio] Theme updated: ${deviceId} = ${displayState.theme}`);
-      }
     } catch (error) {
-      console.error('[Touchkio] Failed to parse theme:', error);
+      console.error('[Touchkio] Failed to parse Home Assistant message:', error);
     }
   });
   
-  // Subscribe to volume status
-  mqttClient.subscribe('homeassistant/number/+/volume/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
-      
-      if (deviceId) {
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
-        
-        const displayState = displayStates.get(deviceId);
-        displayState.volume = parseInt(payload, 10);
-        
-        console.log(`[Touchkio] Volume updated: ${deviceId} = ${displayState.volume}`);
-      }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse volume:', error);
-    }
-  });
-  
-  // Subscribe to keyboard status
-  mqttClient.subscribe('homeassistant/switch/+/keyboard/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
-      
-      if (deviceId) {
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
-        
-        const displayState = displayStates.get(deviceId);
-        displayState.keyboardVisible = payload.toString().trim() === 'ON';
-        
-        console.log(`[Touchkio] Keyboard visibility updated: ${deviceId} = ${displayState.keyboardVisible}`);
-      }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse keyboard status:', error);
-    }
-  });
-  
-  // Subscribe to page zoom status
-  mqttClient.subscribe('homeassistant/number/+/page_zoom/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
-      
-      if (deviceId) {
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
-        
-        const displayState = displayStates.get(deviceId);
-        displayState.pageZoom = parseInt(payload, 10);
-        
-        console.log(`[Touchkio] Page zoom updated: ${deviceId} = ${displayState.pageZoom}%`);
-      }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse page zoom:', error);
-    }
-  });
-  
-  // Subscribe to page URL status (Home Assistant format)
-  mqttClient.subscribe('homeassistant/text/+/page_url/status', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const deviceId = extractDeviceId(topic);
-      
-      if (deviceId) {
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
-        
-        const displayState = displayStates.get(deviceId);
-        const url = payload.toString().trim();
-        displayState.pageUrl = url;
-        
-        // Extract room name from URL (e.g., https://meeteasier.vsti.cloud/single-room/venus -> venus)
-        const roomMatch = url.match(/\/single-room\/([^/?#]+)/);
-        if (roomMatch) {
-          displayState.room = roomMatch[1];
-          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${url} (room: ${displayState.room})`);
-        } else {
-          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${url}`);
-        }
-      }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse page URL:', error);
-    }
-  });
-  
-  // Subscribe to page URL status (Touchkio legacy format)
-  mqttClient.subscribe('touchkio/+/page_url/state', (payload, client) => {
+  // Subscribe to all Touchkio legacy topics with a single wildcard
+  mqttClient.subscribe('touchkio/#', (payload, client) => {
     try {
       const topic = client ? client.topic : 'unknown';
       const match = topic.match(/touchkio\/(rpi_[^/]+)/);
       
-      if (match) {
-        const deviceId = match[1];
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
-        
-        const displayState = displayStates.get(deviceId);
-        const url = payload.toString().trim();
-        displayState.pageUrl = url;
-        
+      if (!match) return;
+      
+      const deviceId = match[1];
+      const payloadStr = payload.toString().trim();
+      
+      // Initialize display state if not exists
+      if (!displayStates.has(deviceId)) {
+        displayStates.set(deviceId, { deviceId });
+      }
+      
+      const displayState = displayStates.get(deviceId);
+      
+      // Route based on topic pattern
+      if (topic.includes('/page_url/state')) {
+        displayState.pageUrl = payloadStr;
         // Extract room name from URL
-        const roomMatch = url.match(/\/single-room\/([^/?#]+)/);
+        const roomMatch = payloadStr.match(/\/single-room\/([^/?#]+)/);
         if (roomMatch) {
           displayState.room = roomMatch[1];
-          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${url} (room: ${displayState.room})`);
+          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${payloadStr} (room: ${displayState.room})`);
         } else {
-          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${url}`);
+          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${payloadStr}`);
         }
+        
+      } else if (topic.includes('/network_address/state')) {
+        displayState.networkAddress = payloadStr;
+        console.log(`[Touchkio] Network address updated: ${deviceId} = ${payloadStr}`);
       }
-    } catch (error) {
-      console.error('[Touchkio] Failed to parse page URL (legacy):', error);
-    }
-  });
-  
-  // Subscribe to network address (Touchkio format)
-  mqttClient.subscribe('touchkio/+/network_address/state', (payload, client) => {
-    try {
-      const topic = client ? client.topic : 'unknown';
-      const match = topic.match(/touchkio\/(rpi_[^/]+)/);
       
-      if (match) {
-        const deviceId = match[1];
-        if (!displayStates.has(deviceId)) {
-          displayStates.set(deviceId, { deviceId });
-        }
-        
-        const displayState = displayStates.get(deviceId);
-        displayState.networkAddress = payload.toString().trim();
-        
-        console.log(`[Touchkio] Network address updated: ${deviceId} = ${displayState.networkAddress}`);
-      }
     } catch (error) {
-      console.error('[Touchkio] Failed to parse network address:', error);
+      console.error('[Touchkio] Failed to parse Touchkio legacy message:', error);
     }
   });
 }
@@ -403,7 +191,7 @@ function sendPowerCommand(hostname, powerState, brightness = 100) {
     return false;
   }
   
-  const topic = `homeassistant/light/${deviceId}/display/power/set`;
+  const topic = `touchkio/${deviceId}/display/power/set`;
   const payload = powerState ? 'ON' : 'OFF';
   
   const success = mqttClient.publish(topic, payload, { qos: 1, retain: false });
@@ -428,7 +216,7 @@ function sendBrightnessCommand(hostname, brightness) {
     return false;
   }
   
-  const topic = `homeassistant/light/${deviceId}/display/brightness/set`;
+  const topic = `touchkio/${deviceId}/display/brightness/set`;
   const value = Math.max(0, Math.min(100, brightness));
   
   const success = mqttClient.publish(topic, value.toString(), { qos: 1, retain: false });
@@ -459,7 +247,7 @@ function sendKioskCommand(hostname, status) {
     return false;
   }
   
-  const topic = `homeassistant/select/${deviceId}/kiosk/set`;
+  const topic = `touchkio/${deviceId}/kiosk/set`;
   const success = mqttClient.publish(topic, status, { qos: 1, retain: false });
   
   if (success) {
@@ -488,7 +276,7 @@ function sendThemeCommand(hostname, theme) {
     return false;
   }
   
-  const topic = `homeassistant/select/${deviceId}/theme/set`;
+  const topic = `touchkio/${deviceId}/theme/set`;
   const success = mqttClient.publish(topic, theme, { qos: 1, retain: false });
   
   if (success) {
@@ -511,7 +299,7 @@ function sendVolumeCommand(hostname, volume) {
     return false;
   }
   
-  const topic = `homeassistant/number/${deviceId}/volume/set`;
+  const topic = `touchkio/${deviceId}/volume/set`;
   const value = Math.max(0, Math.min(100, volume));
   
   const success = mqttClient.publish(topic, value.toString(), { qos: 1, retain: false });
@@ -536,7 +324,7 @@ function sendKeyboardCommand(hostname, visible) {
     return false;
   }
   
-  const topic = `homeassistant/switch/${deviceId}/keyboard/set`;
+  const topic = `touchkio/${deviceId}/keyboard/set`;
   const value = visible ? 'ON' : 'OFF';
   
   const success = mqttClient.publish(topic, value, { qos: 1, retain: false });
@@ -561,7 +349,7 @@ function sendPageZoomCommand(hostname, zoom) {
     return false;
   }
   
-  const topic = `homeassistant/number/${deviceId}/page_zoom/set`;
+  const topic = `touchkio/${deviceId}/page_zoom/set`;
   const value = Math.max(25, Math.min(400, zoom));
   
   const success = mqttClient.publish(topic, value.toString(), { qos: 1, retain: false });
@@ -586,7 +374,7 @@ function sendPageUrlCommand(hostname, url) {
     return false;
   }
   
-  const topic = `homeassistant/text/${deviceId}/page_url/set`;
+  const topic = `touchkio/${deviceId}/page_url/set`;
   
   const success = mqttClient.publish(topic, url, { qos: 1, retain: false });
   
@@ -608,7 +396,7 @@ function sendRefreshCommand(hostname) {
     return false;
   }
   
-  const topic = `homeassistant/button/${deviceId}/refresh/execute`;
+  const topic = `touchkio/${deviceId}/refresh/execute`;
   const success = mqttClient.publish(topic, 'PRESS', { qos: 1, retain: false });
   
   if (success) {
@@ -629,7 +417,7 @@ function sendRebootCommand(hostname) {
     return false;
   }
   
-  const topic = `homeassistant/button/${deviceId}/reboot/execute`;
+  const topic = `touchkio/${deviceId}/reboot/execute`;
   const success = mqttClient.publish(topic, 'PRESS', { qos: 1, retain: false });
   
   if (success) {
@@ -650,7 +438,7 @@ function sendShutdownCommand(hostname) {
     return false;
   }
   
-  const topic = `homeassistant/button/${deviceId}/shutdown/execute`;
+  const topic = `touchkio/${deviceId}/shutdown/execute`;
   const success = mqttClient.publish(topic, 'PRESS', { qos: 1, retain: false });
   
   if (success) {
