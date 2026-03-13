@@ -130,13 +130,13 @@ function subscribeTouchkioStates() {
         }
         
       } else if (topic.includes('/processor_usage/state') || topic.includes('/processor_usage/status')) {
-        displayState.cpuUsage = parseFloat(payload);
+        displayState.cpuUsage = Math.round(parseFloat(payload) * 10) / 10;
         
       } else if (topic.includes('/memory_usage/state') || topic.includes('/memory_usage/status')) {
-        displayState.memoryUsage = parseFloat(payload);
+        displayState.memoryUsage = Math.round(parseFloat(payload) * 10) / 10;
         
       } else if (topic.includes('/processor_temperature/state') || topic.includes('/processor_temperature/status')) {
-        displayState.temperature = parseFloat(payload);
+        displayState.temperature = Math.round(parseFloat(payload) * 10) / 10;
         
       } else if (topic.includes('/up_time/state') || topic.includes('/up_time/status')) {
         displayState.uptime = parseFloat(payload);

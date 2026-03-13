@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.14] - 2026-03-13
+
+### Fixed
+- **Display Status Calculation for Unsupported MQTT Power**
+  - Fixed dual-connection displays showing "Partial" (orange) when MQTT doesn't report power status
+  - Now correctly shows "Active" (green) when Socket.IO is active and MQTT power is unknown
+  - Improved logic to distinguish between "MQTT reports OFF" vs "MQTT doesn't report power at all"
+  - Better handling of displays with unsupported DDC/CI or CEC hardware
+- **Touchkio Modal Power Detection**
+  - Enhanced power support detection to handle empty strings and "undefined" as string
+  - More robust checking for truly unsupported hardware vs missing data
+  - Prevents false "OFF" display when power control is not supported
+- **System Metrics Precision**
+  - Fixed CPU, memory, and temperature values showing excessive decimal places
+  - Values now rounded to 1 decimal place at parse time (e.g., "7.2%" instead of "7.249999999999999%")
+  - Applied to all MQTT metric parsing for consistent display formatting
+
 ## [1.7.13] - 2026-03-13
 
 ### Changed
