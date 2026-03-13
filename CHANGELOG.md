@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.7] - 2026-03-13
+
+### Fixed
+- **Display Merging for Touchkio Devices**
+  - Fixed duplicate display entries for Touchkio devices with both Socket.IO and MQTT connections
+  - Extracted and displayed room name from Touchkio page URL
+  - Automatically set display type to 'single-room' when room is detected
+  - MQTT-only displays now show correct room name instead of hostname
+
+### Changed
+- **Improved Display Matching Algorithm**
+  - Reordered matching strategies to prioritize IP address exact match (most reliable for same physical device)
+  - Added room name matching with IP address for Touchkio displays
+  - Prevents false matches between different displays in the same room
+  - Ensures Socket.IO and MQTT connections are correctly merged for the same physical device
+
 ## [1.7.6] - 2026-03-13
 
 ### Changed
