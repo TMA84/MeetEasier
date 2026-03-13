@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.10] - 2026-03-13
+
+### Added
+- **Touchkio Modal Auto-Refresh**
+  - Modal now auto-refreshes display data every 5 seconds
+  - Keeps status, metrics, and settings current without manual refresh
+  - Automatically updates display state in modal when changes occur
+
+### Fixed
+- **Page URL Command Targeting**
+  - Fixed page URL commands always being sent to wrong display (rpi_1A4187)
+  - Modal now uses deviceId when available for accurate device targeting
+  - Added fallback to hostname if deviceId not available
+  - Improved hostname to deviceId mapping with better logging
+  - Backend now handles both deviceId and hostname formats
+
+### Changed
+- **Error Display Improvements**
+  - Moved error section to bottom of Touchkio modal
+  - Show only ERROR entries (filtered out INFO and WARN logs)
+  - Display only errors from last hour (reduced noise)
+  - Cleaner, more focused error reporting
+
+### Added
+- **Touchkio Modal Auto-Refresh**
+  - Added automatic display data refresh every 5 seconds when Touchkio modal is open
+  - Ensures real-time status updates for display power, brightness, CPU, memory, temperature, and other metrics
+  - Uses React useEffect hook with cleanup to prevent memory leaks
+  - Auto-refresh only active when modal is visible
+  - New `onRefreshDisplay` callback prop for parent component integration
+
+- **Touchkio Modal Recent Errors Display**
+  - Added `getRecentErrors()` function to filter and display ERROR-level logs from the last hour
+  - Filters out WARN and INFO logs to focus on critical issues
+  - Parses ISO timestamp format (e.g., "2026-03-13T13:45")
+  - Returns structured error array with timestamp and message
+  - Integrates with existing error log display section in modal UI
+
+### Changed
+- **Touchkio Modal Error Filtering**
+  - Error display now shows only ERROR-level entries from the last 60 minutes
+  - Improves signal-to-noise ratio by hiding older and less critical logs
+  - `recentErrors` variable now actively used in UI rendering
+
+- **Touchkio Modal Integration in Admin Panel**
+  - Implemented `onRefreshDisplay` callback in Admin.js to support auto-refresh functionality
+  - Callback reloads all display data and updates the modal state with fresh information
+  - Ensures modal shows current display state after automatic refresh cycles
+  - Maintains modal context by finding and updating the specific display being viewed
+
+### Fixed
+- **Touchkio Hostname-to-DeviceId Lookup Enhancement**
+  - Enhanced `getDeviceIdFromHostname()` function to handle hostnames that are already deviceIds (e.g., "rpi_1A4187")
+  - Added early return check for hostnames starting with "rpi_" that exist in displayStates map
+  - Improved error logging with detailed mapping information when deviceId lookup fails
+  - Added debug logging for successful deviceId lookups
+  - Prevents unnecessary mapping lookups when hostname is already in correct deviceId format
+  - Fixes issue where commands sent with deviceId format would fail to find the display
+
 ## [1.7.9] - 2026-03-13
 
 ### Fixed
