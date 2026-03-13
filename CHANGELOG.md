@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.13] - 2026-03-13
+
+### Changed
+- **Touchkio Modal Power Control UX Enhancement**
+  - Power toggle now shows "(Unsupported)" label when hardware doesn't support DDC/CI or CEC
+  - Toggle becomes disabled and grayed out (50% opacity) for unsupported hardware
+  - Cursor changes to "not-allowed" for disabled power controls
+  - Status text shows "N/A" in gray color when power control is unsupported
+  - Improves user understanding of hardware limitations
+  - Prevents confusion when power control commands don't work on incompatible displays
+
+### Fixed
+- **Touchkio Modal Power Support Detection Logic**
+  - Fixed premature "Unsupported" detection for displays that haven't reported MQTT data yet
+  - Power/brightness controls now only marked as unsupported if MQTT data has been received but values are explicitly null/undefined
+  - Prevents false "Unsupported" warnings during initial connection phase
+  - Improves user experience by avoiding misleading hardware capability indicators
+  - Better handling of displays in connecting state vs. truly unsupported hardware
+  - Detection logic now checks for `hasMqttData` (lastUpdate or connected properties) before determining support status
+  - If no MQTT data received yet, assumes hardware is supported (optimistic default)
+- **Touchkio MQTT Topic Compatibility**
+  - Added support for both `/state` and `/status` topic suffixes for all Touchkio state updates
+  - Ensures compatibility with different Touchkio firmware versions that may use either suffix
+  - Affects all state topics: hostname, display power/brightness, kiosk mode, theme, volume, keyboard, page zoom/URL, CPU/memory/temperature, uptime, network address
+  - Improves reliability of display state tracking across different Touchkio configurations
+
+- **Touchkio Modal Uptime Display**
+  - Fixed uptime minutes not being floored, causing decimal values in display
+  - Now uses `Math.floor()` for both hours and minutes in the Network status card
+
+- **Display Status Logic for Unknown MQTT Power State (DevicesTab)**
+  - Fixed status calculation for displays with both Socket.IO and MQTT connections when MQTT power status is unknown
+  - Dual-connection displays: If MQTT power is undefined/null, now falls back to Socket.IO status instead of treating as "OFF"
+  - MQTT-only displays: Unknown power status now shows "Connected" (gray) instead of "OFF" (red)
+  - Prevents misleading "Partial" or "OFF" status when MQTT displays haven't reported power state yet
+  - Improves accuracy of display status representation in Devices tab
+  - Better handling of hardware that doesn't support DDC/CI or CEC power reporting
+
 ## [1.7.12] - 2026-03-13
 
 ### Fixed

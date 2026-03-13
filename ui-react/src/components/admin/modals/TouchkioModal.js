@@ -73,6 +73,12 @@ const TouchkioModal = ({
   const displayData = display.mqtt || display;
   const hostname = displayData.hostname;
 
+  // Check if power/brightness control is supported
+  // If MQTT is connected and we have data, but power/brightness is still undefined/null, it's unsupported
+  const hasMqttConnection = displayData.connected === true;
+  const powerSupported = !hasMqttConnection || (displayData.power !== undefined && displayData.power !== null);
+  const brightnessSupported = !hasMqttConnection || (displayData.brightness !== undefined && displayData.brightness !== null);
+
   // Filter errors to only show ERROR entries from last hour
   const getRecentErrors = () => {
     if (!displayData.errors || Object.keys(displayData.errors).length === 0) {
@@ -119,6 +125,33 @@ const TouchkioModal = ({
             </div>
           )}
 
+          {/* Unsupported Hardware Warning */}
+          {(!powerSupported || !brightnessSupported) && (
+            <div style={{ 
+              marginBottom: '1.5rem',
+              padding: '1rem',
+              background: 'rgba(251, 191, 36, 0.1)',
+              border: '1px solid rgba(251, 191, 36, 0.3)',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'start',
+              gap: '0.75rem'
+            }}>
+              <span style={{ fontSize: '1.25rem' }}>⚠️</span>
+              <div>
+                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fbbf24', marginBottom: '0.25rem' }}>
+                  Hardware Not Supported
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#fcd34d' }}>
+                  {!powerSupported && !brightnessSupported && 'Display power and brightness control are not supported by this hardware.'}
+                  {!powerSupported && brightnessSupported && 'Display power control is not supported by this hardware.'}
+                  {powerSupported && !brightnessSupported && 'Display brightness control is not supported by this hardware.'}
+                  {' '}Your HDMI display may not support DDC/CI or CEC protocols. Status shown is from Socket.IO connection.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* System Status Grid */}
           <div style={{ 
             display: 'grid', 
@@ -133,11 +166,11 @@ const TouchkioModal = ({
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
               <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Power</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: displayData.power === 'ON' ? '#22c55e' : '#ef4444', marginBottom: '0.25rem' }}>
-                {displayData.power || 'UNKNOWN'}
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: powerSupported ? (displayData.power === 'ON' ? '#22c55e' : '#ef4444') : '#94a3b8', marginBottom: '0.25rem' }}>
+                {powerSupported ? (displayData.power || 'UNKNOWN') : 'UNSUPPORTED'}
               </div>
               <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
-                Brightness: <strong>{displayData.brightness || '-'}</strong>
+                Brightness: <strong>{brightnessSupported ? (displayData.brightness || '-') : 'N/A'}</strong>
               </div>
             </div>
 
@@ -180,7 +213,7 @@ const TouchkioModal = ({
                 {displayData.networkAddress || '-'}
               </div>
               <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
-                Uptime: <strong style={{ color: '#f1f5f9' }}>{displayData.uptime !== undefined ? `${Math.floor(displayData.uptime / 60)}h ${displayData.uptime % 60}m` : '-'}</strong>
+                Uptime: <strong style={{ color: '#f1f5f9' }}>{displayData.uptime !== undefined ? `${Math.floor(displayData.uptime / 60)}h ${Math.floor(displayData.uptime % 60)}m` : '-'}</strong>
               </div>
             </div>
           </div>
@@ -276,18 +309,21 @@ const TouchkioModal = ({
                 <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Quick Controls</h4>
                 
                 {/* Power Toggle */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', padding: '0.75rem', background: '#1e293b', borderRadius: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', padding: '0.75rem', background: '#1e293b', borderRadius: '6px', opacity: powerSupported ? 1 : 0.5 }}>
                   <div>
-                    <div style={{ fontSize: '0.875rem', color: '#f1f5f9', fontWeight: 600, marginBottom: '0.25rem' }}>Display Power</div>
-                    <div style={{ fontSize: '0.75rem', color: displayData.power === 'ON' ? '#22c55e' : '#ef4444' }}>
-                      {displayData.power === 'ON' ? 'ON' : displayData.power === 'OFF' ? 'OFF' : 'Unknown'}
+                    <div style={{ fontSize: '0.875rem', color: '#f1f5f9', fontWeight: 600, marginBottom: '0.25rem' }}>
+                      Display Power {!powerSupported && <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>(Unsupported)</span>}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: powerSupported ? (displayData.power === 'ON' ? '#22c55e' : '#ef4444') : '#94a3b8' }}>
+                      {powerSupported ? (displayData.power === 'ON' ? 'ON' : displayData.power === 'OFF' ? 'OFF' : 'Unknown') : 'N/A'}
                     </div>
                   </div>
-                  <label style={{ position: 'relative', display: 'inline-block', width: '52px', height: '28px', cursor: 'pointer' }}>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '52px', height: '28px', cursor: powerSupported ? 'pointer' : 'not-allowed' }}>
                     <input
                       type="checkbox"
                       checked={displayData.power === 'ON'}
-                      onChange={(e) => onPowerCommand(hostname, e.target.checked)}
+                      onChange={(e) => powerSupported && onPowerCommand(hostname, e.target.checked)}
+                      disabled={!powerSupported}
                       style={{ opacity: 0, width: 0, height: 0 }}
                     />
                     <span style={{
@@ -387,11 +423,13 @@ const TouchkioModal = ({
                 <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Adjustments</h4>
                 
                 {/* Brightness */}
-                <div style={{ marginBottom: '1rem' }}>
+                <div style={{ marginBottom: '1rem', opacity: brightnessSupported ? 1 : 0.5 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Brightness</span>
+                    <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+                      Brightness {!brightnessSupported && <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>(Unsupported)</span>}
+                    </span>
                     <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#3b82f6' }}>
-                      {brightness !== undefined ? brightness : displayData.brightness || 200}
+                      {brightnessSupported ? (brightness !== undefined ? brightness : displayData.brightness || 200) : 'N/A'}
                     </span>
                   </div>
                   <input
@@ -399,10 +437,11 @@ const TouchkioModal = ({
                     min="0"
                     max="255"
                     value={brightness !== undefined ? brightness : displayData.brightness || 200}
-                    onChange={(e) => onBrightnessChange(parseInt(e.target.value, 10), false)}
-                    onMouseUp={(e) => onBrightnessChange(parseInt(e.target.value, 10), true)}
-                    onTouchEnd={(e) => onBrightnessChange(parseInt(e.target.value, 10), true)}
-                    style={{ width: '100%', height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
+                    onChange={(e) => brightnessSupported && onBrightnessChange(parseInt(e.target.value, 10), false)}
+                    onMouseUp={(e) => brightnessSupported && onBrightnessChange(parseInt(e.target.value, 10), true)}
+                    onTouchEnd={(e) => brightnessSupported && onBrightnessChange(parseInt(e.target.value, 10), true)}
+                    disabled={!brightnessSupported}
+                    style={{ width: '100%', height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: brightnessSupported ? 'pointer' : 'not-allowed' }}
                   />
                 </div>
 
