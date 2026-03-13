@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.12] - 2026-03-13
+
+### Changed
+- **Touchkio Modal UI Redesign**
+  - Replaced power buttons with modern toggle switch (ON/OFF with green glow effect)
+  - Replaced theme buttons with toggle switch featuring sun ☀️ (Light) and moon 🌙 (Dark) icons
+  - Consolidated all three sliders (Brightness, Volume, Zoom) into single "Adjustments" section
+  - Reduced status card padding and font sizes for more compact layout
+  - Moved Quick Controls (Power, Theme, Refresh) to top of left column
+  - Removed separate Theme section from right column (now in Quick Controls)
+  - Improved visual hierarchy with better spacing and grouping
+  - Toggle switches include smooth animations and color transitions
+  - More modern, cleaner, and space-efficient design
+
+- **Touchkio Modal Status Display**
+  - Power buttons now show active state with color coding (green for ON, red for OFF)
+  - Added checkmark (✓) to active power state
+  - Status updates automatically via 5-second auto-refresh
+  - Removed duplicate error log section (kept only at end of modal)
+  - Error log moved to bottom of modal for better content flow
+  - Current power status displayed above buttons with color-coded indicator
+  - Green styling for ON state, red styling for OFF state
+  - Improved user experience with immediate visual confirmation of display power state
+
+- **Touchkio Modal System Status Cards Optimization**
+  - Reduced grid column minimum width from 220px to 200px for better space utilization
+  - Reduced card padding from 1.25rem to 1rem for more compact layout
+  - Optimized font sizes: headers from 0.75rem to 0.7rem, values from 0.875rem to 0.8rem
+  - Increased power status font size from 1.25rem to 1.5rem for better visibility
+  - Changed "Memory" label to "Mem" for space efficiency
+  - Replaced "Volume" with "Zoom" in Display Mode card (more relevant metric)
+  - Added decimal precision to CPU, memory, and temperature values (e.g., "45.5%" instead of "45%")
+  - Improved visual hierarchy with adjusted spacing and font sizes
+  - More information-dense layout without sacrificing readability
+
+- **Touchkio Modal Layout Optimization**
+  - Reduced Kiosk Mode button font size from 0.875rem to 0.8rem for better fit
+  - Reduced Kiosk Mode button padding from 0.625rem to 0.5rem for more compact layout
+  - Improved space efficiency in control sections
+  - Right column now more compact with optimized button sizing
+
+### Removed
+- **Touchkio Modal Theme Section**
+  - Removed standalone Theme control section from right column
+  - Theme control now integrated into Quick Controls toggle at top of left column
+  - Eliminates redundant UI element and improves modal layout efficiency
+  - Reduces visual clutter while maintaining full theme switching functionality
+  - Saves ~35 lines of code and significant vertical space in modal
+
 ## [1.7.11] - 2026-03-13
 
 ### Added
