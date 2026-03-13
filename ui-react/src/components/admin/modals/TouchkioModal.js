@@ -29,13 +29,14 @@ const TouchkioModal = ({
     if (!show || !display) return;
     
     const interval = setInterval(() => {
-      if (onRefreshDisplay) {
+      // Don't refresh while user is editing URL
+      if (!editingUrl && onRefreshDisplay) {
         onRefreshDisplay();
       }
     }, 5000);
     
     return () => clearInterval(interval);
-  }, [show, display, onRefreshDisplay]);
+  }, [show, display, editingUrl, onRefreshDisplay]);
 
   if (!show || !display) return null;
 
