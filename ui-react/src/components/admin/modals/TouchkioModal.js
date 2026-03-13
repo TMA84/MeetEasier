@@ -116,64 +116,64 @@ const TouchkioModal = ({
           {/* System Status Grid */}
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
             gap: '1rem',
             marginBottom: '2rem'
           }}>
             <div style={{ 
-              padding: '1.25rem', 
+              padding: '1rem', 
               background: '#2d3142',
               borderRadius: '8px',
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Status</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: displayData.power === 'ON' ? '#22c55e' : '#ef4444', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Power</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: displayData.power === 'ON' ? '#22c55e' : '#ef4444', marginBottom: '0.25rem' }}>
                 {displayData.power || 'UNKNOWN'}
               </div>
-              <div style={{ fontSize: '0.875rem', color: '#cbd5e1' }}>
+              <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
                 Brightness: <strong>{displayData.brightness || '-'}</strong>
               </div>
             </div>
 
             <div style={{ 
-              padding: '1.25rem', 
+              padding: '1rem', 
               background: '#2d3142',
               borderRadius: '8px',
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>System Resources</div>
-              <div style={{ fontSize: '0.875rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <div>CPU: <strong style={{ color: '#f1f5f9' }}>{displayData.cpuUsage !== undefined ? `${displayData.cpuUsage}%` : '-'}</strong></div>
-                <div>Memory: <strong style={{ color: '#f1f5f9' }}>{displayData.memoryUsage !== undefined ? `${displayData.memoryUsage}%` : '-'}</strong></div>
-                <div>Temp: <strong style={{ color: '#f1f5f9' }}>{displayData.temperature !== undefined ? `${displayData.temperature}°C` : '-'}</strong></div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>System Resources</div>
+              <div style={{ fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <div>CPU: <strong style={{ color: '#f1f5f9' }}>{displayData.cpuUsage !== undefined ? `${displayData.cpuUsage.toFixed(1)}%` : '-'}</strong></div>
+                <div>Mem: <strong style={{ color: '#f1f5f9' }}>{displayData.memoryUsage !== undefined ? `${displayData.memoryUsage.toFixed(1)}%` : '-'}</strong></div>
+                <div>Temp: <strong style={{ color: '#f1f5f9' }}>{displayData.temperature !== undefined ? `${displayData.temperature.toFixed(1)}°C` : '-'}</strong></div>
               </div>
             </div>
 
             <div style={{ 
-              padding: '1.25rem', 
+              padding: '1rem', 
               background: '#2d3142',
               borderRadius: '8px',
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Mode</div>
-              <div style={{ fontSize: '0.875rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Mode</div>
+              <div style={{ fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <div>Kiosk: <strong style={{ color: '#f1f5f9' }}>{displayData.kioskStatus || '-'}</strong></div>
                 <div>Theme: <strong style={{ color: '#f1f5f9' }}>{displayData.theme || '-'}</strong></div>
-                <div>Volume: <strong style={{ color: '#f1f5f9' }}>{displayData.volume !== undefined ? `${displayData.volume}%` : '-'}</strong></div>
+                <div>Zoom: <strong style={{ color: '#f1f5f9' }}>{displayData.pageZoom !== undefined ? `${displayData.pageZoom}%` : '-'}</strong></div>
               </div>
             </div>
 
             <div style={{ 
-              padding: '1.25rem', 
+              padding: '1rem', 
               background: '#2d3142',
               borderRadius: '8px',
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Network</div>
-              <div style={{ fontSize: '0.8rem', color: '#cbd5e1', wordBreak: 'break-all', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Network</div>
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', wordBreak: 'break-all', marginBottom: '0.5rem' }}>
                 {displayData.networkAddress || '-'}
               </div>
-              <div style={{ fontSize: '0.875rem', color: '#cbd5e1' }}>
+              <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
                 Uptime: <strong style={{ color: '#f1f5f9' }}>{displayData.uptime !== undefined ? `${Math.floor(displayData.uptime / 60)}h ${displayData.uptime % 60}m` : '-'}</strong>
               </div>
             </div>
@@ -259,7 +259,7 @@ const TouchkioModal = ({
             
             {/* Left Column */}
             <div>
-              {/* Display Controls */}
+              {/* Power & Theme Toggles */}
               <div style={{ 
                 marginBottom: '1.5rem',
                 padding: '1.25rem',
@@ -267,59 +267,110 @@ const TouchkioModal = ({
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '8px'
               }}>
-                <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Controls</h4>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.75rem' }}>
-                  Power: <span style={{ color: displayData.power === 'ON' ? '#22c55e' : displayData.power === 'OFF' ? '#ef4444' : '#94a3b8', fontWeight: 600 }}>{displayData.power || 'unknown'}</span>
+                <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Quick Controls</h4>
+                
+                {/* Power Toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', padding: '0.75rem', background: '#1e293b', borderRadius: '6px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.875rem', color: '#f1f5f9', fontWeight: 600, marginBottom: '0.25rem' }}>Display Power</div>
+                    <div style={{ fontSize: '0.75rem', color: displayData.power === 'ON' ? '#22c55e' : '#ef4444' }}>
+                      {displayData.power === 'ON' ? 'ON' : displayData.power === 'OFF' ? 'OFF' : 'Unknown'}
+                    </div>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '52px', height: '28px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={displayData.power === 'ON'}
+                      onChange={(e) => onPowerCommand(hostname, e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: displayData.power === 'ON' ? '#22c55e' : '#475569',
+                      borderRadius: '28px',
+                      transition: 'background-color 0.3s',
+                      boxShadow: displayData.power === 'ON' ? '0 0 8px rgba(34, 197, 94, 0.4)' : 'none'
+                    }}>
+                      <span style={{
+                        position: 'absolute',
+                        content: '',
+                        height: '20px',
+                        width: '20px',
+                        left: displayData.power === 'ON' ? '28px' : '4px',
+                        bottom: '4px',
+                        backgroundColor: 'white',
+                        borderRadius: '50%',
+                        transition: 'left 0.3s',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}></span>
+                    </span>
+                  </label>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                  <button
-                    type="button"
-                    className={displayData.power === 'ON' ? 'admin-primary-button' : 'admin-secondary-button'}
-                    onClick={() => onPowerCommand(hostname, true)}
-                    style={{ 
-                      width: '100%', 
-                      fontSize: '0.875rem', 
-                      padding: '0.625rem',
-                      ...(displayData.power === 'ON' ? { 
-                        background: 'rgba(34, 197, 94, 0.2)',
-                        borderColor: 'rgba(34, 197, 94, 0.5)',
-                        color: '#22c55e',
-                        boxShadow: '0 0 8px rgba(34, 197, 94, 0.4)'
-                      } : {})
-                    }}
-                  >
-                    {displayData.power === 'ON' ? '✓ Turn On' : 'Turn On'}
-                  </button>
-                  <button
-                    type="button"
-                    className={displayData.power === 'OFF' ? 'admin-primary-button' : 'admin-secondary-button'}
-                    onClick={() => onPowerCommand(hostname, false)}
-                    style={{ 
-                      width: '100%', 
-                      fontSize: '0.875rem', 
-                      padding: '0.625rem',
-                      ...(displayData.power === 'OFF' ? { 
-                        background: 'rgba(239, 68, 68, 0.2)',
-                        borderColor: 'rgba(239, 68, 68, 0.5)',
-                        color: '#ef4444',
-                        boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)'
-                      } : {})
-                    }}
-                  >
-                    {displayData.power === 'OFF' ? '✓ Turn Off' : 'Turn Off'}
-                  </button>
+
+                {/* Theme Toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', padding: '0.75rem', background: '#1e293b', borderRadius: '6px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.875rem', color: '#f1f5f9', fontWeight: 600, marginBottom: '0.25rem' }}>Theme</div>
+                    <div style={{ fontSize: '0.75rem', color: '#3b82f6' }}>
+                      {displayData.theme || 'Unknown'}
+                    </div>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '52px', height: '28px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={displayData.theme === 'Dark'}
+                      onChange={(e) => onThemeCommand(hostname, e.target.checked ? 'Dark' : 'Light')}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: displayData.theme === 'Dark' ? '#1e293b' : '#fbbf24',
+                      borderRadius: '28px',
+                      transition: 'background-color 0.3s',
+                      border: '2px solid ' + (displayData.theme === 'Dark' ? '#475569' : '#f59e0b')
+                    }}>
+                      <span style={{
+                        position: 'absolute',
+                        content: '',
+                        height: '20px',
+                        width: '20px',
+                        left: displayData.theme === 'Dark' ? '28px' : '4px',
+                        bottom: '2px',
+                        backgroundColor: 'white',
+                        borderRadius: '50%',
+                        transition: 'left 0.3s',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.7rem'
+                      }}>
+                        {displayData.theme === 'Dark' ? '🌙' : '☀️'}
+                      </span>
+                    </span>
+                  </label>
                 </div>
+
+                {/* Refresh Button */}
                 <button
                   type="button"
                   className="admin-secondary-button"
                   onClick={() => onRefreshCommand(hostname)}
                   style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
                 >
-                  Refresh Page
+                  🔄 Refresh Page
                 </button>
               </div>
 
-              {/* Brightness Control */}
+              {/* Sliders */}
               <div style={{ 
                 marginBottom: '1.5rem',
                 padding: '1.25rem',
@@ -327,8 +378,16 @@ const TouchkioModal = ({
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '8px'
               }}>
-                <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Brightness</h4>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Adjustments</h4>
+                
+                {/* Brightness */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Brightness</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#3b82f6' }}>
+                      {brightness !== undefined ? brightness : displayData.brightness || 200}
+                    </span>
+                  </div>
                   <input
                     type="range"
                     min="0"
@@ -337,24 +396,18 @@ const TouchkioModal = ({
                     onChange={(e) => onBrightnessChange(parseInt(e.target.value, 10), false)}
                     onMouseUp={(e) => onBrightnessChange(parseInt(e.target.value, 10), true)}
                     onTouchEnd={(e) => onBrightnessChange(parseInt(e.target.value, 10), true)}
-                    style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
+                    style={{ width: '100%', height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
                   />
-                  <span style={{ minWidth: '50px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
-                    {brightness !== undefined ? brightness : displayData.brightness || 200}
-                  </span>
                 </div>
-              </div>
 
-              {/* Volume Control */}
-              <div style={{ 
-                marginBottom: '1.5rem',
-                padding: '1.25rem',
-                background: '#2d3142',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '8px'
-              }}>
-                <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Volume</h4>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                {/* Volume */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Volume</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#3b82f6' }}>
+                      {volume !== undefined ? volume : displayData.volume || 50}%
+                    </span>
+                  </div>
                   <input
                     type="range"
                     min="0"
@@ -363,23 +416,18 @@ const TouchkioModal = ({
                     onChange={(e) => onVolumeChange(parseInt(e.target.value, 10), false)}
                     onMouseUp={(e) => onVolumeChange(parseInt(e.target.value, 10), true)}
                     onTouchEnd={(e) => onVolumeChange(parseInt(e.target.value, 10), true)}
-                    style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
+                    style={{ width: '100%', height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
                   />
-                  <span style={{ minWidth: '50px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
-                    {volume !== undefined ? volume : displayData.volume || 50}%
-                  </span>
                 </div>
-              </div>
 
-              {/* Page Zoom */}
-              <div style={{ 
-                padding: '1.25rem',
-                background: '#2d3142',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '8px'
-              }}>
-                <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Page Zoom</h4>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                {/* Page Zoom */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Page Zoom</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#3b82f6' }}>
+                      {zoom !== undefined ? zoom : displayData.pageZoom || 100}%
+                    </span>
+                  </div>
                   <input
                     type="range"
                     min="25"
@@ -389,11 +437,8 @@ const TouchkioModal = ({
                     onChange={(e) => onZoomChange(parseInt(e.target.value, 10), false)}
                     onMouseUp={(e) => onZoomChange(parseInt(e.target.value, 10), true)}
                     onTouchEnd={(e) => onZoomChange(parseInt(e.target.value, 10), true)}
-                    style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
+                    style={{ width: '100%', height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.2)', outline: 'none', cursor: 'pointer' }}
                   />
-                  <span style={{ minWidth: '60px', fontWeight: 'bold', fontSize: '1.125rem', color: '#3b82f6', textAlign: 'right' }}>
-                    {zoom !== undefined ? zoom : displayData.pageZoom || 100}%
-                  </span>
                 </div>
               </div>
             </div>
@@ -423,47 +468,12 @@ const TouchkioModal = ({
                         onClick={() => onKioskCommand(hostname, mode)}
                         style={{ 
                           width: '100%',
-                          fontSize: '0.875rem',
-                          padding: '0.625rem',
+                          fontSize: '0.8rem',
+                          padding: '0.5rem',
                           ...(isActive ? { boxShadow: '0 0 8px rgba(59, 130, 246, 0.4)' } : {})
                         }}
                       >
                         {isActive ? `✓ ${mode}` : mode}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Theme */}
-              <div style={{ 
-                marginBottom: '1.5rem',
-                padding: '1.25rem',
-                background: '#2d3142',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '8px'
-              }}>
-                <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Theme</h4>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.75rem' }}>
-                  Current: <span style={{ color: displayData.theme ? '#3b82f6' : '#94a3b8', fontWeight: 600 }}>{displayData.theme || 'unknown'}</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                  {['Light', 'Dark'].map(theme => {
-                    const isActive = displayData.theme === theme;
-                    return (
-                      <button
-                        key={theme}
-                        type="button"
-                        className={isActive ? 'admin-primary-button' : 'admin-secondary-button'}
-                        onClick={() => onThemeCommand(hostname, theme)}
-                        style={{ 
-                          width: '100%',
-                          fontSize: '0.875rem',
-                          padding: '0.625rem',
-                          ...(isActive ? { boxShadow: '0 0 8px rgba(59, 130, 246, 0.4)' } : {})
-                        }}
-                      >
-                        {isActive ? `✓ ${theme}` : theme}
                       </button>
                     );
                   })}
