@@ -2757,32 +2757,40 @@ module.exports = function(app) {
 			mqttDisplays.forEach(mqtt => {
 				const hostnameKey = mqtt.hostname.toLowerCase();
 				const mqttIp = mqtt.networkAddress ? mqtt.networkAddress.toLowerCase() : null;
+				const mqttRoom = mqtt.room ? mqtt.room.toLowerCase() : null;
 				
 				let existingDisplay = null;
 				
 				// Try multiple matching strategies (only match same physical device, not same room!)
 				for (const [key, display] of displayMap.entries()) {
-					// Strategy 1: clientId ends with hostname (e.g., "192.168.1.10_saturn" matches "saturn")
+					// Strategy 1: IP address exact match (most reliable for same physical device)
+					if (mqttIp && display.ipAddress) {
+						const socketIp = display.ipAddress.toLowerCase();
+						// Extract IP from formats like "192.168.1.10" or "localhost (::1)"
+						if (socketIp === mqttIp || socketIp.includes(mqttIp)) {
+							existingDisplay = display;
+							break;
+						}
+					}
+					
+					// Strategy 2: clientId ends with hostname (e.g., "192.168.1.10_saturn" matches "saturn")
 					// This indicates the Socket.IO client is from the same Touchkio device
 					if (display.id.toLowerCase().endsWith('_' + hostnameKey)) {
 						existingDisplay = display;
 						break;
 					}
 					
-					// Strategy 2: IP address exact match (same physical device)
-					if (mqttIp && display.ipAddress) {
+					// Strategy 3: Room name match with IP (for Touchkio displays)
+					if (mqttRoom && mqttIp && display.ipAddress) {
 						const socketIp = display.ipAddress.toLowerCase();
-						// Extract IP from formats like "192.168.1.10" or "localhost (::1)"
-						if (socketIp === mqttIp || socketIp.includes(mqttIp)) {
-							// Additional check: hostname should also match or be part of clientId
-							if (display.id.toLowerCase().includes(hostnameKey)) {
-								existingDisplay = display;
-								break;
-							}
+						const displayName = display.name.toLowerCase();
+						if ((socketIp === mqttIp || socketIp.includes(mqttIp)) && displayName === mqttRoom) {
+							existingDisplay = display;
+							break;
 						}
 					}
 					
-					// Strategy 3: Exact clientId match (rare but possible)
+					// Strategy 4: Exact clientId match (rare but possible)
 					if (display.id.toLowerCase() === hostnameKey) {
 						existingDisplay = display;
 						break;
@@ -2792,6 +2800,8 @@ module.exports = function(app) {
 				const mqttData = {
 					connected: true,
 					hostname: mqtt.hostname,
+					deviceId: mqtt.deviceId,
+					room: mqtt.room,
 					power: mqtt.power,
 					brightness: mqtt.brightness,
 					kioskStatus: mqtt.kioskStatus,
@@ -2815,10 +2825,14 @@ module.exports = function(app) {
 					}
 				} else {
 					// Add as MQTT-only display
+					// Use room name if available, otherwise hostname
+					const displayName = mqtt.room || mqtt.hostname;
+					const displayType = mqtt.room ? 'single-room' : 'unknown';
+					
 					displayMap.set(hostnameKey, {
 						id: mqtt.hostname,
-						name: mqtt.hostname,
-						type: 'unknown', // We don't know the type from MQTT alone
+						name: displayName,
+						type: displayType,
 						ipAddress: mqtt.networkAddress,
 						socketIO: null,
 						mqtt: mqttData
