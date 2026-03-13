@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.7.12] - 2026-03-13
 
+### Fixed
+- **Touchkio Modal Real-Time Updates**
+  - Fixed modal display data not updating when MQTT displays refresh
+  - Modal now automatically updates with latest display data when mqttDisplays state changes
+  - Ensures users see current status without closing and reopening the modal
+  - Matches display by hostname for accurate updates
+- **Touchkio Modal State Reset**
+  - Fixed URL editing state not resetting when switching between displays
+  - Modal now properly resets editing mode when display changes
+  - Prevents stale editing state from persisting across different displays
+
 ### Changed
 - **Touchkio Modal UI Redesign**
   - Replaced power buttons with modern toggle switch (ON/OFF with green glow effect)

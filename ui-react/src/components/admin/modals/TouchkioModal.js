@@ -24,6 +24,12 @@ const TouchkioModal = ({
   const [editingUrl, setEditingUrl] = useState(false);
   const [urlInput, setUrlInput] = useState('');
 
+  // Reset editing state when display changes
+  useEffect(() => {
+    setEditingUrl(false);
+    setUrlInput('');
+  }, [display]);
+
   // Auto-refresh display data every 5 seconds
   useEffect(() => {
     if (!show || !display) return;
