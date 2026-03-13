@@ -156,6 +156,17 @@ function subscribeTouchkioStates() {
       } else if (topic.includes('/network_address/state')) {
         displayState.networkAddress = payloadStr;
         console.log(`[Touchkio] Network address updated: ${deviceId} = ${payloadStr}`);
+        
+      } else if (topic.includes('/errors/attributes')) {
+        // Parse error log
+        try {
+          const errorData = JSON.parse(payloadStr);
+          displayState.errors = errorData;
+          displayState.lastErrorUpdate = new Date().toISOString();
+          console.log(`[Touchkio] Errors updated: ${deviceId}`);
+        } catch (e) {
+          console.error(`[Touchkio] Failed to parse error data for ${deviceId}:`, e);
+        }
       }
       
     } catch (error) {

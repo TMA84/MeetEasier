@@ -120,7 +120,7 @@ const DevicesTab = ({
                 
                 if (hasSocketIO && hasMQTT) {
                   const socketActive = display.socketIO.status === 'active';
-                  const mqttOn = display.mqtt.power === 'ON';
+                  const mqttOn = display.mqtt.power === 'ON' || display.mqtt.power === undefined;
                   
                   if (socketActive && mqttOn) {
                     status = 'Active';
