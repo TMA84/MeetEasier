@@ -211,7 +211,7 @@ function subscribeTouchkioStates() {
   });
   
   // Subscribe to theme status
-  mqttClient.subscribe('homeassistant/select/+/theme/state', (payload, client) => {
+  mqttClient.subscribe('homeassistant/select/+/theme/status', (payload, client) => {
     try {
       const topic = client ? client.topic : 'unknown';
       const deviceId = extractDeviceId(topic);
@@ -232,7 +232,7 @@ function subscribeTouchkioStates() {
   });
   
   // Subscribe to volume status
-  mqttClient.subscribe('homeassistant/number/+/volume/state', (payload, client) => {
+  mqttClient.subscribe('homeassistant/number/+/volume/status', (payload, client) => {
     try {
       const topic = client ? client.topic : 'unknown';
       const deviceId = extractDeviceId(topic);
@@ -253,7 +253,7 @@ function subscribeTouchkioStates() {
   });
   
   // Subscribe to keyboard status
-  mqttClient.subscribe('homeassistant/switch/+/keyboard/state', (payload, client) => {
+  mqttClient.subscribe('homeassistant/switch/+/keyboard/status', (payload, client) => {
     try {
       const topic = client ? client.topic : 'unknown';
       const deviceId = extractDeviceId(topic);
@@ -274,7 +274,7 @@ function subscribeTouchkioStates() {
   });
   
   // Subscribe to page zoom status
-  mqttClient.subscribe('homeassistant/number/+/page_zoom/state', (payload, client) => {
+  mqttClient.subscribe('homeassistant/number/+/page_zoom/status', (payload, client) => {
     try {
       const topic = client ? client.topic : 'unknown';
       const deviceId = extractDeviceId(topic);
@@ -295,7 +295,7 @@ function subscribeTouchkioStates() {
   });
   
   // Subscribe to page URL status
-  mqttClient.subscribe('homeassistant/text/+/page_url/state', (payload, client) => {
+  mqttClient.subscribe('homeassistant/text/+/page_url/status', (payload, client) => {
     try {
       const topic = client ? client.topic : 'unknown';
       const deviceId = extractDeviceId(topic);
@@ -343,7 +343,7 @@ function sendPowerCommand(hostname, powerState, brightness = 100) {
     return false;
   }
   
-  const topic = `homeassistant/light/${deviceId}/display/set`;
+  const topic = `homeassistant/light/${deviceId}/display/power/set`;
   const payload = powerState ? 'ON' : 'OFF';
   
   const success = mqttClient.publish(topic, payload, { qos: 1, retain: false });
