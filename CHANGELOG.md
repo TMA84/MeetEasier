@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.3] - 2026-03-13
+
+### Added
+- **Complete Touchkio Feature Support**
+  - Theme control: `homeassistant/select/{deviceId}/theme/set` → "Light", "Dark"
+  - Volume control: `homeassistant/number/{deviceId}/volume/set` → 0-100
+  - Keyboard visibility: `homeassistant/switch/{deviceId}/keyboard/set` → "ON", "OFF"
+  - Page zoom: `homeassistant/number/{deviceId}/page_zoom/set` → 25-400
+  - Page URL navigation: `homeassistant/text/{deviceId}/page_url/set` → URL string
+  - Status subscriptions for all new features
+
+### Changed
+- All Touchkio features now fully functional with Home Assistant MQTT format
+- Removed "temporarily unsupported" warnings - all features are now available
+
 ## [1.7.2] - 2026-03-13
 
 ### Changed
