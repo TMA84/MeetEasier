@@ -98,16 +98,15 @@ const DevicesTab = ({
         </div>
       ) : (
         <div className="admin-displays-table-wrapper" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', tableLayout: 'auto' }}>
+          <table style={{ width: '100%', tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th style={{ width: '40px', textAlign: 'center' }}>Status</th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Connection</th>
-                <th>IP Address</th>
-                <th>Details</th>
-                <th style={{ minWidth: '200px' }}>Actions</th>
+                <th style={{ width: '30px', textAlign: 'center' }}></th>
+                <th style={{ width: '20%' }}>Name</th>
+                <th style={{ width: '15%' }}>Type</th>
+                <th style={{ width: '12%' }}>IP</th>
+                <th style={{ width: '23%' }}>Metrics</th>
+                <th style={{ width: '30%' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -197,56 +196,63 @@ const DevicesTab = ({
                       <span 
                         style={{
                           display: 'inline-block',
-                          width: '12px',
-                          height: '12px',
+                          width: '10px',
+                          height: '10px',
                           borderRadius: '50%',
                           backgroundColor: statusDotColor,
                         }}
                         title={status}
                       ></span>
                     </td>
-                    <td>
+                    <td style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       <div>
-                        <strong>{display.name}</strong>
+                        <strong style={{ fontSize: '0.875rem' }}>{display.name}</strong>
                         {(display.mqtt?.deviceId || display.mqtt?.hostname) && (
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.125rem' }}>
+                          <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.125rem' }}>
                             {display.mqtt?.deviceId || display.mqtt?.hostname}
                           </div>
                         )}
                       </div>
                     </td>
-                    <td>
-                      {display.type === 'single-room' && display.mqtt?.room 
-                        ? `single-room (${display.mqtt.room})`
-                        : (display.type || 'unknown')
-                      }
+                    <td style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div>
+                        {display.type === 'single-room' && display.mqtt?.room 
+                          ? `${display.mqtt.room}`
+                          : (display.type || 'unknown')
+                        }
+                      </div>
+                      <div style={{ fontSize: '0.7rem', marginTop: '0.125rem' }}>
+                        {connectionBadges}
+                      </div>
                     </td>
-                    <td>{connectionBadges}</td>
-                    <td className="ip-address">{display.ipAddress || '-'}</td>
-                    <td style={{ fontSize: '0.85rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                    <td style={{ fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {display.ipAddress || '-'}
+                    </td>
+                    <td style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
                       {hasMQTT && (
-                        <div>
-                          CPU: {display.mqtt.cpuUsage !== undefined ? `${display.mqtt.cpuUsage.toFixed(2)}%` : '-'} | 
-                          Mem: {display.mqtt.memoryUsage !== undefined ? `${display.mqtt.memoryUsage.toFixed(2)}%` : '-'} | 
-                          Temp: {display.mqtt.temperature !== undefined ? `${display.mqtt.temperature.toFixed(2)}°C` : '-'}
+                        <div style={{ lineHeight: '1.3' }}>
+                          <div>CPU: {display.mqtt.cpuUsage !== undefined ? `${display.mqtt.cpuUsage.toFixed(1)}%` : '-'}</div>
+                          <div>Mem: {display.mqtt.memoryUsage !== undefined ? `${display.mqtt.memoryUsage.toFixed(1)}%` : '-'}</div>
+                          <div>Temp: {display.mqtt.temperature !== undefined ? `${display.mqtt.temperature.toFixed(1)}°C` : '-'}</div>
                         </div>
                       )}
-                      {hasSocketIO && (
-                        <div>
-                          Connected: {display.socketIO.connectedAt ? new Date(display.socketIO.connectedAt).toLocaleTimeString() : '-'}
+                      {hasSocketIO && !hasMQTT && (
+                        <div style={{ fontSize: '0.7rem' }}>
+                          {display.socketIO.connectedAt ? new Date(display.socketIO.connectedAt).toLocaleTimeString() : '-'}
                         </div>
                       )}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'nowrap' }}>
+                      <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <button
                           type="button"
                           className="admin-secondary-button"
                           onClick={() => onOpenPowerManagement(display.id)}
                           style={{
-                            padding: '0.5rem 0.75rem',
+                            padding: '0.375rem 0.5rem',
                             fontSize: '0.875rem',
-                            height: '36px'
+                            minWidth: '32px',
+                            height: '32px'
                           }}
                           title="Power Management"
                         >
@@ -259,9 +265,10 @@ const DevicesTab = ({
                               className="admin-secondary-button"
                               onClick={() => onMqttRefresh(display.mqtt.hostname)}
                               style={{
-                                padding: '0.5rem 0.75rem',
+                                padding: '0.375rem 0.5rem',
                                 fontSize: '0.875rem',
-                                height: '36px'
+                                minWidth: '32px',
+                                height: '32px'
                               }}
                               title="Refresh Page"
                             >
@@ -272,9 +279,9 @@ const DevicesTab = ({
                               className="admin-primary-button"
                               onClick={() => onOpenTouchkioModal(display)}
                               style={{
-                                padding: '0.5rem 1rem',
-                                fontSize: '0.875rem',
-                                height: '36px'
+                                padding: '0.375rem 0.75rem',
+                                fontSize: '0.8rem',
+                                height: '32px'
                               }}
                             >
                               Details
@@ -287,11 +294,11 @@ const DevicesTab = ({
                             className="admin-secondary-button"
                             onClick={() => onDeleteDisplay(display.id)}
                             style={{
-                              padding: '0.5rem 0.75rem',
-                              fontSize: '0.875rem',
+                              padding: '0.375rem 0.5rem',
+                              fontSize: '0.8rem',
                               backgroundColor: '#ef4444',
                               color: 'white',
-                              height: '36px'
+                              height: '32px'
                             }}
                           >
                             Delete
