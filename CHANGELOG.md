@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.9] - 2026-03-13
+
+### Fixed
+- **Critical: MQTT Topic Subscriptions for Touchkio States**
+  - Fixed incorrect MQTT topic subscriptions for all Touchkio state updates
+  - Moved state subscriptions from `homeassistant/#` to `touchkio/#` handler
+  - Changed topic suffix from `/status` to `/state` (correct Touchkio format)
+  - Now correctly receives: display power, brightness, kiosk mode, theme, volume, keyboard, zoom, CPU, memory, temperature
+  - `homeassistant/#` now only used for device discovery (config topics)
+  - This was preventing all display status updates from being received
+
+### Added
+- **Touchkio Display Controller Module (`app/touchkio.js`)**
+  - Created comprehensive centralized module for Touchkio display management
+  - **State Management:**
+    - Map-based display state storage (deviceId → state object)
+    - Device ID to hostname bidirectional mapping for command routing
+    - Tracks 15+ display properties: power, brightness, kiosk mode, theme, volume, keyboard, zoom, URL, CPU, memory, temperature, uptime, network address, room name, error logs
+    - Automatic room name extraction from page URLs (e.g., `/single-room/venus` → room: "venus")
+    - Error log tracking with timestamp and severity indicators (ERROR, WARN, INFO)
+  - **MQTT Integration:**
+    - Dual wildcard subscriptions (`homeassistant/#` and `touchkio/#`) for efficient topic monitoring
+    - Support for both Home Assistant MQTT Discovery format and Touchkio legacy topics
+    - Supports both `/status` and `/state` topic suffixes for backward compatibility
+    - Regex-based device ID extraction from topics (e.g., `homeassistant/light/rpi_1A4187/display/status` → `rpi_1A4187`)
+    - Single message handler routes to appropriate state updates based on topic patterns
+  - **Command API (11 functions):**
+    - `sendPowerCommand(hostname, powerState, brightness)` - Power control with optional brightness (0-100)
+    - `sendBrightnessCommand(hostname, brightness)` - Brightness adjustment (0-100)
+    - `sendKioskCommand(hostname, status)` - Kiosk mode: Fullscreen, Maximized, Framed, Minimized
+    - `sendThemeCommand(hostname, theme)` - Theme switching: Light, Dark
+    - `sendVolumeCommand(hostname, volume)` - Volume control (0-100)
+    - `sendKeyboardCommand(hostname, visible)` - Keyboard visibility toggle
+    - `sendPageZoomCommand(hostname, zoom)` - Page zoom control (25-400%)
+    - `sendPageUrlCommand(hostname, url)` - Navigate to URL
+    - `sendRefreshCommand(hostname)` - Refresh page
+    - `sendRebootCommand(hostname)` - Reboot device
+    - `sendShutdownCommand(hostname)` - Shutdown device
+  - **Automated Power Management:**
+    - Periodic schedule checker runs every 60 seconds
+    - Automatic schedule enforcement based on power management configuration
+    - Support for weekend mode (all-day off on weekends)
+    - Time-based schedules with overnight range support (e.g., 20:00 to 07:00)
+    - Integrates with `config-manager` for power management config retrieval
+    - Hostname extraction from clientId formats (IP_hostname or hostname)
+  - **Data Export Functions:**
+    - `getDisplayStates()` - Returns array of all displays with hostname as primary identifier
+    - `getAllDisplays()` - Alias for getDisplayStates()
+    - `triggerPowerCommand(clientId)` - Manual power command trigger for testing/debugging
+  - **Validation & Error Handling:**
+    - Input validation for all commands (brightness 0-100, zoom 25-400, valid kiosk modes, valid themes)
+    - Hostname-to-deviceId lookup with error logging for missing mappings
+    - Graceful error handling for malformed MQTT messages and JSON parsing failures
+    - Detailed console logging for all state updates and command executions
+
+### Changed
+- **MQTT Topic Subscription Strategy**
+  - Optimized from 15+ individual subscriptions to 2 wildcard subscriptions
+  - Reduced MQTT broker load and improved connection stability
+  - All topic routing now handled in centralized message handlers
+  - Better scalability for large deployments (20+ displays)
+
+## [1.7.8] - 2026-03-13
+
+### Added
+- **Touchkio Error Log Tracking**
+  - Added support for parsing and storing error logs from Touchkio displays
+  - Subscribes to `touchkio/{deviceId}/errors/attributes` topic
+  - Stores error data and last error update timestamp in display state
+  - Enables error monitoring and troubleshooting for Touchkio devices
+  - Error logs displayed in Touchkio modal with severity indicators (ERROR, WARN, INFO)
+  - Automatic JSON parsing with error handling for malformed data
+  - Timestamp tracking for last error update
+
+### Fixed
+- **Display Status Logic for Dual-Connection Displays**
+  - Fixed status calculation for displays with both Socket.IO and MQTT connections
+  - Displays with undefined MQTT power status now treated as active instead of partial
+  - Prevents false "Partial" status for displays that haven't reported power state yet
+
 ## [1.7.7] - 2026-03-13
 
 ### Fixed
