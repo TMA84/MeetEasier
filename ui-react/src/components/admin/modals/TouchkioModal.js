@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const TouchkioModal = ({
   show,
@@ -18,10 +18,24 @@ const TouchkioModal = ({
   onThemeCommand,
   onRebootCommand,
   onShutdownCommand,
-  onPageUrlChange
+  onPageUrlChange,
+  onRefreshDisplay
 }) => {
   const [editingUrl, setEditingUrl] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+
+  // Auto-refresh display data every 5 seconds
+  useEffect(() => {
+    if (!show || !display) return;
+    
+    const interval = setInterval(() => {
+      if (onRefreshDisplay) {
+        onRefreshDisplay();
+      }
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [show, display, onRefreshDisplay]);
 
   if (!show || !display) return null;
 
@@ -35,7 +49,10 @@ const TouchkioModal = ({
 
   const handleSaveUrl = () => {
     if (onPageUrlChange) {
-      onPageUrlChange(displayData.hostname, urlInput);
+      // Use deviceId if available, otherwise fall back to hostname
+      const identifier = displayData.deviceId || displayData.hostname;
+      console.log('[TouchkioModal] Sending page URL command for:', identifier, 'URL:', urlInput);
+      onPageUrlChange(identifier, urlInput);
     }
     setEditingUrl(false);
   };
@@ -48,6 +65,37 @@ const TouchkioModal = ({
   // Get display data from either mqtt object or direct properties
   const displayData = display.mqtt || display;
   const hostname = displayData.hostname;
+
+  // Filter errors to only show ERROR entries from last hour
+  const getRecentErrors = () => {
+    if (!displayData.errors || Object.keys(displayData.errors).length === 0) {
+      return [];
+    }
+
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const errors = [];
+
+    Object.entries(displayData.errors).forEach(([timestamp, logs]) => {
+      // Parse timestamp (format: "2026-03-13T13:45")
+      const logDate = new Date(timestamp);
+      
+      if (logDate >= oneHourAgo) {
+        logs.forEach((log) => {
+          const logType = Object.keys(log)[0];
+          if (logType === 'ERROR') {
+            errors.push({
+              timestamp,
+              message: log[logType]
+            });
+          }
+        });
+      }
+    });
+
+    return errors;
+  };
+
+  const recentErrors = getRecentErrors();
 
   return (
     <div className="admin-modal-overlay" onClick={onClose}>
@@ -496,6 +544,41 @@ const TouchkioModal = ({
               </div>
             </div>
           </div>
+
+          {/* Recent Errors Section (Last Hour Only) */}
+          {recentErrors.length > 0 && (
+            <div style={{ 
+              marginTop: '2rem',
+              padding: '1.25rem',
+              background: 'rgba(239, 68, 68, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(239, 68, 68, 0.3)'
+            }}>
+              <div style={{ fontSize: '0.75rem', color: '#fca5a5', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                Recent Errors (Last Hour)
+              </div>
+              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                {recentErrors.map((error, idx) => (
+                  <div 
+                    key={idx} 
+                    style={{ 
+                      fontSize: '0.75rem', 
+                      color: '#fca5a5',
+                      marginBottom: '0.75rem',
+                      paddingLeft: '0.5rem',
+                      borderLeft: '2px solid #ef4444',
+                      fontFamily: 'monospace',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word'
+                    }}
+                  >
+                    <div style={{ color: '#94a3b8', marginBottom: '0.25rem' }}>{error.timestamp}</div>
+                    {error.message.length > 300 ? error.message.substring(0, 300) + '...' : error.message}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="admin-modal-footer" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', padding: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>

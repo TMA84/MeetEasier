@@ -168,11 +168,23 @@ function subscribeTouchkioStates() {
  * Returns the deviceId (e.g., "rpi_1A4187") for a given hostname
  */
 function getDeviceIdFromHostname(hostname) {
+  // First, check if hostname is already a deviceId
+  if (hostname && hostname.startsWith('rpi_')) {
+    if (displayStates.has(hostname)) {
+      console.log(`[Touchkio] Hostname "${hostname}" is already a deviceId`);
+      return hostname;
+    }
+  }
+  
+  // Look up in the mapping
   for (const [deviceId, mappedHostname] of deviceIdToHostname.entries()) {
     if (mappedHostname === hostname) {
+      console.log(`[Touchkio] Found deviceId "${deviceId}" for hostname "${hostname}"`);
       return deviceId;
     }
   }
+  
+  console.error(`[Touchkio] No deviceId found for hostname "${hostname}". Available mappings:`, Array.from(deviceIdToHostname.entries()));
   return null;
 }
 

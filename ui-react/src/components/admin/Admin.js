@@ -6164,6 +6164,18 @@ class Admin extends Component {
         onRebootCommand={this.handleMqttRebootCommandModal}
         onShutdownCommand={this.handleMqttShutdownCommandModal}
         onPageUrlChange={this.handleMqttPageUrlCommandModal}
+        onRefreshDisplay={async () => {
+          await this.handleLoadDisplays();
+          if (this.state.touchkioModalDisplay) {
+            const hostname = this.state.touchkioModalDisplay.mqtt?.hostname || this.state.touchkioModalDisplay.hostname;
+            const updatedDisplay = this.state.connectedDisplays.find(d => 
+              d.mqtt?.hostname === hostname || d.hostname === hostname
+            );
+            if (updatedDisplay) {
+              this.setState({ touchkioModalDisplay: updatedDisplay });
+            }
+          }
+        }}
       />
       </>
       )}
