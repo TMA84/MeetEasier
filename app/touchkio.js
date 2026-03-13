@@ -84,41 +84,41 @@ function subscribeTouchkioStates() {
       const displayState = displayStates.get(deviceId);
       
       // Route based on topic pattern
-      if (topic.includes('/host_name/state')) {
+      if (topic.includes('/host_name/state') || topic.includes('/host_name/status')) {
         displayState.hostname = payloadStr;
         deviceIdToHostname.set(deviceId, payloadStr);
         console.log(`[Touchkio] Hostname mapped: ${deviceId} -> ${payloadStr}`);
         
-      } else if (topic.includes('/display/power/state')) {
+      } else if (topic.includes('/display/power/state') || topic.includes('/display/power/status')) {
         displayState.power = payloadStr;
         displayState.lastUpdate = new Date().toISOString();
         console.log(`[Touchkio] Display power updated: ${deviceId} = ${payloadStr}`);
         
-      } else if (topic.includes('/display/brightness/state')) {
+      } else if (topic.includes('/display/brightness/state') || topic.includes('/display/brightness/status')) {
         displayState.brightness = parseInt(payload, 10);
         console.log(`[Touchkio] Brightness updated: ${deviceId} = ${displayState.brightness}`);
         
-      } else if (topic.includes('/kiosk/state')) {
+      } else if (topic.includes('/kiosk/state') || topic.includes('/kiosk/status')) {
         displayState.kioskStatus = payloadStr;
         console.log(`[Touchkio] Kiosk status updated: ${deviceId} = ${payloadStr}`);
         
-      } else if (topic.includes('/theme/state')) {
+      } else if (topic.includes('/theme/state') || topic.includes('/theme/status')) {
         displayState.theme = payloadStr;
         console.log(`[Touchkio] Theme updated: ${deviceId} = ${payloadStr}`);
         
-      } else if (topic.includes('/volume/state')) {
+      } else if (topic.includes('/volume/state') || topic.includes('/volume/status')) {
         displayState.volume = parseInt(payload, 10);
         console.log(`[Touchkio] Volume updated: ${deviceId} = ${displayState.volume}`);
         
-      } else if (topic.includes('/keyboard/state')) {
+      } else if (topic.includes('/keyboard/state') || topic.includes('/keyboard/status')) {
         displayState.keyboardVisible = payloadStr === 'ON';
         console.log(`[Touchkio] Keyboard visibility updated: ${deviceId} = ${displayState.keyboardVisible}`);
         
-      } else if (topic.includes('/page_zoom/state')) {
+      } else if (topic.includes('/page_zoom/state') || topic.includes('/page_zoom/status')) {
         displayState.pageZoom = parseInt(payload, 10);
         console.log(`[Touchkio] Page zoom updated: ${deviceId} = ${displayState.pageZoom}%`);
         
-      } else if (topic.includes('/page_url/state')) {
+      } else if (topic.includes('/page_url/state') || topic.includes('/page_url/status')) {
         displayState.pageUrl = payloadStr;
         // Extract room name from URL
         const roomMatch = payloadStr.match(/\/single-room\/([^/?#]+)/);
@@ -129,19 +129,19 @@ function subscribeTouchkioStates() {
           console.log(`[Touchkio] Page URL updated: ${payloadStr}`);
         }
         
-      } else if (topic.includes('/processor_usage/state')) {
+      } else if (topic.includes('/processor_usage/state') || topic.includes('/processor_usage/status')) {
         displayState.cpuUsage = parseFloat(payload);
         
-      } else if (topic.includes('/memory_usage/state')) {
+      } else if (topic.includes('/memory_usage/state') || topic.includes('/memory_usage/status')) {
         displayState.memoryUsage = parseFloat(payload);
         
-      } else if (topic.includes('/processor_temperature/state')) {
+      } else if (topic.includes('/processor_temperature/state') || topic.includes('/processor_temperature/status')) {
         displayState.temperature = parseFloat(payload);
         
-      } else if (topic.includes('/up_time/state')) {
+      } else if (topic.includes('/up_time/state') || topic.includes('/up_time/status')) {
         displayState.uptime = parseFloat(payload);
         
-      } else if (topic.includes('/network_address/state')) {
+      } else if (topic.includes('/network_address/state') || topic.includes('/network_address/status')) {
         displayState.networkAddress = payloadStr;
         console.log(`[Touchkio] Network address updated: ${deviceId} = ${payloadStr}`);
         

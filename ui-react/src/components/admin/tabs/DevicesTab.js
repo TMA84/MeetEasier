@@ -119,7 +119,9 @@ const DevicesTab = ({
                 
                 if (hasSocketIO && hasMQTT) {
                   const socketActive = display.socketIO.status === 'active';
-                  const mqttOn = display.mqtt.power === 'ON' || display.mqtt.power === undefined;
+                  // If MQTT power is undefined or null, fall back to Socket.IO status
+                  const mqttPowerKnown = display.mqtt.power === 'ON' || display.mqtt.power === 'OFF';
+                  const mqttOn = mqttPowerKnown ? display.mqtt.power === 'ON' : socketActive;
                   
                   if (socketActive && mqttOn) {
                     status = 'Active';
@@ -141,14 +143,20 @@ const DevicesTab = ({
                     statusDotColor = '#f59e0b';
                   }
                 } else if (hasMQTT) {
+                  // Only show ON/OFF if MQTT actually reports power status
                   if (display.mqtt.power === 'ON') {
                     status = 'ON';
                     statusColor = '#86efac';
                     statusDotColor = '#22c55e';
-                  } else {
+                  } else if (display.mqtt.power === 'OFF') {
                     status = 'OFF';
                     statusColor = '#fca5a5';
                     statusDotColor = '#ef4444';
+                  } else {
+                    // Power status unknown - show as connected but unknown
+                    status = 'Connected';
+                    statusColor = '#cbd5e1';
+                    statusDotColor = '#94a3b8';
                   }
                 } else {
                   status = 'Disconnected';
