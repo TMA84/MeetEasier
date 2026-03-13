@@ -516,11 +516,16 @@ function checkDisplaySchedule(clientId, config) {
     shouldBeOff = isTimeInRange(currentTime, startTime, endTime);
   }
   
-  // Extract hostname from clientId (format: IP_hostname or just hostname)
-  let hostname = clientId;
-  if (clientId.includes('_')) {
-    const parts = clientId.split('_');
-    hostname = parts[parts.length - 1]; // Take last part as hostname
+  // Use mqttHostname from config, or extract from clientId
+  let hostname = config.mqttHostname;
+  
+  if (!hostname) {
+    // Extract hostname from clientId (format: IP_hostname or just hostname)
+    hostname = clientId;
+    if (clientId.includes('_')) {
+      const parts = clientId.split('_');
+      hostname = parts[parts.length - 1]; // Take last part as hostname
+    }
   }
   
   // Send command to Touchkio
@@ -539,14 +544,36 @@ function startScheduleChecker() {
   setInterval(() => {
     try {
       const powerConfig = configManager.getPowerManagementConfig();
+      const globalConfig = powerConfig.global || {};
       
-      // Check display-specific configs
-      if (powerConfig.displays) {
-        Object.keys(powerConfig.displays).forEach(clientId => {
-          const displayConfig = powerConfig.displays[clientId];
-          checkDisplaySchedule(clientId, displayConfig);
-        });
-      }
+      // Get all MQTT displays
+      const mqttDisplays = Array.from(displayStates.entries())
+        .filter(([deviceId, state]) => state.hostname || state.deviceId);
+      
+      // Check each MQTT display
+      mqttDisplays.forEach(([deviceId, state]) => {
+        const hostname = state.hostname || deviceId;
+        
+        // Check if display has specific config
+        let displayConfig = null;
+        if (powerConfig.displays) {
+          // Try to find config by various identifiers
+          displayConfig = powerConfig.displays[hostname] || 
+                         powerConfig.displays[deviceId] ||
+                         powerConfig.displays[state.networkAddress];
+        }
+        
+        // Use display-specific config if available, otherwise use global
+        const configToUse = displayConfig || globalConfig;
+        
+        // Only process if mode is MQTT and schedule is enabled
+        if (configToUse.mode === 'mqtt' && configToUse.schedule?.enabled) {
+          // Create a pseudo clientId for logging
+          const clientId = hostname;
+          checkDisplaySchedule(clientId, configToUse);
+        }
+      });
+      
     } catch (error) {
       console.error('[Touchkio] Schedule check error:', error);
     }
