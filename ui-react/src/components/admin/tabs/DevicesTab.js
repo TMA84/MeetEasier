@@ -103,10 +103,10 @@ const DevicesTab = ({
               <tr>
                 <th style={{ width: '30px', textAlign: 'center' }}></th>
                 <th style={{ width: '20%' }}>Name</th>
-                <th style={{ width: '15%' }}>Type</th>
-                <th style={{ width: '12%' }}>IP</th>
-                <th style={{ width: '23%' }}>Metrics</th>
-                <th style={{ width: '30%' }}>Actions</th>
+                <th style={{ width: '12%' }}>Type</th>
+                <th style={{ width: '12%' }}>Connection</th>
+                <th style={{ width: '18%' }}>Metrics</th>
+                <th style={{ width: '28%' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -212,21 +212,23 @@ const DevicesTab = ({
                             {display.mqtt?.deviceId || display.mqtt?.hostname}
                           </div>
                         )}
+                        {display.ipAddress && (
+                          <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.125rem' }}>
+                            {display.ipAddress}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      <div>
-                        {display.type === 'single-room' && display.mqtt?.room 
-                          ? `${display.mqtt.room}`
-                          : (display.type || 'unknown')
-                        }
-                      </div>
-                      <div style={{ fontSize: '0.7rem', marginTop: '0.125rem' }}>
+                      {display.type === 'single-room' && display.mqtt?.room 
+                        ? `${display.mqtt.room}`
+                        : (display.type || 'unknown')
+                      }
+                    </td>
+                    <td style={{ fontSize: '0.75rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
                         {connectionBadges}
                       </div>
-                    </td>
-                    <td style={{ fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {display.ipAddress || '-'}
                     </td>
                     <td style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
                       {hasMQTT && (
