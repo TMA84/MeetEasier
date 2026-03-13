@@ -209,6 +209,111 @@ function subscribeTouchkioStates() {
       console.error('[Touchkio] Failed to parse uptime:', error);
     }
   });
+  
+  // Subscribe to theme status
+  mqttClient.subscribe('homeassistant/select/+/theme/state', (payload, client) => {
+    try {
+      const topic = client ? client.topic : 'unknown';
+      const deviceId = extractDeviceId(topic);
+      
+      if (deviceId) {
+        if (!displayStates.has(deviceId)) {
+          displayStates.set(deviceId, { deviceId });
+        }
+        
+        const displayState = displayStates.get(deviceId);
+        displayState.theme = payload.toString().trim();
+        
+        console.log(`[Touchkio] Theme updated: ${deviceId} = ${displayState.theme}`);
+      }
+    } catch (error) {
+      console.error('[Touchkio] Failed to parse theme:', error);
+    }
+  });
+  
+  // Subscribe to volume status
+  mqttClient.subscribe('homeassistant/number/+/volume/state', (payload, client) => {
+    try {
+      const topic = client ? client.topic : 'unknown';
+      const deviceId = extractDeviceId(topic);
+      
+      if (deviceId) {
+        if (!displayStates.has(deviceId)) {
+          displayStates.set(deviceId, { deviceId });
+        }
+        
+        const displayState = displayStates.get(deviceId);
+        displayState.volume = parseInt(payload, 10);
+        
+        console.log(`[Touchkio] Volume updated: ${deviceId} = ${displayState.volume}`);
+      }
+    } catch (error) {
+      console.error('[Touchkio] Failed to parse volume:', error);
+    }
+  });
+  
+  // Subscribe to keyboard status
+  mqttClient.subscribe('homeassistant/switch/+/keyboard/state', (payload, client) => {
+    try {
+      const topic = client ? client.topic : 'unknown';
+      const deviceId = extractDeviceId(topic);
+      
+      if (deviceId) {
+        if (!displayStates.has(deviceId)) {
+          displayStates.set(deviceId, { deviceId });
+        }
+        
+        const displayState = displayStates.get(deviceId);
+        displayState.keyboardVisible = payload.toString().trim() === 'ON';
+        
+        console.log(`[Touchkio] Keyboard visibility updated: ${deviceId} = ${displayState.keyboardVisible}`);
+      }
+    } catch (error) {
+      console.error('[Touchkio] Failed to parse keyboard status:', error);
+    }
+  });
+  
+  // Subscribe to page zoom status
+  mqttClient.subscribe('homeassistant/number/+/page_zoom/state', (payload, client) => {
+    try {
+      const topic = client ? client.topic : 'unknown';
+      const deviceId = extractDeviceId(topic);
+      
+      if (deviceId) {
+        if (!displayStates.has(deviceId)) {
+          displayStates.set(deviceId, { deviceId });
+        }
+        
+        const displayState = displayStates.get(deviceId);
+        displayState.pageZoom = parseInt(payload, 10);
+        
+        console.log(`[Touchkio] Page zoom updated: ${deviceId} = ${displayState.pageZoom}%`);
+      }
+    } catch (error) {
+      console.error('[Touchkio] Failed to parse page zoom:', error);
+    }
+  });
+  
+  // Subscribe to page URL status
+  mqttClient.subscribe('homeassistant/text/+/page_url/state', (payload, client) => {
+    try {
+      const topic = client ? client.topic : 'unknown';
+      const deviceId = extractDeviceId(topic);
+      
+      if (deviceId) {
+        if (!displayStates.has(deviceId)) {
+          displayStates.set(deviceId, { deviceId });
+        }
+        
+        const displayState = displayStates.get(deviceId);
+        displayState.pageUrl = payload.toString().trim();
+        
+        console.log(`[Touchkio] Page URL updated: ${deviceId} = ${displayState.pageUrl}`);
+      }
+    } catch (error) {
+      console.error('[Touchkio] Failed to parse page URL:', error);
+    }
+  });
 }
 
 /**
@@ -306,47 +411,130 @@ function sendKioskCommand(hostname, status) {
 
 /**
  * Send theme command to Touchkio display
- * Note: Theme is not yet supported in Home Assistant format
+ * @param {string} hostname - Display hostname
+ * @param {string} theme - One of: Light, Dark
  */
 function sendThemeCommand(hostname, theme) {
-  console.warn(`[Touchkio] Theme command not yet supported in Home Assistant format`);
-  return false;
+  const deviceId = getDeviceIdFromHostname(hostname);
+  
+  if (!deviceId) {
+    console.error(`[Touchkio] Cannot send theme command: hostname "${hostname}" not found`);
+    return false;
+  }
+  
+  const validThemes = ['Light', 'Dark'];
+  if (!validThemes.includes(theme)) {
+    console.error(`[Touchkio] Invalid theme: ${theme}`);
+    return false;
+  }
+  
+  const topic = `homeassistant/select/${deviceId}/theme/set`;
+  const success = mqttClient.publish(topic, theme, { qos: 1, retain: false });
+  
+  if (success) {
+    console.log(`[Touchkio] Sent theme command to ${hostname} (${deviceId}): ${theme}`);
+  }
+  
+  return success;
 }
 
 /**
  * Send volume command to Touchkio display
- * Note: Volume is not yet supported in Home Assistant format
+ * @param {string} hostname - Display hostname
+ * @param {number} volume - Volume level (0-100)
  */
 function sendVolumeCommand(hostname, volume) {
-  console.warn(`[Touchkio] Volume command not yet supported in Home Assistant format`);
-  return false;
+  const deviceId = getDeviceIdFromHostname(hostname);
+  
+  if (!deviceId) {
+    console.error(`[Touchkio] Cannot send volume command: hostname "${hostname}" not found`);
+    return false;
+  }
+  
+  const topic = `homeassistant/number/${deviceId}/volume/set`;
+  const value = Math.max(0, Math.min(100, volume));
+  
+  const success = mqttClient.publish(topic, value.toString(), { qos: 1, retain: false });
+  
+  if (success) {
+    console.log(`[Touchkio] Sent volume command to ${hostname} (${deviceId}): ${value}`);
+  }
+  
+  return success;
 }
 
 /**
  * Send keyboard visibility command to Touchkio display
- * Note: Keyboard is not yet supported in Home Assistant format
+ * @param {string} hostname - Display hostname
+ * @param {boolean} visible - Keyboard visibility
  */
 function sendKeyboardCommand(hostname, visible) {
-  console.warn(`[Touchkio] Keyboard command not yet supported in Home Assistant format`);
-  return false;
+  const deviceId = getDeviceIdFromHostname(hostname);
+  
+  if (!deviceId) {
+    console.error(`[Touchkio] Cannot send keyboard command: hostname "${hostname}" not found`);
+    return false;
+  }
+  
+  const topic = `homeassistant/switch/${deviceId}/keyboard/set`;
+  const value = visible ? 'ON' : 'OFF';
+  
+  const success = mqttClient.publish(topic, value, { qos: 1, retain: false });
+  
+  if (success) {
+    console.log(`[Touchkio] Sent keyboard command to ${hostname} (${deviceId}): ${value}`);
+  }
+  
+  return success;
 }
 
 /**
  * Send page zoom command to Touchkio display
- * Note: Page zoom is not yet supported in Home Assistant format
+ * @param {string} hostname - Display hostname
+ * @param {number} zoom - Zoom level (25-400%)
  */
 function sendPageZoomCommand(hostname, zoom) {
-  console.warn(`[Touchkio] Page zoom command not yet supported in Home Assistant format`);
-  return false;
+  const deviceId = getDeviceIdFromHostname(hostname);
+  
+  if (!deviceId) {
+    console.error(`[Touchkio] Cannot send page zoom command: hostname "${hostname}" not found`);
+    return false;
+  }
+  
+  const topic = `homeassistant/number/${deviceId}/page_zoom/set`;
+  const value = Math.max(25, Math.min(400, zoom));
+  
+  const success = mqttClient.publish(topic, value.toString(), { qos: 1, retain: false });
+  
+  if (success) {
+    console.log(`[Touchkio] Sent page zoom command to ${hostname} (${deviceId}): ${value}%`);
+  }
+  
+  return success;
 }
 
 /**
  * Send page URL command to Touchkio display
- * Note: Page URL is not yet supported in Home Assistant format
+ * @param {string} hostname - Display hostname
+ * @param {string} url - URL to navigate to
  */
 function sendPageUrlCommand(hostname, url) {
-  console.warn(`[Touchkio] Page URL command not yet supported in Home Assistant format`);
-  return false;
+  const deviceId = getDeviceIdFromHostname(hostname);
+  
+  if (!deviceId) {
+    console.error(`[Touchkio] Cannot send page URL command: hostname "${hostname}" not found`);
+    return false;
+  }
+  
+  const topic = `homeassistant/text/${deviceId}/page_url/set`;
+  
+  const success = mqttClient.publish(topic, url, { qos: 1, retain: false });
+  
+  if (success) {
+    console.log(`[Touchkio] Sent page URL command to ${hostname} (${deviceId}): ${url}`);
+  }
+  
+  return success;
 }
 
 /**
