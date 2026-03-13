@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-03-13
+
+### Changed
+- **Home Assistant MQTT Format Support**
+  - Rewritten Touchkio integration to use real Home Assistant MQTT Discovery format
+  - Device ID mapping: `rpi_1A4187` format instead of custom hostnames
+  - Automatic hostname mapping from `homeassistant/sensor/{deviceId}/host_name/status`
+  - Updated all MQTT topics to Home Assistant format
+  - Topics: `homeassistant/light/{deviceId}/display/set` instead of `touchkio/rpi_{hostname}/...`
+  - Kiosk mode: `homeassistant/select/{deviceId}/kiosk/set`
+  - Buttons: `homeassistant/button/{deviceId}/refresh|reboot|shutdown/execute`
+
+### Fixed
+- Touchkio commands now work with real Touchkio devices using Home Assistant format
+- Device ID to hostname mapping for proper command routing
+
+### Removed
+- **Temporarily Unsupported Features** (not available in current Touchkio Home Assistant format)
+  - Theme control (Light/Dark)
+  - Volume control
+  - Page zoom control
+  - Page URL navigation
+  - These will be re-added when Touchkio supports them via Home Assistant MQTT
+
 ## [1.7.1] - 2026-03-13
 
 ### Fixed
