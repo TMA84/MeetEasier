@@ -2984,7 +2984,10 @@ class Admin extends Component {
     let display = null;
     let hasMqtt = false;
     
-    if (clientId !== '__global__') {
+    if (clientId === '__global__') {
+      // For global config, check if ANY display has MQTT
+      hasMqtt = connectedDisplays.some(d => d.mqtt && d.mqtt.connected);
+    } else {
       display = connectedDisplays.find(d => d.id === clientId);
       hasMqtt = display && display.mqtt && display.mqtt.connected;
     }
@@ -3017,13 +3020,13 @@ class Admin extends Component {
       
       // Auto-select MQTT mode if display has MQTT and no mode is configured
       let selectedMode = config.mode || 'browser';
-      if (!config.mode && hasMqtt) {
+      if (!config.mode && hasMqtt && clientId !== '__global__') {
         selectedMode = 'mqtt';
       }
       
       // Auto-fill MQTT hostname from display data if available
       let mqttHostname = config.mqttHostname || '';
-      if (hasMqtt && !mqttHostname && display.mqtt) {
+      if (hasMqtt && !mqttHostname && display && display.mqtt) {
         mqttHostname = display.mqtt.hostname || display.mqtt.deviceId || '';
       }
       
@@ -3045,7 +3048,7 @@ class Admin extends Component {
       this.setState({
         showPowerManagementModal: true,
         powerManagementClientId: clientId,
-        powerManagementMode: hasMqtt ? 'mqtt' : 'browser',
+        powerManagementMode: hasMqtt && clientId !== '__global__' ? 'mqtt' : 'browser',
         powerManagementMqttHostname: display?.mqtt?.hostname || display?.mqtt?.deviceId || '',
         powerManagementScheduleEnabled: false,
         powerManagementStartTime: '20:00',
