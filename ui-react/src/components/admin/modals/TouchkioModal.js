@@ -179,52 +179,6 @@ const TouchkioModal = ({
             </div>
           </div>
 
-          {/* Error Log Section */}
-          {displayData.errors && Object.keys(displayData.errors).length > 0 && (
-            <div style={{ 
-              marginBottom: '2rem',
-              padding: '1.25rem',
-              background: 'rgba(239, 68, 68, 0.1)',
-              borderRadius: '8px',
-              border: '1px solid rgba(239, 68, 68, 0.3)'
-            }}>
-              <div style={{ fontSize: '0.75rem', color: '#fca5a5', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
-                Recent Errors & Logs
-              </div>
-              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                {Object.entries(displayData.errors).map(([timestamp, logs]) => (
-                  <div key={timestamp} style={{ marginBottom: '0.75rem' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.25rem' }}>{timestamp}</div>
-                    {logs.map((log, idx) => {
-                      const logType = Object.keys(log)[0];
-                      const logMessage = log[logType];
-                      const isError = logType === 'ERROR';
-                      const isWarning = logType === 'WARN';
-                      
-                      return (
-                        <div 
-                          key={idx} 
-                          style={{ 
-                            fontSize: '0.75rem', 
-                            color: isError ? '#fca5a5' : isWarning ? '#fbbf24' : '#cbd5e1',
-                            marginBottom: '0.25rem',
-                            paddingLeft: '0.5rem',
-                            borderLeft: `2px solid ${isError ? '#ef4444' : isWarning ? '#f59e0b' : '#475569'}`,
-                            fontFamily: 'monospace',
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-word'
-                          }}
-                        >
-                          <strong>[{logType}]</strong> {logMessage.length > 200 ? logMessage.substring(0, 200) + '...' : logMessage}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Page URL Section */}
           <div style={{ 
             marginBottom: '2rem',
@@ -313,23 +267,46 @@ const TouchkioModal = ({
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '8px'
               }}>
-                <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Controls</h4>
+                <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Display Controls</h4>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.75rem' }}>
+                  Power: <span style={{ color: displayData.power === 'ON' ? '#22c55e' : displayData.power === 'OFF' ? '#ef4444' : '#94a3b8', fontWeight: 600 }}>{displayData.power || 'unknown'}</span>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
                   <button
                     type="button"
-                    className="admin-primary-button"
+                    className={displayData.power === 'ON' ? 'admin-primary-button' : 'admin-secondary-button'}
                     onClick={() => onPowerCommand(hostname, true)}
-                    style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
+                    style={{ 
+                      width: '100%', 
+                      fontSize: '0.875rem', 
+                      padding: '0.625rem',
+                      ...(displayData.power === 'ON' ? { 
+                        background: 'rgba(34, 197, 94, 0.2)',
+                        borderColor: 'rgba(34, 197, 94, 0.5)',
+                        color: '#22c55e',
+                        boxShadow: '0 0 8px rgba(34, 197, 94, 0.4)'
+                      } : {})
+                    }}
                   >
-                    Turn On
+                    {displayData.power === 'ON' ? '✓ Turn On' : 'Turn On'}
                   </button>
                   <button
                     type="button"
-                    className="admin-secondary-button"
+                    className={displayData.power === 'OFF' ? 'admin-primary-button' : 'admin-secondary-button'}
                     onClick={() => onPowerCommand(hostname, false)}
-                    style={{ width: '100%', fontSize: '0.875rem', padding: '0.625rem' }}
+                    style={{ 
+                      width: '100%', 
+                      fontSize: '0.875rem', 
+                      padding: '0.625rem',
+                      ...(displayData.power === 'OFF' ? { 
+                        background: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: 'rgba(239, 68, 68, 0.5)',
+                        color: '#ef4444',
+                        boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)'
+                      } : {})
+                    }}
                   >
-                    Turn Off
+                    {displayData.power === 'OFF' ? '✓ Turn Off' : 'Turn Off'}
                   </button>
                 </div>
                 <button
