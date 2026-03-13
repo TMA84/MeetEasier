@@ -2977,8 +2977,17 @@ class Admin extends Component {
   }
 
   handleOpenPowerManagementModal = async (clientId) => {
-    const { apiToken } = this.state;
+    const { apiToken, connectedDisplays } = this.state;
     const t = this.getTranslations();
+    
+    // Find the display to check if MQTT is available
+    let display = null;
+    let hasMqtt = false;
+    
+    if (clientId !== '__global__') {
+      display = connectedDisplays.find(d => d.id === clientId);
+      hasMqtt = display && display.mqtt && display.mqtt.connected;
+    }
     
     try {
       let config;
@@ -3006,16 +3015,29 @@ class Admin extends Component {
         config = await response.json();
       }
       
+      // Auto-select MQTT mode if display has MQTT and no mode is configured
+      let selectedMode = config.mode || 'browser';
+      if (!config.mode && hasMqtt) {
+        selectedMode = 'mqtt';
+      }
+      
+      // Auto-fill MQTT hostname from display data if available
+      let mqttHostname = config.mqttHostname || '';
+      if (hasMqtt && !mqttHostname && display.mqtt) {
+        mqttHostname = display.mqtt.hostname || display.mqtt.deviceId || '';
+      }
+      
       this.setState({
         showPowerManagementModal: true,
         powerManagementClientId: clientId,
-        powerManagementMode: config.mode || 'browser',
-        powerManagementMqttHostname: config.mqttHostname || '',
+        powerManagementMode: selectedMode,
+        powerManagementMqttHostname: mqttHostname,
         powerManagementScheduleEnabled: config.schedule?.enabled || false,
         powerManagementStartTime: config.schedule?.startTime || '20:00',
         powerManagementEndTime: config.schedule?.endTime || '07:00',
         powerManagementWeekendMode: config.schedule?.weekendMode || false,
-        powerManagementMessage: null
+        powerManagementMessage: null,
+        powerManagementHasMqtt: hasMqtt
       });
     } catch (err) {
       console.error('Error loading power management config:', err);
@@ -3023,13 +3045,14 @@ class Admin extends Component {
       this.setState({
         showPowerManagementModal: true,
         powerManagementClientId: clientId,
-        powerManagementMode: 'browser',
-        powerManagementMqttHostname: '',
+        powerManagementMode: hasMqtt ? 'mqtt' : 'browser',
+        powerManagementMqttHostname: display?.mqtt?.hostname || display?.mqtt?.deviceId || '',
         powerManagementScheduleEnabled: false,
         powerManagementStartTime: '20:00',
         powerManagementEndTime: '07:00',
         powerManagementWeekendMode: false,
-        powerManagementMessage: null
+        powerManagementMessage: null,
+        powerManagementHasMqtt: hasMqtt
       });
     }
   }
@@ -6109,6 +6132,7 @@ class Admin extends Component {
             clientId={powerManagementClientId}
             mode={powerManagementMode}
             mqttHostname={this.state.powerManagementMqttHostname || ''}
+            hasMqtt={this.state.powerManagementHasMqtt || false}
             scheduleEnabled={powerManagementScheduleEnabled}
             startTime={powerManagementStartTime}
             endTime={powerManagementEndTime}
