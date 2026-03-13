@@ -74,10 +74,10 @@ const TouchkioModal = ({
   const hostname = displayData.hostname;
 
   // Check if power/brightness control is supported
-  // If MQTT is connected and we have data, but power/brightness is still undefined/null, it's unsupported
+  // If MQTT is connected and we have data, but power/brightness is still undefined/null/empty, it's unsupported
   const hasMqttConnection = displayData.connected === true;
-  const powerSupported = !hasMqttConnection || (displayData.power !== undefined && displayData.power !== null);
-  const brightnessSupported = !hasMqttConnection || (displayData.brightness !== undefined && displayData.brightness !== null);
+  const powerSupported = !hasMqttConnection || (displayData.power && displayData.power !== 'undefined' && displayData.power !== '');
+  const brightnessSupported = !hasMqttConnection || (displayData.brightness !== undefined && displayData.brightness !== null && displayData.brightness !== '');
 
   // Filter errors to only show ERROR entries from last hour
   const getRecentErrors = () => {
