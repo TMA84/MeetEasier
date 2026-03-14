@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { getBookingModalTranslations } from '../../config/displayTranslations.js';
 // Styles are loaded from /css/styles.css (compiled.scss from backend)
 
 /**
@@ -41,95 +42,13 @@ class BookingModal extends Component {
 
   // Get default meeting subject based on browser language
   getDefaultSubject() {
-    const lang = navigator.language || navigator.userLanguage || 'en';
-    const langCode = lang.split('-')[0].toLowerCase();
-    
-    const translations = {
-      en: 'Meeting',
-      de: 'Besprechung',
-      fr: 'Réunion',
-      es: 'Reunión',
-      it: 'Riunione',
-      pt: 'Reunião',
-      nl: 'Vergadering',
-      pl: 'Spotkanie',
-      ru: 'Встреча',
-      ja: '会議',
-      zh: '会议',
-      ko: '회의',
-      ar: 'اجتماع',
-      tr: 'Toplantı',
-      sv: 'Möte',
-      da: 'Møde',
-      no: 'Møte',
-      fi: 'Kokous',
-      cs: 'Schůzka',
-      hu: 'Találkozó',
-      ro: 'Întâlnire',
-      el: 'Συνάντηση',
-      he: 'פגישה',
-      th: 'การประชุม',
-      vi: 'Cuộc họp',
-      id: 'Pertemuan',
-      ms: 'Mesyuarat',
-      uk: 'Зустріч',
-      bg: 'Среща',
-      hr: 'Sastanak',
-      sk: 'Stretnutie',
-      sl: 'Sestanek',
-      lt: 'Susitikimas',
-      lv: 'Tikšanās',
-      et: 'Kohtumine'
-    };
-    
-    return translations[langCode] || translations.en;
+    const t = getBookingModalTranslations();
+    return t.defaultSubject;
   }
 
   // Get translations for UI text
   getTranslations() {
-    const lang = navigator.language || navigator.userLanguage || 'en';
-    const langCode = lang.split('-')[0].toLowerCase();
-    
-    const translations = {
-      en: {
-        title: 'Book Room',
-        quickBook: 'Quick Book:',
-        custom: 'Custom',
-        date: 'Date:',
-        startTime: 'Start Time:',
-        duration: 'Duration:',
-        endTime: 'End Time:',
-        today: 'Today',
-        tomorrow: 'Tomorrow',
-        minutes: 'min',
-        hours: 'hours',
-        cancel: 'Cancel',
-        bookRoom: 'Book Room',
-        booking: 'Booking...',
-        conflictError: 'This room is already booked during the selected time. Please choose a different time.',
-        genericError: 'Failed to book room. Please try again.'
-      },
-      de: {
-        title: 'Raum buchen',
-        quickBook: 'Schnellbuchung:',
-        custom: 'Benutzerdefiniert',
-        date: 'Datum:',
-        startTime: 'Startzeit:',
-        duration: 'Dauer:',
-        endTime: 'Endzeit:',
-        today: 'Heute',
-        tomorrow: 'Morgen',
-        minutes: 'Min',
-        hours: 'Std',
-        cancel: 'Abbrechen',
-        bookRoom: 'Raum buchen',
-        booking: 'Wird gebucht...',
-        conflictError: 'Dieser Raum ist während der ausgewählten Zeit bereits gebucht. Bitte wählen Sie eine andere Zeit.',
-        genericError: 'Raumbuchung fehlgeschlagen. Bitte versuchen Sie es erneut.'
-      }
-    };
-    
-    return translations[langCode] || translations.en;
+    return getBookingModalTranslations();
   }
 
   // Round time to next 15-minute interval
@@ -202,7 +121,18 @@ class BookingModal extends Component {
         if (response.status === 409) {
           throw new Error(t.conflictError);
         }
-        throw new Error(data.message || t.genericError);
+        if (response.status === 403) {
+          if (data.error === 'ip_not_whitelisted') {
+            throw new Error(t.ipNotWhitelistedError);
+          }
+          if (data.error === 'origin_not_allowed') {
+            throw new Error(t.originNotAllowedError);
+          }
+          if (data.error === 'Booking disabled') {
+            throw new Error(t.bookingDisabledError);
+          }
+        }
+        throw new Error(t.genericError);
       }
 
       // Success

@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import io from 'socket.io-client';
+import { getWiFiInfoTranslations, applyDisplayI18nConfig } from '../../config/displayTranslations.js';
 // Styles are loaded from /css/styles.css (compiled.scss from backend)
 
 class WiFiInfo extends Component {
@@ -10,12 +11,16 @@ class WiFiInfo extends Component {
       error: null,
       ssid: '',
       password: '',
-      logoLightUrl: '/img/logo.W.png'
+      logoLightUrl: '/img/logo.W.png',
+      i18nTick: 0
     };
     this.socket = null;
   }
 
   componentDidMount() {
+    // Load i18n config so admin translation overrides take effect
+    this.loadI18nConfig();
+
     this.loadWiFiInfo();
     this.loadLogoConfig();
     
@@ -45,6 +50,12 @@ class WiFiInfo extends Component {
         this.setState({
           logoLightUrl: config.logoLightUrl || '/img/logo.W.png'
         });
+      });
+
+      // Listen for i18n config updates
+      this.socket.on('i18nConfigUpdated', (i18nConfig) => {
+        applyDisplayI18nConfig(i18nConfig);
+        this.setState({ i18nTick: Date.now() });
       });
     }
     
@@ -99,28 +110,23 @@ class WiFiInfo extends Component {
       });
   }
 
+  loadI18nConfig = () => {
+    fetch('/api/i18n')
+      .then(response => response.json())
+      .then(data => {
+        applyDisplayI18nConfig(data);
+        this.setState({ i18nTick: Date.now() });
+        // Update page title with potentially overridden translation
+        const t = this.getTranslations();
+        document.title = t.title;
+      })
+      .catch(err => {
+        console.error('Error loading i18n config:', err);
+      });
+  }
+
   getTranslations() {
-    const browserLang = navigator.language || navigator.userLanguage;
-    const lang = browserLang.split('-')[0];
-    
-    const translations = {
-      de: {
-        title: 'WiFi Informationen',
-        ssidLabel: 'SSID:',
-        passwordLabel: 'Passwort:',
-        loading: 'Lade WiFi-Informationen...',
-        errorPrefix: 'Fehler beim Laden der WiFi-Informationen:'
-      },
-      en: {
-        title: 'WiFi Information',
-        ssidLabel: 'SSID:',
-        passwordLabel: 'Password:',
-        loading: 'Loading WiFi information...',
-        errorPrefix: 'Error loading WiFi information:'
-      }
-    };
-    
-    return translations[lang] || translations.en;
+    return getWiFiInfoTranslations();
   }
 
   render() {

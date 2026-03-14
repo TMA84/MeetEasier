@@ -7,8 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Security
-- Disabled `upgrade-insecure-requests` CSP directive by setting `upgradeInsecureRequests: null` in Helmet config — prevents browsers from automatically upgrading HTTP requests to HTTPS, which caused issues on non-HTTPS deployments (e.g., local network displays)
+### Changed
+- Admin translations editor now exposes all display-facing translation keys in the "Displays" group — added 30 missing keys including booking modal, WiFi info, check-in, error states, and general display labels for full in-panel localization coverage
+
+## [1.7.22] - 2026-03-14
+
+### Added
+- Display-facing error translation keys: `displayIpNotWhitelistedErrorLabel`, `displayOriginNotAllowedErrorLabel`, `displayBookingDisabledErrorLabel` — displays now show user-friendly localized messages for IP whitelist, origin, and booking-disabled rejections
+- Booking modal translation helper `getBookingModalTranslations()` in `displayTranslations.js` — provides localized strings for quick book, custom booking, date/time labels, duration, conflict and generic error messages
+- WiFi info translation helper `getWiFiInfoTranslations()` in `displayTranslations.js` — provides localized strings for WiFi SSID, password, loading, and error states
+- Check-in translation helper `getCheckInTranslations()` in `displayTranslations.js` — provides localized strings for check-in button, expired/too-early tooltips, and error states
+
+### Changed
+- `checkDisplayOrigin` middleware now returns machine-readable error codes (`ip_not_whitelisted`, `origin_not_allowed`) instead of generic `Forbidden` — enables clients to distinguish rejection reasons programmatically
+- `BookingModal.js` now uses centralized `getBookingModalTranslations()` instead of inline hardcoded translation objects
+- `WiFiInfo.js` now uses centralized `getWiFiInfoTranslations()` instead of local inline translations — loads i18n config on mount and listens for real-time updates via Socket.IO
+- `ExtendMeetingModal.js` and `Display.js` error handlers now use machine-readable 403 error codes for IP whitelist and origin rejection messages
+- Check-in button text, tooltips, and error messages in `Display.js`/`Sidebar.js` now use centralized `getCheckInTranslations()` instead of hardcoded English strings
+
+### Fixed
+- Booking from non-whitelisted device now shows clear error message ("Your device is not authorized") instead of misleading "only accessible with valid API token"
+- `isDisplayOriginAllowed()` now returns rejection reason (`ip_not_whitelisted` vs `origin_mismatch`) so `checkDisplayOrigin` middleware can respond with context-specific error messages
 
 ## [1.7.21] - 2026-03-14
 

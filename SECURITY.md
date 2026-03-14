@@ -165,7 +165,8 @@ When deploying MeetEasier, please follow these security best practices:
 3. **Display-Facing Endpoints**:
    - Booking, extend-meeting, end-meeting, and check-in endpoints are protected by an origin guard (`isDisplayOriginAllowed`)
    - Requests must originate from the same host (validated via `Origin` or `Referer` header) or carry a valid API token
-   - External/scripted requests without a matching origin or token receive `403 Forbidden`
+   - Non-whitelisted IPs receive `403` with error code `ip_not_whitelisted`; requests without valid origin or token receive `403` with error code `origin_not_allowed`
+   - Machine-readable error codes enable clients to distinguish rejection reasons programmatically
    - This prevents abuse of display-facing write endpoints from outside the application UI
 
 4. **Admin Panel**:

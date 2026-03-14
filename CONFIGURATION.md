@@ -108,7 +108,7 @@ API_TOKEN=your-secure-random-token-here
 
 #### Display IP Whitelist
 
-Restrict which IP addresses can access display-facing endpoints (room data, booking, check-in, etc.). When enabled, only requests from whitelisted IPs are allowed; all others receive a 403 Forbidden response.
+Restrict which IP addresses can access display-facing endpoints (room data, booking, check-in, etc.). When enabled, only requests from whitelisted IPs are allowed; non-whitelisted IPs receive a `403` response with error code `ip_not_whitelisted`.
 
 This is configured via the Admin Panel under **Operations → System** (Display IP Whitelist section). Two settings control this feature:
 
@@ -116,6 +116,14 @@ This is configured via the Admin Panel under **Operations → System** (Display 
 - `displayIpWhitelist` (array of IP strings) — List of allowed IP addresses (one per line in the admin UI)
 
 When disabled (default), all IPs can access display endpoints. IPv4 and IPv6 addresses are supported, and `::1` / `127.0.0.1` are normalized for consistent matching.
+
+Rejected requests show localized error messages on the display. These messages can be customized via the translation system (see [Localization](#localization)):
+
+| Error Code | Translation Key | Default (EN) |
+|---|---|---|
+| `ip_not_whitelisted` | `displayIpNotWhitelistedErrorLabel` | Your device is not authorized. Please contact your administrator. |
+| `origin_not_allowed` | `displayOriginNotAllowedErrorLabel` | This action is only available from authorized devices. |
+| `booking_disabled` | `displayBookingDisabledErrorLabel` | Booking is currently disabled for this room. |
 
 If `API_TOKEN` is not set, MeetEasier starts without a static default token.
 Create the initial admin token on first login at `/admin`.
@@ -710,6 +718,7 @@ Time format is automatically determined by locale:
 #### Adding New Languages
 
 1. Edit translation objects in components:
+   - `ui-react/src/config/displayTranslations.js` (display-facing error messages)
    - `ui-react/src/components/booking/BookingModal.js`
    - `ui-react/src/components/admin/Admin.js`
    - `ui-react/src/config/singleRoom.config.js`
