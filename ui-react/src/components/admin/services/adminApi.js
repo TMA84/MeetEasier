@@ -338,4 +338,5 @@ export const adminApi = {
     }).then(handleResponse)
 };
 
+export { getCsrfToken };
 export default adminApi;

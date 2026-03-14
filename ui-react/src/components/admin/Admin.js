@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import io from 'socket.io-client';
 import defaultAdminTranslations, { getAdminTranslations } from '../../config/adminTranslations.js';
+import { getCsrfToken } from './services/adminApi.js';
 import PowerManagementModal from './modals/PowerManagementModal.js';
 import TouchkioModal from './modals/TouchkioModal.js';
 import DevicesTab from './tabs/DevicesTab.js';
@@ -449,6 +450,27 @@ class Admin extends Component {
       // Version
       appVersion: null
     };
+  }
+
+  /**
+   * Build request headers with auth token and CSRF token.
+   * @param {boolean} includeContentType - Whether to include Content-Type: application/json
+   * @returns {Object} Headers object
+   */
+  getRequestHeaders = (includeContentType = true) => {
+    const headers = {};
+    if (includeContentType) {
+      headers['Content-Type'] = 'application/json';
+    }
+    const { apiToken } = this.state;
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+    return headers;
   }
 
   componentDidMount() {
@@ -1009,13 +1031,7 @@ class Admin extends Component {
       ...(currentAdminTranslations?.en || {})
     };
 
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     try {
       const response = await fetch('/api/i18n/auto-translate', {
@@ -1085,14 +1101,7 @@ class Admin extends Component {
 
   saveI18nConfig = (maintenanceMessages, adminTranslations, successMessage) => {
     const t = this.getTranslations();
-    const { apiToken } = this.state;
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     return fetch('/api/i18n', {
       method: 'POST',
@@ -1299,11 +1308,7 @@ class Admin extends Component {
   }
 
   loadCurrentConfig = () => {
-	const { apiToken } = this.state;
-	const wifiHeaders = {};
-	if (apiToken) {
-	  wifiHeaders['Authorization'] = `Bearer ${apiToken}`;
-	}
+	const wifiHeaders = this.getRequestHeaders(false);
 
     this.loadConnectedClients();
 
@@ -1614,10 +1619,7 @@ class Admin extends Component {
         console.error('Error loading maintenance config:', err);
       });
 
-    const systemHeaders = {};
-    if (this.state.apiToken) {
-      systemHeaders.Authorization = `Bearer ${this.state.apiToken}`;
-    }
+    const systemHeaders = this.getRequestHeaders(false);
 
     fetch('/api/system-config', {
       method: 'GET',
@@ -1679,10 +1681,7 @@ class Admin extends Component {
         console.error('Error loading system config:', err);
       });
 
-    const oauthHeaders = {};
-    if (this.state.apiToken) {
-      oauthHeaders.Authorization = `Bearer ${this.state.apiToken}`;
-    }
+    const oauthHeaders = this.getRequestHeaders(false);
 
     fetch('/api/oauth-config', {
       method: 'GET',
@@ -1725,10 +1724,7 @@ class Admin extends Component {
         console.error('Error loading oauth config:', err);
       });
 
-    const apiTokenHeaders = {};
-    if (this.state.apiToken) {
-      apiTokenHeaders.Authorization = `Bearer ${this.state.apiToken}`;
-    }
+    const apiTokenHeaders = this.getRequestHeaders(false);
 
     fetch('/api/api-token-config', {
       method: 'GET',
@@ -1836,15 +1832,9 @@ class Admin extends Component {
   handleWiFiSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
-    const { apiToken, ssid, password } = this.state;
+    const { ssid, password } = this.state;
     
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
     
     fetch('/api/wifi', {
       method: 'POST',
@@ -1889,11 +1879,7 @@ class Admin extends Component {
     const t = this.getTranslations();
     const { apiToken, logoDarkUrl, logoLightUrl, logoDarkFile, logoLightFile, uploadMode } = this.state;
     
-    const headers = {};
-    
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders(false);
     
     try {
       let finalLogoDarkUrl = logoDarkUrl;
@@ -2023,13 +2009,7 @@ class Admin extends Component {
       : 3;
     const targetClientId = String(sidebarTargetClientId || '').trim();
     
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
     
     const payload = targetClientId
       ? {
@@ -2101,13 +2081,7 @@ class Admin extends Component {
       roomGroupFeatureFlags
     } = this.state;
     
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
     
     fetch('/api/booking-config', {
       method: 'POST',
@@ -2235,13 +2209,7 @@ class Admin extends Component {
     const t = this.getTranslations();
     const { apiToken, maintenanceEnabled, maintenanceMessage } = this.state;
 
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     fetch('/api/maintenance', {
       method: 'POST',
@@ -2290,13 +2258,7 @@ class Admin extends Component {
       systemDisplayIpWhitelist
     } = this.state;
 
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-
-    if (apiToken) {
-      headers.Authorization = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     fetch('/api/system-config', {
       method: 'POST',
@@ -2356,13 +2318,7 @@ class Admin extends Component {
       systemGraphFetchRetryBaseMs
     } = this.state;
 
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-
-    if (apiToken) {
-      headers.Authorization = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     const webhookAllowedIps = String(systemGraphWebhookAllowedIps || '')
       .split(',')
@@ -2422,13 +2378,7 @@ class Admin extends Component {
       translationApiApiKey
     } = this.state;
 
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-
-    if (apiToken) {
-      headers.Authorization = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     const payload = {
       enabled: !!translationApiEnabled,
@@ -2481,13 +2431,7 @@ class Admin extends Component {
     const t = this.getTranslations();
     const { apiToken, oauthClientId, oauthAuthority, oauthClientSecret } = this.state;
 
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-
-    if (apiToken) {
-      headers.Authorization = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     fetch('/api/oauth-config', {
       method: 'POST',
@@ -2554,13 +2498,7 @@ class Admin extends Component {
       return;
     }
 
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-
-    if (apiToken) {
-      headers.Authorization = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     fetch('/api/api-token-config', {
       method: 'POST',
@@ -2623,13 +2561,7 @@ class Admin extends Component {
       return;
     }
 
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-
-    if (apiToken) {
-      headers.Authorization = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     fetch('/api/api-token-config', {
       method: 'POST',
@@ -2681,13 +2613,7 @@ class Admin extends Component {
       searchPollIntervalMs
     } = this.state;
 
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     fetch('/api/search-config', {
       method: 'POST',
@@ -2744,13 +2670,7 @@ class Admin extends Component {
       rateLimitAuthMax
     } = this.state;
 
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     fetch('/api/rate-limit-config', {
       method: 'POST',
@@ -2796,12 +2716,7 @@ class Admin extends Component {
 
   handleExportBackup = () => {
     const t = this.getTranslations();
-    const { apiToken } = this.state;
-    const headers = {};
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders(false);
 
     fetch('/api/config/backup', {
       method: 'GET',
@@ -2831,14 +2746,8 @@ class Admin extends Component {
 
   handleImportBackup = () => {
     const t = this.getTranslations();
-    const { apiToken, backupPayloadText } = this.state;
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const { backupPayloadText } = this.state;
+    const headers = this.getRequestHeaders();
 
     let parsed;
     try {
@@ -2884,12 +2793,7 @@ class Admin extends Component {
 
   handleLoadAuditLogs = () => {
     const t = this.getTranslations();
-    const { apiToken } = this.state;
-    const headers = {};
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders(false);
 
     fetch('/api/audit-logs?limit=200', {
       method: 'GET',
@@ -2919,12 +2823,7 @@ class Admin extends Component {
 
   handleLoadConnectedDisplays = () => {
     const t = this.getTranslations();
-    const { apiToken } = this.state;
-    const headers = {};
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders(false);
 
     this.setState({ connectedDisplaysLoading: true });
 
@@ -2963,12 +2862,7 @@ class Admin extends Component {
       return;
     }
 
-    const { apiToken } = this.state;
-    const headers = {};
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders(false);
 
     fetch(`/api/connected-clients/${encodeURIComponent(clientId)}`, {
       method: 'DELETE',
@@ -3023,9 +2917,7 @@ class Admin extends Component {
       if (clientId === '__global__') {
         // Fetch global power management config
         const response = await fetch('/api/power-management', {
-          headers: {
-            'Authorization': `Bearer ${apiToken}`
-          }
+          headers: this.getRequestHeaders(false)
         });
         const data = await response.json();
         config = data.global || {
@@ -3107,13 +2999,7 @@ class Admin extends Component {
       powerManagementWeekendMode
     } = this.state;
 
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
 
     try {
       let url, method;
@@ -3187,10 +3073,7 @@ class Admin extends Component {
     try {
       const response = await fetch('/api/mqtt-config', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        },
+        headers: this.getRequestHeaders(),
         body: JSON.stringify({
           enabled: this.state.mqttEnabled || false,
           brokerUrl: this.state.mqttBrokerUrl || 'mqtt://localhost:1883',
@@ -3230,13 +3113,9 @@ class Admin extends Component {
   }
 
   loadMqttConfig = async () => {
-    const { apiToken } = this.state;
-
     try {
       const response = await fetch('/api/mqtt-config', {
-        headers: {
-          'Authorization': `Bearer ${apiToken}`
-        }
+        headers: this.getRequestHeaders(false)
       });
 
       if (response.ok) {
@@ -3256,13 +3135,9 @@ class Admin extends Component {
   }
 
   loadMqttStatus = async () => {
-    const { apiToken } = this.state;
-
     try {
       const response = await fetch('/api/mqtt-status', {
-        headers: {
-          'Authorization': `Bearer ${apiToken}`
-        }
+        headers: this.getRequestHeaders(false)
       });
 
       if (response.ok) {
@@ -3275,16 +3150,13 @@ class Admin extends Component {
   }
 
   handleLoadMqttDisplays = async (startAutoRefresh = false) => {
-    const { apiToken } = this.state;
     const t = this.getTranslations();
 
     this.setState({ mqttDisplaysLoading: true });
 
     try {
       const response = await fetch('/api/mqtt-displays', {
-        headers: {
-          'Authorization': `Bearer ${apiToken}`
-        }
+        headers: this.getRequestHeaders(false)
       });
 
       if (response.status === 401) {
@@ -3329,10 +3201,7 @@ class Admin extends Component {
     try {
       const response = await fetch(`/api/mqtt-power-trigger/${hostname}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        },
+        headers: this.getRequestHeaders(),
         body: JSON.stringify({
           powerState: powerOn,
           brightness: powerOn ? 255 : 0
@@ -3373,10 +3242,7 @@ class Admin extends Component {
     try {
       const response = await fetch(`/api/mqtt-brightness/${hostname}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        },
+        headers: this.getRequestHeaders(),
         body: JSON.stringify({ brightness })
       });
 
@@ -3400,10 +3266,7 @@ class Admin extends Component {
     try {
       const response = await fetch(`/api/mqtt-kiosk/${hostname}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        },
+        headers: this.getRequestHeaders(),
         body: JSON.stringify({ status })
       });
 
@@ -3430,10 +3293,7 @@ class Admin extends Component {
     try {
       const response = await fetch(`/api/mqtt-theme/${hostname}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        },
+        headers: this.getRequestHeaders(),
         body: JSON.stringify({ theme })
       });
 
@@ -3460,10 +3320,7 @@ class Admin extends Component {
     try {
       const response = await fetch(`/api/mqtt-volume/${hostname}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        },
+        headers: this.getRequestHeaders(),
         body: JSON.stringify({ volume })
       });
 
@@ -3486,10 +3343,7 @@ class Admin extends Component {
     try {
       const response = await fetch(`/api/mqtt-page-zoom/${hostname}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        },
+        headers: this.getRequestHeaders(),
         body: JSON.stringify({ zoom })
       });
 
@@ -3513,10 +3367,7 @@ class Admin extends Component {
     try {
       const response = await fetch(`/api/mqtt-refresh/${hostname}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        }
+        headers: this.getRequestHeaders()
       });
 
       if (response.status === 401) {
@@ -3555,10 +3406,7 @@ class Admin extends Component {
     try {
       const response = await fetch(`/api/mqtt-reboot/${hostname}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        }
+        headers: this.getRequestHeaders()
       });
 
       if (response.status === 401) {
@@ -3597,10 +3445,7 @@ class Admin extends Component {
     try {
       const response = await fetch(`/api/mqtt-shutdown/${hostname}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        }
+        headers: this.getRequestHeaders()
       });
 
       if (response.status === 401) {
@@ -3630,10 +3475,7 @@ class Admin extends Component {
     try {
       const response = await fetch('/api/mqtt-refresh-all', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        }
+        headers: this.getRequestHeaders()
       });
 
       if (response.status === 401) {
@@ -3677,10 +3519,7 @@ class Admin extends Component {
     try {
       const response = await fetch('/api/mqtt-reboot-all', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        }
+        headers: this.getRequestHeaders()
       });
 
       if (response.status === 401) {
@@ -3816,15 +3655,10 @@ class Admin extends Component {
   }
 
   handleMqttPageUrlCommandModal = async (hostname, url) => {
-    const { apiToken } = this.state;
-    
     try {
       const response = await fetch(`/api/mqtt-page-url/${hostname}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'Content-Type': 'application/json'
-        },
+        headers: this.getRequestHeaders(),
         body: JSON.stringify({ url })
       });
 
@@ -3943,15 +3777,9 @@ class Admin extends Component {
   handleColorsSubmit = (e) => {
     e.preventDefault();
     const t = this.getTranslations();
-    const { apiToken, bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor, statusNotFoundColor } = this.state;
+    const { bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor, statusNotFoundColor } = this.state;
     
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
+    const headers = this.getRequestHeaders();
     
     fetch('/api/colors', {
       method: 'POST',
