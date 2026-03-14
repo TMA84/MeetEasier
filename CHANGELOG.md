@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.17] - 2026-03-14
+
+### Security
+- Added origin validation (`checkDisplayOrigin` middleware) for display-facing endpoints: booking, extend-meeting, end-meeting, check-in, check-in-status, power-management per display
+- Requests must originate from the application UI (same-origin via Origin/Referer header) or carry a valid API token
+- External/scripted access without valid origin or token now returns 403 Forbidden
+
 ## [1.7.16] - 2026-03-14
 
 ### Added

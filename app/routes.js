@@ -344,6 +344,46 @@ function isInitialAdminTokenSetupRequired() {
 	return !effectiveToken;
 }
 
+/**
+ * Validates that a request originates from the application itself (same-origin)
+ * or carries a valid API token. This protects display-facing endpoints
+ * (booking, check-in, power-management) from external/scripted access
+ * while allowing the embedded display UI to function normally.
+ */
+function isDisplayOriginAllowed(req) {
+	// Always allow if a valid admin or WiFi API token is provided
+	if (hasValidApiToken(req) || hasValidWiFiApiToken(req)) {
+		return true;
+	}
+
+	// Check Origin header (set by browsers on POST/fetch requests)
+	const origin = req.headers['origin'];
+	if (origin) {
+		try {
+			const originHost = new URL(origin).host;
+			const requestHost = req.headers['host'];
+			return originHost === requestHost;
+		} catch (_) {
+			return false;
+		}
+	}
+
+	// Fallback: check Referer header
+	const referer = req.headers['referer'];
+	if (referer) {
+		try {
+			const refererHost = new URL(referer).host;
+			const requestHost = req.headers['host'];
+			return refererHost === requestHost;
+		} catch (_) {
+			return false;
+		}
+	}
+
+	// No Origin, no Referer, no token → reject
+	return false;
+}
+
 function getClientIp(req) {
 	return req.ip || req.socket?.remoteAddress || 'unknown';
 }
@@ -1155,8 +1195,20 @@ module.exports = function(app) {
 		}
 	});
 
+	// Middleware: Validates request originates from application UI (same-origin) or carries valid API token
+	const checkDisplayOrigin = (req, res, next) => {
+		if (isDisplayOriginAllowed(req)) {
+			return next();
+		}
+
+		res.status(403).json({
+			error: 'Forbidden',
+			message: 'This endpoint is only accessible from the application UI or with a valid API token.'
+		});
+	};
+
 	// Room booking endpoint
-	app.post('/api/rooms/:roomEmail/book', function(req, res, next) {
+	app.post('/api/rooms/:roomEmail/book', checkDisplayOrigin, function(req, res, next) {
 		return bookingRateLimiter(req, res, next);
 	}, async function(req, res) {
 		const { roomEmail } = req.params;
@@ -1255,7 +1307,7 @@ module.exports = function(app) {
 	});
 
 	// Extend existing meeting endpoint
-	app.post('/api/extend-meeting', function(req, res, next) {
+	app.post('/api/extend-meeting', checkDisplayOrigin, function(req, res, next) {
 		return bookingRateLimiter(req, res, next);
 	}, async function(req, res) {
 		const { roomEmail, appointmentId, minutes, roomGroup } = req.body;
@@ -1423,7 +1475,7 @@ module.exports = function(app) {
 		}
 	});
 
-	app.post('/api/end-meeting', function(req, res, next) {
+	app.post('/api/end-meeting', checkDisplayOrigin, function(req, res, next) {
 		return bookingRateLimiter(req, res, next);
 	}, async function(req, res) {
 		const { roomEmail, appointmentId, roomGroup } = req.body || {};
@@ -1484,7 +1536,7 @@ module.exports = function(app) {
 		}
 	});
 
-	app.get('/api/check-in-status', function(req, res) {
+	app.get('/api/check-in-status', checkDisplayOrigin, function(req, res) {
 		const { roomEmail, appointmentId, organizer, roomName, startTimestamp } = req.query;
 
 		if (!roomEmail || !appointmentId) {
@@ -1507,7 +1559,7 @@ module.exports = function(app) {
 		res.json(status);
 	});
 
-	app.post('/api/check-in', async function(req, res) {
+	app.post('/api/check-in', checkDisplayOrigin, async function(req, res) {
 		const { roomEmail, appointmentId, organizer, roomName, startTimestamp } = req.body || {};
 
 		if (!roomEmail || !appointmentId) {
@@ -2136,8 +2188,8 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get power management configuration for specific display (public - for displays)
-	app.get('/api/power-management/:clientId', function(req, res) {
+	// Get power management configuration for specific display (display-origin only)
+	app.get('/api/power-management/:clientId', checkDisplayOrigin, function(req, res) {
 		try {
 			const { clientId } = req.params;
 			
