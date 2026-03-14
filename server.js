@@ -7,7 +7,7 @@ const cors = require('cors');
 const reload = require('reload');
 const app = express();
 const config = require('./config/config');
-require('./app/config-manager');
+const configManager = require('./app/config-manager');
 const { validateStartupConfig, printStartupValidation } = require('./app/startup-validation');
 
 function parseAllowedOrigins(rawValue) {
@@ -229,6 +229,41 @@ const port = process.env.PORT || 8080;
 const theserver = app.listen(port, function() {
 	// call controller functions -------------------------------------------------
 	const io = require('socket.io')(theserver);
+
+	// Socket.IO IP whitelist middleware
+	io.use((socket, next) => {
+		const systemConfig = configManager.getSystemConfig();
+		if (!systemConfig.displayIpWhitelistEnabled || !Array.isArray(systemConfig.displayIpWhitelist) || systemConfig.displayIpWhitelist.length === 0) {
+			return next();
+		}
+
+		const rawIp = socket.handshake.address || '';
+		let clientIp = rawIp.trim();
+		if (clientIp.startsWith('::ffff:')) {
+			clientIp = clientIp.substring(7);
+		}
+		if (clientIp === '::1' || clientIp === '127.0.0.1' || clientIp === 'localhost') {
+			clientIp = '127.0.0.1';
+		}
+
+		const isWhitelisted = systemConfig.displayIpWhitelist.some(allowedIp => {
+			let normalized = (allowedIp || '').trim();
+			if (normalized.startsWith('::ffff:')) {
+				normalized = normalized.substring(7);
+			}
+			if (normalized === '::1' || normalized === '127.0.0.1' || normalized === 'localhost') {
+				normalized = '127.0.0.1';
+			}
+			return clientIp === normalized;
+		});
+
+		if (!isWhitelisted) {
+			console.log(`[Socket.IO] Connection rejected: IP ${rawIp} not in whitelist`);
+			return next(new Error('IP not whitelisted'));
+		}
+
+		next();
+	});
 
 	// controller if using room lists
 	const controller = require('./app/socket-controller.js')(io);
