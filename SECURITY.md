@@ -66,6 +66,11 @@ When deploying MeetEasier, please follow these security best practices:
    - Enforce HTTPS redirects
    - Use valid SSL/TLS certificates
 
+2. **HTTP Deployments (Local Network)**:
+   - The `upgrade-insecure-requests` CSP directive is disabled by default
+   - This prevents browsers from automatically upgrading HTTP requests to HTTPS, which would break non-HTTPS deployments (e.g., local network displays, Raspberry Pi kiosks)
+   - If you deploy exclusively over HTTPS, you can re-enable this directive in `server.js` for additional security
+
 2. **Firewall Rules**: Restrict access to the application
    - Limit access to internal networks if possible
    - Use IP whitelisting for admin endpoints

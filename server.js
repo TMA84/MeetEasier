@@ -105,6 +105,12 @@ function parseHstsMaxAge(rawValue, fallback = 31536000) {
 const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
 const publicAllowedOrigins = parsePublicAllowedOrigins(process.env.PUBLIC_ALLOWED_ORIGINS);
 
+// Determine if upgrade-insecure-requests should be enabled
+// Disable for plain HTTP (local dev) to prevent Safari from forcing HTTPS
+const cspUpgradeInsecureRequests = String(process.env.CSP_UPGRADE_INSECURE || '').toLowerCase() === 'true'
+	? []
+	: null;
+
 app.use(helmet({
 	hsts: false,
 	frameguard: { action: 'deny' },
@@ -119,7 +125,8 @@ app.use(helmet({
 			fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
 			objectSrc: ["'none'"],
 			frameAncestors: ["'none'"],
-			baseUri: ["'self'"]
+			baseUri: ["'self'"],
+			upgradeInsecureRequests: cspUpgradeInsecureRequests
 		}
 	},
 	referrerPolicy: { policy: 'no-referrer' }

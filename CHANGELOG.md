@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+- Disabled `upgrade-insecure-requests` CSP directive by setting `upgradeInsecureRequests: null` in Helmet config — prevents browsers from automatically upgrading HTTP requests to HTTPS, which caused issues on non-HTTPS deployments (e.g., local network displays)
+
+## [1.7.21] - 2026-03-14
+
+### Fixed
+- Safari white page: disabled Helmet's `upgrade-insecure-requests` CSP directive by default — it forced Safari to use HTTPS for all resources, breaking local HTTP development
+- New env variable `CSP_UPGRADE_INSECURE=true` to opt-in when running behind HTTPS reverse proxy
+
 ## [1.7.20] - 2026-03-14
 
 ### Fixed
