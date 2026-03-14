@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.18] - 2026-03-14
+
+### Added
+- Display IP Whitelist: configurable IP whitelist for display-facing endpoints (booking, check-in, extend/end meeting, power management)
+- When enabled, only requests from whitelisted IP addresses can access these endpoints
+- Room status display (`/api/rooms`, `/api/roomlists`, etc.) remains accessible without IP restriction
+- Admin API endpoints remain protected by API token (unaffected by whitelist)
+- UI in Devices tab: enable/disable toggle and textarea for IP addresses (one per line)
+- IPv4-mapped IPv6 normalization (e.g., `::ffff:192.168.1.1` matches `192.168.1.1`)
+- Localhost variants (`::1`, `127.0.0.1`, `localhost`) treated as equivalent
+
 ## [1.7.17] - 2026-03-14
 
 ### Security

@@ -11,6 +11,10 @@ const DevicesTab = ({
   currentSystemDisplayTrackingRetentionHours,
   systemDisplayTrackingCleanupMinutes,
   currentSystemDisplayTrackingCleanupMinutes,
+  systemDisplayIpWhitelistEnabled,
+  currentSystemDisplayIpWhitelistEnabled,
+  systemDisplayIpWhitelist,
+  currentSystemDisplayIpWhitelist,
   systemMessage,
   systemMessageType,
   t,
@@ -24,6 +28,8 @@ const DevicesTab = ({
   onTrackingModeChange,
   onRetentionHoursChange,
   onCleanupMinutesChange,
+  onIpWhitelistEnabledChange,
+  onIpWhitelistChange,
   onSaveSettings
 }) => {
   const hasMqttDisplays = connectedDisplays && connectedDisplays.filter(d => d.mqtt).length > 0;
@@ -188,6 +194,36 @@ const DevicesTab = ({
         <small className="admin-help-text">{t.systemDisplayTrackingCleanupHelp || 'Wait time after disconnect before automatic cleanup (0-60 minutes)'}</small>
       </div>
 
+      <div className="admin-form-divider"></div>
+      <h3>{t.displayIpWhitelistSectionTitle || 'Display IP Whitelist'}</h3>
+
+      <div className="admin-form-group">
+        <label className="inline-label">
+          <span className="label-text">{t.displayIpWhitelistEnabledLabel || 'Enable IP Whitelist'}</span>
+          <input
+            type="checkbox"
+            checked={systemDisplayIpWhitelistEnabled}
+            onChange={(e) => onIpWhitelistEnabledChange(e.target.checked)}
+          />
+        </label>
+        <small className="admin-help-text">{t.displayIpWhitelistEnabledHelp || 'When enabled, only whitelisted IPs can use booking, check-in, and power management endpoints. Room status display remains accessible to all.'}</small>
+      </div>
+
+      {systemDisplayIpWhitelistEnabled && (
+        <div className="admin-form-group">
+          <label htmlFor="systemDisplayIpWhitelist">{t.displayIpWhitelistLabel || 'Allowed IP Addresses (one per line)'}</label>
+          <textarea
+            id="systemDisplayIpWhitelist"
+            value={systemDisplayIpWhitelist}
+            onChange={(e) => onIpWhitelistChange(e.target.value)}
+            rows={6}
+            placeholder={"192.168.1.100\n192.168.1.101\n10.0.0.50"}
+            style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+          />
+          <small className="admin-help-text">{t.displayIpWhitelistHelp || 'Enter one IP address per line. IPv4 and IPv6 are supported. localhost/127.0.0.1/::1 are treated as equivalent.'}</small>
+        </div>
+      )}
+
       <button 
         type="submit" 
         className="admin-submit-button" 
@@ -195,7 +231,9 @@ const DevicesTab = ({
         disabled={
           systemDisplayTrackingMode === currentSystemDisplayTrackingMode &&
           parseInt(systemDisplayTrackingRetentionHours, 10) === currentSystemDisplayTrackingRetentionHours &&
-          parseInt(systemDisplayTrackingCleanupMinutes, 10) === currentSystemDisplayTrackingCleanupMinutes
+          parseInt(systemDisplayTrackingCleanupMinutes, 10) === currentSystemDisplayTrackingCleanupMinutes &&
+          systemDisplayIpWhitelistEnabled === currentSystemDisplayIpWhitelistEnabled &&
+          systemDisplayIpWhitelist === currentSystemDisplayIpWhitelist
         }
       >
         {t.systemSaveButton || 'Save System Configuration'}
