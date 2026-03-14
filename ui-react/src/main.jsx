@@ -2,7 +2,6 @@ import React, { lazy, Suspense, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
-import './index.css';
 import { getConnectionMonitor } from './utils/connectionMonitor';
 import ConnectionStatus from './components/global/ConnectionStatus';
 

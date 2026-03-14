@@ -17,7 +17,7 @@ const AuditTab = ({
       <div className="admin-form-divider"></div>
 
       <h3>{t.auditSectionTitle}</h3>
-      <div style={{ marginBottom: '1rem' }}>
+      <div className="audit-actions">
         <button type="button" className="admin-secondary-button" onClick={onLoadLogs}>
           {t.auditLoadButton}
         </button>

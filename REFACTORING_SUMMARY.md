@@ -23,11 +23,18 @@ Successfully refactored the Admin.js component by extracting modal and tab compo
 ### 2. Created Tab Components
 - **DevicesTab.js** (`ui-react/src/components/admin/tabs/DevicesTab.js`)
   - Extracted unified devices management tab (formerly ConnectedDisplaysTab)
-  - Displays table with Socket.IO and MQTT devices
-  - Action buttons (Refresh, Power Management, Touchkio controls)
-  - Bulk operations (Refresh All, Reboot All)
-  - Device tracking settings
-  - ~310 lines
+  - Unified display table with Socket.IO and MQTT displays merged
+  - Status indicator with color-coded dots (Active/Inactive/Partial/Connected/Disconnected)
+  - Connection type badges (Socket.IO, MQTT) displayed vertically
+  - Display metrics showing CPU, memory, and temperature for MQTT displays
+  - Action buttons: Power Management, Refresh, Details, Delete (context-aware based on connection type)
+  - Bulk operations: "Refresh All Touchkio" and "Reboot All Touchkio" buttons
+  - Display tracking settings UI (tracking mode, retention hours, cleanup delay)
+  - Improved table layout with fixed column widths for better readability
+  - Device ID and hostname display under display name
+  - Room name extraction for single-room displays
+  - Smart status logic with fallback to Socket.IO when MQTT power is unknown
+  - ~421 lines
 
 - **MqttTab.js** (`ui-react/src/components/admin/tabs/MqttTab.js`)
   - Extracted MQTT broker configuration tab
@@ -65,13 +72,14 @@ Successfully refactored the Admin.js component by extracting modal and tab compo
 ## File Structure
 ```
 ui-react/src/components/admin/
-├── Admin.js (6840 lines, down from 7816)
+├── Admin.js (~6700 lines, down from 7816)
 ├── AdminContext.js
 ├── modals/
 │   ├── PowerManagementModal.js (~160 lines)
 │   └── TouchkioModal.js (~350 lines)
 ├── tabs/
-│   ├── DevicesTab.js (~310 lines)
+│   ├── README.md ✨ NEW - Component documentation
+│   ├── DevicesTab.js (~421 lines) ✨ NEW
 │   ├── MqttTab.js (~140 lines)
 │   ├── AuditTab.js (~45 lines)
 │   ├── BackupTab.js (~50 lines)
@@ -94,11 +102,12 @@ ui-react/src/components/admin/
 - Bundle size slightly increased but within acceptable range
 
 ## Progress Metrics
-- **Total Lines Removed from Admin.js**: 976 lines (12.5% reduction)
+- **Total Lines Removed from Admin.js**: ~1,100+ lines (14%+ reduction)
 - **Original Size**: 7816 lines
-- **Current Size**: 6840 lines
-- **Files Created**: 7 components (2 modals + 5 tabs)
+- **Current Size**: ~6700 lines (estimated)
+- **Files Created**: 8 components (2 modals + 6 tabs)
 - **Build Time**: ~782ms (stable)
+- **Documentation**: Component README created in tabs/ directory
 
 ## Next Steps (Future Refactoring)
 1. Extract more tab components:

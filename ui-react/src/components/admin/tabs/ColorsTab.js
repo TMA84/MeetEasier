@@ -31,21 +31,14 @@ const ColorsTab = ({
     return (
       <div className="admin-form-group">
         <label>{label}</label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', marginBottom: '12px' }}>
+        <div className="color-preset-grid">
           {presetColors.map(color => (
             <button
               key={color}
               type="button"
               onClick={() => onColorChange(colorKey, color)}
-              style={{
-                width: '45px',
-                height: '45px',
-                backgroundColor: color,
-                border: currentColor === color ? '3px solid #000' : '2px solid #999',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                padding: '0'
-              }}
+              className={`color-preset-button ${currentColor === color ? 'color-preset-button--selected' : 'color-preset-button--unselected'}`}
+              style={{ backgroundColor: color }}
               title={color}
             >
               {currentColor === color ? '✓' : ''}
@@ -54,71 +47,58 @@ const ColorsTab = ({
         </div>
 
         <div>
-          <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+          <div className="color-slider-row">
+            <div className="color-slider-column">
+              <label className="color-slider-label">
                 {t.colorPickerHue}: {hsl.h}°
               </label>
               <input
-                type="range"
-                min={hueMin}
-                max={hueMax}
+                type="range" min={hueMin} max={hueMax}
                 value={hsl.h <= hueMax && hsl.h >= hueMin ? hsl.h : hueMin}
                 onChange={(e) => {
                   const newHsl = { h: parseInt(e.target.value), s: hsl.s, l: hsl.l };
                   onColorChange(colorKey, hslToHex(newHsl.h, newHsl.s, newHsl.l));
                 }}
-                style={{ width: '100%', cursor: 'pointer' }}
+                className="color-slider"
               />
             </div>
-            <div style={{ width: '60px', height: '50px', backgroundColor: currentColor, border: '2px solid #ddd', borderRadius: '4px' }}></div>
+            <div className="color-preview-box" style={{ backgroundColor: currentColor }}></div>
           </div>
           
-          <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+          <div className="color-slider-row">
+            <div className="color-slider-column">
+              <label className="color-slider-label">
                 {t.colorPickerSaturation}: {hsl.s}%
               </label>
               <input
-                type="range"
-                min="0"
-                max="100"
-                value={hsl.s}
+                type="range" min="0" max="100" value={hsl.s}
                 onChange={(e) => {
                   const newHsl = { h: hsl.h, s: parseInt(e.target.value), l: hsl.l };
                   onColorChange(colorKey, hslToHex(newHsl.h, newHsl.s, newHsl.l));
                 }}
-                style={{ width: '100%', cursor: 'pointer' }}
+                className="color-slider"
               />
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+          <div className="color-slider-row">
+            <div className="color-slider-column">
+              <label className="color-slider-label">
                 {t.colorPickerLightness}: {hsl.l}%
               </label>
               <input
-                type="range"
-                min="0"
-                max="100"
-                value={hsl.l}
+                type="range" min="0" max="100" value={hsl.l}
                 onChange={(e) => {
                   const newHsl = { h: hsl.h, s: hsl.s, l: parseInt(e.target.value) };
                   onColorChange(colorKey, hslToHex(newHsl.h, newHsl.s, newHsl.l));
                 }}
-                style={{ width: '100%', cursor: 'pointer' }}
+                className="color-slider"
               />
             </div>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => onResetColor(colorKey, defaultColor)}
-          className="admin-secondary-button"
-          style={{ marginTop: '8px' }}
-        >
+        <button type="button" onClick={() => onResetColor(colorKey, defaultColor)} className="admin-secondary-button admin-mt-05">
           {t.resetToDefaultButton}
         </button>
         <small>{helpText}</small>
@@ -134,150 +114,52 @@ const ColorsTab = ({
         <div className="admin-current-config">
           <h3>{t.currentConfigTitle}</h3>
           <div className="config-grid">
-            <div className="config-item">
-              <span className="config-label">{t.bookingButtonColorLabel}</span>
-              <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ 
-                  display: 'inline-block', 
-                  width: '20px', 
-                  height: '20px', 
-                  backgroundColor: currentBookingButtonColor,
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}></span>
-                {currentBookingButtonColor}
-              </span>
-            </div>
-            <div className="config-item">
-              <span className="config-label">{t.statusAvailableColorLabel}</span>
-              <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ 
-                  display: 'inline-block', 
-                  width: '20px', 
-                  height: '20px', 
-                  backgroundColor: currentStatusAvailableColor,
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}></span>
-                {currentStatusAvailableColor}
-              </span>
-            </div>
-            <div className="config-item">
-              <span className="config-label">{t.statusBusyColorLabel}</span>
-              <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ 
-                  display: 'inline-block', 
-                  width: '20px', 
-                  height: '20px', 
-                  backgroundColor: currentStatusBusyColor,
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}></span>
-                {currentStatusBusyColor}
-              </span>
-            </div>
-            <div className="config-item">
-              <span className="config-label">{t.statusUpcomingColorLabel}</span>
-              <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ 
-                  display: 'inline-block', 
-                  width: '20px', 
-                  height: '20px', 
-                  backgroundColor: currentStatusUpcomingColor,
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}></span>
-                {currentStatusUpcomingColor}
-              </span>
-            </div>
-            <div className="config-item">
-              <span className="config-label">{t.statusNotFoundColorLabel}</span>
-              <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ 
-                  display: 'inline-block', 
-                  width: '20px', 
-                  height: '20px', 
-                  backgroundColor: currentStatusNotFoundColor,
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}></span>
-                {currentStatusNotFoundColor}
-              </span>
-            </div>
+            {[
+              { label: t.bookingButtonColorLabel, color: currentBookingButtonColor },
+              { label: t.statusAvailableColorLabel, color: currentStatusAvailableColor },
+              { label: t.statusBusyColorLabel, color: currentStatusBusyColor },
+              { label: t.statusUpcomingColorLabel, color: currentStatusUpcomingColor },
+              { label: t.statusNotFoundColorLabel, color: currentStatusNotFoundColor }
+            ].map(({ label, color }) => (
+              <div className="config-item" key={label}>
+                <span className="config-label">{label}</span>
+                <span className="config-value color-value-display">
+                  <span className="color-swatch-inline" style={{ backgroundColor: color }}></span>
+                  {color}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
         <form onSubmit={onSubmit}>
           <div className="admin-form-group">
             <label>{t.bookingButtonColorLabel}</label>
-            <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
+            <div className="color-input-row">
               <input
                 type="color"
                 value={bookingButtonColor}
                 onChange={(e) => onColorChange('bookingButtonColor', e.target.value)}
-                style={{ width: '60px', height: '40px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '4px', flexShrink: 0 }}
+                className="color-input-picker"
               />
               <input
                 type="text"
                 value={bookingButtonColor}
                 onChange={(e) => onColorChange('bookingButtonColor', e.target.value)}
                 placeholder="#334155"
-                style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px' }}
+                className="color-input-text"
               />
-              <button
-                type="button"
-                onClick={() => onResetColor('bookingButtonColor', '#334155')}
-                className="admin-secondary-button"
-              >
+              <button type="button" onClick={() => onResetColor('bookingButtonColor', '#334155')} className="admin-secondary-button">
                 {t.resetToDefaultButton}
               </button>
             </div>
             <small>{t.bookingButtonColorHelp}</small>
           </div>
 
-          {renderColorPicker(
-            `${t.statusAvailableColorLabel} - ${t.colorPickerGreenVariations}`,
-            'statusAvailableColor',
-            statusAvailableColor,
-            greenColors,
-            80,
-            150,
-            '#22c55e',
-            t.statusAvailableColorHelp
-          )}
-
-          {renderColorPicker(
-            `${t.statusBusyColorLabel} - ${t.colorPickerRedVariations}`,
-            'statusBusyColor',
-            statusBusyColor,
-            redColors,
-            0,
-            20,
-            '#ef4444',
-            t.statusBusyColorHelp
-          )}
-
-          {renderColorPicker(
-            `${t.statusUpcomingColorLabel} - ${t.colorPickerYellowVariations}`,
-            'statusUpcomingColor',
-            statusUpcomingColor,
-            yellowColors,
-            20,
-            60,
-            '#f59e0b',
-            t.statusUpcomingColorHelp
-          )}
-
-          {renderColorPicker(
-            `${t.statusNotFoundColorLabel} - ${t.colorPickerGrayVariations}`,
-            'statusNotFoundColor',
-            statusNotFoundColor,
-            grayColors,
-            0,
-            360,
-            '#6b7280',
-            t.statusNotFoundColorHelp
-          )}
+          {renderColorPicker(`${t.statusAvailableColorLabel} - ${t.colorPickerGreenVariations}`, 'statusAvailableColor', statusAvailableColor, greenColors, 80, 150, '#22c55e', t.statusAvailableColorHelp)}
+          {renderColorPicker(`${t.statusBusyColorLabel} - ${t.colorPickerRedVariations}`, 'statusBusyColor', statusBusyColor, redColors, 0, 20, '#ef4444', t.statusBusyColorHelp)}
+          {renderColorPicker(`${t.statusUpcomingColorLabel} - ${t.colorPickerYellowVariations}`, 'statusUpcomingColor', statusUpcomingColor, yellowColors, 20, 60, '#f59e0b', t.statusUpcomingColorHelp)}
+          {renderColorPicker(`${t.statusNotFoundColorLabel} - ${t.colorPickerGrayVariations}`, 'statusNotFoundColor', statusNotFoundColor, grayColors, 0, 360, '#6b7280', t.statusNotFoundColorHelp)}
 
           <button 
             type="submit" 
@@ -295,9 +177,7 @@ const ColorsTab = ({
         </form>
 
         {colorMessage && (
-          <div className={`admin-message admin-message-${colorMessageType}`}>
-            {colorMessage}
-          </div>
+          <div className={`admin-message admin-message-${colorMessageType}`}>{colorMessage}</div>
         )}
       </div>
     </div>

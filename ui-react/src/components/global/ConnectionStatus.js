@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { getConnectionMonitor } from '../../utils/connectionMonitor';
-import './ConnectionStatus.css';
 
 const ConnectionStatus = () => {
   const [status, setStatus] = useState({

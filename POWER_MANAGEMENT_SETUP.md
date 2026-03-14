@@ -328,7 +328,9 @@ MeetEasier Server
    # Touchkio verwendet Home Assistant MQTT Discovery Format:
    
    # State Topic (Touchkio → Broker)
+   # Unterstützt sowohl /state als auch /status Suffix
    homeassistant/light/touchkio_{hostname}/display/state
+   homeassistant/light/touchkio_{hostname}/display/status
    Payload: {"state": "ON", "brightness": 255}
    
    # Command Topic (MeetEasier → Touchkio)
@@ -337,6 +339,9 @@ MeetEasier Server
    
    # Hostname ist der Raspberry Pi Hostname (z.B. "raspberrypi" oder "saturn")
    # Beispiel: homeassistant/light/touchkio_saturn/display/set
+   
+   # Hinweis: MeetEasier empfängt automatisch beide Topic-Formate (/state und /status)
+   # für maximale Kompatibilität mit verschiedenen Touchkio Firmware-Versionen
    ```
 
 ### Temporäre Lösung (bis v1.6.0):

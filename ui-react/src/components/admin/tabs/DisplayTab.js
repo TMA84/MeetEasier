@@ -74,14 +74,14 @@ const DisplayTab = ({
 
           <form onSubmit={onSubmit}>
             <div className="admin-form-group">
-              <label htmlFor="sidebarTargetClientId" style={{ display: 'block', marginBottom: '0.5rem' }}>
+              <label htmlFor="sidebarTargetClientId">
                 {t.sidebarTargetClientLabel || 'Target Client'}
               </label>
               <select
                 id="sidebarTargetClientId"
                 value={sidebarTargetClientId}
                 onChange={onTargetClientChange}
-                style={{ width: '100%' }}
+                className="admin-w-full"
               >
                 <option value="">{t.sidebarTargetGlobalOption || 'Global default (all displays)'}</option>
                 {(connectedClients || []).map((client) => {
@@ -96,7 +96,7 @@ const DisplayTab = ({
                   );
                 })}
               </select>
-              <small style={{ display: 'block', marginTop: '0.5rem' }}>
+              <small className="admin-help-text">
                 {connectedClientsLoading
                   ? (t.sidebarTargetLoading || 'Loading connected clients...')
                   : (t.sidebarTargetHelp || 'Select a connected client to override Single-Room dark mode only for that client.')}
@@ -145,7 +145,7 @@ const DisplayTab = ({
             </div>
 
             <div className="admin-form-group">
-              <label htmlFor="upcomingMeetingsCount" style={{ display: 'block', marginBottom: '0.5rem' }}>
+              <label htmlFor="upcomingMeetingsCount">
                 {t.upcomingMeetingsCountLabel}
               </label>
               <input
@@ -156,9 +156,9 @@ const DisplayTab = ({
                 value={upcomingMeetingsCount}
                 disabled={!!sidebarTargetClientId}
                 onChange={(e) => onFieldChange('upcomingMeetingsCount', e.target.value)}
-                style={{ width: '120px' }}
+                className="display-input-narrow"
               />
-              <small style={{ display: 'block', marginTop: '0.5rem' }}>{t.upcomingMeetingsCountHelp}</small>
+              <small className="admin-help-text">{t.upcomingMeetingsCountHelp}</small>
             </div>
             
             <hr className="admin-form-divider" />
@@ -177,10 +177,10 @@ const DisplayTab = ({
 
             {singleRoomDarkMode && (
               <div className="admin-form-group">
-                <label style={{ display: 'block', marginBottom: '0.75rem' }}>
+                <label>
                   {t.minimalHeaderStyleLabel}
                 </label>
-                <small style={{ display: 'block', marginBottom: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>
+                <small className="display-header-style-help">
                   {t.minimalHeaderStyleHelp}
                 </small>
                 <label className="inline-label">
@@ -194,7 +194,7 @@ const DisplayTab = ({
                     onChange={(e) => onFieldChange('minimalHeaderStyle', e.target.value)}
                   />
                 </label>
-                <label className="inline-label" style={{ marginTop: '0.5rem' }}>
+                <label className="inline-label admin-inline-label-mt">
                   <span className="label-text">{t.minimalHeaderStyleTransparent}</span>
                   <input
                     type="radio"
@@ -210,7 +210,7 @@ const DisplayTab = ({
 
             {!singleRoomDarkMode && (
               <div className="admin-form-group">
-                <small style={{ display: 'block', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>
+                <small className="display-dark-mode-hint">
                   {t.minimalHeaderStyleDarkModeRequired}
                 </small>
               </div>

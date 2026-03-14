@@ -162,6 +162,7 @@ let graphAuthHealthCache = {
 };
 
 const ADMIN_AUTH_COOKIE_NAME = 'meeteasier_admin_auth';
+const CSRF_COOKIE_NAME = 'meeteasier_csrf';
 
 function isEnvDefined(name) {
 	return process.env[name] !== undefined;
@@ -242,6 +243,46 @@ function setAdminAuthCookie(res, token) {
 
 function clearAdminAuthCookie(res) {
 	res.clearCookie(ADMIN_AUTH_COOKIE_NAME, getAdminCookieOptions());
+	res.clearCookie(CSRF_COOKIE_NAME, getCsrfCookieOptions());
+}
+
+function generateCsrfToken() {
+	return crypto.randomBytes(32).toString('hex');
+}
+
+function getCsrfCookieOptions() {
+	const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+	return {
+		httpOnly: false, // Must be readable by JavaScript
+		sameSite: 'strict',
+		secure: isProduction,
+		path: '/'
+	};
+}
+
+function setCsrfCookie(res) {
+	const token = generateCsrfToken();
+	res.cookie(CSRF_COOKIE_NAME, token, getCsrfCookieOptions());
+	return token;
+}
+
+function validateCsrf(req) {
+	// CSRF only applies to cookie-based auth
+	const hasAuthHeader = !!(req.headers['authorization'] || req.headers['x-api-token']);
+	if (hasAuthHeader) {
+		return true; // Token-based auth is not vulnerable to CSRF
+	}
+
+	// For cookie-based auth, validate CSRF token
+	const cookies = parseCookies(req);
+	const csrfCookie = cookies[CSRF_COOKIE_NAME] || '';
+	const csrfHeader = req.headers['x-csrf-token'] || '';
+
+	if (!csrfCookie || !csrfHeader) {
+		return false;
+	}
+
+	return csrfCookie === csrfHeader;
 }
 
 function hasValidAdminAuthCookie(req) {
@@ -799,15 +840,15 @@ const upload = multer({
 		fileSize: 5 * 1024 * 1024 // 5MB limit
 	},
 	fileFilter: function (req, file, cb) {
-		// Accept only image files
-		const allowedTypes = /jpeg|jpg|png|gif|svg|webp/;
+		// Accept only safe raster image files (SVG excluded - XSS vector)
+		const allowedTypes = /jpeg|jpg|png|gif|webp/;
 		const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
 		const mimetype = allowedTypes.test(file.mimetype);
 		
 		if (mimetype && extname) {
 			return cb(null, true);
 		} else {
-			cb(new Error('Only image files are allowed (jpeg, jpg, png, gif, svg, webp)'));
+			cb(new Error('Only image files are allowed (jpeg, jpg, png, gif, webp)'));
 		}
 	}
 });
@@ -1544,23 +1585,30 @@ module.exports = function(app) {
 
 	// Middleware to check API token
 	const checkApiToken = (req, res, next) => {
-		if (hasValidApiToken(req)) {
-			return next();
+		if (!hasValidApiToken(req)) {
+			appendAuditLog({
+				event: 'auth.failure',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null
+			});
+
+			return res.status(401).json({ 
+				error: 'Unauthorized',
+				message: 'Valid API token required. Provide token in Authorization header or X-API-Token header.'
+			});
 		}
 
-		appendAuditLog({
-			event: 'auth.failure',
-			path: req.path,
-			method: req.method,
-			ip: getClientIp(req),
-			userAgent: req.headers['user-agent'] || null
-		});
+		// CSRF validation for state-changing requests using cookie auth
+		if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !validateCsrf(req)) {
+			return res.status(403).json({
+				error: 'CSRF validation failed',
+				message: 'Missing or invalid CSRF token.'
+			});
+		}
 
-		// Unauthorized
-		res.status(401).json({ 
-			error: 'Unauthorized',
-			message: 'Valid API token required. Provide token in Authorization header or X-API-Token header.'
-		});
+		return next();
 	};
 
 	const checkWiFiApiToken = (req, res, next) => {
@@ -1628,7 +1676,8 @@ module.exports = function(app) {
 				});
 
 				setAdminAuthCookie(res, providedToken);
-				res.json({ success: true, message: 'Initial admin API token created.' });
+				const csrfToken = setCsrfCookie(res);
+				res.json({ success: true, message: 'Initial admin API token created.', csrfToken });
 			})
 			.catch((err) => {
 				console.error('Error creating initial admin API token:', err);
@@ -1673,7 +1722,8 @@ module.exports = function(app) {
 		}
 
 		setAdminAuthCookie(res, providedToken);
-		return res.json({ success: true });
+		const csrfToken = setCsrfCookie(res);
+		return res.json({ success: true, csrfToken });
 	});
 
 	app.post('/api/admin/logout', function(req, res) {

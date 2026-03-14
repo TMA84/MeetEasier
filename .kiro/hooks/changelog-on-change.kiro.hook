@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "name": "Update Changelog on Code Change",
+  "description": "Monitors JavaScript, SCSS, and configuration files for changes and prompts the agent to update CHANGELOG.md with appropriate entries",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.js",
+      "app/*.js",
+      "app/**/*.js",
+      "config/*.js",
+      "ui-react/src/**/*.js",
+      "ui-react/src/**/*.jsx",
+      "scss/*.scss",
+      "*.json",
+      "package.json",
+      "ui-react/package.json"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file was just modified. Review the changes and update CHANGELOG.md by adding appropriate entries to the [Unreleased] section. Categorize changes as Added, Changed, Deprecated, Removed, Fixed, or Security following Keep a Changelog format."
+  }
+}

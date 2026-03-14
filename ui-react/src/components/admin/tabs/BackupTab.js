@@ -27,7 +27,7 @@ const BackupTab = ({
         />
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+      <div className="backup-actions">
         <button type="button" className="admin-secondary-button" onClick={onExport}>
           {t.backupExportButton}
         </button>

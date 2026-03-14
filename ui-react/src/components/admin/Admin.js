@@ -4141,7 +4141,7 @@ class Admin extends Component {
                 }} 
               />
             </div>
-            <div style={{ flex: 1 }}>
+            <div className="admin-flex-1">
               <h1>{t.title}</h1>
               {this.state.appVersion && (
                 <div className="admin-version">
@@ -4154,7 +4154,7 @@ class Admin extends Component {
 
         <div className="admin-container">
           {!isAuthenticated && (
-            <div className="admin-token-banner" style={{ marginBottom: '2rem' }}>
+            <div className="admin-token-banner admin-mb-2">
               <div className="admin-token-content">
                 <form onSubmit={this.handleAdminLogin} className="token-input-wrapper">
                   <label htmlFor="apiToken">{t.apiTokenLabel}</label>
@@ -4185,7 +4185,7 @@ class Admin extends Component {
           )}
 
           {!isAuthenticated && authMessage && (
-            <div className={`admin-message admin-message-${authMessageType || 'error'}`} style={{ marginBottom: '2rem' }}>
+            <div className={`admin-message admin-message-${authMessageType || 'error'} admin-mb-2`}>
               {authMessage}
             </div>
           )}
@@ -4198,7 +4198,7 @@ class Admin extends Component {
           )}
 
           {isAuthenticated && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+            <div className="admin-flex-end">
               <button type="button" className="admin-submit-button" onClick={this.handleAdminLogout}>
                 Logout
               </button>
@@ -4210,13 +4210,12 @@ class Admin extends Component {
 
           {/* Sync Status Banner */}
           {syncStatus && !syncStatusLoading && (
-            <div className={`admin-message ${(() => {
+            <div className={`admin-message admin-mb-2 ${(() => {
               const lastSyncTime = syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime) : null;
               const secondsSinceSync = lastSyncTime ? Math.floor((syncStatusTick - lastSyncTime.getTime()) / 1000) : null;
               const isStale = secondsSinceSync !== null && secondsSinceSync > 180;
               return isStale || !syncStatus.lastSyncSuccess ? 'admin-message-warning' : 'admin-message-success';
-            })()}`}
-                 style={{ marginBottom: '2rem' }}>
+            })()}`}>
               <strong>{t.syncStatusTitle}:</strong> {' '}
               {syncStatus.hasNeverSynced ? (
                 <span>{t.syncStatusNever}</span>
@@ -4247,7 +4246,7 @@ class Admin extends Component {
                     return isStale ? <span> - {t.syncStatusStale}</span> : null;
                   })()}
                   {syncStatus.syncErrorMessage && (
-                    <div style={{ marginTop: '0.5rem' }}>
+                    <div className="admin-mt-05">
                       {t.syncStatusError} {syncStatus.syncErrorMessage}
                     </div>
                   )}
@@ -4330,7 +4329,7 @@ class Admin extends Component {
 
               <form onSubmit={this.handleSidebarSubmit}>
                 <div className="admin-form-group">
-                  <label htmlFor="sidebarTargetClientId" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                  <label htmlFor="sidebarTargetClientId">
                     {t.sidebarTargetClientLabel || 'Target Client'}
                   </label>
                   <select
@@ -4357,7 +4356,7 @@ class Admin extends Component {
                         }
                       });
                     }}
-                    style={{ width: '100%' }}
+                    className="admin-w-full"
                   >
                     <option value="">{t.sidebarTargetGlobalOption || 'Global default (all displays)'}</option>
                     {(connectedClients || []).map((client) => {
@@ -4372,7 +4371,7 @@ class Admin extends Component {
                       );
                     })}
                   </select>
-                  <small style={{ display: 'block', marginTop: '0.5rem' }}>
+                  <small className="admin-help-text">
                     {connectedClientsLoading
                       ? (t.sidebarTargetLoading || 'Loading connected clients...')
                       : (t.sidebarTargetHelp || 'Select a connected client to override Single-Room dark mode only for that client.')}
@@ -4421,7 +4420,7 @@ class Admin extends Component {
                 </div>
 
                 <div className="admin-form-group">
-                  <label htmlFor="upcomingMeetingsCount" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                  <label htmlFor="upcomingMeetingsCount">
                     {t.upcomingMeetingsCountLabel}
                   </label>
                   <input
@@ -4432,9 +4431,9 @@ class Admin extends Component {
                     value={upcomingMeetingsCount}
                     disabled={!!sidebarTargetClientId}
                     onChange={(e) => this.setState({ upcomingMeetingsCount: e.target.value })}
-                    style={{ width: '120px' }}
+                    className="display-input-narrow"
                   />
-                  <small style={{ display: 'block', marginTop: '0.5rem' }}>{t.upcomingMeetingsCountHelp}</small>
+                  <small className="admin-help-text">{t.upcomingMeetingsCountHelp}</small>
                 </div>
                 
                 <hr className="admin-form-divider" />
@@ -4453,10 +4452,10 @@ class Admin extends Component {
 
                 {singleRoomDarkMode && (
                   <div className="admin-form-group">
-                    <label style={{ display: 'block', marginBottom: '0.75rem' }}>
+                    <label>
                       {t.minimalHeaderStyleLabel}
                     </label>
-                    <small style={{ display: 'block', marginBottom: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>
+                    <small className="display-header-style-help">
                       {t.minimalHeaderStyleHelp}
                     </small>
                     <label className="inline-label">
@@ -4470,7 +4469,7 @@ class Admin extends Component {
                         onChange={(e) => this.setState({ minimalHeaderStyle: e.target.value })}
                       />
                     </label>
-                    <label className="inline-label" style={{ marginTop: '0.5rem' }}>
+                    <label className="inline-label admin-inline-label-mt">
                       <span className="label-text">{t.minimalHeaderStyleTransparent}</span>
                       <input
                         type="radio"
@@ -4486,7 +4485,7 @@ class Admin extends Component {
 
                 {!singleRoomDarkMode && (
                   <div className="admin-form-group">
-                    <small style={{ display: 'block', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>
+                    <small className="display-dark-mode-hint">
                       {t.minimalHeaderStyleDarkModeRequired}
                     </small>
                   </div>
@@ -4792,7 +4791,7 @@ class Admin extends Component {
             <h2>{t.bookingSectionTitle}</h2>
             
             {bookingPermissionMissing && (
-              <div className="admin-message admin-message-warning" style={{ marginBottom: '1rem' }}>
+              <div className="admin-message admin-message-warning admin-mb-1">
                 <div>
                   <strong>Permission Missing:</strong> Calendars.ReadWrite permission is not granted in Azure AD. 
                   The booking feature is automatically disabled. Please grant this permission to enable room booking.
@@ -4833,22 +4832,15 @@ class Admin extends Component {
                 </div>
                 <div className="config-item">
                   <span className="config-label">{t.bookingButtonColorLabel}</span>
-                  <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ 
-                      display: 'inline-block', 
-                      width: '20px', 
-                      height: '20px', 
-                      backgroundColor: currentBookingButtonColor,
-                      border: '1px solid #ddd',
-                      borderRadius: '4px'
-                    }}></span>
+                  <span className="config-value color-value-display">
+                    <span className="color-swatch-inline" style={{ backgroundColor: currentBookingButtonColor }}></span>
                     {currentBookingButtonColor}
                   </span>
                 </div>
                 {bookingPermissionMissing && (
                   <div className="config-item">
                     <span className="config-label">Status</span>
-                    <span className="config-value" style={{ color: '#f59e0b' }}>Disabled (Permission Missing)</span>
+                    <span className="config-value booking-permission-status">Disabled (Permission Missing)</span>
                   </div>
                 )}
                 <div className="config-item">
@@ -4960,11 +4952,11 @@ class Admin extends Component {
                 <small>{t.roomGroupFeatureFlagsHelp || 'Optional: Override booking/extend per room group alias (e.g. roomlist-building-a).'}</small>
 
                 {availableRoomGroupOptions.length > 0 && (
-                  <div style={{ marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+                  <div className="booking-override-select-wrapper">
                     <select
                       value={newRoomGroupOverrideKey}
                       onChange={(e) => this.handleOverrideDraftChange('group', e.target.value)}
-                      style={{ minHeight: '2.25rem' }}
+                      className="booking-override-select"
                     >
                       <option value="">{t.selectRoomGroupLabel || 'Select room group'}</option>
                       {availableRoomGroupOptions.map((option) => (
@@ -4974,7 +4966,7 @@ class Admin extends Component {
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+                <div className="booking-override-add-row">
                   <input
                     type="text"
                     value={newRoomGroupOverrideKey}
@@ -4987,11 +4979,11 @@ class Admin extends Component {
                 </div>
 
                 {roomGroupOverrideEntries.length === 0 ? (
-                  <div className="admin-locked-message" style={{ marginBottom: '1rem' }}>
+                  <div className="admin-locked-message admin-mb-1">
                     <p>{t.noRoomGroupOverridesLabel || 'No room-group overrides configured.'}</p>
                   </div>
                 ) : roomGroupOverrideEntries.map(([groupKey, groupValue]) => (
-                  <div key={groupKey} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <div key={groupKey} className="booking-override-grid">
                     <input type="text" value={groupKey} readOnly />
                     <select
                       value={toOverrideState(groupValue?.enableBooking)}
@@ -5021,11 +5013,11 @@ class Admin extends Component {
                 <small>{t.roomFeatureFlagsHelp || 'Optional: Override booking/extend per room email.'}</small>
 
                 {availableRoomOptions.length > 0 && (
-                  <div style={{ marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+                  <div className="booking-override-select-wrapper">
                     <select
                       value={newRoomOverrideKey}
                       onChange={(e) => this.handleOverrideDraftChange('room', e.target.value)}
-                      style={{ minHeight: '2.25rem' }}
+                      className="booking-override-select"
                     >
                       <option value="">{t.selectRoomLabel || 'Select room'}</option>
                       {availableRoomOptions.map((option) => (
@@ -5035,7 +5027,7 @@ class Admin extends Component {
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+                <div className="booking-override-add-row">
                   <input
                     type="text"
                     value={newRoomOverrideKey}
@@ -5048,11 +5040,11 @@ class Admin extends Component {
                 </div>
 
                 {roomOverrideEntries.length === 0 ? (
-                  <div className="admin-locked-message" style={{ marginBottom: '1rem' }}>
+                  <div className="admin-locked-message admin-mb-1">
                     <p>{t.noRoomOverridesLabel || 'No room overrides configured.'}</p>
                   </div>
                 ) : roomOverrideEntries.map(([roomKey, roomValue]) => (
-                  <div key={roomKey} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <div key={roomKey} className="booking-override-grid">
                     <input type="text" value={roomKey} readOnly />
                     <select
                       value={toOverrideState(roomValue?.enableBooking)}
@@ -5078,7 +5070,7 @@ class Admin extends Component {
               </div>
 
               {(currentRoomFeatureFlags && Object.keys(currentRoomFeatureFlags).length > 0) || (currentRoomGroupFeatureFlags && Object.keys(currentRoomGroupFeatureFlags).length > 0) ? (
-                <div className="admin-current-config" style={{ marginBottom: '1.5rem' }}>
+                <div className="admin-current-config admin-mb-15">
                   <h3>{t.currentConfigTitle} - {t.overridePreviewLabel || 'Override Preview'}</h3>
                   <pre className="admin-json-pre">{JSON.stringify({ roomGroupFeatureFlags: currentRoomGroupFeatureFlags, roomFeatureFlags: currentRoomFeatureFlags }, null, 2)}</pre>
                 </div>
@@ -5150,9 +5142,9 @@ class Admin extends Component {
 
             <div className="admin-section">
               <h2>{t.addLanguageButtonLabel}</h2>
-              <div className="admin-form-group" style={{ marginBottom: 0 }}>
+              <div className="admin-form-group admin-mb-0">
                 <label htmlFor="newTranslationLanguageCode">{t.addLanguageButtonLabel}</label>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <div className="admin-flex-row">
                   <input
                     type="text"
                     id="newTranslationLanguageCode"
@@ -5170,10 +5162,10 @@ class Admin extends Component {
                 </div>
                 <small>{t.addLanguageHelp}</small>
                 {translationLanguageDraftError && (
-                  <small style={{ color: '#f87171' }}>{translationLanguageDraftError}</small>
+                  <small className="translation-error-text">{translationLanguageDraftError}</small>
                 )}
               </div>
-              <div className="admin-form-group" style={{ marginTop: '1rem', marginBottom: 0 }}>
+              <div className="admin-form-group admin-mt-1 admin-mb-0">
                 <label>{t.removeLanguageButtonLabel || 'Language removal'}</label>
                 <button
                   type="button"
@@ -5187,7 +5179,7 @@ class Admin extends Component {
               </div>
 
               {i18nMessage && (
-                <div className={`admin-message admin-message-${i18nMessageType || 'success'}`} style={{ marginTop: '1rem' }}>
+                <div className={`admin-message admin-message-${i18nMessageType || 'success'} admin-mt-1`}>
                   {i18nMessage}
                 </div>
               )}
@@ -5215,7 +5207,7 @@ class Admin extends Component {
               </div>
 
               <form onSubmit={this.handleI18nSubmit}>
-                <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }}>
+                <div className="admin-current-config admin-collapsible-config admin-mb-1">
                   <button
                     type="button"
                     className="admin-collapsible-header"
@@ -5239,7 +5231,7 @@ class Admin extends Component {
                           onChange={(e) => this.handleMaintenanceTranslationFieldChange(activeTranslationLanguage, 'title', e.target.value)}
                         />
                       </div>
-                      <div className="admin-form-group" style={{ marginBottom: 0 }}>
+                      <div className="admin-form-group admin-mb-0">
                         <label htmlFor="maintenanceBodyInput">{t.maintenanceBodyLabel}</label>
                         <textarea
                           id="maintenanceBodyInput"
@@ -5254,7 +5246,7 @@ class Admin extends Component {
                 </div>
 
                 {QUICK_ADMIN_TRANSLATION_GROUPS.map((group) => (
-                  <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }} key={group.labelKey}>
+                  <div className="admin-current-config admin-collapsible-config admin-mb-1" key={group.labelKey}>
                     <button
                       type="button"
                       className="admin-collapsible-header"
@@ -5278,7 +5270,7 @@ class Admin extends Component {
                   </div>
                 ))}
 
-                <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }}>
+                <div className="admin-current-config admin-collapsible-config admin-mb-1">
                   <button
                     type="button"
                     className="admin-collapsible-header"
@@ -5316,7 +5308,7 @@ class Admin extends Component {
                             />
                           </div>
 
-                          <div className="admin-form-group" style={{ marginBottom: 0 }}>
+                          <div className="admin-form-group admin-mb-0">
                             <label htmlFor="adminTranslationsText">{t.adminJsonLabel}</label>
                             <textarea
                               id="adminTranslationsText"
@@ -5621,71 +5613,36 @@ class Admin extends Component {
                 <div className="config-grid">
                   <div className="config-item">
                     <span className="config-label">{t.bookingButtonColorLabel}</span>
-                    <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ 
-                        display: 'inline-block', 
-                        width: '20px', 
-                        height: '20px', 
-                        backgroundColor: currentBookingButtonColor,
-                        border: '1px solid #ddd',
-                        borderRadius: '4px'
-                      }}></span>
+                    <span className="config-value color-value-display">
+                      <span className="color-swatch-inline" style={{ backgroundColor: currentBookingButtonColor }}></span>
                       {currentBookingButtonColor}
                     </span>
                   </div>
                   <div className="config-item">
                     <span className="config-label">{t.statusAvailableColorLabel}</span>
-                    <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ 
-                        display: 'inline-block', 
-                        width: '20px', 
-                        height: '20px', 
-                        backgroundColor: currentStatusAvailableColor,
-                        border: '1px solid #ddd',
-                        borderRadius: '4px'
-                      }}></span>
+                    <span className="config-value color-value-display">
+                      <span className="color-swatch-inline" style={{ backgroundColor: currentStatusAvailableColor }}></span>
                       {currentStatusAvailableColor}
                     </span>
                   </div>
                   <div className="config-item">
                     <span className="config-label">{t.statusBusyColorLabel}</span>
-                    <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ 
-                        display: 'inline-block', 
-                        width: '20px', 
-                        height: '20px', 
-                        backgroundColor: currentStatusBusyColor,
-                        border: '1px solid #ddd',
-                        borderRadius: '4px'
-                      }}></span>
+                    <span className="config-value color-value-display">
+                      <span className="color-swatch-inline" style={{ backgroundColor: currentStatusBusyColor }}></span>
                       {currentStatusBusyColor}
                     </span>
                   </div>
                   <div className="config-item">
                     <span className="config-label">{t.statusUpcomingColorLabel}</span>
-                    <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ 
-                        display: 'inline-block', 
-                        width: '20px', 
-                        height: '20px', 
-                        backgroundColor: currentStatusUpcomingColor,
-                        border: '1px solid #ddd',
-                        borderRadius: '4px'
-                      }}></span>
+                    <span className="config-value color-value-display">
+                      <span className="color-swatch-inline" style={{ backgroundColor: currentStatusUpcomingColor }}></span>
                       {currentStatusUpcomingColor}
                     </span>
                   </div>
                   <div className="config-item">
                     <span className="config-label">{t.statusNotFoundColorLabel}</span>
-                    <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ 
-                        display: 'inline-block', 
-                        width: '20px', 
-                        height: '20px', 
-                        backgroundColor: currentStatusNotFoundColor,
-                        border: '1px solid #ddd',
-                        borderRadius: '4px'
-                      }}></span>
+                    <span className="config-value color-value-display">
+                      <span className="color-swatch-inline" style={{ backgroundColor: currentStatusNotFoundColor }}></span>
                       {currentStatusNotFoundColor}
                     </span>
                   </div>

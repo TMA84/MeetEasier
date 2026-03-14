@@ -1,9 +1,0 @@
-{
-  "enabled": true,
-  "brokerUrl": "mqtt://localhost:1883",
-  "authentication": false,
-  "username": "meeteasier",
-  "password": "",
-  "discovery": "homeassistant",
-  "lastUpdated": "2026-03-12T16:37:41.399Z"
-}

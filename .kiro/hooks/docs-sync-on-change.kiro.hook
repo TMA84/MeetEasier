@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "name": "Sync Docs on Code Change",
+  "description": "Monitors JavaScript, SCSS, and configuration files for changes and prompts the agent to update relevant documentation in README.md or other documentation files",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.js",
+      "app/*.js",
+      "app/**/*.js",
+      "config/*.js",
+      "ui-react/src/**/*.js",
+      "ui-react/src/**/*.jsx",
+      "scss/*.scss",
+      "*.json",
+      "package.json",
+      "ui-react/package.json"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file was just modified. Review the changes and update the relevant documentation in README.md or other documentation files (like CONFIGURATION.md, INSTALLATION.md, etc.) to reflect any new features, changed behavior, or updated configuration options."
+  }
+}

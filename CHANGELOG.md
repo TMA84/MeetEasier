@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.16] - 2026-03-14
+
+### Added
+- Added `admin-message-info` SCSS style variant for informational messages (blue theme matching existing success/error/warning pattern)
+- Added `_connection-status.scss` with dedicated SCSS styles for the connection status overlay (offline/online states, mobile responsive)
+
+### Security
+- WiFi password encryption at rest: `saveWiFiConfig()` now stores `passwordEncrypted` (AES-256-GCM) instead of plaintext; `getWiFiConfig()` decrypts transparently
+- MQTT password encryption at rest: `updateMqttConfig()` now stores `passwordEncrypted` (AES-256-GCM) instead of plaintext; `getMqttConfig()` decrypts transparently
+- Automatic migration for both WiFi and MQTT: legacy plaintext passwords are encrypted on first read and plaintext field is removed from config files
+- Blocked SVG file uploads to prevent stored XSS via malicious SVG content
+- Added CSRF protection: cookie-based admin sessions now require `X-CSRF-Token` header on state-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`)
+- Frontend `adminApi.js` sends CSRF token from cookie with every mutating request
+- Removed `fonts.gstatic.com` from Content Security Policy `connect-src` directive
+
+### Fixed
+- Fixed duplicate `className` attribute on sync status banner causing `admin-mb-2` spacing class to be ignored
+
+### Changed
+- Refactored 309 inline styles to SCSS classes across all admin components
+  - TouchkioModal, DevicesTab, ColorsTab, BookingTab, TranslationsTab, DisplayTab, MqttTab, PowerManagementModal, BackupTab, AuditTab
+  - New SCSS sections in `_admin.scss`: Touchkio Modal, DevicesTab, ColorsTab, BookingTab, TranslationsTab, DisplayTab, MqttTab, utility classes
+- Migrated `index.css` (body/svg styles) into `_globals.scss`
+- Migrated `ConnectionStatus.css` into new `_connection-status.scss`
+- Removed all CSS file imports from React components — all styles now in SCSS pipeline
+
+### Fixed
+- TouchkioModal now has consistent width (950px / 95vw max) regardless of content
+
 ## [1.7.15] - 2026-03-13
 
 ### Fixed

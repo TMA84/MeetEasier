@@ -128,8 +128,8 @@ const MqttTab = ({
             <span className="config-label">{t.mqttStatusLabel || 'Status:'}</span>
             <span className="config-value">
               {mqttStatus?.running ? 
-                <span style={{ color: '#28a745' }}>{t.mqttStatusRunning || 'Running'}</span> : 
-                <span style={{ color: '#dc3545' }}>{t.mqttStatusStopped || 'Stopped'}</span>
+                <span className="mqtt-status-running">{t.mqttStatusRunning || 'Running'}</span> : 
+                <span className="mqtt-status-stopped">{t.mqttStatusStopped || 'Stopped'}</span>
               }
             </span>
           </div>

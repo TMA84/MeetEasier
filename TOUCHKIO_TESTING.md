@@ -247,20 +247,22 @@ Du solltest sehen:
 
 ### Status Topics (Touchkio → MeetEasier)
 
+**Hinweis:** MeetEasier unterstützt sowohl `/state` als auch `/status` Topic-Suffixe für maximale Kompatibilität mit verschiedenen Touchkio Firmware-Versionen.
+
 | Topic | Beschreibung | Beispiel |
 |-------|--------------|----------|
-| `homeassistant/light/touchkio_{hostname}/display/state` | Display Power & Brightness | `{"state":"ON","brightness":200}` |
-| `touchkio/rpi_{hostname}/kiosk/state` | Kiosk Mode | `Fullscreen` |
-| `touchkio/rpi_{hostname}/theme/state` | Theme | `Dark` |
-| `touchkio/rpi_{hostname}/volume/state` | Volume | `75` |
-| `touchkio/rpi_{hostname}/keyboard/state` | Keyboard Visibility | `OFF` |
-| `touchkio/rpi_{hostname}/page_zoom/state` | Page Zoom | `100` |
-| `touchkio/rpi_{hostname}/page_url/state` | Current URL | `http://...` |
-| `touchkio/rpi_{hostname}/processor_usage/state` | CPU Usage % | `45.5` |
-| `touchkio/rpi_{hostname}/memory_usage/state` | Memory Usage % | `62.3` |
-| `touchkio/rpi_{hostname}/processor_temperature/state` | Temperature °C | `58` |
-| `touchkio/rpi_{hostname}/network_address/state` | IP Address | `192.168.1.100` |
-| `touchkio/rpi_{hostname}/up_time/state` | Uptime (minutes) | `1440` |
+| `homeassistant/light/touchkio_{hostname}/display/state` (oder `/status`) | Display Power & Brightness | `{"state":"ON","brightness":200}` |
+| `touchkio/rpi_{hostname}/kiosk/state` (oder `/status`) | Kiosk Mode | `Fullscreen` |
+| `touchkio/rpi_{hostname}/theme/state` (oder `/status`) | Theme | `Dark` |
+| `touchkio/rpi_{hostname}/volume/state` (oder `/status`) | Volume | `75` |
+| `touchkio/rpi_{hostname}/keyboard/state` (oder `/status`) | Keyboard Visibility | `OFF` |
+| `touchkio/rpi_{hostname}/page_zoom/state` (oder `/status`) | Page Zoom | `100` |
+| `touchkio/rpi_{hostname}/page_url/state` (oder `/status`) | Current URL | `http://...` |
+| `touchkio/rpi_{hostname}/processor_usage/state` (oder `/status`) | CPU Usage % | `45.5` |
+| `touchkio/rpi_{hostname}/memory_usage/state` (oder `/status`) | Memory Usage % | `62.3` |
+| `touchkio/rpi_{hostname}/processor_temperature/state` (oder `/status`) | Temperature °C | `58` |
+| `touchkio/rpi_{hostname}/network_address/state` (oder `/status`) | IP Address | `192.168.1.100` |
+| `touchkio/rpi_{hostname}/up_time/state` (oder `/status`) | Uptime (minutes) | `1440` |
 
 ### Command Topics (MeetEasier → Touchkio)
 
