@@ -2102,7 +2102,9 @@ module.exports = function(app) {
 				rateLimitMaxBuckets,
 				displayTrackingMode,
 				displayTrackingRetentionHours,
-				displayTrackingCleanupMinutes
+				displayTrackingCleanupMinutes,
+				displayIpWhitelistEnabled,
+				displayIpWhitelist
 			} = req.body || {};
 
 			if (
@@ -2119,6 +2121,8 @@ module.exports = function(app) {
 				&& displayTrackingMode === undefined
 				&& displayTrackingRetentionHours === undefined
 				&& displayTrackingCleanupMinutes === undefined
+				&& displayIpWhitelistEnabled === undefined
+				&& displayIpWhitelist === undefined
 			) {
 				return res.status(400).json({ error: 'At least one system configuration option is required' });
 			}
@@ -2137,7 +2141,9 @@ module.exports = function(app) {
 				rateLimitMaxBuckets,
 				displayTrackingMode,
 				displayTrackingRetentionHours,
-				displayTrackingCleanupMinutes
+				displayTrackingCleanupMinutes,
+				displayIpWhitelistEnabled,
+				displayIpWhitelist
 			});
 
 			require('./socket-controller').refreshPollingSchedule();

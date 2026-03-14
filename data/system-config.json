@@ -11,8 +11,8 @@
   "rateLimitMaxBuckets": 10000,
   "displayTrackingMode": "ip-room",
   "displayTrackingRetentionHours": 2,
-  "displayTrackingCleanupMinutes": 5,
+  "displayTrackingCleanupMinutes": 6,
   "displayIpWhitelistEnabled": false,
   "displayIpWhitelist": [],
-  "lastUpdated": "2026-03-11T13:14:12.392Z"
+  "lastUpdated": "2026-03-14T20:10:13.054Z"
 }
