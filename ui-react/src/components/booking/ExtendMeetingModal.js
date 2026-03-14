@@ -92,6 +92,10 @@ class ExtendMeetingModal extends Component {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
+  		if (response.status === 403) {
+  		  if (data.error === 'ip_not_whitelisted') throw new Error(t.ipNotWhitelistedError);
+  		  if (data.error === 'origin_not_allowed') throw new Error(t.originNotAllowedError);
+  		}
   		throw new Error(data.error || data.message || t.endGenericError);
       }
 
@@ -137,6 +141,10 @@ class ExtendMeetingModal extends Component {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
+        if (response.status === 403) {
+          if (data.error === 'ip_not_whitelisted') throw new Error(t.ipNotWhitelistedError);
+          if (data.error === 'origin_not_allowed') throw new Error(t.originNotAllowedError);
+        }
         throw new Error(data.error || data.message || t.genericError);
       }
 

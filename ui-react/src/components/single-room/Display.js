@@ -9,7 +9,7 @@ import Spinner from '../global/Spinner';
 import BookingModal from '../booking/BookingModal';
 import ExtendMeetingModal from '../booking/ExtendMeetingModal';
 import { applyI18nConfig, getMaintenanceCopy, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';
-import { getSingleRoomDisplayTranslations } from '../../config/displayTranslations.js';
+import { getSingleRoomDisplayTranslations, getMeetingActionModalTranslations, getCheckInTranslations } from '../../config/displayTranslations.js';
 import { getDisplayClientId } from '../../utils/displayClientId.js';
 import { initPowerManagement } from '../../utils/powerManagement.js';
 import { getDeviceTypeString } from '../../utils/deviceDetection.js';
@@ -97,7 +97,7 @@ class Display extends Component {
         console.error('Error fetching rooms data:', err);
         this.setState({
           response: true,
-          room: { Name: 'Error loading room', Appointments: [] }
+          room: { Name: '', Appointments: [] }
         });
       });
   }
@@ -503,17 +503,24 @@ class Display extends Component {
       })
     })
       .then((response) => response.json().then((data) => ({ ok: response.ok, status: response.status, data })))
-      .then(({ ok, data }) => {
+      .then(({ ok, status, data }) => {
         if (!ok || !data?.success) {
-          throw new Error(data?.message || data?.error || 'Check-in failed');
+          const mt = getMeetingActionModalTranslations();
+          const ct = getCheckInTranslations();
+          if (status === 403) {
+            if (data?.error === 'ip_not_whitelisted') throw new Error(mt.ipNotWhitelistedError);
+            if (data?.error === 'origin_not_allowed') throw new Error(mt.originNotAllowedError);
+          }
+          throw new Error(data?.message || data?.error || ct.checkInFailed);
         }
 
         this.fetchCheckInStatus(room);
       })
       .catch((err) => {
+        const ct = getCheckInTranslations();
         this.setState({
           showErrorModal: true,
-          errorMessage: err.message || 'Check-in failed'
+          errorMessage: err.message || ct.checkInFailed
         });
       });
   }
@@ -557,6 +564,17 @@ class Display extends Component {
           // Refresh room data to show updated meeting end time
           setTimeout(() => this.getRoomsData(), 1000);
         } else {
+          const mt = getMeetingActionModalTranslations();
+          if (status === 403) {
+            if (data.error === 'ip_not_whitelisted') {
+              this.setState({ showErrorModal: true, errorMessage: mt.ipNotWhitelistedError });
+              return;
+            }
+            if (data.error === 'origin_not_allowed') {
+              this.setState({ showErrorModal: true, errorMessage: mt.originNotAllowedError });
+              return;
+            }
+          }
           const errorMsg = data.error || data.message || 'Failed to extend meeting';
           console.error('Failed to extend meeting:', errorMsg);
           console.log('Setting error modal state:', { showErrorModal: true, errorMessage: errorMsg });
@@ -570,9 +588,10 @@ class Display extends Component {
       })
       .catch(err => {
         console.error('Error extending meeting:', err);
+        const mt = getMeetingActionModalTranslations();
         this.setState({ 
           showErrorModal: true, 
-          errorMessage: 'Network error. Please try again.' 
+          errorMessage: mt.genericError
         });
       });
   }
@@ -643,7 +662,8 @@ class Display extends Component {
     
     const bookButtonText = displayTranslations.bookButtonText;
     const extendButtonText = displayTranslations.extendButtonText;
-    const checkInButtonText = 'Check-in';
+    const checkInTexts = getCheckInTranslations();
+    const checkInButtonText = checkInTexts.checkInButton;
     const extendDisabledTitle = displayTranslations.extendDisabledTitle;
     const errorText = displayTranslations.errorTitle;
     const maintenanceCopy = getMaintenanceCopy();
@@ -693,6 +713,8 @@ class Display extends Component {
               bookButtonText={bookButtonText}
               extendButtonText={extendButtonText}
               checkInButtonText={checkInButtonText}
+              checkInExpiredTitle={checkInTexts.checkInExpiredTitle}
+              checkInTooEarlyTitle={checkInTexts.checkInTooEarlyTitle}
               extendDisabledTitle={extendDisabledTitle}
             />
           </div>

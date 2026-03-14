@@ -355,7 +355,7 @@ function isInitialAdminTokenSetupRequired() {
 function isDisplayOriginAllowed(req) {
 	// Always allow if a valid admin or WiFi API token is provided
 	if (hasValidApiToken(req) || hasValidWiFiApiToken(req)) {
-		return true;
+		return { allowed: true };
 	}
 
 	// IP whitelist check (when enabled)
@@ -368,7 +368,7 @@ function isDisplayOriginAllowed(req) {
 			return normalizedClientIp === normalizedAllowed;
 		});
 		if (!isWhitelisted) {
-			return false;
+			return { allowed: false, reason: 'ip_not_whitelisted' };
 		}
 	}
 
@@ -378,10 +378,13 @@ function isDisplayOriginAllowed(req) {
 		try {
 			const originHost = new URL(origin).host;
 			const requestHost = req.headers['host'];
-			return originHost === requestHost;
+			if (originHost === requestHost) {
+				return { allowed: true };
+			}
 		} catch (_) {
-			return false;
+			// invalid origin
 		}
+		return { allowed: false, reason: 'origin_mismatch' };
 	}
 
 	// Fallback: check Referer header
@@ -390,14 +393,17 @@ function isDisplayOriginAllowed(req) {
 		try {
 			const refererHost = new URL(referer).host;
 			const requestHost = req.headers['host'];
-			return refererHost === requestHost;
+			if (refererHost === requestHost) {
+				return { allowed: true };
+			}
 		} catch (_) {
-			return false;
+			// invalid referer
 		}
+		return { allowed: false, reason: 'origin_mismatch' };
 	}
 
 	// No Origin, no Referer, no token → reject
-	return false;
+	return { allowed: false, reason: 'origin_mismatch' };
 }
 
 /**
@@ -1230,12 +1236,20 @@ module.exports = function(app) {
 
 	// Middleware: Validates request originates from application UI (same-origin) or carries valid API token
 	const checkDisplayOrigin = (req, res, next) => {
-		if (isDisplayOriginAllowed(req)) {
+		const result = isDisplayOriginAllowed(req);
+		if (result.allowed) {
 			return next();
 		}
 
+		if (result.reason === 'ip_not_whitelisted') {
+			return res.status(403).json({
+				error: 'ip_not_whitelisted',
+				message: 'Your device IP is not whitelisted. Contact your administrator to add this device.'
+			});
+		}
+
 		res.status(403).json({
-			error: 'Forbidden',
+			error: 'origin_not_allowed',
 			message: 'This endpoint is only accessible from the application UI or with a valid API token.'
 		});
 	};

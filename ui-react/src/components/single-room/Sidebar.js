@@ -287,7 +287,7 @@ class Sidebar extends Component {
                 className="sidebar-book-btn"
                 onClick={this.props.onCheckIn}
             disabled={!!this.props.checkInExpired || !!this.props.checkInTooEarly}
-                title={this.props.checkInExpired ? 'Check-in window expired' : (this.props.checkInTooEarly ? `Check-in available ${this.props.checkInEarlyMinutes || 5} minutes before start` : undefined)}
+                title={this.props.checkInExpired ? (this.props.checkInExpiredTitle || 'Check-in window expired') : (this.props.checkInTooEarly ? (this.props.checkInTooEarlyTitle || `Check-in available ${this.props.checkInEarlyMinutes || 5} minutes before start`).replace('{minutes}', this.props.checkInEarlyMinutes || 5) : undefined)}
               >
                 {this.props.checkInButtonText || 'Check-in'}
               </button>
