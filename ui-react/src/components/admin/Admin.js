@@ -349,6 +349,10 @@ class Admin extends Component {
       systemDisplayTrackingRetentionHours: 2,
       currentSystemDisplayTrackingCleanupMinutes: 5,
       systemDisplayTrackingCleanupMinutes: 5,
+      currentSystemDisplayIpWhitelistEnabled: false,
+      systemDisplayIpWhitelistEnabled: false,
+      currentSystemDisplayIpWhitelist: '',
+      systemDisplayIpWhitelist: '',
       systemLastUpdated: '',
       currentTranslationApiEnabled: true,
       translationApiEnabled: true,
@@ -1662,6 +1666,10 @@ class Admin extends Component {
           systemDisplayTrackingRetentionHours: parseInt(data.displayTrackingRetentionHours, 10) || 2,
           currentSystemDisplayTrackingCleanupMinutes: parseInt(data.displayTrackingCleanupMinutes, 10) || 5,
           systemDisplayTrackingCleanupMinutes: parseInt(data.displayTrackingCleanupMinutes, 10) || 5,
+          currentSystemDisplayIpWhitelistEnabled: !!data.displayIpWhitelistEnabled,
+          systemDisplayIpWhitelistEnabled: !!data.displayIpWhitelistEnabled,
+          currentSystemDisplayIpWhitelist: Array.isArray(data.displayIpWhitelist) ? data.displayIpWhitelist.join('\n') : '',
+          systemDisplayIpWhitelist: Array.isArray(data.displayIpWhitelist) ? data.displayIpWhitelist.join('\n') : '',
           systemLastUpdated: data.lastUpdated
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
             : '-'
@@ -2277,7 +2285,9 @@ class Admin extends Component {
       systemRateLimitMaxBuckets,
       systemDisplayTrackingMode,
       systemDisplayTrackingRetentionHours,
-      systemDisplayTrackingCleanupMinutes
+      systemDisplayTrackingCleanupMinutes,
+      systemDisplayIpWhitelistEnabled,
+      systemDisplayIpWhitelist
     } = this.state;
 
     const headers = {
@@ -2298,7 +2308,9 @@ class Admin extends Component {
         rateLimitMaxBuckets: Math.max(parseInt(systemRateLimitMaxBuckets, 10) || 1000, 1000),
         displayTrackingMode: systemDisplayTrackingMode,
         displayTrackingRetentionHours: Math.max(Math.min(parseInt(systemDisplayTrackingRetentionHours, 10) || 2, 168), 1),
-        displayTrackingCleanupMinutes: Math.max(Math.min(parseInt(systemDisplayTrackingCleanupMinutes, 10) || 5, 60), 0)
+        displayTrackingCleanupMinutes: Math.max(Math.min(parseInt(systemDisplayTrackingCleanupMinutes, 10) || 5, 60), 0),
+        displayIpWhitelistEnabled: !!systemDisplayIpWhitelistEnabled,
+        displayIpWhitelist: String(systemDisplayIpWhitelist || '').split('\n').map(s => s.trim()).filter(Boolean)
       })
     })
       .then(response => {
@@ -4011,6 +4023,8 @@ class Admin extends Component {
       currentSystemDisplayTrackingMode, systemDisplayTrackingMode,
       currentSystemDisplayTrackingRetentionHours, systemDisplayTrackingRetentionHours,
       currentSystemDisplayTrackingCleanupMinutes, systemDisplayTrackingCleanupMinutes,
+      currentSystemDisplayIpWhitelistEnabled, systemDisplayIpWhitelistEnabled,
+      currentSystemDisplayIpWhitelist, systemDisplayIpWhitelist,
       systemLastUpdated,
       currentTranslationApiEnabled, translationApiEnabled,
       currentTranslationApiUrl, translationApiUrl,
@@ -5564,6 +5578,12 @@ class Admin extends Component {
                   onTrackingModeChange={(value) => this.setState({ systemDisplayTrackingMode: value })}
                   onRetentionHoursChange={(value) => this.setState({ systemDisplayTrackingRetentionHours: value })}
                   onCleanupMinutesChange={(value) => this.setState({ systemDisplayTrackingCleanupMinutes: value })}
+                  systemDisplayIpWhitelistEnabled={systemDisplayIpWhitelistEnabled}
+                  currentSystemDisplayIpWhitelistEnabled={currentSystemDisplayIpWhitelistEnabled}
+                  systemDisplayIpWhitelist={systemDisplayIpWhitelist}
+                  currentSystemDisplayIpWhitelist={currentSystemDisplayIpWhitelist}
+                  onIpWhitelistEnabledChange={(value) => this.setState({ systemDisplayIpWhitelistEnabled: value })}
+                  onIpWhitelistChange={(value) => this.setState({ systemDisplayIpWhitelist: value })}
                   onSaveSettings={this.handleSystemSubmit}
                 />
               )}

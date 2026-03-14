@@ -346,14 +346,30 @@ function isInitialAdminTokenSetupRequired() {
 
 /**
  * Validates that a request originates from the application itself (same-origin)
- * or carries a valid API token. This protects display-facing endpoints
- * (booking, check-in, power-management) from external/scripted access
- * while allowing the embedded display UI to function normally.
+ * or carries a valid API token. When IP whitelisting is enabled, also checks
+ * the client IP against the configured whitelist.
+ * Protects display-facing endpoints (booking, check-in, power-management)
+ * from external/scripted access while allowing the embedded display UI
+ * to function normally.
  */
 function isDisplayOriginAllowed(req) {
 	// Always allow if a valid admin or WiFi API token is provided
 	if (hasValidApiToken(req) || hasValidWiFiApiToken(req)) {
 		return true;
+	}
+
+	// IP whitelist check (when enabled)
+	const systemConfig = configManager.getSystemConfig();
+	if (systemConfig.displayIpWhitelistEnabled && Array.isArray(systemConfig.displayIpWhitelist) && systemConfig.displayIpWhitelist.length > 0) {
+		const clientIp = getClientIp(req);
+		const normalizedClientIp = normalizeIpForWhitelist(clientIp);
+		const isWhitelisted = systemConfig.displayIpWhitelist.some(allowedIp => {
+			const normalizedAllowed = normalizeIpForWhitelist(allowedIp);
+			return normalizedClientIp === normalizedAllowed;
+		});
+		if (!isWhitelisted) {
+			return false;
+		}
 	}
 
 	// Check Origin header (set by browsers on POST/fetch requests)
@@ -382,6 +398,23 @@ function isDisplayOriginAllowed(req) {
 
 	// No Origin, no Referer, no token → reject
 	return false;
+}
+
+/**
+ * Normalize IP address for comparison (handles IPv4-mapped IPv6 like ::ffff:192.168.1.1)
+ */
+function normalizeIpForWhitelist(ip) {
+	if (!ip || typeof ip !== 'string') return '';
+	let normalized = ip.trim();
+	// Strip IPv4-mapped IPv6 prefix
+	if (normalized.startsWith('::ffff:')) {
+		normalized = normalized.substring(7);
+	}
+	// Normalize localhost variants
+	if (normalized === '::1' || normalized === '127.0.0.1' || normalized === 'localhost') {
+		return '127.0.0.1';
+	}
+	return normalized;
 }
 
 function getClientIp(req) {

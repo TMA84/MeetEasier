@@ -106,6 +106,17 @@ SEARCH_MAXITEMS=100
 API_TOKEN=your-secure-random-token-here
 ```
 
+#### Display IP Whitelist
+
+Restrict which IP addresses can access display-facing endpoints (room data, booking, check-in, etc.). When enabled, only requests from whitelisted IPs are allowed; all others receive a 403 Forbidden response.
+
+This is configured via the Admin Panel under **Operations → System** (Display IP Whitelist section). Two settings control this feature:
+
+- `displayIpWhitelistEnabled` (boolean, default: `false`) — Enable or disable the whitelist
+- `displayIpWhitelist` (array of IP strings) — List of allowed IP addresses (one per line in the admin UI)
+
+When disabled (default), all IPs can access display endpoints. IPv4 and IPv6 addresses are supported, and `::1` / `127.0.0.1` are normalized for consistent matching.
+
 If `API_TOKEN` is not set, MeetEasier starts without a static default token.
 Create the initial admin token on first login at `/admin`.
 For production, always set a secure custom token (or rotate it immediately via Admin panel).
@@ -455,6 +466,18 @@ data/
   "enableExtendMeeting": false,
   "extendMeetingUrlAllowlist": [],
   "lastUpdated": "2026-02-08T14:30:00.000Z"
+}
+```
+
+**system-config.json:**
+```json
+{
+  "displayIpWhitelistEnabled": false,
+  "displayIpWhitelist": [],
+  "displayTrackingMode": "client-id",
+  "displayTrackingRetentionHours": 2,
+  "displayTrackingCleanupMinutes": 5,
+  "lastUpdated": "2026-03-14T10:00:00.000Z"
 }
 ```
 

@@ -936,7 +936,9 @@ function normalizeSystemConfig(systemConfig, fallback = {}) {
 		rateLimitMaxBuckets: toMinInt(source.rateLimitMaxBuckets, toMinInt(fallback.rateLimitMaxBuckets, 10000, 1000), 1000),
 		displayTrackingMode: normalizeTrackingMode(source.displayTrackingMode, normalizeTrackingMode(fallback.displayTrackingMode, 'client-id')),
 		displayTrackingRetentionHours: toMinInt(source.displayTrackingRetentionHours, toMinInt(fallback.displayTrackingRetentionHours, 2, 1), 1),
-		displayTrackingCleanupMinutes: toMinInt(source.displayTrackingCleanupMinutes, toMinInt(fallback.displayTrackingCleanupMinutes, 5, 0), 0)
+		displayTrackingCleanupMinutes: toMinInt(source.displayTrackingCleanupMinutes, toMinInt(fallback.displayTrackingCleanupMinutes, 5, 0), 0),
+		displayIpWhitelistEnabled: toBoolean(source.displayIpWhitelistEnabled, toBoolean(fallback.displayIpWhitelistEnabled, false)),
+		displayIpWhitelist: parseWebhookIps(source.displayIpWhitelist, Array.isArray(fallback.displayIpWhitelist) ? fallback.displayIpWhitelist : [])
 	};
 }
 
@@ -954,7 +956,9 @@ function getSystemRuntimeConfig() {
 		rateLimitMaxBuckets: toMinInt(config.systemDefaults?.rateLimitMaxBuckets, 10000, 1000),
 		displayTrackingMode: 'client-id',
 		displayTrackingRetentionHours: 2,
-		displayTrackingCleanupMinutes: 5
+		displayTrackingCleanupMinutes: 5,
+		displayIpWhitelistEnabled: false,
+		displayIpWhitelist: []
 	};
 
 	const rawConfig = (() => {
@@ -997,6 +1001,8 @@ function getSystemConfig() {
 		displayTrackingMode: runtimeConfig.displayTrackingMode,
 		displayTrackingRetentionHours: runtimeConfig.displayTrackingRetentionHours,
 		displayTrackingCleanupMinutes: runtimeConfig.displayTrackingCleanupMinutes,
+		displayIpWhitelistEnabled: runtimeConfig.displayIpWhitelistEnabled,
+		displayIpWhitelist: runtimeConfig.displayIpWhitelist,
 		lastUpdated: runtimeConfig.lastUpdated
 	};
 }
@@ -1250,7 +1256,9 @@ function saveSystemConfig(systemConfig) {
 			rateLimitMaxBuckets: toMinInt(config.systemDefaults?.rateLimitMaxBuckets, 10000, 1000),
 			displayTrackingMode: 'client-id',
 			displayTrackingRetentionHours: 2,
-			displayTrackingCleanupMinutes: 5
+			displayTrackingCleanupMinutes: 5,
+			displayIpWhitelistEnabled: false,
+			displayIpWhitelist: []
 		})
 	);
 
@@ -1274,6 +1282,8 @@ function saveSystemConfig(systemConfig) {
 		displayTrackingMode: configData.displayTrackingMode,
 		displayTrackingRetentionHours: configData.displayTrackingRetentionHours,
 		displayTrackingCleanupMinutes: configData.displayTrackingCleanupMinutes,
+		displayIpWhitelistEnabled: configData.displayIpWhitelistEnabled,
+		displayIpWhitelist: configData.displayIpWhitelist,
 		lastUpdated: configData.lastUpdated
 	};
 }

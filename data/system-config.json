@@ -12,5 +12,7 @@
   "displayTrackingMode": "ip-room",
   "displayTrackingRetentionHours": 2,
   "displayTrackingCleanupMinutes": 5,
+  "displayIpWhitelistEnabled": false,
+  "displayIpWhitelist": [],
   "lastUpdated": "2026-03-11T13:14:12.392Z"
 }
