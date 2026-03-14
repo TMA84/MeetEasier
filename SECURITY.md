@@ -157,7 +157,13 @@ When deploying MeetEasier, please follow these security best practices:
    - Intended for guest network access only
    - Do not use for secure/internal networks
 
-3. **Admin Panel**:
+3. **Display-Facing Endpoints**:
+   - Booking, extend-meeting, end-meeting, and check-in endpoints are protected by an origin guard (`isDisplayOriginAllowed`)
+   - Requests must originate from the same host (validated via `Origin` or `Referer` header) or carry a valid API token
+   - External/scripted requests without a matching origin or token receive `403 Forbidden`
+   - This prevents abuse of display-facing write endpoints from outside the application UI
+
+4. **Admin Panel**:
    - Protected by API token (`API_TOKEN`)
    - No user authentication system (single shared token)
    - Token is sent in Authorization header or X-API-Token header
