@@ -115,7 +115,7 @@ app.use(helmet({
 			scriptSrc: ["'self'"],
 			styleSrc: ["'self'", "'unsafe-inline'"],
 			imgSrc: ["'self'", 'data:', 'https:', 'http:'],
-			connectSrc: ["'self'", 'ws:', 'wss:', 'https://fonts.gstatic.com'],
+			connectSrc: ["'self'", 'ws:', 'wss:'],
 			fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
 			objectSrc: ["'none'"],
 			frameAncestors: ["'none'"],

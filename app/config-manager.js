@@ -68,7 +68,44 @@ function setSocketIO(socketIO) {
 function getWiFiConfig() {
 	try {
 		const data = fs.readFileSync(configPath, 'utf8');
-		return JSON.parse(data);
+		const parsed = JSON.parse(data);
+
+		// Migration: decrypt passwordEncrypted if present
+		if (parsed.passwordEncrypted && typeof parsed.passwordEncrypted === 'object') {
+			const decrypted = decryptApiToken(parsed.passwordEncrypted);
+			parsed.password = decrypted || '';
+
+			// Migrate on read: remove legacy plaintext if still present
+			if (parsed.passwordEncrypted && !parsed.password_migrated) {
+				parsed.password_migrated = true;
+				try {
+					fs.writeFileSync(configPath, JSON.stringify({
+						ssid: parsed.ssid || '',
+						passwordEncrypted: parsed.passwordEncrypted,
+						password_migrated: true,
+						lastUpdated: parsed.lastUpdated
+					}, null, 2));
+				} catch (_) { /* best effort */ }
+			}
+		} else if (parsed.password) {
+			// Legacy plaintext password found — encrypt and save back
+			const encrypted = encryptApiToken(parsed.password);
+			const migrated = {
+				ssid: parsed.ssid || '',
+				passwordEncrypted: encrypted,
+				password_migrated: true,
+				lastUpdated: parsed.lastUpdated
+			};
+			try {
+				fs.writeFileSync(configPath, JSON.stringify(migrated, null, 2));
+			} catch (_) { /* best effort */ }
+		}
+
+		return {
+			ssid: parsed.ssid || '',
+			password: parsed.password || '',
+			lastUpdated: parsed.lastUpdated || null
+		};
 	} catch (err) {
 		// Return default config from environment variables if file doesn't exist
 		return {
@@ -1398,14 +1435,22 @@ function getColorsConfig() {
  * @returns {Object} Saved configuration with timestamp
  */
 function saveWiFiConfig(config) {
+	const plainPassword = config.password || '';
 	const configData = {
 		ssid: config.ssid || '',
-		password: config.password || '',
+		passwordEncrypted: plainPassword ? encryptApiToken(plainPassword) : null,
+		password_migrated: true,
 		lastUpdated: new Date().toISOString()
 	};
 	
 	fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
-	return configData;
+
+	// Return plaintext for callers (e.g. QR code generation)
+	return {
+		ssid: configData.ssid,
+		password: plainPassword,
+		lastUpdated: configData.lastUpdated
+	};
 }
 
 /**
@@ -2322,7 +2367,31 @@ const mqttConfigPath = path.join(__dirname, '../data/mqtt-config.json');
 function getMqttConfig() {
 	try {
 		const data = fs.readFileSync(mqttConfigPath, 'utf8');
-		return JSON.parse(data);
+		const parsed = JSON.parse(data);
+
+		// Migration: decrypt passwordEncrypted if present
+		if (parsed.passwordEncrypted && typeof parsed.passwordEncrypted === 'object') {
+			const decrypted = decryptApiToken(parsed.passwordEncrypted);
+			parsed.password = decrypted || '';
+		} else if (parsed.password) {
+			// Legacy plaintext password found — encrypt and save back
+			const encrypted = encryptApiToken(parsed.password);
+			const migrated = { ...parsed, passwordEncrypted: encrypted };
+			delete migrated.password;
+			try {
+				fs.writeFileSync(mqttConfigPath, JSON.stringify(migrated, null, 2));
+			} catch (_) { /* best effort */ }
+		}
+
+		return {
+			enabled: parsed.enabled || false,
+			brokerUrl: parsed.brokerUrl || 'mqtt://localhost:1883',
+			authentication: parsed.authentication || false,
+			username: parsed.username || 'meeteasier',
+			password: parsed.password || '',
+			discovery: parsed.discovery || 'homeassistant',
+			lastUpdated: parsed.lastUpdated || null
+		};
 	} catch (err) {
 		// Return default config if file doesn't exist
 		return {
@@ -2343,24 +2412,38 @@ function getMqttConfig() {
  */
 function updateMqttConfig(mqttConfig) {
 	try {
-		const config = {
+		const plainPassword = mqttConfig.password || '';
+		const configToStore = {
 			enabled: mqttConfig.enabled !== undefined ? mqttConfig.enabled : false,
 			brokerUrl: mqttConfig.brokerUrl || 'mqtt://localhost:1883',
 			authentication: mqttConfig.authentication !== undefined ? mqttConfig.authentication : false,
 			username: mqttConfig.username || 'meeteasier',
-			password: mqttConfig.password || '',
+			passwordEncrypted: plainPassword ? encryptApiToken(plainPassword) : null,
 			discovery: mqttConfig.discovery || 'homeassistant',
 			lastUpdated: new Date().toISOString()
 		};
 
-		fs.writeFileSync(mqttConfigPath, JSON.stringify(config, null, 2));
+		fs.writeFileSync(mqttConfigPath, JSON.stringify(configToStore, null, 2));
 
-		// Broadcast update via Socket.IO
+		// Return plaintext for callers (mqtt-client needs it)
+		const configResult = {
+			enabled: configToStore.enabled,
+			brokerUrl: configToStore.brokerUrl,
+			authentication: configToStore.authentication,
+			username: configToStore.username,
+			password: plainPassword,
+			discovery: configToStore.discovery,
+			lastUpdated: configToStore.lastUpdated
+		};
+
+		// Broadcast update via Socket.IO (without password)
 		if (io) {
-			io.emit('mqttConfigUpdated', config);
+			const safeConfig = { ...configResult };
+			delete safeConfig.password;
+			io.emit('mqttConfigUpdated', safeConfig);
 		}
 
-		return config;
+		return configResult;
 	} catch (error) {
 		console.error('[ConfigManager] Error updating MQTT config:', error);
 		throw error;

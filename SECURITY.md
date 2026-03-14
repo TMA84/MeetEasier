@@ -102,9 +102,9 @@ When deploying MeetEasier, please follow these security best practices:
 ### Data Protection
 
 1. **Sensitive Data**: 
-   - WiFi passwords are stored in configuration files
+   - WiFi passwords are encrypted at rest in `wifi-config.json` (stored as `passwordEncrypted`)
+   - Legacy plaintext passwords are automatically migrated to encrypted form on first read
    - Ensure proper file permissions on the server
-   - Consider encrypting configuration files at rest
 
 2. **Uploaded Files**:
    - Logo uploads are validated for file type and size
@@ -161,8 +161,16 @@ When deploying MeetEasier, please follow these security best practices:
    - Protected by API token (`API_TOKEN`)
    - No user authentication system (single shared token)
    - Token is sent in Authorization header or X-API-Token header
+   - CSRF protection for cookie-based admin sessions (see below)
    - Consider implementing proper user authentication for production
    - Restrict network access to admin panel via firewall rules
+
+4. **CSRF Protection**:
+   - State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) are protected against Cross-Site Request Forgery
+   - Cookie-based admin sessions require a matching CSRF token in the `X-CSRF-Token` header
+   - The CSRF token is stored in the `meeteasier_csrf` cookie and must be echoed back in the header
+   - Token-based authentication (`Authorization` or `X-API-Token` headers) is exempt from CSRF checks, as header-based auth is not vulnerable to CSRF attacks
+   - Requests failing CSRF validation receive a `403 Forbidden` response
 
 ## Security Updates
 

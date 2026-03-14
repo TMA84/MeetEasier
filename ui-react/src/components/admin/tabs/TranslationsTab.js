@@ -60,9 +60,9 @@ const TranslationsTab = ({
 
       <div className="admin-section">
         <h2>{t.addLanguageButtonLabel}</h2>
-        <div className="admin-form-group" style={{ marginBottom: 0 }}>
+        <div className="admin-form-group admin-mb-0">
           <label htmlFor="newTranslationLanguageCode">{t.addLanguageButtonLabel}</label>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <div className="admin-flex-row">
             <input
               type="text"
               id="newTranslationLanguageCode"
@@ -80,10 +80,10 @@ const TranslationsTab = ({
           </div>
           <small>{t.addLanguageHelp}</small>
           {translationLanguageDraftError && (
-            <small style={{ color: '#f87171' }}>{translationLanguageDraftError}</small>
+            <small className="translation-error-text">{translationLanguageDraftError}</small>
           )}
         </div>
-        <div className="admin-form-group" style={{ marginTop: '1rem', marginBottom: 0 }}>
+        <div className="admin-form-group admin-mt-1 admin-mb-0">
           <label>{t.removeLanguageButtonLabel || 'Language removal'}</label>
           <button
             type="button"
@@ -97,7 +97,7 @@ const TranslationsTab = ({
         </div>
 
         {i18nMessage && (
-          <div className={`admin-message admin-message-${i18nMessageType || 'success'}`} style={{ marginTop: '1rem' }}>
+          <div className={`admin-message admin-message-${i18nMessageType || 'success'} admin-mt-1`}>
             {i18nMessage}
           </div>
         )}
@@ -125,7 +125,7 @@ const TranslationsTab = ({
         </div>
 
         <form onSubmit={onSubmit}>
-          <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }}>
+          <div className="admin-current-config admin-collapsible-config admin-mb-1">
             <button
               type="button"
               className="admin-collapsible-header"
@@ -149,7 +149,7 @@ const TranslationsTab = ({
                     onChange={(e) => onMaintenanceTranslationFieldChange(activeTranslationLanguage, 'title', e.target.value)}
                   />
                 </div>
-                <div className="admin-form-group" style={{ marginBottom: 0 }}>
+                <div className="admin-form-group admin-mb-0">
                   <label htmlFor="maintenanceBodyInput">{t.maintenanceBodyLabel}</label>
                   <textarea
                     id="maintenanceBodyInput"
@@ -164,7 +164,7 @@ const TranslationsTab = ({
           </div>
 
           {quickAdminTranslationGroups.map((group) => (
-            <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }} key={group.labelKey}>
+            <div className="admin-current-config admin-collapsible-config admin-mb-1" key={group.labelKey}>
               <button
                 type="button"
                 className="admin-collapsible-header"
@@ -188,7 +188,7 @@ const TranslationsTab = ({
             </div>
           ))}
 
-          <div className="admin-current-config admin-collapsible-config" style={{ marginBottom: '1rem' }}>
+          <div className="admin-current-config admin-collapsible-config admin-mb-1">
             <button
               type="button"
               className="admin-collapsible-header"
@@ -226,7 +226,7 @@ const TranslationsTab = ({
                       />
                     </div>
 
-                    <div className="admin-form-group" style={{ marginBottom: 0 }}>
+                    <div className="admin-form-group admin-mb-0">
                       <label htmlFor="adminTranslationsText">{t.adminJsonLabel}</label>
                       <textarea
                         id="adminTranslationsText"

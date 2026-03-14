@@ -1,3 +1,4 @@
+// Connection Status Overlay
 .connection-status {
   position: fixed;
   bottom: 20px;
@@ -9,17 +10,29 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   font-size: 12px;
   font-weight: 500;
-  animation: fadeIn 0.3s ease-out;
+  animation: connectionFadeIn 0.3s ease-out;
   max-width: 280px;
   opacity: 0.85;
   transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &.offline {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fbbf24;
+  }
+
+  &.online {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #34d399;
+  }
 }
 
-.connection-status:hover {
-  opacity: 1;
-}
-
-@keyframes fadeIn {
+@keyframes connectionFadeIn {
   from {
     opacity: 0;
     transform: translateY(10px);
@@ -28,18 +41,6 @@
     opacity: 0.85;
     transform: translateY(0);
   }
-}
-
-.connection-status.offline {
-  background-color: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fbbf24;
-}
-
-.connection-status.online {
-  background-color: #d1fae5;
-  color: #065f46;
-  border: 1px solid #34d399;
 }
 
 .connection-status-content {
@@ -58,7 +59,7 @@
   font-size: 11px;
 }
 
-/* Mobile optimization */
+// Mobile optimization
 @media (max-width: 768px) {
   .connection-status {
     bottom: 10px;
@@ -66,7 +67,7 @@
     padding: 6px 10px;
     font-size: 11px;
   }
-  
+
   .connection-text {
     font-size: 10px;
   }

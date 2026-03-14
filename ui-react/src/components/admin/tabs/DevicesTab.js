@@ -1,7 +1,6 @@
 import React from 'react';
 
 const DevicesTab = ({
-  // Data
   connectedDisplays,
   connectedDisplaysLoading,
   connectedDisplaysMessage,
@@ -14,11 +13,7 @@ const DevicesTab = ({
   currentSystemDisplayTrackingCleanupMinutes,
   systemMessage,
   systemMessageType,
-  
-  // Translations
   t,
-  
-  // Handlers
   onLoadDisplays,
   onOpenPowerManagement,
   onOpenTouchkioModal,
@@ -36,62 +31,27 @@ const DevicesTab = ({
   return (
     <div className="admin-card" id="ops-connected-displays">
       <div className="admin-form-divider"></div>
-
       <h3>{t.connectedDisplaysSectionTitle || 'Connected Displays'}</h3>
       
-      {/* Action Buttons */}
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <button 
-          type="button" 
-          className="admin-secondary-button" 
-          onClick={onLoadDisplays}
-          disabled={connectedDisplaysLoading}
-        >
+      <div className="devices-action-bar">
+        <button type="button" className="admin-secondary-button" onClick={onLoadDisplays} disabled={connectedDisplaysLoading}>
           {connectedDisplaysLoading ? t.loading : (t.connectedDisplaysRefreshButton || 'Refresh')}
         </button>
-        <button 
-          type="button" 
-          className="admin-primary-button" 
-          onClick={() => onOpenPowerManagement('__global__')}
-        >
+        <button type="button" className="admin-primary-button" onClick={() => onOpenPowerManagement('__global__')}>
           {t.powerManagementGlobalButton || 'Global Standard'}
         </button>
-        <button 
-          type="button" 
-          className="admin-secondary-button" 
-          onClick={onMqttRefreshAll}
-          disabled={connectedDisplaysLoading || !hasMqttDisplays}
-          style={{ 
-            background: 'rgba(59, 130, 246, 0.2)',
-            borderColor: 'rgba(59, 130, 246, 0.5)',
-            color: '#3b82f6'
-          }}
-        >
+        <button type="button" className="admin-secondary-button devices-refresh-all-button" onClick={onMqttRefreshAll} disabled={connectedDisplaysLoading || !hasMqttDisplays}>
           Refresh All Touchkio
         </button>
-        <button 
-          type="button" 
-          className="admin-secondary-button" 
-          onClick={onMqttRebootAll}
-          disabled={connectedDisplaysLoading || !hasMqttDisplays}
-          style={{ 
-            background: 'rgba(251, 191, 36, 0.2)',
-            borderColor: 'rgba(251, 191, 36, 0.5)',
-            color: '#fbbf24'
-          }}
-        >
+        <button type="button" className="admin-secondary-button devices-reboot-all-button" onClick={onMqttRebootAll} disabled={connectedDisplaysLoading || !hasMqttDisplays}>
           Reboot All Touchkio
         </button>
       </div>
 
-      {/* Messages */}
       {connectedDisplaysMessage && (
-        <div className={`admin-message admin-message-${connectedDisplaysMessageType}`}>
-          {connectedDisplaysMessage}
-        </div>
+        <div className={`admin-message admin-message-${connectedDisplaysMessageType}`}>{connectedDisplaysMessage}</div>
       )}
 
-      {/* Displays Table */}
       {connectedDisplays.length === 0 ? (
         <div className="admin-locked-message">
           <p>{t.connectedDisplaysEmpty || 'No displays connected.'}</p>
@@ -114,223 +74,79 @@ const DevicesTab = ({
                 const hasSocketIO = display.socketIO && display.socketIO.connected;
                 const hasMQTT = display.mqtt && display.mqtt.connected;
                 
-                // Determine overall status
-                let status, statusColor, statusDotColor;
+                let status, statusDotColor;
                 
                 if (hasSocketIO && hasMQTT) {
                   const socketActive = display.socketIO.status === 'active';
-                  // If MQTT power is unsupported or not reported, fall back to Socket.IO status
                   const mqttPowerKnown = !display.mqtt.powerUnsupported && (display.mqtt.power === 'ON' || display.mqtt.power === 'OFF');
-                  
                   if (!mqttPowerKnown) {
-                    // MQTT doesn't report power - use Socket.IO status only
-                    if (socketActive) {
-                      status = 'Active';
-                      statusColor = '#86efac';
-                      statusDotColor = '#22c55e';
-                    } else {
-                      status = 'Inactive';
-                      statusColor = '#fcd34d';
-                      statusDotColor = '#f59e0b';
-                    }
+                    status = socketActive ? 'Active' : 'Inactive';
+                    statusDotColor = socketActive ? '#22c55e' : '#f59e0b';
                   } else {
-                    // MQTT reports power - check both
                     const mqttOn = display.mqtt.power === 'ON';
-                    if (socketActive && mqttOn) {
-                      status = 'Active';
-                      statusColor = '#86efac';
-                      statusDotColor = '#22c55e';
-                    } else {
-                      status = 'Partial';
-                      statusColor = '#fcd34d';
-                      statusDotColor = '#f59e0b';
-                    }
+                    if (socketActive && mqttOn) { status = 'Active'; statusDotColor = '#22c55e'; }
+                    else { status = 'Partial'; statusDotColor = '#f59e0b'; }
                   }
                 } else if (hasSocketIO) {
-                  if (display.socketIO.status === 'active') {
-                    status = 'Active';
-                    statusColor = '#86efac';
-                    statusDotColor = '#22c55e';
-                  } else {
-                    status = 'Inactive';
-                    statusColor = '#fcd34d';
-                    statusDotColor = '#f59e0b';
-                  }
+                  if (display.socketIO.status === 'active') { status = 'Active'; statusDotColor = '#22c55e'; }
+                  else { status = 'Inactive'; statusDotColor = '#f59e0b'; }
                 } else if (hasMQTT) {
-                  // Only show ON/OFF if MQTT actually reports power status
-                  if (display.mqtt.powerUnsupported) {
-                    status = 'Connected';
-                    statusColor = '#cbd5e1';
-                    statusDotColor = '#94a3b8';
-                  } else if (display.mqtt.power === 'ON') {
-                    status = 'ON';
-                    statusColor = '#86efac';
-                    statusDotColor = '#22c55e';
-                  } else if (display.mqtt.power === 'OFF') {
-                    status = 'OFF';
-                    statusColor = '#fca5a5';
-                    statusDotColor = '#ef4444';
-                  } else {
-                    // Power status unknown - show as connected but unknown
-                    status = 'Connected';
-                    statusColor = '#cbd5e1';
-                    statusDotColor = '#94a3b8';
-                  }
+                  if (display.mqtt.powerUnsupported) { status = 'Connected'; statusDotColor = '#94a3b8'; }
+                  else if (display.mqtt.power === 'ON') { status = 'ON'; statusDotColor = '#22c55e'; }
+                  else if (display.mqtt.power === 'OFF') { status = 'OFF'; statusDotColor = '#ef4444'; }
+                  else { status = 'Connected'; statusDotColor = '#94a3b8'; }
                 } else {
-                  status = 'Disconnected';
-                  statusColor = '#fca5a5';
-                  statusDotColor = '#ef4444';
-                }
-                
-                // Connection badges
-                const connectionBadges = [];
-                if (hasSocketIO) {
-                  connectionBadges.push(
-                    <span key="socket" style={{
-                      display: 'inline-block',
-                      padding: '0.125rem 0.5rem',
-                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                      color: '#3b82f6',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      marginRight: '0.25rem',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      Socket.IO
-                    </span>
-                  );
-                }
-                if (hasMQTT) {
-                  connectionBadges.push(
-                    <span key="mqtt" style={{
-                      display: 'inline-block',
-                      padding: '0.125rem 0.5rem',
-                      backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                      color: '#22c55e',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      MQTT
-                    </span>
-                  );
+                  status = 'Disconnected'; statusDotColor = '#ef4444';
                 }
                 
                 return (
                   <tr key={display.id}>
                     <td className="status-cell" style={{ textAlign: 'center', padding: '0.5rem' }}>
-                      <span 
-                        style={{
-                          display: 'inline-block',
-                          width: '10px',
-                          height: '10px',
-                          borderRadius: '50%',
-                          backgroundColor: statusDotColor,
-                        }}
-                        title={status}
-                      ></span>
+                      <span className="devices-status-dot" style={{ backgroundColor: statusDotColor }} title={status}></span>
                     </td>
-                    <td style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <td className="devices-name-cell">
                       <div>
-                        <strong style={{ fontSize: '0.875rem' }}>{display.name}</strong>
+                        <strong>{display.name}</strong>
                         {(display.mqtt?.deviceId || display.mqtt?.hostname) && (
-                          <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.125rem' }}>
-                            {display.mqtt?.deviceId || display.mqtt?.hostname}
-                          </div>
+                          <div className="devices-sub-info">{display.mqtt?.deviceId || display.mqtt?.hostname}</div>
                         )}
-                        {display.ipAddress && (
-                          <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.125rem' }}>
-                            {display.ipAddress}
-                          </div>
-                        )}
+                        {display.ipAddress && <div className="devices-sub-info">{display.ipAddress}</div>}
                       </div>
                     </td>
-                    <td style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {display.type === 'single-room' && display.mqtt?.room 
-                        ? `${display.mqtt.room}`
-                        : (display.type || 'unknown')
-                      }
+                    <td className="devices-type-cell">
+                      {display.type === 'single-room' && display.mqtt?.room ? display.mqtt.room : (display.type || 'unknown')}
                     </td>
-                    <td style={{ fontSize: '0.75rem' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
-                        {connectionBadges}
+                    <td>
+                      <div className="devices-connection-cell">
+                        {hasSocketIO && <span className="devices-badge devices-badge--socketio">Socket.IO</span>}
+                        {hasMQTT && <span className="devices-badge devices-badge--mqtt">MQTT</span>}
                       </div>
                     </td>
-                    <td style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    <td className="devices-metrics-cell">
                       {hasMQTT && (
-                        <div style={{ lineHeight: '1.3' }}>
+                        <div>
                           <div>CPU: {display.mqtt.cpuUsage !== undefined ? `${display.mqtt.cpuUsage.toFixed(1)}%` : '-'}</div>
                           <div>Mem: {display.mqtt.memoryUsage !== undefined ? `${display.mqtt.memoryUsage.toFixed(1)}%` : '-'}</div>
                           <div>Temp: {display.mqtt.temperature !== undefined ? `${display.mqtt.temperature.toFixed(1)}°C` : '-'}</div>
                         </div>
                       )}
                       {hasSocketIO && !hasMQTT && (
-                        <div style={{ fontSize: '0.7rem' }}>
+                        <div className="devices-timestamp">
                           {display.socketIO.connectedAt ? new Date(display.socketIO.connectedAt).toLocaleTimeString() : '-'}
                         </div>
                       )}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          className="admin-secondary-button"
-                          onClick={() => onOpenPowerManagement(display.id)}
-                          style={{
-                            padding: '0.375rem 0.5rem',
-                            fontSize: '0.875rem',
-                            minWidth: '32px',
-                            height: '32px'
-                          }}
-                          title="Power Management"
-                        >
-                          ⚡
-                        </button>
+                      <div className="devices-actions-cell">
+                        <button type="button" className="admin-secondary-button devices-icon-button" onClick={() => onOpenPowerManagement(display.id)} title="Power Management">⚡</button>
                         {hasMQTT && (
                           <>
-                            <button
-                              type="button"
-                              className="admin-secondary-button"
-                              onClick={() => onMqttRefresh(display.mqtt.hostname)}
-                              style={{
-                                padding: '0.375rem 0.5rem',
-                                fontSize: '0.875rem',
-                                minWidth: '32px',
-                                height: '32px'
-                              }}
-                              title="Refresh Page"
-                            >
-                              🔄
-                            </button>
-                            <button
-                              type="button"
-                              className="admin-primary-button"
-                              onClick={() => onOpenTouchkioModal(display)}
-                              style={{
-                                padding: '0.375rem 0.75rem',
-                                fontSize: '0.8rem',
-                                height: '32px'
-                              }}
-                            >
-                              Details
-                            </button>
+                            <button type="button" className="admin-secondary-button devices-icon-button" onClick={() => onMqttRefresh(display.mqtt.hostname)} title="Refresh Page">🔄</button>
+                            <button type="button" className="admin-primary-button devices-details-button" onClick={() => onOpenTouchkioModal(display)}>Details</button>
                           </>
                         )}
                         {!hasSocketIO && !hasMQTT && (
-                          <button
-                            type="button"
-                            className="admin-secondary-button"
-                            onClick={() => onDeleteDisplay(display.id)}
-                            style={{
-                              padding: '0.375rem 0.5rem',
-                              fontSize: '0.8rem',
-                              backgroundColor: '#ef4444',
-                              color: 'white',
-                              height: '32px'
-                            }}
-                          >
-                            Delete
-                          </button>
+                          <button type="button" className="admin-secondary-button devices-delete-button" onClick={() => onDeleteDisplay(display.id)}>Delete</button>
                         )}
                       </div>
                     </td>
@@ -342,32 +158,18 @@ const DevicesTab = ({
         </div>
       )}
 
-      {/* Tracking Settings */}
       <div className="admin-form-divider"></div>
-
       <h3>{t.systemDisplayTrackingSectionTitle || 'Tracking Settings'}</h3>
       
       <div className="admin-form-group">
         <label htmlFor="systemDisplayTrackingMode">{t.systemDisplayTrackingModeLabel || 'Tracking Mode'}</label>
         <div className="admin-radio-group">
           <label className="admin-radio-label">
-            <input
-              type="radio"
-              name="systemDisplayTrackingMode"
-              value="client-id"
-              checked={systemDisplayTrackingMode === 'client-id'}
-              onChange={(e) => onTrackingModeChange(e.target.value)}
-            />
+            <input type="radio" name="systemDisplayTrackingMode" value="client-id" checked={systemDisplayTrackingMode === 'client-id'} onChange={(e) => onTrackingModeChange(e.target.value)} />
             <span>{t.systemDisplayTrackingModeClientId || 'Client ID (each browser tab separately)'}</span>
           </label>
           <label className="admin-radio-label">
-            <input
-              type="radio"
-              name="systemDisplayTrackingMode"
-              value="ip-room"
-              checked={systemDisplayTrackingMode === 'ip-room'}
-              onChange={(e) => onTrackingModeChange(e.target.value)}
-            />
+            <input type="radio" name="systemDisplayTrackingMode" value="ip-room" checked={systemDisplayTrackingMode === 'ip-room'} onChange={(e) => onTrackingModeChange(e.target.value)} />
             <span>{t.systemDisplayTrackingModeIpRoom || 'IP + Room (one entry per physical display)'}</span>
           </label>
         </div>
@@ -376,27 +178,13 @@ const DevicesTab = ({
 
       <div className="admin-form-group">
         <label htmlFor="systemDisplayTrackingRetentionHours">{t.systemDisplayTrackingRetentionLabel || 'Retention Time (hours)'}</label>
-        <input
-          type="number"
-          id="systemDisplayTrackingRetentionHours"
-          value={systemDisplayTrackingRetentionHours}
-          onChange={(e) => onRetentionHoursChange(e.target.value)}
-          min="1"
-          max="168"
-        />
+        <input type="number" id="systemDisplayTrackingRetentionHours" value={systemDisplayTrackingRetentionHours} onChange={(e) => onRetentionHoursChange(e.target.value)} min="1" max="168" />
         <small className="admin-help-text">{t.systemDisplayTrackingRetentionHelp || 'How long disconnected displays remain visible (1-168 hours)'}</small>
       </div>
 
       <div className="admin-form-group">
         <label htmlFor="systemDisplayTrackingCleanupMinutes">{t.systemDisplayTrackingCleanupLabel || 'Cleanup Delay (minutes)'}</label>
-        <input
-          type="number"
-          id="systemDisplayTrackingCleanupMinutes"
-          value={systemDisplayTrackingCleanupMinutes}
-          onChange={(e) => onCleanupMinutesChange(e.target.value)}
-          min="0"
-          max="60"
-        />
+        <input type="number" id="systemDisplayTrackingCleanupMinutes" value={systemDisplayTrackingCleanupMinutes} onChange={(e) => onCleanupMinutesChange(e.target.value)} min="0" max="60" />
         <small className="admin-help-text">{t.systemDisplayTrackingCleanupHelp || 'Wait time after disconnect before automatic cleanup (0-60 minutes)'}</small>
       </div>
 
@@ -414,9 +202,7 @@ const DevicesTab = ({
       </button>
 
       {systemMessage && (
-        <div className={`admin-message admin-message-${systemMessageType}`}>
-          {systemMessage}
-        </div>
+        <div className={`admin-message admin-message-${systemMessageType}`}>{systemMessage}</div>
       )}
     </div>
   );

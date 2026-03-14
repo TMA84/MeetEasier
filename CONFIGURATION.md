@@ -420,10 +420,13 @@ data/
 ```json
 {
   "ssid": "Guest WiFi",
-  "password": "SecurePassword123",
+  "passwordEncrypted": { "iv": "...", "data": "..." },
+  "password_migrated": true,
   "lastUpdated": "2026-02-08T14:30:00.000Z"
 }
 ```
+
+> **Note:** WiFi passwords are encrypted at rest. Legacy plaintext `password` fields are automatically migrated to `passwordEncrypted` on first read. The API continues to return the decrypted password in its response for display purposes (e.g., QR code generation).
 
 **logo-config.json:**
 ```json
@@ -795,6 +798,10 @@ MeetEasier provides REST API endpoints for programmatic configuration. All admin
 All admin API endpoints require the `API_TOKEN` to be sent in one of these headers:
 - `Authorization: Bearer YOUR_API_TOKEN`
 - `X-API-Token: YOUR_API_TOKEN`
+
+**CSRF Protection:**
+
+State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) using cookie-based admin sessions require a valid CSRF token. The `meeteasier_csrf` cookie value must be sent in the `X-CSRF-Token` request header. This does not apply when using header-based authentication (`Authorization` or `X-API-Token`), which is the standard approach for API scripts and external integrations.
 
 **Example:**
 ```bash

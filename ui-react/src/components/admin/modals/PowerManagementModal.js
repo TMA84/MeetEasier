@@ -139,7 +139,7 @@ const PowerManagementModal = ({
                   type="time"
                   value={startTime}
                   onChange={(e) => onStartTimeChange(e.target.value)}
-                  style={{ width: '150px' }}
+                  className="display-time-input"
                 />
                 <small>Time when display turns off (e.g., 20:00)</small>
               </div>
@@ -151,7 +151,7 @@ const PowerManagementModal = ({
                   type="time"
                   value={endTime}
                   onChange={(e) => onEndTimeChange(e.target.value)}
-                  style={{ width: '150px' }}
+                  className="display-time-input"
                 />
                 <small>Time when display turns on (e.g., 07:00)</small>
               </div>

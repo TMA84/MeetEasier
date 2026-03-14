@@ -4,17 +4,32 @@
  */
 
 /**
+ * Get CSRF token from cookie
+ * @returns {string} CSRF token or empty string
+ */
+const getCsrfToken = () => {
+  const match = document.cookie.match(/(?:^|;\s*)meeteasier_csrf=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : '';
+};
+
+/**
  * Create headers with authorization token
  * @param {string} apiToken - API token
  * @param {boolean} includeContentType - Whether to include Content-Type header
  * @returns {Object} Headers object
  */
 const createHeaders = (apiToken, includeContentType = true) => {
-  const headers = {
-    'Authorization': `Bearer ${apiToken}`
-  };
+  const headers = {};
+  if (apiToken) {
+    headers['Authorization'] = `Bearer ${apiToken}`;
+  }
   if (includeContentType) {
     headers['Content-Type'] = 'application/json';
+  }
+  // Always include CSRF token for cookie-based auth fallback
+  const csrfToken = getCsrfToken();
+  if (csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken;
   }
   return headers;
 };

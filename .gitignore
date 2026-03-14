@@ -57,6 +57,8 @@ _OLD_TODO.md
 /data/wifi-config.json
 /data/.api-token-key
 /data/maintenance-config.json
+/data/mqtt-config.json
+/data/power-management-config.json
 # Generated runtime assets
 /static/img/wifi-qr.png
 
@@ -81,3 +83,6 @@ docker-compose.override.yml
 # Shrinkwrap (optional - some prefer to commit this)
 # npm-shrinkwrap.json
 data/maintenance-config.json
+
+# External Touchkio repository (submodule/clone)
+/touchkio/

@@ -2,8 +2,6 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
-import './index.css';
-
 import FlightboardLayout from './layouts/FlightboardLayout';
 import SingleRoomLayout from './layouts/SingleRoomLayout';
 import WiFiInfoLayout from './layouts/WiFiInfoLayout';

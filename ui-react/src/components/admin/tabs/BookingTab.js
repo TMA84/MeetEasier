@@ -48,7 +48,7 @@ const BookingTab = ({
           <h2>{t.bookingSectionTitle}</h2>
           
           {bookingPermissionMissing && (
-            <div className="admin-message admin-message-warning" style={{ marginBottom: '1rem' }}>
+            <div className="admin-message admin-message-warning admin-mb-1">
               <div>
                 <strong>Permission Missing:</strong> Calendars.ReadWrite permission is not granted in Azure AD. 
                 The booking feature is automatically disabled. Please grant this permission to enable room booking.
@@ -89,22 +89,15 @@ const BookingTab = ({
               </div>
               <div className="config-item">
                 <span className="config-label">{t.bookingButtonColorLabel}</span>
-                <span className="config-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ 
-                    display: 'inline-block', 
-                    width: '20px', 
-                    height: '20px', 
-                    backgroundColor: currentBookingButtonColor,
-                    border: '1px solid #ddd',
-                    borderRadius: '4px'
-                  }}></span>
+                <span className="config-value color-value-display">
+                  <span className="color-swatch-inline" style={{ backgroundColor: currentBookingButtonColor }}></span>
                   {currentBookingButtonColor}
                 </span>
               </div>
               {bookingPermissionMissing && (
                 <div className="config-item">
                   <span className="config-label">Status</span>
-                  <span className="config-value" style={{ color: '#f59e0b' }}>Disabled (Permission Missing)</span>
+                  <span className="config-value booking-permission-status">Disabled (Permission Missing)</span>
                 </div>
               )}
               <div className="config-item">
@@ -216,11 +209,11 @@ const BookingTab = ({
               <small>{t.roomGroupFeatureFlagsHelp || 'Optional: Override booking/extend per room group alias (e.g. roomlist-building-a).'}</small>
 
               {availableRoomGroupOptions.length > 0 && (
-                <div style={{ marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+                <div className="booking-override-select-wrapper">
                   <select
                     value={newRoomGroupOverrideKey}
                     onChange={(e) => onOverrideDraftChange('group', e.target.value)}
-                    style={{ minHeight: '2.25rem' }}
+                    className="booking-override-select"
                   >
                     <option value="">{t.selectRoomGroupLabel || 'Select room group'}</option>
                     {availableRoomGroupOptions.map((option) => (
@@ -230,7 +223,7 @@ const BookingTab = ({
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+              <div className="booking-override-add-row">
                 <input
                   type="text"
                   value={newRoomGroupOverrideKey}
@@ -243,11 +236,11 @@ const BookingTab = ({
               </div>
 
               {roomGroupOverrideEntries.length === 0 ? (
-                <div className="admin-locked-message" style={{ marginBottom: '1rem' }}>
+                <div className="admin-locked-message admin-mb-1">
                   <p>{t.noRoomGroupOverridesLabel || 'No room-group overrides configured.'}</p>
                 </div>
               ) : roomGroupOverrideEntries.map(([groupKey, groupValue]) => (
-                <div key={groupKey} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div key={groupKey} className="booking-override-grid">
                   <input type="text" value={groupKey} readOnly />
                   <select
                     value={toOverrideState(groupValue?.enableBooking)}
@@ -277,11 +270,11 @@ const BookingTab = ({
               <small>{t.roomFeatureFlagsHelp || 'Optional: Override booking/extend per room email.'}</small>
 
               {availableRoomOptions.length > 0 && (
-                <div style={{ marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+                <div className="booking-override-select-wrapper">
                   <select
                     value={newRoomOverrideKey}
                     onChange={(e) => onOverrideDraftChange('room', e.target.value)}
-                    style={{ minHeight: '2.25rem' }}
+                    className="booking-override-select"
                   >
                     <option value="">{t.selectRoomLabel || 'Select room'}</option>
                     {availableRoomOptions.map((option) => (
@@ -291,7 +284,7 @@ const BookingTab = ({
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+              <div className="booking-override-add-row">
                 <input
                   type="text"
                   value={newRoomOverrideKey}
@@ -304,11 +297,11 @@ const BookingTab = ({
               </div>
 
               {roomOverrideEntries.length === 0 ? (
-                <div className="admin-locked-message" style={{ marginBottom: '1rem' }}>
+                <div className="admin-locked-message admin-mb-1">
                   <p>{t.noRoomOverridesLabel || 'No room overrides configured.'}</p>
                 </div>
               ) : roomOverrideEntries.map(([roomKey, roomValue]) => (
-                <div key={roomKey} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div key={roomKey} className="booking-override-grid">
                   <input type="text" value={roomKey} readOnly />
                   <select
                     value={toOverrideState(roomValue?.enableBooking)}
@@ -334,7 +327,7 @@ const BookingTab = ({
             </div>
 
             {(currentRoomFeatureFlags && Object.keys(currentRoomFeatureFlags).length > 0) || (currentRoomGroupFeatureFlags && Object.keys(currentRoomGroupFeatureFlags).length > 0) ? (
-              <div className="admin-current-config" style={{ marginBottom: '1.5rem' }}>
+              <div className="admin-current-config admin-mb-15">
                 <h3>{t.currentConfigTitle} - {t.overridePreviewLabel || 'Override Preview'}</h3>
                 <pre className="admin-json-pre">{JSON.stringify({ roomGroupFeatureFlags: currentRoomGroupFeatureFlags, roomFeatureFlags: currentRoomFeatureFlags }, null, 2)}</pre>
               </div>
