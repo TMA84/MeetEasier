@@ -1,6 +1,6 @@
 {
   "name": "meet-easier",
-  "version": "1.7.27",
+  "version": "1.7.28",
   "main": "server.js",
   "engines": {
     "node": ">=18.0.0",
