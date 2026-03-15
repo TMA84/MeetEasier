@@ -61,6 +61,10 @@ function setSocketIO(socketIO) {
 	io = socketIO;
 }
 
+function getSocketIO() {
+	return io;
+}
+
 /**
  * Read WiFi configuration from file or return defaults
  * @returns {Object} WiFi configuration with ssid, password, and lastUpdated
@@ -938,7 +942,8 @@ function normalizeSystemConfig(systemConfig, fallback = {}) {
 		displayTrackingRetentionHours: toMinInt(source.displayTrackingRetentionHours, toMinInt(fallback.displayTrackingRetentionHours, 2, 1), 1),
 		displayTrackingCleanupMinutes: toMinInt(source.displayTrackingCleanupMinutes, toMinInt(fallback.displayTrackingCleanupMinutes, 5, 0), 0),
 		displayIpWhitelistEnabled: toBoolean(source.displayIpWhitelistEnabled, toBoolean(fallback.displayIpWhitelistEnabled, false)),
-		displayIpWhitelist: parseWebhookIps(source.displayIpWhitelist, Array.isArray(fallback.displayIpWhitelist) ? fallback.displayIpWhitelist : [])
+		displayIpWhitelist: parseWebhookIps(source.displayIpWhitelist, Array.isArray(fallback.displayIpWhitelist) ? fallback.displayIpWhitelist : []),
+		demoMode: toBoolean(source.demoMode, toBoolean(fallback.demoMode, false))
 	};
 }
 
@@ -987,6 +992,29 @@ function getSystemRuntimeConfig() {
 
 function getSystemConfig() {
 	const runtimeConfig = getSystemRuntimeConfig();
+
+	// Demo mode is tied to OAuth status:
+	// - No OAuth configured → demo mode ON (regardless of saved value)
+	// - OAuth configured → demo mode OFF (regardless of saved value)
+	const oauthConfigured = (() => {
+		// Check env-based OAuth
+		const clientId = String(config?.msalConfig?.auth?.clientId || '').trim();
+		const authority = String(config?.msalConfig?.auth?.authority || '').trim();
+		const clientSecret = String(config?.msalConfig?.auth?.clientSecret || '').trim();
+		if (clientId && clientId !== 'OAUTH_CLIENT_ID_NOT_SET'
+			&& authority && authority !== 'OAUTH_AUTHORITY_NOT_SET'
+			&& clientSecret && clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET') {
+			return true;
+		}
+		// Check file-based OAuth
+		const oauthConfig = getOAuthRuntimeConfig();
+		const fileClientId = String(oauthConfig.clientId || '').trim();
+		const fileAuthority = String(oauthConfig.authority || '').trim();
+		return !!(fileClientId && fileClientId !== 'OAUTH_CLIENT_ID_NOT_SET'
+			&& fileAuthority && fileAuthority !== 'OAUTH_AUTHORITY_NOT_SET'
+			&& oauthConfig.hasClientSecret);
+	})();
+
 	return {
 		startupValidationStrict: runtimeConfig.startupValidationStrict,
 		graphWebhookEnabled: runtimeConfig.graphWebhookEnabled,
@@ -1003,6 +1031,7 @@ function getSystemConfig() {
 		displayTrackingCleanupMinutes: runtimeConfig.displayTrackingCleanupMinutes,
 		displayIpWhitelistEnabled: runtimeConfig.displayIpWhitelistEnabled,
 		displayIpWhitelist: runtimeConfig.displayIpWhitelist,
+		demoMode: !oauthConfigured,
 		lastUpdated: runtimeConfig.lastUpdated
 	};
 }
@@ -1284,6 +1313,7 @@ function saveSystemConfig(systemConfig) {
 		displayTrackingCleanupMinutes: configData.displayTrackingCleanupMinutes,
 		displayIpWhitelistEnabled: configData.displayIpWhitelistEnabled,
 		displayIpWhitelist: configData.displayIpWhitelist,
+		demoMode: configData.demoMode,
 		lastUpdated: configData.lastUpdated
 	};
 }
@@ -2323,6 +2353,7 @@ function deletePowerManagementConfig(clientId) {
 
 module.exports = {
 	setSocketIO,
+	getSocketIO,
 	getWiFiConfig,
 	getLogoConfig,
 	getSidebarConfig,

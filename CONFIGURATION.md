@@ -22,6 +22,8 @@ All environment variables are configured in the `.env` file in the root director
 
 #### Microsoft Graph API Authentication
 
+> **Tip:** All three OAuth variables are optional. When omitted, MeetEasier starts in **Demo Mode** with 8 sample rooms and dynamically generated meetings. See the [README](README.md#demo-mode) for details.
+
 ```env
 # Application (client) ID from Azure AD app registration
 OAUTH_CLIENT_ID=12345678-1234-1234-1234-123456789abc

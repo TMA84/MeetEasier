@@ -85,12 +85,25 @@ For detailed version history and changelog, see [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
+## Demo Mode
+
+MeetEasier includes a built-in demo data generator that activates automatically when no Microsoft Graph API credentials are configured. This lets you explore the full UI — flightboard, single-room displays, booking, and admin panel — without an Azure AD setup.
+
+- 8 demo rooms across 3 floors (Headquarters, 2nd Floor, 3rd Floor)
+- Meetings are dynamically generated relative to the current time (mix of busy, upcoming, and free rooms)
+- Booking, extend, end-meeting, and check-in actions work against the in-memory demo data
+- Demo data resets on server restart
+
+Demo mode activates automatically when no Microsoft Graph API credentials are configured. You can also toggle it manually via the Admin Panel under **Devices → Demo Mode**, which persists the setting in the system configuration. If demo mode is enabled but valid OAuth credentials are detected (either via environment variables or the Admin Panel's OAuth configuration), demo mode is automatically disabled to prevent demo data from running alongside a real Microsoft Graph connection.
+
+---
+
 ## Requirements
 
 This application requires:
 
 - **Node.js 20+** and **npm 9+**
-- Microsoft Graph API (Microsoft 365)
+- Microsoft Graph API (Microsoft 365) — *or use [Demo Mode](#demo-mode) without any API credentials*
 - Conference room mailboxes organized in room lists
 - A registered application in Azure AD (see [here](#setup-the-application-in-microsoft-365) for more information)
 - A web server to run the application
@@ -278,6 +291,7 @@ For production, prefer setting a secure token via environment/secrets manager.
 - `app/` : Routes for MSGRAPH and EWS APIs
 - `app/ews/` : All EWS functionality (deprecated)
 - `app/msgraph/` : All Microsoft Graph functionality with pagination support
+- `app/demo-data.js` : Demo data generator (rooms & meetings without Graph API)
 - `app/wifi-manager.js` : WiFi configuration and QR code management
 - `app/socket-controller.js` : Real-time updates via Socket.IO
 - `config/` : All server side configuration settings
