@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.29] - 2026-03-15
+
+### Fixed
+- Modal refresh after MQTT commands now reloads unified `connectedDisplays` list and matches by `deviceId` — fixes stale data and wrong device shown after power, kiosk, theme, and URL commands
+- `onRefreshDisplay` callback in TouchkioModal now correctly calls `handleLoadConnectedDisplays()` instead of non-existent `handleLoadDisplays()`
+- `handleLoadConnectedDisplays` now returns the fetch Promise — enables proper `await` in modal command handlers
+- All modal command handlers (power, kiosk, theme, URL) search by `deviceId` with hostname fallback — prevents cross-device data leaks when devices share the same hostname
+- Optimistic UI updates for power, theme, kiosk, and URL commands — modal immediately shows expected state instead of briefly flashing "UNSUPPORTED" or stale data while waiting for server refresh
+
 ## [1.7.28] - 2026-03-15
 
 ### Fixed

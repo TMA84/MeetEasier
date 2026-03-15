@@ -79,7 +79,7 @@ In the event of wanting to commercially distribute a closed source modification 
 
 ## Version
 
-**Current Version:** 1.7.15
+**Current Version:** 1.7.29
 
 For detailed version history and changelog, see [CHANGELOG.md](CHANGELOG.md).
 
