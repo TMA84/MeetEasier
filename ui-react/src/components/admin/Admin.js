@@ -398,6 +398,8 @@ class Admin extends Component {
       systemDisplayIpWhitelistEnabled: false,
       currentSystemDisplayIpWhitelist: '',
       systemDisplayIpWhitelist: '',
+      currentDemoMode: false,
+      demoMode: false,
       systemLastUpdated: '',
       currentTranslationApiEnabled: true,
       translationApiEnabled: true,
@@ -1716,6 +1718,8 @@ class Admin extends Component {
           systemDisplayIpWhitelistEnabled: !!data.displayIpWhitelistEnabled,
           currentSystemDisplayIpWhitelist: Array.isArray(data.displayIpWhitelist) ? data.displayIpWhitelist.join('\n') : '',
           systemDisplayIpWhitelist: Array.isArray(data.displayIpWhitelist) ? data.displayIpWhitelist.join('\n') : '',
+          currentDemoMode: !!data.demoMode,
+          demoMode: !!data.demoMode,
           systemLastUpdated: data.lastUpdated
             ? new Date(data.lastUpdated).toLocaleString(navigator.language || 'de-DE')
             : '-'
@@ -2299,7 +2303,8 @@ class Admin extends Component {
       systemDisplayTrackingRetentionHours,
       systemDisplayTrackingCleanupMinutes,
       systemDisplayIpWhitelistEnabled,
-      systemDisplayIpWhitelist
+      systemDisplayIpWhitelist,
+      demoMode
     } = this.state;
 
     const headers = this.getRequestHeaders();
@@ -2316,7 +2321,8 @@ class Admin extends Component {
         displayTrackingRetentionHours: Math.max(Math.min(parseInt(systemDisplayTrackingRetentionHours, 10) || 2, 168), 1),
         displayTrackingCleanupMinutes: Math.max(Math.min(parseInt(systemDisplayTrackingCleanupMinutes, 10) || 5, 60), 0),
         displayIpWhitelistEnabled: !!systemDisplayIpWhitelistEnabled,
-        displayIpWhitelist: String(systemDisplayIpWhitelist || '').split('\n').map(s => s.trim()).filter(Boolean)
+        displayIpWhitelist: String(systemDisplayIpWhitelist || '').split('\n').map(s => s.trim()).filter(Boolean),
+        demoMode: !!demoMode
       })
     })
       .then(response => {
@@ -3897,6 +3903,7 @@ class Admin extends Component {
       currentSystemDisplayTrackingCleanupMinutes, systemDisplayTrackingCleanupMinutes,
       currentSystemDisplayIpWhitelistEnabled, systemDisplayIpWhitelistEnabled,
       currentSystemDisplayIpWhitelist, systemDisplayIpWhitelist,
+      currentDemoMode, demoMode,
       systemLastUpdated,
       currentTranslationApiEnabled, translationApiEnabled,
       currentTranslationApiUrl, translationApiUrl,
@@ -5275,6 +5282,8 @@ class Admin extends Component {
                   systemRateLimitMaxBuckets={systemRateLimitMaxBuckets}
                   systemMessage={systemMessage}
                   systemMessageType={systemMessageType}
+                  demoMode={demoMode}
+                  currentDemoMode={currentDemoMode}
                   t={t}
                   booleanLabel={booleanLabel}
                   onStartupValidationChange={(value) => this.setState({ systemStartupValidationStrict: value })}

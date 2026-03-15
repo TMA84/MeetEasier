@@ -15,6 +15,8 @@ const SystemTab = ({
   systemExposeDetailedErrors,
   systemHstsMaxAge,
   systemRateLimitMaxBuckets,
+  demoMode,
+  currentDemoMode,
   systemMessage,
   systemMessageType,
   
@@ -73,6 +75,10 @@ const SystemTab = ({
                 <span className="config-label">{t.lastUpdatedLabel}</span>
                 <span className="config-value">{systemLastUpdated || '-'}</span>
               </div>
+              <div className="config-item">
+                <span className="config-label">{t.demoModeEnabledLabel || 'Demo Mode'}</span>
+                <span className="config-value">{booleanLabel(currentDemoMode)}</span>
+              </div>
             </div>
           </div>
 
@@ -124,6 +130,25 @@ const SystemTab = ({
                 min="1000"
                 step="500"
               />
+            </div>
+
+            <div className="admin-form-divider"></div>
+            <h3>{t.demoModeSectionTitle || 'Demo Mode'}</h3>
+
+            <div className="admin-form-group">
+              <label className="inline-label">
+                <span className="label-text">{t.demoModeEnabledLabel || 'Demo Mode'}</span>
+                <input
+                  type="checkbox"
+                  checked={demoMode}
+                  disabled={true}
+                />
+              </label>
+              <small className="admin-help-text">
+                {demoMode
+                  ? (t.demoModeActiveHelp || 'Demo mode is active because OAuth is not configured. Configure OAuth credentials to switch to live data.')
+                  : (t.demoModeDisabledByOauth || 'Demo mode is not available when OAuth is configured.')}
+              </small>
             </div>
 
             <button 

@@ -505,6 +505,19 @@ function fetchAndBroadcastRooms() {
       return;
     }
 
+    // Demo mode: broadcast demo data instead of fetching from Graph
+    const systemConfig = configManager.getSystemConfig();
+    if (systemConfig.demoMode) {
+      const demoData = require('./demo-data');
+      lastSyncTime = new Date().toISOString();
+      lastSyncSuccess = true;
+      syncErrorMessage = null;
+      socketIO.of('/').emit('updatedRooms', demoData.getDemoRoomsSnapshot());
+      socketIO.of('/').emit('controllerDone', 'done');
+      resolve(true);
+      return;
+    }
+
     if (!hasValidGraphCredentials()) {
       lastSyncTime = new Date().toISOString();
       lastSyncSuccess = false;

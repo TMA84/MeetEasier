@@ -7,7 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `getDemoDisplays()` function in `demo-data.js` — generates 5 simulated connected display devices (3 with dual Socket.IO + MQTT, 1 Socket.IO-only, 1 with inactive Socket.IO + MQTT OFF) for demo mode, matching the `/api/displays` response format
+
 ### Changed
+- `getSystemConfig()` now auto-disables demo mode when valid OAuth credentials are detected — checks both environment variables (`msalConfig`) and file-based OAuth config, preventing demo mode from running alongside a real Microsoft Graph connection
+
+### Removed
+- Removed `oauthConfigured` prop from SystemTab — OAuth detection for demo mode now handled server-side in `getSystemConfig()`
+- Removed `onDemoModeChange` callback from SystemTab — demo mode toggle moved out of System Configuration tab
+
+### Fixed
+- `getSystemConfig()` now includes `demoMode` in its response — previously the demo mode flag was missing from the system config GET endpoint, causing the Admin Panel to not reflect the persisted value on load
+
+## [1.7.25] - 2026-03-15
+
+### Added
+- Full demo mode: toggleable via Admin Panel (Devices tab) — generates 8 demo rooms across 3 room lists with dynamic meetings based on current time
+- Demo mode supports all display features: booking, extend meeting, end meeting early, and check-in all work with simulated data
+- Demo rooms update in real-time via Socket.IO polling, same as production mode
+- `demoMode` flag in system configuration, persisted to `system-config.json`
+
+### Changed
+- `/api/rooms`, `/api/roomlists`, `/api/rooms/:email/book`, `/api/extend-meeting`, `/api/end-meeting` endpoints now check for demo mode and return simulated data when active
+- Demo mode support for end-meeting-early endpoint — simulates ending a meeting early for demo rooms, emits real-time `updatedRooms` event via Socket.IO
+
+### Changed
+- DevicesTab now receives `demoMode`, `currentDemoMode`, and `onDemoModeChange` props from Admin.js — enables demo mode toggle directly in the Devices settings panel
 - Service Worker rewritten to network-first strategy: removed aggressive precaching of app assets (`/`, `/index.html`, `/css/styles.css`, logos) that caused stale content after deployments
 - Service Worker cache name now includes `__BUILD_HASH__` placeholder for automatic cache busting on each build
 - Vendor libraries (`/css/6.2.3/`, `/js/1.12.4/`, etc.) identified as immutable via prefix list for future cache-first handling

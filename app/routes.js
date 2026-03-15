@@ -9,6 +9,7 @@ const configManager = require('./config-manager');
 const { createRateLimiter } = require('./rate-limiter');
 const { appendAuditLog, getAuditLogs } = require('./audit-logger');
 const checkinManager = require('./checkin-manager');
+const demoData = require('./demo-data');
 
 let msalClient = null;
 const isProductionEnv = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
@@ -1145,6 +1146,12 @@ module.exports = function(app) {
 	// api routes ================================================================
 	// returns an array of room objects
 	app.get('/api/rooms', function(req, res) {
+		// Demo mode: return generated demo rooms
+		const systemConfig = configManager.getSystemConfig();
+		if (systemConfig.demoMode) {
+			return res.json(demoData.getDemoRoomsSnapshot());
+		}
+
 		const hasRequiredCreds = (
 			!!config.msalConfig.auth.clientId
 			&& config.msalConfig.auth.clientId !== 'OAUTH_CLIENT_ID_NOT_SET'
@@ -1184,6 +1191,12 @@ module.exports = function(app) {
 
 	// returns an array of roomlist objects with aliases for filtering
 	app.get('/api/roomlists', function(req, res) {
+		// Demo mode: return demo roomlists
+		const systemConfig = configManager.getSystemConfig();
+		if (systemConfig.demoMode) {
+			return res.json(demoData.getDemoRoomlists());
+		}
+
 		const api = require('./msgraph/roomlists.js');
 
 		api(function(err, roomlists) {
@@ -1260,6 +1273,22 @@ module.exports = function(app) {
 	}, async function(req, res) {
 		const { roomEmail } = req.params;
 		const { subject, startTime, endTime, description, roomGroup } = req.body;
+
+		// Demo mode: simulate booking
+		const systemConfig = configManager.getSystemConfig();
+		if (systemConfig.demoMode && demoData.isDemoEmail(roomEmail)) {
+			const result = demoData.bookDemoRoom(roomEmail, subject, startTime, endTime);
+			if (result.error) {
+				return res.status(result.status).json({ error: 'Room not available', message: result.message });
+			}
+			// Trigger room refresh for demo
+			const io = configManager.getSocketIO();
+			if (io) {
+				io.of('/').emit('updatedRooms', demoData.getDemoRoomsSnapshot());
+			}
+			return res.json({ success: true, id: result.id, subject: result.subject });
+		}
+
 		const bookingConfig = configManager.getBookingConfig();
 		const hasPermission = await checkCalendarWritePermission();
 		const effectiveBooking = getEffectiveBookingConfig(bookingConfig, roomEmail, roomGroup, hasPermission);
@@ -1358,6 +1387,21 @@ module.exports = function(app) {
 		return bookingRateLimiter(req, res, next);
 	}, async function(req, res) {
 		const { roomEmail, appointmentId, minutes, roomGroup } = req.body;
+
+		// Demo mode: simulate extend meeting
+		const systemConfig = configManager.getSystemConfig();
+		if (systemConfig.demoMode && demoData.isDemoEmail(roomEmail)) {
+			const minutesValue = Number(minutes);
+			const result = demoData.extendDemoMeeting(roomEmail, appointmentId, minutesValue);
+			if (result.error) {
+				return res.status(result.status).json({ success: false, error: result.message });
+			}
+			const io = configManager.getSocketIO();
+			if (io) {
+				io.of('/').emit('updatedRooms', demoData.getDemoRoomsSnapshot());
+			}
+			return res.json({ success: true, newEnd: result.newEnd });
+		}
 
 		// Detect language from Accept-Language header
 		const acceptLanguage = req.headers['accept-language'] || 'en';
@@ -1526,6 +1570,20 @@ module.exports = function(app) {
 		return bookingRateLimiter(req, res, next);
 	}, async function(req, res) {
 		const { roomEmail, appointmentId, roomGroup } = req.body || {};
+
+		// Demo mode: simulate end meeting early
+		const systemConfig = configManager.getSystemConfig();
+		if (systemConfig.demoMode && demoData.isDemoEmail(roomEmail)) {
+			const result = demoData.endDemoMeetingEarly(roomEmail, appointmentId);
+			if (result.error) {
+				return res.status(result.status).json({ success: false, error: result.message });
+			}
+			const io = configManager.getSocketIO();
+			if (io) {
+				io.of('/').emit('updatedRooms', demoData.getDemoRoomsSnapshot());
+			}
+			return res.json({ success: true, endedAt: result.endedAt });
+		}
 
 		const acceptLanguage = req.headers['accept-language'] || 'en';
 		const lang = acceptLanguage.split(',')[0].split('-')[0];
@@ -2063,6 +2121,16 @@ module.exports = function(app) {
 			require('./socket-controller').refreshMsalClient();
 			triggerRoomRefreshWithFollowUp();
 
+			// Auto-disable demo mode when OAuth is configured
+			const systemConfig = configManager.getSystemConfig();
+			if (systemConfig.demoMode) {
+				const normalizedClientId = String(clientId || updatedConfig.clientId || '').trim();
+				if (normalizedClientId && normalizedClientId !== 'OAUTH_CLIENT_ID_NOT_SET') {
+					configManager.updateSystemConfig({ demoMode: false }).catch(() => {});
+					require('./socket-controller').triggerImmediateRefresh();
+				}
+			}
+
 			appendAuditLog({
 				event: 'config.oauth.update',
 				path: req.path,
@@ -2118,7 +2186,8 @@ module.exports = function(app) {
 				displayTrackingRetentionHours,
 				displayTrackingCleanupMinutes,
 				displayIpWhitelistEnabled,
-				displayIpWhitelist
+				displayIpWhitelist,
+				demoMode
 			} = req.body || {};
 
 			if (
@@ -2137,6 +2206,7 @@ module.exports = function(app) {
 				&& displayTrackingCleanupMinutes === undefined
 				&& displayIpWhitelistEnabled === undefined
 				&& displayIpWhitelist === undefined
+				&& demoMode === undefined
 			) {
 				return res.status(400).json({ error: 'At least one system configuration option is required' });
 			}
@@ -2157,10 +2227,15 @@ module.exports = function(app) {
 				displayTrackingRetentionHours,
 				displayTrackingCleanupMinutes,
 				displayIpWhitelistEnabled,
-				displayIpWhitelist
+				displayIpWhitelist,
+				demoMode
 			});
 
 			require('./socket-controller').refreshPollingSchedule();
+			// If demoMode changed, trigger immediate room data refresh
+			if (beforeConfig.demoMode !== updatedConfig.demoMode) {
+				require('./socket-controller').triggerImmediateRefresh();
+			}
 			rebuildRateLimiters();
 
 			appendAuditLog({
@@ -2875,6 +2950,12 @@ module.exports = function(app) {
 	// Get merged displays (Socket.IO + MQTT) - protected
 	app.get('/api/displays', checkApiToken, function(req, res) {
 		try {
+			// Demo mode: return demo displays
+			const systemConfig = configManager.getSystemConfig();
+			if (systemConfig.demoMode) {
+				return res.json({ displays: demoData.getDemoDisplays() });
+			}
+
 			const socketController = require('./socket-controller');
 			const mqttPowerBridge = require('./touchkio');
 			
