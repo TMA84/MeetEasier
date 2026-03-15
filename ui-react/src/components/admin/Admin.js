@@ -2877,7 +2877,7 @@ class Admin extends Component {
 
     this.setState({ connectedDisplaysLoading: true });
 
-    fetch('/api/displays', {
+    return fetch('/api/displays', {
       method: 'GET',
       headers
     })
@@ -3629,21 +3629,36 @@ class Admin extends Component {
     });
   }
 
-  handleMqttPowerCommandModal = async (hostname, powerOn) => {
-    await this.handleMqttPowerCommand(hostname, powerOn);
-    this.setState({
-      touchkioModalMessage: `Power command sent: ${powerOn ? 'ON' : 'OFF'}`,
-      touchkioModalMessageType: 'success'
-    });
-    setTimeout(() => {
-      this.handleLoadMqttDisplays();
+  handleMqttPowerCommandModal = async (identifier, powerOn) => {
+    await this.handleMqttPowerCommand(identifier, powerOn);
+    // Optimistically update modal display so user sees expected state immediately
+    if (this.state.touchkioModalDisplay) {
+      const optimistic = { ...this.state.touchkioModalDisplay };
+      if (optimistic.mqtt) {
+        optimistic.mqtt = { ...optimistic.mqtt, power: powerOn ? 'ON' : 'OFF' };
+      }
+      this.setState({
+        touchkioModalDisplay: optimistic,
+        touchkioModalMessage: `Power command sent: ${powerOn ? 'ON' : 'OFF'}`,
+        touchkioModalMessageType: 'success'
+      });
+    } else {
+      this.setState({
+        touchkioModalMessage: `Power command sent: ${powerOn ? 'ON' : 'OFF'}`,
+        touchkioModalMessageType: 'success'
+      });
+    }
+    setTimeout(async () => {
+      await this.handleLoadConnectedDisplays();
       if (this.state.touchkioModalDisplay) {
-        const updatedDisplay = this.state.mqttDisplays.find(d => d.mqtt?.hostname === hostname);
+        const updatedDisplay = (this.state.connectedDisplays || []).find(d => 
+          d.mqtt?.deviceId === identifier || d.mqtt?.hostname === identifier
+        );
         if (updatedDisplay) {
           this.setState({ touchkioModalDisplay: updatedDisplay });
         }
       }
-    }, 1000);
+    }, 2000);
   }
 
   handleMqttBrightnessCommandModal = async (hostname, brightness) => {
@@ -3654,38 +3669,68 @@ class Admin extends Component {
     });
   }
 
-  handleMqttKioskCommandModal = async (hostname, status) => {
-    await this.handleMqttKioskCommand(hostname, status);
-    this.setState({
-      touchkioModalMessage: `Kiosk mode set to ${status}`,
-      touchkioModalMessageType: 'success'
-    });
-    setTimeout(() => {
-      this.handleLoadMqttDisplays();
+  handleMqttKioskCommandModal = async (identifier, status) => {
+    await this.handleMqttKioskCommand(identifier, status);
+    // Optimistically update modal display
+    if (this.state.touchkioModalDisplay) {
+      const optimistic = { ...this.state.touchkioModalDisplay };
+      if (optimistic.mqtt) {
+        optimistic.mqtt = { ...optimistic.mqtt, kioskStatus: status };
+      }
+      this.setState({
+        touchkioModalDisplay: optimistic,
+        touchkioModalMessage: `Kiosk mode set to ${status}`,
+        touchkioModalMessageType: 'success'
+      });
+    } else {
+      this.setState({
+        touchkioModalMessage: `Kiosk mode set to ${status}`,
+        touchkioModalMessageType: 'success'
+      });
+    }
+    setTimeout(async () => {
+      await this.handleLoadConnectedDisplays();
       if (this.state.touchkioModalDisplay) {
-        const updatedDisplay = this.state.mqttDisplays.find(d => d.mqtt?.hostname === hostname);
+        const updatedDisplay = (this.state.connectedDisplays || []).find(d => 
+          d.mqtt?.deviceId === identifier || d.mqtt?.hostname === identifier
+        );
         if (updatedDisplay) {
           this.setState({ touchkioModalDisplay: updatedDisplay });
         }
       }
-    }, 1000);
+    }, 2000);
   }
 
-  handleMqttThemeCommandModal = async (hostname, theme) => {
-    await this.handleMqttThemeCommand(hostname, theme);
-    this.setState({
-      touchkioModalMessage: `Theme set to ${theme}`,
-      touchkioModalMessageType: 'success'
-    });
-    setTimeout(() => {
-      this.handleLoadMqttDisplays();
+  handleMqttThemeCommandModal = async (identifier, theme) => {
+    await this.handleMqttThemeCommand(identifier, theme);
+    // Optimistically update modal display
+    if (this.state.touchkioModalDisplay) {
+      const optimistic = { ...this.state.touchkioModalDisplay };
+      if (optimistic.mqtt) {
+        optimistic.mqtt = { ...optimistic.mqtt, theme: theme };
+      }
+      this.setState({
+        touchkioModalDisplay: optimistic,
+        touchkioModalMessage: `Theme set to ${theme}`,
+        touchkioModalMessageType: 'success'
+      });
+    } else {
+      this.setState({
+        touchkioModalMessage: `Theme set to ${theme}`,
+        touchkioModalMessageType: 'success'
+      });
+    }
+    setTimeout(async () => {
+      await this.handleLoadConnectedDisplays();
       if (this.state.touchkioModalDisplay) {
-        const updatedDisplay = this.state.mqttDisplays.find(d => d.mqtt?.hostname === hostname);
+        const updatedDisplay = (this.state.connectedDisplays || []).find(d => 
+          d.mqtt?.deviceId === identifier || d.mqtt?.hostname === identifier
+        );
         if (updatedDisplay) {
           this.setState({ touchkioModalDisplay: updatedDisplay });
         }
       }
-    }, 1000);
+    }, 2000);
   }
 
   handleMqttVolumeCommandModal = async (hostname, volume) => {
@@ -3704,30 +3749,44 @@ class Admin extends Component {
     });
   }
 
-  handleMqttPageUrlCommandModal = async (hostname, url) => {
+  handleMqttPageUrlCommandModal = async (identifier, url) => {
     try {
-      const response = await fetch(`/api/mqtt-page-url/${hostname}`, {
+      const response = await fetch(`/api/mqtt-page-url/${identifier}`, {
         method: 'POST',
         headers: this.getRequestHeaders(),
         body: JSON.stringify({ url })
       });
 
       if (response.ok) {
-        this.setState({
-          touchkioModalMessage: 'Page URL updated successfully',
-          touchkioModalMessageType: 'success'
-        });
-        
-        // Reload displays to get updated URL
-        setTimeout(() => {
-          this.handleLoadMqttDisplays();
-          if (this.state.touchkioModalDisplay) {
-            const updatedDisplay = this.state.mqttDisplays.find(d => d.mqtt?.hostname === hostname);
-            if (updatedDisplay) {
-              this.setState({ touchkioModalDisplay: updatedDisplay });
-            }
+        // Optimistically update modal display with new URL
+        if (this.state.touchkioModalDisplay) {
+          const optimistic = { ...this.state.touchkioModalDisplay };
+          if (optimistic.mqtt) {
+            optimistic.mqtt = { ...optimistic.mqtt, pageUrl: url };
           }
-        }, 1000);
+          this.setState({
+            touchkioModalDisplay: optimistic,
+            touchkioModalMessage: 'Page URL updated successfully',
+            touchkioModalMessageType: 'success'
+          });
+        } else {
+          this.setState({
+            touchkioModalMessage: 'Page URL updated successfully',
+            touchkioModalMessageType: 'success'
+          });
+        }
+        
+        // Reload displays to get confirmed data from server
+        setTimeout(async () => {
+          await this.handleLoadConnectedDisplays();
+          const displays = this.state.connectedDisplays || [];
+          const updatedDisplay = displays.find(d => 
+            d.mqtt?.deviceId === identifier || d.mqtt?.hostname === identifier
+          );
+          if (updatedDisplay) {
+            this.setState({ touchkioModalDisplay: updatedDisplay });
+          }
+        }, 2000);
       } else {
         throw new Error('Failed to update page URL');
       }
@@ -6064,11 +6123,12 @@ class Admin extends Component {
         onShutdownCommand={this.handleMqttShutdownCommandModal}
         onPageUrlChange={this.handleMqttPageUrlCommandModal}
         onRefreshDisplay={async () => {
-          await this.handleLoadDisplays();
+          await this.handleLoadConnectedDisplays();
           if (this.state.touchkioModalDisplay) {
+            const deviceId = this.state.touchkioModalDisplay.mqtt?.deviceId;
             const hostname = this.state.touchkioModalDisplay.mqtt?.hostname || this.state.touchkioModalDisplay.hostname;
             const updatedDisplay = this.state.connectedDisplays.find(d => 
-              d.mqtt?.hostname === hostname || d.hostname === hostname
+              (deviceId && d.mqtt?.deviceId === deviceId) || d.mqtt?.hostname === hostname || d.hostname === hostname
             );
             if (updatedDisplay) {
               this.setState({ touchkioModalDisplay: updatedDisplay });
