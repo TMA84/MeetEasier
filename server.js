@@ -161,7 +161,16 @@ app.use('/api', cors(apiCorsOptionsDelegate));
 app.options('/api/*', cors(apiCorsOptionsDelegate));
 
 // use public folder for js, css, imgs, etc
-app.use(express.static("static"));
+app.use(express.static("static", {
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    // styles.css is cache-busted via ?v=hash — browser must revalidate each time
+    if (filePath.endsWith('styles.css')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 // Serve React build with proper cache control
 app.use(express.static(`${__dirname}/ui-react/build`, {

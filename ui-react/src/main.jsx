@@ -36,10 +36,22 @@ if ('serviceWorker' in navigator) {
       .then((registration) => {
         console.log('[ServiceWorker] Registered successfully:', registration.scope);
         
-        // Check for updates every hour
+        // When a new SW is found, tell it to activate immediately
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'activated') {
+                console.log('[ServiceWorker] New version activated');
+              }
+            });
+          }
+        });
+
+        // Check for updates every 5 minutes
         setInterval(() => {
           registration.update();
-        }, 60 * 60 * 1000);
+        }, 5 * 60 * 1000);
       })
       .catch((error) => {
         console.error('[ServiceWorker] Registration failed:', error);
