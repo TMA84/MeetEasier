@@ -92,10 +92,18 @@ function subscribeTouchkioStates() {
       } else if (topic.includes('/display/power/state') || topic.includes('/display/power/status')) {
         displayState.power = payloadStr;
         displayState.lastUpdate = new Date().toISOString();
+        // If we receive 'ON', power is definitely supported
+        if (payloadStr === 'ON') {
+          displayState.powerUnsupported = false;
+        }
         console.log(`[Touchkio] Display power updated: ${deviceId} = ${payloadStr}`);
         
       } else if (topic.includes('/display/brightness/state') || topic.includes('/display/brightness/status')) {
         displayState.brightness = parseInt(payload, 10);
+        // If we receive a valid brightness value, brightness is supported
+        if (!isNaN(displayState.brightness)) {
+          displayState.brightnessUnsupported = false;
+        }
         console.log(`[Touchkio] Brightness updated: ${deviceId} = ${displayState.brightness}`);
         
       } else if (topic.includes('/kiosk/state') || topic.includes('/kiosk/status')) {

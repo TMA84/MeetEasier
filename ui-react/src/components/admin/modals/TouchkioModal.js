@@ -69,8 +69,8 @@ const TouchkioModal = ({
   const hostname = displayData.hostname;
 
   const hasMqttConnection = displayData.connected === true;
-  const powerSupported = !hasMqttConnection || (!displayData.powerUnsupported && (displayData.power === 'ON' || displayData.power === 'OFF'));
-  const brightnessSupported = !hasMqttConnection || (!displayData.brightnessUnsupported && typeof displayData.brightness === 'number');
+  const powerSupported = !hasMqttConnection || (displayData.powerUnsupported === false && (displayData.power === 'ON' || displayData.power === 'OFF'));
+  const brightnessSupported = !hasMqttConnection || (displayData.brightnessUnsupported === false && typeof displayData.brightness === 'number');
 
   const getRecentErrors = () => {
     if (!displayData.errors || Object.keys(displayData.errors).length === 0) return [];
