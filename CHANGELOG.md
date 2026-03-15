@@ -8,9 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- Display power status for devices where `powerUnsupported` was never explicitly set (undefined) — previously treated as "supported" causing false "Partial" status and "OFF" display; now correctly falls back to Socket.IO status
-- TouchkioModal power controls now disabled when power support is unconfirmed (undefined), not just when explicitly unsupported
-- `getSystemConfig()` now includes `demoMode` in its response — previously the demo mode flag was missing from the system config GET endpoint, causing the Admin Panel to not reflect the persisted value on load
+- TouchkioModal now sends `deviceId` instead of `hostname` for all MQTT commands (power, theme, kiosk, refresh, reboot, shutdown) — fixes command routing when multiple devices share the same hostname
+- URL input field in TouchkioModal now has correct dark background (`!important` CSS fix)
+- MQTT-only displays show "MQTT Only" (orange) instead of green — reflects missing Socket.IO connection
+- Dual-connection displays with MQTT power ON now show "Active" (green) regardless of Socket.IO socket count
+- Display power status for devices where `powerUnsupported` is undefined now correctly falls back to Socket.IO status instead of showing false "Partial"
+- TouchkioModal power/brightness controls disabled when power support is unconfirmed
 
 ## [1.7.25] - 2026-03-15
 

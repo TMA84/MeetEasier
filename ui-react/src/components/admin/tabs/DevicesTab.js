@@ -93,18 +93,19 @@ const DevicesTab = ({
                     statusDotColor = socketActive ? '#22c55e' : '#f59e0b';
                   } else {
                     const mqttOn = display.mqtt.power === 'ON';
-                    if (socketActive && mqttOn) { status = 'Active'; statusDotColor = '#22c55e'; }
+                    if (mqttOn) { status = 'Active'; statusDotColor = '#22c55e'; }
                     else if (socketActive && !mqttOn) { status = 'Partial'; statusDotColor = '#f59e0b'; }
-                    else { status = 'Inactive'; statusDotColor = '#f59e0b'; }
+                    else { status = 'OFF'; statusDotColor = '#ef4444'; }
                   }
                 } else if (hasSocketIO) {
                   if (display.socketIO.status === 'active') { status = 'Active'; statusDotColor = '#22c55e'; }
                   else { status = 'Inactive'; statusDotColor = '#f59e0b'; }
                 } else if (hasMQTT) {
-                  if (display.mqtt.powerUnsupported === true || display.mqtt.powerUnsupported === undefined) { status = 'Connected'; statusDotColor = '#94a3b8'; }
-                  else if (display.mqtt.power === 'ON') { status = 'ON'; statusDotColor = '#22c55e'; }
+                  // MQTT-only: device is reachable via MQTT but no Socket.IO — app functionality limited
+                  if (display.mqtt.powerUnsupported === true || display.mqtt.powerUnsupported === undefined) { status = 'MQTT Only'; statusDotColor = '#f59e0b'; }
+                  else if (display.mqtt.power === 'ON') { status = 'MQTT Only'; statusDotColor = '#f59e0b'; }
                   else if (display.mqtt.power === 'OFF') { status = 'OFF'; statusDotColor = '#ef4444'; }
-                  else { status = 'Connected'; statusDotColor = '#94a3b8'; }
+                  else { status = 'MQTT Only'; statusDotColor = '#f59e0b'; }
                 } else {
                   status = 'Disconnected'; statusDotColor = '#ef4444';
                 }
