@@ -1,10 +1,56 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import fs from 'fs'
+import crypto from 'crypto'
+
+/**
+ * Vite plugin: appends ?v=<contenthash> to /css/styles.css in index.html
+ * so browsers fetch the new version after each SCSS rebuild.
+ */
+function cacheBustStaticCss() {
+  return {
+    name: 'cache-bust-static-css',
+    transformIndexHtml(html) {
+      const cssPath = path.resolve(__dirname, '../static/css/styles.css');
+      let hash = Date.now().toString(36);
+      try {
+        const content = fs.readFileSync(cssPath);
+        hash = crypto.createHash('md5').update(content).digest('hex').slice(0, 8);
+      } catch (_) { /* file may not exist during dev */ }
+      return html.replace(
+        /href="\/css\/styles\.css"/,
+        `href="/css/styles.css?v=${hash}"`
+      );
+    },
+  };
+}
+
+/**
+ * Vite plugin: stamps the service-worker.js with a unique build hash
+ * so the browser detects a new SW version and activates it (clearing old caches).
+ */
+function versionServiceWorker() {
+  return {
+    name: 'version-service-worker',
+    writeBundle() {
+      const swPath = path.resolve(__dirname, 'build/service-worker.js');
+      try {
+        let sw = fs.readFileSync(swPath, 'utf-8');
+        const buildHash = crypto.randomBytes(8).toString('hex');
+        sw = sw.replace('__BUILD_HASH__', buildHash);
+        fs.writeFileSync(swPath, sw, 'utf-8');
+        console.log(`[versionServiceWorker] Stamped SW with hash: ${buildHash}`);
+      } catch (err) {
+        console.warn('[versionServiceWorker] Could not stamp SW:', err.message);
+      }
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), cacheBustStaticCss(), versionServiceWorker()],
   resolve: {
     alias: {
       '@scss': path.resolve(__dirname, '../scss'),

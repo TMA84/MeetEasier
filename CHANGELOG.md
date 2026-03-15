@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Service Worker rewritten to network-first strategy: removed aggressive precaching of app assets (`/`, `/index.html`, `/css/styles.css`, logos) that caused stale content after deployments
+- Service Worker cache name now includes `__BUILD_HASH__` placeholder for automatic cache busting on each build
+- Vendor libraries (`/css/6.2.3/`, `/js/1.12.4/`, etc.) identified as immutable via prefix list for future cache-first handling
+
+### Removed
+- Service Worker `fetch` event handler removed — eliminates cache-first serving of app assets that caused stale UI after deployments
+- Service Worker `message` event handler removed (`SKIP_WAITING`, `CLEAR_CACHE` commands) — no longer needed with simplified caching strategy
+- Service Worker no longer precaches app shell assets on install — prevents serving outdated `index.html`, `styles.css`, and logos from cache
+- Removed runtime caching of API responses in Service Worker — API calls now always go to network
+
+### Fixed
+- SPA catch-all route now sends `Cache-Control: no-cache, no-store, must-revalidate`, `Pragma: no-cache`, and `Expires: 0` headers with `index.html` — prevents browsers from serving a stale shell after deployments
+
+## [1.7.24] - 2026-03-15
+
+### Added
+- Cache-busting for `styles.css`: Vite build plugin appends `?v=<contenthash>` to the stylesheet link — eliminates need to clear browser cache after CSS changes
+- Service Worker rewritten with network-first strategy for HTML/CSS/app JS — browser always fetches latest version, falls back to cache only when offline
+- Service Worker `CACHE_NAME` now includes a unique build hash — old caches are automatically purged on each deployment
+
+### Changed
+- Static file server now sets `no-cache` header for `styles.css` to complement query-string cache busting
+- Catch-all route for SPA now sends `no-cache, no-store, must-revalidate` headers on `index.html`
+- Service Worker update check interval reduced from 1 hour to 5 minutes
+
 ## [1.7.23] - 2026-03-15
 
 ### Fixed

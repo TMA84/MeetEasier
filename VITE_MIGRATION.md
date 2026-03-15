@@ -146,6 +146,14 @@ The Dockerfile now uses a multi-stage build to eliminate dev dependencies and bu
 - ✅ Faster container startup
 - ✅ Better security posture
 
+## SCSS Cache Busting
+
+The Vite config includes a custom `cacheBustStaticCss` plugin that automatically appends a content-hash query parameter (`?v=<md5>`) to the `/css/styles.css` link in `index.html` at build time. This ensures browsers fetch the latest SCSS build after each change instead of serving stale cached versions.
+
+- The hash is derived from the actual file content of `static/css/styles.css`
+- Falls back to a timestamp-based hash if the CSS file doesn't exist yet (e.g. during initial dev)
+- No manual cache-busting or version bumping required
+
 ## Notes
 
 - Dev server port changed from 3000 to 3000 (same, but configurable in vite.config.js)

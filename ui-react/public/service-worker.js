@@ -1,39 +1,29 @@
 // Service Worker for MeetEasier
-// Provides offline support and caching for better performance
+// Network-first strategy for app assets, cache-first only for vendor libs
 
-const CACHE_NAME = 'meeteasier-v1.5.2';
+const CACHE_NAME = 'meeteasier-__BUILD_HASH__';
 const RUNTIME_CACHE = 'meeteasier-runtime';
 
-// Assets to cache on install
-const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/css/styles.css',
-  '/css/6.2.3/foundation.css',
-  '/css/3.0.0/foundation-icons.min.css',
-  '/js/1.12.4/jquery.min.js',
-  '/js/6.2.3/foundation.js',
-  '/img/logo-light.svg',
-  '/img/logo-dark.svg',
+// Vendor assets that never change — cache-first is safe
+const IMMUTABLE_PREFIXES = [
+  '/css/6.2.3/',
+  '/css/3.0.0/',
+  '/js/1.12.4/',
+  '/js/6.2.3/',
+  '/css/font.css',
 ];
 
-// Install event - cache essential assets
+function isImmutableAsset(url) {
+  return IMMUTABLE_PREFIXES.some(prefix => url.pathname.startsWith(prefix));
+}
+
+// Install event - skip waiting immediately
 self.addEventListener('install', (event) => {
   console.log('[ServiceWorker] Installing...');
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[ServiceWorker] Precaching assets');
-        return cache.addAll(PRECACHE_ASSETS.map(url => new Request(url, { cache: 'reload' })));
-      })
-      .catch((error) => {
-        console.error('[ServiceWorker] Precache failed:', error);
-      })
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up ALL old caches
 self.addEventListener('activate', (event) => {
   console.log('[ServiceWorker] Activating...');
   event.waitUntil(
@@ -41,10 +31,10 @@ self.addEventListener('activate', (event) => {
       .then((cacheNames) => {
         return Promise.all(
           cacheNames
-            .filter((cacheName) => cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE)
-            .map((cacheName) => {
-              console.log('[ServiceWorker] Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
+            .filter((name) => name !== CACHE_NAME && name !== RUNTIME_CACHE)
+            .map((name) => {
+              console.log('[ServiceWorker] Deleting old cache:', name);
+              return caches.delete(name);
             })
         );
       })
@@ -52,72 +42,74 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - serve from cache, fallback to network
+
+// Fetch event
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
   // Skip non-GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
+  if (request.method !== 'GET') return;
 
-  // Skip socket.io requests
-  if (url.pathname.startsWith('/socket.io')) {
-    return;
-  }
+  // Skip socket.io
+  if (url.pathname.startsWith('/socket.io')) return;
 
-  // API requests - network first, cache fallback
-  if (url.pathname.startsWith('/api')) {
+  // Skip API requests entirely — let them go straight to network
+  if (url.pathname.startsWith('/api')) return;
+
+  // Vite hashed assets (/assets/index-DtpW3qYv.js) — cache-first, they're immutable
+  if (url.pathname.startsWith('/assets/')) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache successful API responses
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
           if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
-        })
-        .catch(() => {
-          // Return cached response if network fails
-          return caches.match(request);
-        })
+        });
+      })
     );
     return;
   }
 
-  // Static assets - cache first, network fallback
+  // Vendor libs (foundation, jquery) — cache-first, they never change
+  if (isImmutableAsset(url)) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Everything else (HTML, styles.css, app JS) — NETWORK FIRST
   event.respondWith(
-    caches.match(request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, clone));
         }
-
-        return fetch(request)
-          .then((response) => {
-            // Don't cache non-successful responses
-            if (!response || response.status !== 200 || response.type === 'error') {
-              return response;
-            }
-
-            // Cache the fetched resource
-            const responseClone = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
-
-            return response;
-          })
-          .catch(() => {
-            // Return offline page for navigation requests
-            if (request.mode === 'navigate') {
-              return caches.match('/offline.html');
-            }
-          });
+        return response;
+      })
+      .catch(() => {
+        // Offline fallback from cache
+        return caches.match(request).then((cached) => {
+          if (cached) return cached;
+          // For navigation requests, try to serve cached index.html
+          if (request.mode === 'navigate') {
+            return caches.match('/');
+          }
+        });
       })
   );
 });
@@ -127,14 +119,9 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
   if (event.data && event.data.type === 'CLEAR_CACHE') {
     event.waitUntil(
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => caches.delete(cacheName))
-        );
-      })
+      caches.keys().then((names) => Promise.all(names.map((n) => caches.delete(n))))
     );
   }
 });
