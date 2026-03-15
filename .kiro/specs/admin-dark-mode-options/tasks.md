@@ -22,7 +22,7 @@ Diese Implementierung erweitert die bestehende Admin-Komponente (`ui-react/src/c
     - Radio-Buttons für "Gefüllt" und "Transparent" in bedingtem Block wrappen
     - _Requirements: 1.1, 1.2_
   
-  - [~] 2.2 Property-Test für Options-Sichtbarkeit schreiben
+  - [ ] 2.2 Property-Test für Options-Sichtbarkeit schreiben
     - **Property 1: Dark Mode Options Visibility**
     - **Validates: Requirements 1.1, 1.2**
   
@@ -32,30 +32,30 @@ Diese Implementierung erweitert die bestehende Admin-Komponente (`ui-react/src/c
     - Styling: Subtile Info-Nachricht (graue Schrift, kleine Schriftgröße)
     - _Requirements: 1.3, 1.4, 4.1_
   
-  - [~] 2.4 Property-Test für Options-Ausblendung schreiben
+  - [ ] 2.4 Property-Test für Options-Ausblendung schreiben
     - **Property 2: Dark Mode Options Hidden**
     - **Validates: Requirements 1.3, 1.4**
   
-  - [~] 2.5 Property-Test für Informationsnachricht schreiben
+  - [ ] 2.5 Property-Test für Informationsnachricht schreiben
     - **Property 5: Informational Message Display**
     - **Validates: Requirements 4.1**
 
-- [~] 3. State-Persistenz sicherstellen
+- [ ] 3. State-Persistenz sicherstellen
   - [x] 3.1 Verifizieren dass minimalHeaderStyle-State erhalten bleibt
     - State bleibt beim Toggle von Dark-Mode erhalten
     - Werte werden korrekt vom Server geladen
     - Werte werden korrekt an Server gesendet
     - _Requirements: 3.1, 3.2_
   
-  - [~] 3.2 Property-Test für State-Persistenz schreiben
+  - [ ] 3.2 Property-Test für State-Persistenz schreiben
     - **Property 4: Configuration Persistence Through Toggle**
     - **Validates: Requirements 3.1, 3.2**
   
-  - [~] 3.3 Property-Test für Dark-Mode-Status-Erkennung schreiben
+  - [ ] 3.3 Property-Test für Dark-Mode-Status-Erkennung schreiben
     - **Property 3: Dark Mode Status Detection**
     - **Validates: Requirements 2.1**
 
-- [~] 4. Unit-Tests schreiben
+- [ ] 4. Unit-Tests schreiben
   - Test: Optionen werden angezeigt wenn Dark Mode aktiv ist
   - Test: Optionen werden ausgeblendet wenn Dark Mode inaktiv ist
   - Test: Informationsnachricht wird angezeigt wenn Dark Mode inaktiv ist
@@ -65,7 +65,7 @@ Diese Implementierung erweitert die bestehende Admin-Komponente (`ui-react/src/c
   - Test: Radio Button Selection funktioniert
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 3.1, 3.2, 4.1_
 
-- [~] 5. Checkpoint - Tests ausführen und Funktionalität verifizieren
+- [ ] 5. Checkpoint - Tests ausführen und Funktionalität verifizieren
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

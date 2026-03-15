@@ -84,14 +84,16 @@ const DevicesTab = ({
                 
                 if (hasSocketIO && hasMQTT) {
                   const socketActive = display.socketIO.status === 'active';
-                  const mqttPowerKnown = !display.mqtt.powerUnsupported && (display.mqtt.power === 'ON' || display.mqtt.power === 'OFF');
+                  const powerExplicitlySupported = display.mqtt.powerUnsupported === false;
+                  const mqttPowerKnown = powerExplicitlySupported && (display.mqtt.power === 'ON' || display.mqtt.power === 'OFF');
                   if (!mqttPowerKnown) {
                     status = socketActive ? 'Active' : 'Inactive';
                     statusDotColor = socketActive ? '#22c55e' : '#f59e0b';
                   } else {
                     const mqttOn = display.mqtt.power === 'ON';
                     if (socketActive && mqttOn) { status = 'Active'; statusDotColor = '#22c55e'; }
-                    else { status = 'Partial'; statusDotColor = '#f59e0b'; }
+                    else if (socketActive && !mqttOn) { status = 'Partial'; statusDotColor = '#f59e0b'; }
+                    else { status = 'Inactive'; statusDotColor = '#f59e0b'; }
                   }
                 } else if (hasSocketIO) {
                   if (display.socketIO.status === 'active') { status = 'Active'; statusDotColor = '#22c55e'; }

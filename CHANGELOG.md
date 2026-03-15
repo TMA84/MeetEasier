@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.23] - 2026-03-15
+
+### Fixed
+- Dual-connection display status now uses strict equality (`=== false`) for `powerUnsupported` check — prevents `undefined` from being treated as supported, avoiding incorrect "Partial" status during initial MQTT connection
+- Backend now explicitly sets `powerUnsupported = false` when `power: 'ON'` is received, and `brightnessUnsupported = false` when a valid brightness value is received — provides positive confirmation of hardware support
+- TouchkioModal power/brightness controls now require explicit support confirmation (`=== false`) instead of truthy fallback
+
 ### Changed
 - Admin translations editor now exposes all display-facing translation keys in the "Displays" group — added 30 missing keys including booking modal, WiFi info, check-in, error states, and general display labels for full in-panel localization coverage
 
