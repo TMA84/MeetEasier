@@ -7,17 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- `getDemoDisplays()` function in `demo-data.js` — generates 5 simulated connected display devices (3 with dual Socket.IO + MQTT, 1 Socket.IO-only, 1 with inactive Socket.IO + MQTT OFF) for demo mode, matching the `/api/displays` response format
-
-### Changed
-- `getSystemConfig()` now auto-disables demo mode when valid OAuth credentials are detected — checks both environment variables (`msalConfig`) and file-based OAuth config, preventing demo mode from running alongside a real Microsoft Graph connection
-
-### Removed
-- Removed `oauthConfigured` prop from SystemTab — OAuth detection for demo mode now handled server-side in `getSystemConfig()`
-- Removed `onDemoModeChange` callback from SystemTab — demo mode toggle moved out of System Configuration tab
-
 ### Fixed
+- Display power status for devices where `powerUnsupported` was never explicitly set (undefined) — previously treated as "supported" causing false "Partial" status and "OFF" display; now correctly falls back to Socket.IO status
+- TouchkioModal power controls now disabled when power support is unconfirmed (undefined), not just when explicitly unsupported
 - `getSystemConfig()` now includes `demoMode` in its response — previously the demo mode flag was missing from the system config GET endpoint, causing the Admin Panel to not reflect the persisted value on load
 
 ## [1.7.25] - 2026-03-15

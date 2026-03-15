@@ -84,9 +84,11 @@ const DevicesTab = ({
                 
                 if (hasSocketIO && hasMQTT) {
                   const socketActive = display.socketIO.status === 'active';
+                  // Only trust MQTT power if explicitly confirmed as supported (=== false, not undefined)
                   const powerExplicitlySupported = display.mqtt.powerUnsupported === false;
                   const mqttPowerKnown = powerExplicitlySupported && (display.mqtt.power === 'ON' || display.mqtt.power === 'OFF');
                   if (!mqttPowerKnown) {
+                    // Power status unknown or unsupported — fall back to Socket.IO status
                     status = socketActive ? 'Active' : 'Inactive';
                     statusDotColor = socketActive ? '#22c55e' : '#f59e0b';
                   } else {
@@ -99,7 +101,7 @@ const DevicesTab = ({
                   if (display.socketIO.status === 'active') { status = 'Active'; statusDotColor = '#22c55e'; }
                   else { status = 'Inactive'; statusDotColor = '#f59e0b'; }
                 } else if (hasMQTT) {
-                  if (display.mqtt.powerUnsupported) { status = 'Connected'; statusDotColor = '#94a3b8'; }
+                  if (display.mqtt.powerUnsupported === true || display.mqtt.powerUnsupported === undefined) { status = 'Connected'; statusDotColor = '#94a3b8'; }
                   else if (display.mqtt.power === 'ON') { status = 'ON'; statusDotColor = '#22c55e'; }
                   else if (display.mqtt.power === 'OFF') { status = 'OFF'; statusDotColor = '#ef4444'; }
                   else { status = 'Connected'; statusDotColor = '#94a3b8'; }
