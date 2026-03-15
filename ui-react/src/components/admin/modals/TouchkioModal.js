@@ -67,6 +67,7 @@ const TouchkioModal = ({
 
   const displayData = display.mqtt || display;
   const hostname = displayData.hostname;
+  const mqttIdentifier = displayData.deviceId || displayData.hostname;
 
   const hasMqttConnection = displayData.connected === true;
   const powerSupported = hasMqttConnection && displayData.powerUnsupported === false && (displayData.power === 'ON' || displayData.power === 'OFF');
@@ -217,7 +218,7 @@ const TouchkioModal = ({
                     <input
                       type="checkbox"
                       checked={displayData.power === 'ON'}
-                      onChange={(e) => powerSupported && onPowerCommand(hostname, e.target.checked)}
+                      onChange={(e) => powerSupported && onPowerCommand(mqttIdentifier, e.target.checked)}
                       disabled={!powerSupported}
                     />
                     <span className={`touchkio-toggle-track ${displayData.power === 'ON' ? 'touchkio-toggle-track--on' : 'touchkio-toggle-track--off'}`}>
@@ -236,7 +237,7 @@ const TouchkioModal = ({
                     <input
                       type="checkbox"
                       checked={displayData.theme === 'Dark'}
-                      onChange={(e) => onThemeCommand(hostname, e.target.checked ? 'Dark' : 'Light')}
+                      onChange={(e) => onThemeCommand(mqttIdentifier, e.target.checked ? 'Dark' : 'Light')}
                     />
                     <span className={`touchkio-toggle-track ${displayData.theme === 'Dark' ? 'touchkio-toggle-track--dark' : 'touchkio-toggle-track--light'}`}>
                       <span className={`touchkio-toggle-thumb-theme ${displayData.theme === 'Dark' ? 'touchkio-toggle-thumb--on' : 'touchkio-toggle-thumb--off'}`}>
@@ -247,7 +248,7 @@ const TouchkioModal = ({
                 </div>
 
                 {/* Refresh Button */}
-                <button type="button" className="admin-secondary-button admin-w-full admin-btn-sm" onClick={() => onRefreshCommand(hostname)}>
+                <button type="button" className="admin-secondary-button admin-w-full admin-btn-sm" onClick={() => onRefreshCommand(mqttIdentifier)}>
                   🔄 Refresh Page
                 </button>
               </div>
@@ -327,7 +328,7 @@ const TouchkioModal = ({
                         key={mode}
                         type="button"
                         className={`${isActive ? 'admin-primary-button' : 'admin-secondary-button'} touchkio-kiosk-button ${isActive ? 'touchkio-kiosk-button--active' : ''}`}
-                        onClick={() => onKioskCommand(hostname, mode)}
+                        onClick={() => onKioskCommand(mqttIdentifier, mode)}
                       >
                         {isActive ? `✓ ${mode}` : mode}
                       </button>
@@ -342,14 +343,14 @@ const TouchkioModal = ({
                 <button
                   type="button"
                   className="admin-secondary-button touchkio-reboot-button"
-                  onClick={() => { if (window.confirm(`Reboot ${hostname}?`)) onRebootCommand(hostname); }}
+                  onClick={() => { if (window.confirm(`Reboot ${hostname}?`)) onRebootCommand(mqttIdentifier); }}
                 >
                   Reboot Device
                 </button>
                 <button
                   type="button"
                   className="admin-secondary-button touchkio-shutdown-button"
-                  onClick={() => { if (window.confirm(`Shutdown ${hostname}? This will turn off the device!`)) onShutdownCommand(hostname); }}
+                  onClick={() => { if (window.confirm(`Shutdown ${hostname}? This will turn off the device!`)) onShutdownCommand(mqttIdentifier); }}
                 >
                   Shutdown Device
                 </button>
