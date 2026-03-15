@@ -33,7 +33,7 @@ function RoomFilter({ filter, error, response, roomlists, currentFilter }) {
         );
         
         if (matchingRoomlist) {
-          setSelectedFilter(matchingRoomlist.name);
+          setSelectedFilter(matchingRoomlist.displayName || matchingRoomlist.name);
         }
       }
     }
@@ -101,12 +101,12 @@ function RoomFilter({ filter, error, response, roomlists, currentFilter }) {
               <li 
                 onClick={() => handleFilterClick(
                   `roomlist-${item.alias}`, 
-                  item.name
+                  item.displayName || item.name
                 )}
                 key={key}
                 className="dropdown-item"
               >
-                {item.name}
+                {item.displayName || item.name}
               </li>
             ))
           ) : (
