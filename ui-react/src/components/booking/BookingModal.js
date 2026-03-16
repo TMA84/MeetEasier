@@ -100,7 +100,23 @@ class BookingModal extends Component {
     this.setState({ isSubmitting: true, error: null });
 
     try {
-      const response = await fetch(`/api/rooms/${encodeURIComponent(room.Email)}/book`, {
+      // Retry helper for network errors (e.g. unstable WiFi on Raspberry Pi)
+      const fetchWithRetry = async (url, options, retries = 2) => {
+        for (let attempt = 0; attempt <= retries; attempt++) {
+          try {
+            return await fetch(url, options);
+          } catch (err) {
+            if (attempt < retries) {
+              console.warn(`Booking fetch attempt ${attempt + 1} failed, retrying...`, err.message);
+              await new Promise(r => setTimeout(r, 1000));
+            } else {
+              throw err;
+            }
+          }
+        }
+      };
+
+      const response = await fetchWithRetry(`/api/rooms/${encodeURIComponent(room.Email)}/book`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

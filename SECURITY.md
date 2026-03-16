@@ -173,6 +173,7 @@ When deploying MeetEasier, please follow these security best practices:
    - Protected by API token (`API_TOKEN`)
    - No user authentication system (single shared token)
    - Token is sent in Authorization header or X-API-Token header
+   - Admin session cookie expires after 1 hour — re-login required after expiry
    - CSRF protection for cookie-based admin sessions (see below)
    - Consider implementing proper user authentication for production
    - Restrict network access to admin panel via firewall rules

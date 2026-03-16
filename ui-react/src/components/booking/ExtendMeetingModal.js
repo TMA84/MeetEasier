@@ -76,7 +76,23 @@ class ExtendMeetingModal extends Component {
     this.setState({ isSubmitting: true, error: null });
 
     try {
-      const response = await fetch('/api/extend-meeting', {
+      // Retry helper for network errors (e.g. unstable WiFi on Raspberry Pi)
+      const fetchWithRetry = async (url, options, retries = 2) => {
+        for (let attempt = 0; attempt <= retries; attempt++) {
+          try {
+            return await fetch(url, options);
+          } catch (err) {
+            if (attempt < retries) {
+              console.warn(`Extend meeting fetch attempt ${attempt + 1} failed, retrying...`, err.message);
+              await new Promise(r => setTimeout(r, 1000));
+            } else {
+              throw err;
+            }
+          }
+        }
+      };
+
+      const response = await fetchWithRetry('/api/extend-meeting', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

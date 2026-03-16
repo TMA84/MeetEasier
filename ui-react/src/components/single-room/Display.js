@@ -544,7 +544,7 @@ class Display extends Component {
     
     const currentAppointment = room.Appointments[0];
     
-    fetch('/api/extend-meeting', {
+    const fetchOptions = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -554,7 +554,20 @@ class Display extends Component {
         appointmentId: currentAppointment.Id,
         minutes: minutes
       })
-    })
+    };
+
+    // Retry helper for network errors (e.g. unstable WiFi on Raspberry Pi)
+    const fetchWithRetry = (url, options, retries = 2, attempt = 0) => {
+      return fetch(url, options).catch(err => {
+        if (attempt < retries) {
+          console.warn(`Extend meeting fetch attempt ${attempt + 1} failed, retrying...`, err.message);
+          return new Promise(r => setTimeout(r, 1000)).then(() => fetchWithRetry(url, options, retries, attempt + 1));
+        }
+        throw err;
+      });
+    };
+
+    fetchWithRetry('/api/extend-meeting', fetchOptions)
       .then(response => {
         return response.json().then(data => ({ status: response.status, data }));
       })

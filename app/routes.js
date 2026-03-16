@@ -234,7 +234,8 @@ function getAdminCookieOptions() {
 		httpOnly: true,
 		sameSite: 'strict',
 		secure: isProduction,
-		path: '/'
+		path: '/',
+		maxAge: 60 * 60 * 1000 // 1 hour
 	};
 }
 
@@ -257,7 +258,8 @@ function getCsrfCookieOptions() {
 		httpOnly: false, // Must be readable by JavaScript
 		sameSite: 'strict',
 		secure: isProduction,
-		path: '/'
+		path: '/',
+		maxAge: 60 * 60 * 1000 // 1 hour
 	};
 }
 
@@ -2973,9 +2975,14 @@ module.exports = function(app) {
 			// Add Socket.IO displays first
 			socketDisplays.forEach(display => {
 				const key = display.clientId.toLowerCase();
+				// Strip IP prefix from clientId for display name (e.g. "192.168.3.220_flightboard" → "flightboard")
+				let displayName = display.roomAlias || display.clientId;
+				if (!display.roomAlias && /^\d+\.\d+\.\d+\.\d+_/.test(displayName)) {
+					displayName = displayName.replace(/^\d+\.\d+\.\d+\.\d+_/, '');
+				}
 				displayMap.set(key, {
 					id: display.clientId,
-					name: display.roomAlias || display.clientId,
+					name: displayName,
 					type: display.displayType || 'unknown',
 					ipAddress: display.ipAddress,
 					socketIO: {
@@ -3062,6 +3069,10 @@ module.exports = function(app) {
 					// Update IP if we have it from MQTT
 					if (mqtt.networkAddress && !existingDisplay.ipAddress) {
 						existingDisplay.ipAddress = mqtt.networkAddress;
+					}
+					// Use MQTT room name as display name if current name contains IP (raw clientId)
+					if (mqtt.room && existingDisplay.name && /\d+\.\d+\.\d+\.\d+/.test(existingDisplay.name)) {
+						existingDisplay.name = mqtt.room;
 					}
 				} else {
 					// Add as MQTT-only display
