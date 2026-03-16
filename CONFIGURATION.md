@@ -837,6 +837,10 @@ All admin API endpoints require the `API_TOKEN` to be sent in one of these heade
 
 State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) using cookie-based admin sessions require a valid CSRF token. The `meeteasier_csrf` cookie value must be sent in the `X-CSRF-Token` request header. This does not apply when using header-based authentication (`Authorization` or `X-API-Token`), which is the standard approach for API scripts and external integrations.
 
+**Session Expiry:**
+
+Admin session cookies expire after 1 hour. After expiry the admin panel will require re-login.
+
 **Example:**
 ```bash
 # Set your API token

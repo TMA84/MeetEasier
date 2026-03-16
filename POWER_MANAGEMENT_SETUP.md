@@ -46,7 +46,66 @@ Der Browser-Modus funktioniert automatisch auf allen Displays:
 
 ## DPMS-Modus (Raspberry Pi)
 
-Für echtes Stromsparen auf Raspberry Pi muss ein lokales Skript installiert werden.
+### X11 Display-Konfiguration (LXDE)
+
+Damit das Display nicht nach ein paar Minuten automatisch schwarz wird, muss der Screensaver und das automatische DPMS-Blanking deaktiviert werden. DPMS bleibt aktiv für die manuelle Steuerung per MQTT/Touchkio.
+
+**Wichtig: Raspberry Pi OS verwendet zwei Autostart-Dateien.** Die User-Level-Datei hat Vorrang und überschreibt die globale:
+
+| Datei | Priorität |
+|---|---|
+| `~/.config/lxsession/LXDE-pi/autostart` | Hoch (User-Level, wird bevorzugt) |
+| `/etc/xdg/lxsession/LXDE/autostart` | Niedrig (Global, wird ignoriert wenn User-Level existiert) |
+
+Auf Raspberry Pi OS existiert standardmäßig die User-Level-Datei mit DPMS-Standardwerten, die das Display nach ~10 Minuten ausschalten. **Nur diese Datei muss angepasst werden.**
+
+User-Level-Datei bearbeiten:
+```bash
+nano ~/.config/lxsession/LXDE-pi/autostart
+```
+
+Inhalt ersetzen mit:
+```
+@xset s noblank
+@xset s off
+@xset dpms 0 0 0
+```
+
+Erklärung:
+- `@xset s noblank` — Verhindert, dass X11 den Bildschirm schwarz schaltet
+- `@xset s off` — Deaktiviert den X11-Screensaver komplett
+- `@xset dpms 0 0 0` — Setzt Standby/Suspend/Off-Timeouts auf 0 (nie automatisch), DPMS bleibt aber für manuelle Befehle verfügbar (`xset dpms force off/on`)
+
+**Häufiger Fehler:** `@xset dpms` ohne Parameter aktiviert DPMS mit Standard-Timeouts (600s = 10 Minuten). Das ist der häufigste Grund, warum Kiosk-Displays nach ein paar Minuten ausgehen.
+
+**Wichtig:** `@xscreensaver -no-splash` darf **nicht** in der Autostart stehen — es kollidiert mit den xset-Einstellungen und kann Chromium Render-Prozess-Crashes verursachen (Error Code 1002).
+
+#### Kernel Console Blanking
+
+Falls das Display trotz korrekter xset-Konfiguration noch ausgeht, kann der Kernel-Konsolen-Blanker die Ursache sein:
+
+```bash
+# Prüfen:
+cat /sys/module/kernel/parameters/consoleblank
+
+# Falls nicht 0: In /boot/cmdline.txt am Ende der Zeile hinzufügen:
+consoleblank=0
+```
+
+#### Optionale LightDM-Konfiguration
+
+In `/etc/lightdm/lightdm.conf` unter `[Seat:*]`:
+```ini
+xserver-command=X -s 0 -dpms
+```
+
+#### Verifizierung
+
+Nach dem Neustart auf dem Pi prüfen:
+```bash
+xset q | grep -A 5 "DPMS"
+# Erwartete Ausgabe: Standby: 0, Suspend: 0, Off: 0
+```
 
 ### Installation auf Raspberry Pi
 

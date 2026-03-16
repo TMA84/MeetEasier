@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.30] - 2026-03-16
+
+### Fixed
+- Display names in Devices tab now strip IP prefix from Socket.IO clientId (e.g., `192.168.3.220_flightboard` → `flightboard`) — only applies when no `roomAlias` is set
+- MQTT merge now replaces IP-based display names with MQTT `room` name when available
+- Room booking and extend-meeting fetch requests now retry up to 2 times on network errors — prevents false "Failed to Fetch" errors on Raspberry Pi displays with unstable WiFi
+
+### Security
+- Admin session cookie now expires after 1 hour (`maxAge: 60 * 60 * 1000`) — previously had no expiry, persisting until browser close
+- CSRF cookie now also expires after 1 hour for consistency
+
+### Documentation
+- Added X11 display blanking prevention guide for Raspberry Pi to POWER_MANAGEMENT_SETUP.md — covers DPMS configuration, user-level autostart overrides, and kernel console blanking
+
 ## [1.7.29] - 2026-03-15
 
 ### Fixed
