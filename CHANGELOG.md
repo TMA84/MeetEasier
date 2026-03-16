@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.31] - 2026-03-16
+
+### Fixed
+- "Refresh All" and "Reboot All" now use `deviceId` instead of `hostname` — fixes all commands being sent to the same device when multiple displays share the hostname `piosk`
+
 ## [1.7.30] - 2026-03-16
 
 ### Fixed

@@ -2765,7 +2765,8 @@ module.exports = function(app) {
 			let failCount = 0;
 
 			displays.forEach(display => {
-				const success = mqttPowerBridge.sendRefreshCommand(display.hostname);
+				const identifier = display.deviceId || display.hostname;
+				const success = mqttPowerBridge.sendRefreshCommand(identifier);
 				if (success) {
 					successCount++;
 				} else {
@@ -2796,7 +2797,8 @@ module.exports = function(app) {
 			let failCount = 0;
 
 			displays.forEach(display => {
-				const success = mqttPowerBridge.sendRebootCommand(display.hostname);
+				const identifier = display.deviceId || display.hostname;
+				const success = mqttPowerBridge.sendRebootCommand(identifier);
 				if (success) {
 					successCount++;
 				} else {
