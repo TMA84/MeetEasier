@@ -152,7 +152,7 @@ const DevicesTab = ({
                         <button type="button" className="admin-secondary-button devices-icon-button" onClick={() => onOpenPowerManagement(display.id)} title="Power Management">⚡</button>
                         {hasMQTT && (
                           <>
-                            <button type="button" className="admin-secondary-button devices-icon-button" onClick={() => onMqttRefresh(display.mqtt.hostname)} title="Refresh Page">🔄</button>
+                            <button type="button" className="admin-secondary-button devices-icon-button" onClick={() => onMqttRefresh(display.mqtt.deviceId || display.mqtt.hostname)} title="Refresh Page">🔄</button>
                             <button type="button" className="admin-primary-button devices-details-button" onClick={() => onOpenTouchkioModal(display)}>Details</button>
                           </>
                         )}

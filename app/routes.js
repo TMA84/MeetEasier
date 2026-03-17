@@ -361,21 +361,12 @@ function isDisplayOriginAllowed(req) {
 		return { allowed: true };
 	}
 
-	// IP whitelist check (when enabled)
-	const systemConfig = configManager.getSystemConfig();
-	if (systemConfig.displayIpWhitelistEnabled && Array.isArray(systemConfig.displayIpWhitelist) && systemConfig.displayIpWhitelist.length > 0) {
-		const clientIp = getClientIp(req);
-		const normalizedClientIp = normalizeIpForWhitelist(clientIp);
-		const isWhitelisted = systemConfig.displayIpWhitelist.some(allowedIp => {
-			const normalizedAllowed = normalizeIpForWhitelist(allowedIp);
-			return normalizedClientIp === normalizedAllowed;
-		});
-		if (!isWhitelisted) {
-			return { allowed: false, reason: 'ip_not_whitelisted' };
-		}
+	// Always allow admin session cookie (logged-in admin users)
+	if (hasValidAdminAuthCookie(req)) {
+		return { allowed: true };
 	}
 
-	// Check Origin header (set by browsers on POST/fetch requests)
+	// Check Same-Origin via Origin header (set by browsers on fetch requests)
 	const origin = req.headers['origin'];
 	if (origin) {
 		try {
@@ -390,7 +381,7 @@ function isDisplayOriginAllowed(req) {
 		return { allowed: false, reason: 'origin_mismatch' };
 	}
 
-	// Fallback: check Referer header
+	// Check Same-Origin via Referer header (fallback for GET requests)
 	const referer = req.headers['referer'];
 	if (referer) {
 		try {
@@ -405,8 +396,22 @@ function isDisplayOriginAllowed(req) {
 		return { allowed: false, reason: 'origin_mismatch' };
 	}
 
-	// No Origin, no Referer, no token → reject
-	return { allowed: false, reason: 'origin_mismatch' };
+	// No Origin, no Referer — check IP whitelist as last resort
+	const systemConfig = configManager.getSystemConfig();
+	if (systemConfig.displayIpWhitelistEnabled && Array.isArray(systemConfig.displayIpWhitelist) && systemConfig.displayIpWhitelist.length > 0) {
+		const clientIp = getClientIp(req);
+		const normalizedClientIp = normalizeIpForWhitelist(clientIp);
+		const isWhitelisted = systemConfig.displayIpWhitelist.some(allowedIp => {
+			const normalizedAllowed = normalizeIpForWhitelist(allowedIp);
+			return normalizedClientIp === normalizedAllowed;
+		});
+		if (isWhitelisted) {
+			return { allowed: true };
+		}
+	}
+
+	// No Origin, no Referer, no token, not whitelisted → reject
+	return { allowed: false, reason: 'origin_not_allowed' };
 }
 
 /**
@@ -3021,8 +3026,7 @@ module.exports = function(app) {
 			
 			// Merge or add MQTT displays
 			mqttDisplays.forEach(mqtt => {
-				const hostnameKey = mqtt.hostname.toLowerCase();
-				const deviceKey = mqtt.deviceId ? mqtt.deviceId.toLowerCase() : hostnameKey;
+				const deviceKey = (mqtt.deviceId || mqtt.hostname).toLowerCase();
 				const mqttIp = mqtt.networkAddress ? mqtt.networkAddress.toLowerCase() : null;
 				const mqttRoom = mqtt.room ? mqtt.room.toLowerCase() : null;
 				
@@ -3033,32 +3037,14 @@ module.exports = function(app) {
 					// Strategy 1: IP address exact match (most reliable for same physical device)
 					if (mqttIp && display.ipAddress) {
 						const socketIp = display.ipAddress.toLowerCase();
-						// Extract IP from formats like "192.168.1.10" or "localhost (::1)"
 						if (socketIp === mqttIp || socketIp.includes(mqttIp)) {
 							existingDisplay = display;
 							break;
 						}
 					}
 					
-					// Strategy 2: clientId ends with hostname (e.g., "192.168.1.10_saturn" matches "saturn")
-					// This indicates the Socket.IO client is from the same Touchkio device
-					if (display.id.toLowerCase().endsWith('_' + hostnameKey)) {
-						existingDisplay = display;
-						break;
-					}
-					
-					// Strategy 3: Room name match with IP (for Touchkio displays)
-					if (mqttRoom && mqttIp && display.ipAddress) {
-						const socketIp = display.ipAddress.toLowerCase();
-						const displayName = display.name.toLowerCase();
-						if ((socketIp === mqttIp || socketIp.includes(mqttIp)) && displayName === mqttRoom) {
-							existingDisplay = display;
-							break;
-						}
-					}
-					
-					// Strategy 4: Exact clientId match (rare but possible)
-					if (display.id.toLowerCase() === hostnameKey) {
+					// Strategy 2: clientId contains deviceId (e.g., "192.168.1.10_rpi_1A4187")
+					if (mqtt.deviceId && display.id.toLowerCase().includes(mqtt.deviceId.toLowerCase())) {
 						existingDisplay = display;
 						break;
 					}

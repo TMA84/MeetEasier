@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.34] - 2026-03-17
+
+### Fixed
+- `checkDisplayOrigin` now checks Same-Origin (Origin/Referer) before IP whitelist — fixes Touchkio displays losing Socket.IO connection when `/api/rooms` returned 403
+- Added admin session cookie check to `checkDisplayOrigin` for logged-in admin users
+- All MQTT commands and display merge now use `deviceId` instead of `hostname` — fixes cloned devices (same hostname `piosk`) targeting wrong device
+- `getDeviceIdFromHostname` warns when hostname maps to multiple devices
+- Power schedule uses `deviceId` directly instead of potentially ambiguous `config.mqttHostname`
+
+### Security
+- `/api/health` and `/api/version` now require authentication (admin or WiFi API token)
+- `HEAD /api/health` remains unauthenticated for uptime monitoring
+- `/api/rooms` and `/api/roomlists` secured with `checkDisplayOrigin` middleware
+
 ## [1.7.33] - 2026-03-17
 
 ### Fixed
