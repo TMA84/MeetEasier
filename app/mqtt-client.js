@@ -228,11 +228,12 @@ function unsubscribe(topic) {
  * Get client status
  */
 function getStatus() {
+  const mqttConfig = configManager.getMqttConfig();
   return {
-    running: isConnected,
+    enabled: mqttConfig.enabled,
     connected: isConnected,
     subscribedTopics: Array.from(subscribedTopics),
-    brokerUrl: mqttClient?.options?.href || 'Not connected'
+    brokerUrl: mqttConfig.brokerUrl || null
   };
 }
 

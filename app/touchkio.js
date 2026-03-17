@@ -83,6 +83,9 @@ function subscribeTouchkioStates() {
       
       const displayState = displayStates.get(deviceId);
       
+      // Update lastSeen on every message from this device
+      displayState.lastSeen = new Date().toISOString();
+      
       // Route based on topic pattern
       if (topic.includes('/host_name/state') || topic.includes('/host_name/status')) {
         displayState.hostname = payloadStr;

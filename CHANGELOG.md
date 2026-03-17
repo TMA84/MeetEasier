@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.32] - 2026-03-17
+
+### Changed
+- `/api/health` endpoint now includes MQTT client status (broker connection, subscribed topics) and per-device display status (online/offline based on 5-minute heartbeat, hostname, room, last update)
+- Removed redundant simple health endpoint (duplicate was overridden by detailed version)
+- MQTT admin tab: renamed from "Broker" to "Client" terminology, shows connection status, broker URL and subscribed topics (DE+EN)
+- MQTT `getStatus()` now returns configured broker URL from config instead of broken `options.href`
+
+### Fixed
+- MQTT display online detection now uses `lastSeen` timestamp updated on every incoming MQTT message — previously only `display/power/state` updated the timestamp, causing devices to appear offline despite sending regular CPU/memory/uptime updates
+- MQTT displays in Devices tab now correctly show as disconnected when no message received within 5 minutes — previously all discovered devices were permanently shown as connected
+
+### Security
+- `/api/rooms` and `/api/roomlists` now secured with `checkDisplayOrigin` middleware — restricts access to same-origin requests or valid API tokens
+
 ## [1.7.31] - 2026-03-16
 
 ### Fixed
