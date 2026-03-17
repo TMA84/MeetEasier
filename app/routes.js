@@ -1089,7 +1089,12 @@ module.exports = function(app) {
 		res.json(maintenanceConfig);
 	});
 
-	app.get('/api/health', async function(req, res) {
+	app.get('/api/health', function(req, res, next) {
+		if (!hasValidWiFiApiToken(req)) {
+			return res.status(401).json({ error: 'Unauthorized', message: 'Valid API token required.' });
+		}
+		next();
+	}, async function(req, res) {
 		const syncStatus = require('./socket-controller').getSyncStatus();
 		const graphAuth = await getGraphAuthHealth();
 		const cacheHealth = getCacheHealth();
@@ -1147,7 +1152,12 @@ module.exports = function(app) {
 	});
 
 	// Version endpoint - returns application version
-	app.get('/api/version', function(req, res) {
+	app.get('/api/version', function(req, res, next) {
+		if (!hasValidWiFiApiToken(req)) {
+			return res.status(401).json({ error: 'Unauthorized', message: 'Valid API token required.' });
+		}
+		next();
+	}, function(req, res) {
 		const packageJson = require('../package.json');
 		res.json({
 			version: packageJson.version || 'unknown',
@@ -3012,6 +3022,7 @@ module.exports = function(app) {
 			// Merge or add MQTT displays
 			mqttDisplays.forEach(mqtt => {
 				const hostnameKey = mqtt.hostname.toLowerCase();
+				const deviceKey = mqtt.deviceId ? mqtt.deviceId.toLowerCase() : hostnameKey;
 				const mqttIp = mqtt.networkAddress ? mqtt.networkAddress.toLowerCase() : null;
 				const mqttRoom = mqtt.room ? mqtt.room.toLowerCase() : null;
 				
@@ -3094,8 +3105,8 @@ module.exports = function(app) {
 					const displayName = mqtt.room || mqtt.hostname;
 					const displayType = mqtt.room ? 'single-room' : 'unknown';
 					
-					displayMap.set(hostnameKey, {
-						id: mqtt.hostname,
+					displayMap.set(deviceKey, {
+						id: mqtt.deviceId || mqtt.hostname,
 						name: displayName,
 						type: displayType,
 						ipAddress: mqtt.networkAddress,

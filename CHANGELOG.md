@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.33] - 2026-03-17
+
+### Fixed
+- MQTT displays with identical hostname (cloned devices) no longer overwrite each other in Devices tab — now uses `deviceId` as map key instead of `hostname`
+- MQTT display online detection uses `lastSeen` timestamp updated on every MQTT message — previously only power state updates set the timestamp
+- MQTT displays correctly show as disconnected after 5 minutes without messages
+
+### Security
+- `/api/health` and `/api/version` now require authentication (admin or WiFi API token)
+- `HEAD /api/health` remains unauthenticated for uptime monitoring
+
 ## [1.7.32] - 2026-03-17
 
 ### Changed
