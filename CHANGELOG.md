@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.32] - 2026-03-17
+
+### Changed
+- `/api/health` endpoint now includes MQTT client status (broker connection, subscribed topics) and per-device display status (online/offline based on 5-minute heartbeat, hostname, room, last update)
+- Removed redundant simple health endpoint (duplicate was overridden by detailed version)
+
+### Security
+- `/api/rooms` and `/api/roomlists` now secured with `checkDisplayOrigin` middleware — restricts access to same-origin requests or valid API tokens
+
 ## [1.7.31] - 2026-03-16
 
 ### Fixed
