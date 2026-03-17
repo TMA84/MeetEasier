@@ -27,19 +27,19 @@ const MqttTab = ({
 }) => {
   return (
     <div className="admin-card" id="ops-mqtt">
-      <h3>{t.mqttSectionTitle || 'MQTT Broker Configuration'}</h3>
+      <h3>{t.mqttSectionTitle || 'MQTT Configuration'}</h3>
       
       <form onSubmit={onSubmit}>
         <div className="admin-form-group">
           <label className="inline-label">
-            <span className="label-text">{t.mqttEnabledLabel || 'MQTT Broker Enabled'}</span>
+            <span className="label-text">{t.mqttEnabledLabel || 'MQTT Client Enabled'}</span>
             <input
               type="checkbox"
               checked={mqttEnabled || false}
               onChange={(e) => onEnabledChange(e.target.checked)}
             />
           </label>
-          <small>{t.mqttEnabledHelp || 'Connects to an external MQTT broker for Touchkio display control'}</small>
+          <small>{t.mqttEnabledHelp || 'Connects to an MQTT broker for Touchkio display control'}</small>
         </div>
 
         <div className="admin-form-group">
@@ -121,21 +121,25 @@ const MqttTab = ({
 
       <div className="admin-form-divider"></div>
 
-      <h3>{t.mqttStatusSectionTitle || 'MQTT Broker Status'}</h3>
+      <h3>{t.mqttStatusSectionTitle || 'MQTT Client Status'}</h3>
       <div className="admin-current-config">
         <div className="config-grid">
           <div className="config-item">
-            <span className="config-label">{t.mqttStatusLabel || 'Status:'}</span>
+            <span className="config-label">{t.mqttConnectionLabel || 'Connection:'}</span>
             <span className="config-value">
-              {mqttStatus?.running ? 
-                <span className="mqtt-status-running">{t.mqttStatusRunning || 'Running'}</span> : 
-                <span className="mqtt-status-stopped">{t.mqttStatusStopped || 'Stopped'}</span>
+              {mqttStatus?.connected ? 
+                <span className="mqtt-status-running">{t.mqttStatusRunning || 'Connected'}</span> : 
+                <span className="mqtt-status-stopped">{t.mqttStatusDisconnected || 'Disconnected'}</span>
               }
             </span>
           </div>
           <div className="config-item">
-            <span className="config-label">{t.mqttConnectedClientsLabel || 'Connected Clients:'}</span>
-            <span className="config-value">{mqttStatus?.clients || 0}</span>
+            <span className="config-label">{t.mqttBrokerLabel || 'Broker:'}</span>
+            <span className="config-value">{mqttStatus?.brokerUrl || '—'}</span>
+          </div>
+          <div className="config-item">
+            <span className="config-label">{t.mqttTopicsLabel || 'Subscribed Topics:'}</span>
+            <span className="config-value">{mqttStatus?.subscribedTopics?.length || 0}</span>
           </div>
         </div>
       </div>

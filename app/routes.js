@@ -1024,14 +1024,6 @@ module.exports = function(app) {
 		res.status(200).end();
 	});
 
-	app.get('/api/health', function(req, res) {
-		res.status(200).json({
-			status: 'ok',
-			timestamp: new Date().toISOString(),
-			uptime: process.uptime()
-		});
-	});
-
 	app.get('/api/graph/webhook', function(req, res) {
 		if (!config.graphWebhook.enabled) {
 			return res.status(503).json({
@@ -1102,14 +1094,32 @@ module.exports = function(app) {
 		const graphAuth = await getGraphAuthHealth();
 		const cacheHealth = getCacheHealth();
 		const maintenance = configManager.getMaintenanceConfig();
+		const mqttClient = require('./mqtt-client');
+		const mqttStatus = mqttClient.getStatus();
+		const touchkio = require('./touchkio');
+		const displays = touchkio.getDisplayStates();
+
+		// Count displays that reported state within last 5 minutes as online
+		const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+		const onlineDisplays = displays.filter(d => d.lastSeen && new Date(d.lastSeen).getTime() > fiveMinAgo);
 
 		res.json({
 			status: 'ok',
 			timestamp: new Date().toISOString(),
+			uptime: process.uptime(),
 			graphAuth,
 			syncStatus,
 			cache: cacheHealth,
-			maintenance
+			maintenance,
+			mqtt: {
+				connected: mqttStatus.connected,
+				brokerUrl: mqttStatus.brokerUrl,
+				subscribedTopics: mqttStatus.subscribedTopics.length,
+				displays: {
+					total: displays.length,
+					online: onlineDisplays.length
+				}
+			}
 		});
 	});
 
@@ -1146,8 +1156,29 @@ module.exports = function(app) {
 	});
 
 	// api routes ================================================================
+
+	// Middleware: Validates request originates from application UI (same-origin) or carries valid API token
+	const checkDisplayOrigin = (req, res, next) => {
+		const result = isDisplayOriginAllowed(req);
+		if (result.allowed) {
+			return next();
+		}
+
+		if (result.reason === 'ip_not_whitelisted') {
+			return res.status(403).json({
+				error: 'ip_not_whitelisted',
+				message: 'Your device IP is not whitelisted. Contact your administrator to add this device.'
+			});
+		}
+
+		res.status(403).json({
+			error: 'origin_not_allowed',
+			message: 'This endpoint is only accessible from the application UI or with a valid API token.'
+		});
+	};
+
 	// returns an array of room objects
-	app.get('/api/rooms', function(req, res) {
+	app.get('/api/rooms', checkDisplayOrigin, function(req, res) {
 		// Demo mode: return generated demo rooms
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode) {
@@ -1192,7 +1223,7 @@ module.exports = function(app) {
 	});
 
 	// returns an array of roomlist objects with aliases for filtering
-	app.get('/api/roomlists', function(req, res) {
+	app.get('/api/roomlists', checkDisplayOrigin, function(req, res) {
 		// Demo mode: return demo roomlists
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode) {
@@ -1248,26 +1279,6 @@ module.exports = function(app) {
 			});
 		}
 	});
-
-	// Middleware: Validates request originates from application UI (same-origin) or carries valid API token
-	const checkDisplayOrigin = (req, res, next) => {
-		const result = isDisplayOriginAllowed(req);
-		if (result.allowed) {
-			return next();
-		}
-
-		if (result.reason === 'ip_not_whitelisted') {
-			return res.status(403).json({
-				error: 'ip_not_whitelisted',
-				message: 'Your device IP is not whitelisted. Contact your administrator to add this device.'
-			});
-		}
-
-		res.status(403).json({
-			error: 'origin_not_allowed',
-			message: 'This endpoint is only accessible from the application UI or with a valid API token.'
-		});
-	};
 
 	// Room booking endpoint
 	app.post('/api/rooms/:roomEmail/book', checkDisplayOrigin, function(req, res, next) {
@@ -3043,7 +3054,7 @@ module.exports = function(app) {
 				}
 				
 				const mqttData = {
-					connected: true,
+					connected: !!(mqtt.lastSeen && (Date.now() - new Date(mqtt.lastSeen).getTime()) < 5 * 60 * 1000),
 					hostname: mqtt.hostname,
 					deviceId: mqtt.deviceId,
 					room: mqtt.room,
@@ -3061,6 +3072,7 @@ module.exports = function(app) {
 					networkAddress: mqtt.networkAddress,
 					uptime: mqtt.uptime,
 					lastUpdate: mqtt.lastUpdate,
+					lastSeen: mqtt.lastSeen,
 					errors: mqtt.errors,
 					lastErrorUpdate: mqtt.lastErrorUpdate
 				};
