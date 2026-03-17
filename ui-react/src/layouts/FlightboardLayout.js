@@ -1,6 +1,5 @@
-import React, { Component } from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import io from 'socket.io-client';
 
 import Flightboard from '../components/flightboard/Flightboard';
 import Navbar from '../components/flightboard/Navbar';
@@ -16,7 +15,6 @@ function FlightboardLayout() {
 
   const handleFilter = (filterValue) => {
     setFilter(filterValue);
-    // Update URL with new filter
     if (filterValue && filterValue !== config.roomFilter.filterDefault) {
       setSearchParams({ filter: filterValue });
     } else {
@@ -34,25 +32,6 @@ function FlightboardLayout() {
       .catch(err => {
         console.error('Error fetching sidebar config:', err);
       });
-
-    // Listen for config updates
-    const socket = io();
-    socket.on('sidebarConfigUpdated', () => {
-      fetch('/api/sidebar')
-        .then(response => response.json())
-        .then(data => {
-          setFlightboardDarkMode(data.flightboardDarkMode !== undefined ? data.flightboardDarkMode : true);
-        })
-        .catch(err => {
-          console.error('Error fetching sidebar config:', err);
-        });
-    });
-
-    return () => {
-      if (socket) {
-        socket.disconnect();
-      }
-    };
   }, []);
 
   // Update filter when URL changes
@@ -75,8 +54,6 @@ function FlightboardLayout() {
     } else {
       document.body.classList.remove('flightboard-light');
     }
-
-    // Cleanup on unmount
     return () => {
       document.body.classList.remove('flightboard-light');
     };

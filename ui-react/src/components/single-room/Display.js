@@ -4,7 +4,6 @@ import io from 'socket.io-client';
 
 import RoomStatusBlock from './RoomStatusBlock';
 import Sidebar from './Sidebar';
-import Socket from '../global/Socket';
 import Spinner from '../global/Spinner';
 import BookingModal from '../booking/BookingModal';
 import ExtendMeetingModal from '../booking/ExtendMeetingModal';
@@ -165,17 +164,6 @@ class Display extends Component {
     });
   }
 
-  /**
-   * Handle Socket.IO updates
-   * Updates rooms data when received via websocket
-   * @param {Object} socketResponse - Response from Socket.IO containing rooms data
-   */
-  handleSocket = (socketResponse) => {
-    this.setState({
-      rooms: socketResponse.rooms
-    }, () => this.processRoomDetails());
-  }
-
   componentDidMount() {
     this.getRoomsData();
     this.fetchMaintenanceStatus();
@@ -308,6 +296,11 @@ class Display extends Component {
         document.documentElement.style.setProperty('--status-busy-color', config.statusBusyColor || '#ef4444');
         document.documentElement.style.setProperty('--status-upcoming-color', config.statusUpcomingColor || '#f59e0b');
         document.documentElement.style.setProperty('--status-not-found-color', config.statusNotFoundColor || '#6b7280');
+      });
+
+      // Listen for real-time room updates (replaces separate Socket component)
+      this.socket.on('updatedRooms', (rooms) => {
+        this.setState({ rooms }, () => this.processRoomDetails());
       });
     }
 
@@ -696,8 +689,6 @@ class Display extends Component {
 
     return (
       <div style={{ position: 'relative' }}>
-        {/* Socket.IO connection for real-time updates */}
-        <Socket response={this.handleSocket} />
 
         {response ? (
           <div className={`single-room-layout ${isDarkModeActive ? 'single-room-layout--dark' : ''}`} style={{ display: 'flex', height: '100vh' }}>
@@ -711,6 +702,7 @@ class Display extends Component {
               room={room} 
               displayAlias={this.state.roomAlias}
               forceDarkMode={isDarkModeActive}
+              socket={this.socket}
               details={roomDetails} 
               config={displayTranslations}
               bookingConfig={bookingConfig}

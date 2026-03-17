@@ -1094,6 +1094,17 @@ module.exports = function(app) {
 		res.json(maintenanceConfig);
 	});
 
+	// Debug endpoint for Socket.IO disconnect reasons (requires auth)
+	app.get('/api/debug/socket-disconnects', function(req, res, next) {
+		if (!hasValidWiFiApiToken(req)) {
+			return res.status(401).json({ error: 'Unauthorized', message: 'Valid API token required.' });
+		}
+		next();
+	}, function(req, res) {
+		const socketController = require('./socket-controller');
+		res.json({ disconnects: socketController.getRecentDisconnects() });
+	});
+
 	app.get('/api/health', function(req, res, next) {
 		if (!hasValidWiFiApiToken(req)) {
 			return res.status(401).json({ error: 'Unauthorized', message: 'Valid API token required.' });

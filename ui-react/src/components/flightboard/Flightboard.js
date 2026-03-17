@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import io from 'socket.io-client';
 
 import FlightboardRow from './FlightboardRow';
-import Socket from '../global/Socket';
 import Spinner from '../global/Spinner';
 import { applyI18nConfig, getMaintenanceCopy, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';
 import { getDisplayClientId } from '../../utils/displayClientId.js';
@@ -31,7 +30,6 @@ class Flightboard extends Component {
 
     this.displayClientId = getDisplayClientId();
     this.socket = null;
-    this.handleSocket = this.handleSocket.bind(this);
   }
 
   /**
@@ -64,18 +62,6 @@ class Flightboard extends Component {
           rooms: { error: 'Failed to fetch room data' }
         });
       });
-  }
-
-  /**
-   * Handle Socket.IO updates
-   * Updates component state when new room data is received via websocket
-   * @param {Object} socketResponse - Response from Socket.IO containing room data
-   */
-  handleSocket(socketResponse) {
-    this.setState({
-      response: socketResponse.response,
-      rooms: socketResponse.rooms
-    });
   }
 
   fetchMaintenanceStatus() {
@@ -151,6 +137,11 @@ class Flightboard extends Component {
           initPowerManagement(this.displayClientId);
         }
       });
+
+      // Listen for real-time room updates (replaces separate Socket component)
+      this.socket.on('updatedRooms', (rooms) => {
+        this.setState({ response: true, rooms });
+      });
     }
 
     // Send heartbeat every 30 seconds to keep display status active
@@ -190,8 +181,6 @@ class Flightboard extends Component {
 
     return (
       <div className={`tracker-wrap ${wrapperClass}`}>
-        {/* Socket.IO connection for real-time updates */}
-        <Socket response={this.handleSocket} />
 
         {response ? (
           !error ? (

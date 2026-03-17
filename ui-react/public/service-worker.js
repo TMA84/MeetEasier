@@ -51,6 +51,12 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
+  // Skip non-HTTP(S) requests (e.g., chrome-extension://)
+  if (!url.protocol.startsWith('http')) return;
+
+  // Skip cross-origin requests (external fonts, CDNs, etc.)
+  if (url.origin !== self.location.origin) return;
+
   // Skip socket.io
   if (url.pathname.startsWith('/socket.io')) return;
 
@@ -107,8 +113,10 @@ self.addEventListener('fetch', (event) => {
           if (cached) return cached;
           // For navigation requests, try to serve cached index.html
           if (request.mode === 'navigate') {
-            return caches.match('/');
+            return caches.match('/').then((index) => index || new Response('Offline', { status: 503 }));
           }
+          // Return a proper error response instead of undefined
+          return new Response('Network error', { status: 503, statusText: 'Service Unavailable' });
         });
       })
   );
