@@ -204,20 +204,27 @@ function getDeviceIdFromHostname(hostname) {
   // First, check if hostname is already a deviceId
   if (hostname && hostname.startsWith('rpi_')) {
     if (displayStates.has(hostname)) {
-      console.log(`[Touchkio] Hostname "${hostname}" is already a deviceId`);
       return hostname;
     }
   }
   
-  // Look up in the mapping
+  // Look up in the mapping — warn if hostname maps to multiple devices
+  const matches = [];
   for (const [deviceId, mappedHostname] of deviceIdToHostname.entries()) {
     if (mappedHostname === hostname) {
-      console.log(`[Touchkio] Found deviceId "${deviceId}" for hostname "${hostname}"`);
-      return deviceId;
+      matches.push(deviceId);
     }
   }
   
-  console.error(`[Touchkio] No deviceId found for hostname "${hostname}". Available mappings:`, Array.from(deviceIdToHostname.entries()));
+  if (matches.length > 1) {
+    console.warn(`[Touchkio] Hostname "${hostname}" maps to ${matches.length} devices: ${matches.join(', ')}. Use deviceId instead. Returning first match.`);
+  }
+  
+  if (matches.length > 0) {
+    return matches[0];
+  }
+  
+  console.error(`[Touchkio] No deviceId found for "${hostname}". Available mappings:`, Array.from(deviceIdToHostname.entries()));
   return null;
 }
 
@@ -545,9 +552,9 @@ function checkDisplaySchedule(clientId, config) {
     shouldBeOff = isTimeInRange(currentTime, startTime, endTime);
   }
   
-  // Use mqttHostname from config (which should be deviceId), or use clientId directly
-  // clientId is already deviceId when called from startScheduleChecker
-  let deviceIdOrHostname = config.mqttHostname || clientId;
+  // Use deviceId directly (clientId is already deviceId from startScheduleChecker)
+  // config.mqttHostname may contain a legacy hostname — ignore it if clientId is a deviceId
+  let deviceIdOrHostname = clientId.startsWith('rpi_') ? clientId : (config.mqttHostname || clientId);
   
   // Send command to Touchkio (getDeviceIdFromHostname handles both deviceId and hostname)
   if (shouldBeOff) {
