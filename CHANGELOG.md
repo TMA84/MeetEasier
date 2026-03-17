@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.35] - 2026-03-17
+
+### Added
+- Socket.IO disconnect reason logging — stores last 50 disconnect events with reason, IP, and timestamp
+- Debug endpoint `GET /api/debug/socket-disconnects` (requires API token) for diagnosing Socket.IO connection issues
+
+### Fixed
+- Service Worker no longer intercepts `chrome-extension://` URLs or cross-origin requests (e.g., Google Fonts) — fixes `Failed to execute 'put' on 'Cache'` errors
+- CSP now allows `fonts.gstatic.com` in `connect-src` — fixes font loading blocked by Content Security Policy
+- Consolidated Socket.IO connections: each display now uses a single connection instead of 2-4 separate ones (Display+Socket+Sidebar, Flightboard+Socket+Navbar+Layout) — reduces 39+ concurrent connections to 15 for all devices
+
 ## [1.7.34] - 2026-03-17
 
 ### Fixed

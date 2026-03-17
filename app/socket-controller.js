@@ -20,6 +20,8 @@ let socketIO = null;
 let pollTimerHandle = null;
 let autoMaintenanceOwned = false;
 const connectedDisplayClients = new Map();
+const recentDisconnects = []; // Store last 50 disconnect events for debugging
+const MAX_DISCONNECT_LOG = 50;
 
 const GRAPH_FAILURE_MAINTENANCE_MESSAGE = process.env.GRAPH_FAILURE_MAINTENANCE_MESSAGE
   || 'Calendar backend currently unavailable. Display is temporarily in fallback mode.';
@@ -742,7 +744,11 @@ module.exports = function(io) {
    * Starts the API polling loop on first connection
    */
   io.of('/').on('connection', function(socket) {
-    console.log('Client connected to Socket.IO');
+    const clientIp = socket.handshake.headers?.['x-forwarded-for']?.split(',')[0]?.trim()
+      || socket.handshake.address || 'unknown';
+    const displayClientId = socket.handshake.query?.displayClientId || 'none';
+    const displayType = socket.handshake.query?.displayType || 'none';
+    console.log(`[Socket] Client connected: ip=${clientIp}, displayClientId=${displayClientId}, displayType=${displayType}, transport=${socket.conn?.transport?.name || 'unknown'}`);
     registerConnectedClient(socket);
 
     // Start API polling loop only once
@@ -771,10 +777,21 @@ module.exports = function(io) {
       }
     });
 
-    // Handle client disconnection
-    socket.on('disconnect', function() {
+    // Handle client disconnection with reason logging
+    socket.on('disconnect', function(reason) {
+      const identifier = socket?.data?.displayIdentifier || 'unregistered';
+      console.log(`[Socket] Client disconnected: identifier=${identifier}, reason=${reason}, ip=${clientIp}`);
+      recentDisconnects.push({
+        identifier,
+        reason,
+        ip: clientIp,
+        displayType,
+        timestamp: new Date().toISOString()
+      });
+      if (recentDisconnects.length > MAX_DISCONNECT_LOG) {
+        recentDisconnects.shift();
+      }
       unregisterConnectedClient(socket);
-      console.log('Client disconnected from Socket.IO');
     });
   });
 
@@ -786,6 +803,7 @@ module.exports = function(io) {
   module.exports.getConnectedDisplayClients = getConnectedDisplayClients;
   module.exports.emitToDisplayClient = emitToDisplayClient;
   module.exports.removeDisplayClient = removeDisplayClient;
+  module.exports.getRecentDisconnects = function() { return [...recentDisconnects]; };
 };
 
 module.exports.getSyncStatus = getSyncStatus;
@@ -795,3 +813,4 @@ module.exports.refreshMsalClient = refreshMsalClient;
 module.exports.getConnectedDisplayClients = getConnectedDisplayClients;
 module.exports.emitToDisplayClient = emitToDisplayClient;
 module.exports.removeDisplayClient = removeDisplayClient;
+module.exports.getRecentDisconnects = function() { return []; };

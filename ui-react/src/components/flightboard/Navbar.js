@@ -1,9 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import io from 'socket.io-client';
 import { applyI18nConfig, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';
 import { getFlightboardDisplayTranslations } from '../../config/displayTranslations.js';
-import { getDisplayClientId } from '../../utils/displayClientId.js';
 
 import Clock from './Clock';
 import RoomFilterContainer from './RoomFilterContainer';
@@ -21,8 +19,6 @@ class Navbar extends Component {
       i18nTick: 0,
       flightboardDarkMode: true
     };
-    this.displayClientId = getDisplayClientId();
-    this.socket = null;
   }
 
   componentDidMount() {
@@ -32,45 +28,16 @@ class Navbar extends Component {
       this.setState({ i18nTick: Date.now() });
     });
     
-    // Connect to Socket.IO for real-time logo updates
-    this.socket = io({
-      query: {
-        displayClientId: this.displayClientId,
-        displayType: 'flightboard-navbar',
-        roomAlias: ''
-      }
-    });
-    
-    this.socket.on('logoConfigUpdated', (config) => {
-      console.log('Logo config updated via Socket.IO:', config);
-      this.updateLogoUrl(config);
-    });
-
-    this.socket.on('sidebarConfigUpdated', () => {
+    // Refresh configs every 60 seconds as fallback (real-time updates come via Flightboard's socket)
+    this.refreshInterval = setInterval(() => {
+      this.fetchLogoConfig();
       this.fetchSidebarConfig();
-    });
-
-    this.socket.on('i18nConfigUpdated', (i18nConfig) => {
-      applyI18nConfig(i18nConfig);
-      this.setState({ i18nTick: Date.now() });
-    });
-
-    // Send heartbeat every 30 seconds to keep display status active
-    this.heartbeatInterval = setInterval(() => {
-      if (this.socket && this.socket.connected) {
-        this.socket.emit('display-heartbeat');
-      }
-    }, 30000);
+    }, 60000);
   }
 
   componentWillUnmount() {
-    // Clean up socket connection
-    if (this.socket) {
-      this.socket.disconnect();
-    }
-    // Clean up heartbeat interval
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
     }
   }
 

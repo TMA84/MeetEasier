@@ -1,10 +1,8 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import io from 'socket.io-client';
 
 import Clock from './Clock';
 import { uses12HourFormat } from '../../utils/timeFormat';
-import { getDisplayClientId } from '../../utils/displayClientId.js';
 
 /**
  * Sidebar component for single room display
@@ -29,8 +27,6 @@ class Sidebar extends Component {
         singleRoomDarkMode: false
       }
     };
-    this.displayClientId = getDisplayClientId();
-    this.socket = null;
   }
 
   componentDidMount() {
@@ -38,50 +34,38 @@ class Sidebar extends Component {
     this.fetchLogoConfig();
     this.fetchSidebarConfig();
     
-    // Connect to Socket.IO for real-time updates
-    this.socket = io({
-      query: {
-        displayClientId: this.displayClientId,
-        displayType: 'single-room',
-        roomAlias: this.props.displayAlias || ''
-      }
-    });
-    
-    // Listen for WiFi config updates
-    this.socket.on('wifiConfigUpdated', (config) => {
-      console.log('WiFi config updated via Socket.IO:', config);
-      this.setState({ wifiConfig: config });
-      // Force QR code image reload
-      const qrImage = document.querySelector('.wifi-qr img');
-      if (qrImage) {
-        qrImage.src = `../img/wifi-qr.png?t=${Date.now()}`;
-      }
-    });
-    
-    // Listen for Logo config updates
-    this.socket.on('logoConfigUpdated', (config) => {
-      console.log('Logo config updated via Socket.IO:', config);
-      this.setState({
-        logoDarkUrl: config.logoDarkUrl || '../img/logo.B.png',
-        logoLightUrl: config.logoLightUrl || '../img/logo.W.png'
-      });
-    });
-    
-    // Listen for Sidebar config updates
-    this.socket.on('sidebarConfigUpdated', (config) => {
-      console.log('Sidebar config updated via Socket.IO:', config);
-      this.setState({
-        sidebarConfig: {
-          showWiFi: config.showWiFi !== undefined ? config.showWiFi : true,
-          showUpcomingMeetings: config.showUpcomingMeetings !== undefined ? config.showUpcomingMeetings : false,
-          showMeetingTitles: config.showMeetingTitles !== undefined ? config.showMeetingTitles : false,
-          upcomingMeetingsCount: Number.isFinite(Number(config.upcomingMeetingsCount))
-            ? Math.min(Math.max(parseInt(config.upcomingMeetingsCount, 10), 1), 10)
-            : 3,
-          singleRoomDarkMode: config.singleRoomDarkMode !== undefined ? config.singleRoomDarkMode : false
+    // Use parent's Socket.IO connection for real-time updates
+    const socket = this.props.socket;
+    if (socket) {
+      socket.on('wifiConfigUpdated', (config) => {
+        this.setState({ wifiConfig: config });
+        const qrImage = document.querySelector('.wifi-qr img');
+        if (qrImage) {
+          qrImage.src = `../img/wifi-qr.png?t=${Date.now()}`;
         }
       });
-    });
+      
+      socket.on('logoConfigUpdated', (config) => {
+        this.setState({
+          logoDarkUrl: config.logoDarkUrl || '../img/logo.B.png',
+          logoLightUrl: config.logoLightUrl || '../img/logo.W.png'
+        });
+      });
+      
+      socket.on('sidebarConfigUpdated', (config) => {
+        this.setState({
+          sidebarConfig: {
+            showWiFi: config.showWiFi !== undefined ? config.showWiFi : true,
+            showUpcomingMeetings: config.showUpcomingMeetings !== undefined ? config.showUpcomingMeetings : false,
+            showMeetingTitles: config.showMeetingTitles !== undefined ? config.showMeetingTitles : false,
+            upcomingMeetingsCount: Number.isFinite(Number(config.upcomingMeetingsCount))
+              ? Math.min(Math.max(parseInt(config.upcomingMeetingsCount, 10), 1), 10)
+              : 3,
+            singleRoomDarkMode: config.singleRoomDarkMode !== undefined ? config.singleRoomDarkMode : false
+          }
+        });
+      });
+    }
     
     // Refresh configs every 5 minutes as backup
     this.wifiInterval = setInterval(() => {
@@ -92,12 +76,8 @@ class Sidebar extends Component {
   }
 
   componentWillUnmount() {
-    // Clean up interval and socket connection
     if (this.wifiInterval) {
       clearInterval(this.wifiInterval);
-    }
-    if (this.socket) {
-      this.socket.disconnect();
     }
   }
 
