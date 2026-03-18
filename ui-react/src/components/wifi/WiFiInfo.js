@@ -12,6 +12,7 @@ class WiFiInfo extends Component {
       ssid: '',
       password: '',
       logoLightUrl: '/img/logo.W.png',
+      qrTimestamp: Date.now(),
       i18nTick: 0
     };
     this.socket = null;
@@ -34,14 +35,9 @@ class WiFiInfo extends Component {
         this.setState({
           ssid: config.ssid || '-',
           password: config.password || '-',
+          qrTimestamp: Date.now(),
           loading: false
         });
-        
-        // Force QR code image reload
-        const qrImage = document.querySelector('.wifi-qr-container img');
-        if (qrImage) {
-          qrImage.src = `/img/wifi-qr.png?t=${Date.now()}`;
-        }
       });
       
       // Listen for logo config updates
@@ -85,15 +81,20 @@ class WiFiInfo extends Component {
       .then(data => {
         this.setState({
           loading: false,
+          error: null,
           ssid: data.ssid || '-',
-          password: data.password || '-'
+          password: data.password || '-',
+          qrTimestamp: Date.now()
         });
       })
       .catch(err => {
-        this.setState({
-          loading: false,
-          error: err.message
-        });
+        // Only show error if we have no data yet (initial load)
+        if (!this.state.ssid) {
+          this.setState({
+            loading: false,
+            error: err.message
+          });
+        }
       });
   }
 
@@ -130,7 +131,7 @@ class WiFiInfo extends Component {
   }
 
   render() {
-    const { loading, error, ssid, password, logoLightUrl } = this.state;
+    const { loading, error, ssid, password, logoLightUrl, qrTimestamp } = this.state;
     const t = this.getTranslations();
 
     return (
@@ -163,7 +164,7 @@ class WiFiInfo extends Component {
 
               <div className="wifi-qr-container">
                 <img 
-                  src={`/img/wifi-qr.png?t=${Date.now()}`} 
+                  src={`/img/wifi-qr.png?t=${qrTimestamp}`} 
                   alt="WiFi QR Code" 
                   onError={(e) => e.target.style.display = 'none'}
                 />

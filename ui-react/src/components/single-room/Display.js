@@ -20,12 +20,15 @@ import { getDeviceTypeString } from '../../utils/deviceDetection.js';
  */
 class Display extends Component {
   /**
-   * Error boundary - reload page on component error
-   * Provides graceful recovery from rendering errors
+   * Error boundary - show error state instead of crashing
+   * Avoids infinite reload loops from transient render errors
    */
   componentDidCatch(error, info) {
     console.error('Display component error:', error, info);
-    window.location.reload();
+    this.setState({
+      showErrorModal: true,
+      errorMessage: 'A display error occurred. The page will recover automatically.'
+    });
   }
 
   constructor(props) {
