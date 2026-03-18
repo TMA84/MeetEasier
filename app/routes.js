@@ -397,21 +397,8 @@ function isDisplayOriginAllowed(req) {
 	}
 
 	// No Origin, no Referer — check IP whitelist as last resort
-	const systemConfig = configManager.getSystemConfig();
-	if (systemConfig.displayIpWhitelistEnabled && Array.isArray(systemConfig.displayIpWhitelist) && systemConfig.displayIpWhitelist.length > 0) {
-		const clientIp = getClientIp(req);
-		const normalizedClientIp = normalizeIpForWhitelist(clientIp);
-		const isWhitelisted = systemConfig.displayIpWhitelist.some(allowedIp => {
-			const normalizedAllowed = normalizeIpForWhitelist(allowedIp);
-			// Support CIDR notation (e.g., 192.168.3.0/24)
-			if (normalizedAllowed.includes('/')) {
-				return ipMatchesCidr(normalizedClientIp, normalizedAllowed);
-			}
-			return normalizedClientIp === normalizedAllowed;
-		});
-		if (isWhitelisted) {
-			return { allowed: true };
-		}
+	if (isClientIpWhitelisted(req)) {
+		return { allowed: true };
 	}
 
 	// No Origin, no Referer, no token, not whitelisted → reject
@@ -449,6 +436,26 @@ function normalizeIpForWhitelist(ip) {
 
 function getClientIp(req) {
 	return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+/**
+ * Check if client IP is whitelisted.
+ * Returns true if whitelist is disabled or IP matches an entry.
+ */
+function isClientIpWhitelisted(req) {
+	const systemConfig = configManager.getSystemConfig();
+	if (!systemConfig.displayIpWhitelistEnabled || !Array.isArray(systemConfig.displayIpWhitelist) || systemConfig.displayIpWhitelist.length === 0) {
+		return true;
+	}
+	const clientIp = getClientIp(req);
+	const normalizedClientIp = normalizeIpForWhitelist(clientIp);
+	return systemConfig.displayIpWhitelist.some(allowedIp => {
+		const normalizedAllowed = normalizeIpForWhitelist(allowedIp);
+		if (normalizedAllowed.includes('/')) {
+			return ipMatchesCidr(normalizedClientIp, normalizedAllowed);
+		}
+		return normalizedClientIp === normalizedAllowed;
+	});
 }
 
 /**
@@ -1244,8 +1251,7 @@ module.exports = function(app) {
 	};
 
 	// Middleware: Loose origin check for data endpoints (/api/rooms, /api/roomlists)
-	// Blocks requests with a mismatched Origin/Referer (cross-site), but allows
-	// requests with NO Origin/Referer (kiosk browsers, curl, direct fetch).
+	// Blocks cross-origin requests. When IP whitelist is enabled, also checks client IP.
 	const checkDisplayOriginLoose = (req, res, next) => {
 		// Always allow tokens and admin cookies
 		if (hasValidApiToken(req) || hasValidWiFiApiToken(req) || hasValidAdminAuthCookie(req)) {
@@ -1256,21 +1262,33 @@ module.exports = function(app) {
 		const origin = req.headers['origin'];
 		if (origin) {
 			try {
-				if (new URL(origin).host === req.headers['host']) return next();
-			} catch (_) {}
-			return res.status(403).json({ error: 'origin_mismatch', message: 'Cross-origin access is not allowed.' });
+				if (new URL(origin).host !== req.headers['host']) {
+					return res.status(403).json({ error: 'origin_mismatch', message: 'Cross-origin access is not allowed.' });
+				}
+			} catch (_) {
+				return res.status(403).json({ error: 'origin_mismatch', message: 'Cross-origin access is not allowed.' });
+			}
 		}
 
-		// If Referer is present, it must match
-		const referer = req.headers['referer'];
-		if (referer) {
-			try {
-				if (new URL(referer).host === req.headers['host']) return next();
-			} catch (_) {}
-			return res.status(403).json({ error: 'origin_mismatch', message: 'Cross-origin access is not allowed.' });
+		// If Referer is present (and no Origin), it must match
+		if (!origin) {
+			const referer = req.headers['referer'];
+			if (referer) {
+				try {
+					if (new URL(referer).host !== req.headers['host']) {
+						return res.status(403).json({ error: 'origin_mismatch', message: 'Cross-origin access is not allowed.' });
+					}
+				} catch (_) {
+					return res.status(403).json({ error: 'origin_mismatch', message: 'Cross-origin access is not allowed.' });
+				}
+			}
 		}
 
-		// No Origin, no Referer — allow (kiosk browsers, server-to-server, curl)
+		// Check IP whitelist
+		if (!isClientIpWhitelisted(req)) {
+			return res.status(403).json({ error: 'ip_not_whitelisted', message: 'Your device IP is not whitelisted.' });
+		}
+
 		next();
 	};
 
@@ -3999,11 +4017,38 @@ module.exports = function(app) {
 		}
 	});
 
-	// redirects everything else to our react app
-	app.get('*', function(req, res) {
+	// Middleware: IP whitelist check for display pages (flightboard, single-room)
+	// When IP whitelist is enabled, only whitelisted IPs can access display pages.
+	// Admin and WiFi pages remain open to all.
+	const checkDisplayPageAccess = (req, res, next) => {
+		if (hasValidApiToken(req) || hasValidWiFiApiToken(req) || hasValidAdminAuthCookie(req)) {
+			return next();
+		}
+
+		if (!isClientIpWhitelisted(req)) {
+			return res.status(403).send('Access denied. Your IP is not whitelisted.');
+		}
+
+		next();
+	};
+
+	// Helper: serve React index.html with no-cache headers
+	const serveReactApp = (req, res) => {
 		res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 		res.setHeader('Pragma', 'no-cache');
 		res.setHeader('Expires', '0');
 		res.sendFile(path.join(__dirname, '../ui-react/build/', 'index.html'));
-	});
+	};
+
+	// Display pages — IP whitelist enforced when enabled
+	app.get('/', checkDisplayPageAccess, serveReactApp);
+	app.get('/single-room/*', checkDisplayPageAccess, serveReactApp);
+	app.get('/room-minimal/*', checkDisplayPageAccess, serveReactApp);
+
+	// Admin and WiFi pages — open to all
+	app.get('/admin', serveReactApp);
+	app.get('/wifi-info', serveReactApp);
+
+	// Everything else (404 page, static assets not caught by express.static, etc.)
+	app.get('*', serveReactApp);
 };

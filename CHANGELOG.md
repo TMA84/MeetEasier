@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.42] - 2026-03-18
+
+### Security
+- Display pages (`/`, `/single-room/*`, `/room-minimal/*`) now enforce IP whitelist when enabled — only whitelisted IPs can access flightboard and room displays. `/admin` and `/wifi-info` remain open to all devices. API endpoints (`/api/rooms`, `/api/rooms/:alias`, `/api/roomlists`) continue to enforce both cross-origin check and IP whitelist.
+
 ## [1.7.41] - 2026-03-18
 
 ### Security
-- `/api/rooms`, `/api/rooms/:alias`, and `/api/roomlists` secured with `checkDisplayOriginLoose` — blocks cross-origin requests (mismatched Origin/Referer) but allows requests without Origin/Referer (kiosk browsers, curl). Booking, check-in, and power endpoints retain strict `checkDisplayOrigin`.
+- `/api/rooms`, `/api/rooms/:alias`, and `/api/roomlists` secured with `checkDisplayOriginLoose` — blocks cross-origin requests (mismatched Origin/Referer) and enforces IP whitelist when enabled. Requests without Origin/Referer are allowed through but still checked against IP whitelist. Booking, check-in, and power endpoints retain strict `checkDisplayOrigin`.
 
 ## [1.7.40] - 2026-03-18
 
