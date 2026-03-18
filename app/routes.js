@@ -435,6 +435,17 @@ function normalizeIpForWhitelist(ip) {
 }
 
 function getClientIp(req) {
+	// When trustReverseProxy is enabled, use X-Forwarded-For header (set by ALB, Nginx, etc.)
+	// ALB appends the real client IP as the last entry — always use the rightmost IP
+	// to prevent spoofing via client-supplied X-Forwarded-For values.
+	const systemConfig = configManager.getSystemConfig();
+	if (systemConfig.trustReverseProxy) {
+		const forwarded = req.headers['x-forwarded-for'];
+		if (forwarded) {
+			const parts = forwarded.split(',').map(s => s.trim()).filter(Boolean);
+			if (parts.length > 0) return parts[parts.length - 1];
+		}
+	}
 	return req.ip || req.socket?.remoteAddress || 'unknown';
 }
 
@@ -2344,6 +2355,7 @@ module.exports = function(app) {
 				displayTrackingCleanupMinutes,
 				displayIpWhitelistEnabled,
 				displayIpWhitelist,
+				trustReverseProxy,
 				demoMode
 			} = req.body || {};
 
@@ -2363,6 +2375,7 @@ module.exports = function(app) {
 				&& displayTrackingCleanupMinutes === undefined
 				&& displayIpWhitelistEnabled === undefined
 				&& displayIpWhitelist === undefined
+				&& trustReverseProxy === undefined
 				&& demoMode === undefined
 			) {
 				return res.status(400).json({ error: 'At least one system configuration option is required' });
@@ -2385,6 +2398,7 @@ module.exports = function(app) {
 				displayTrackingCleanupMinutes,
 				displayIpWhitelistEnabled,
 				displayIpWhitelist,
+				trustReverseProxy,
 				demoMode
 			});
 
@@ -4026,7 +4040,43 @@ module.exports = function(app) {
 		}
 
 		if (!isClientIpWhitelisted(req)) {
-			return res.status(403).send('Access denied. Your IP is not whitelisted.');
+			const clientIp = getClientIp(req);
+			const acceptLang = String(req.headers['accept-language'] || '').toLowerCase();
+			const isGerman = acceptLang.startsWith('de') || acceptLang.includes(',de');
+			const lang = isGerman ? 'de' : 'en';
+			const title = isGerman ? 'Zugriff verweigert' : 'Access Denied';
+			const msg1 = isGerman
+				? 'Dieses Gerät ist nicht für den Zugriff auf die Raumanzeige freigegeben.'
+				: 'This device is not authorized to access the room display.';
+			const msg2 = isGerman
+				? 'Bitte wenden Sie sich an den Administrator, um Ihre IP-Adresse zur Whitelist hinzuzufügen.'
+				: 'Please contact your administrator to add your IP address to the whitelist.';
+			return res.status(403).send(`<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .container { text-align: center; max-width: 480px; padding: 2rem; }
+  .icon { font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.6; }
+  h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.75rem; color: #f8fafc; }
+  p { font-size: 1rem; line-height: 1.6; color: #94a3b8; margin-bottom: 0.5rem; }
+  .ip { font-family: 'SF Mono', SFMono-Regular, Consolas, monospace; font-size: 0.85rem; color: #64748b; margin-top: 1.5rem; padding: 0.5rem 1rem; background: #1e293b; border-radius: 6px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="icon">🔒</div>
+  <h1>${title}</h1>
+  <p>${msg1}</p>
+  <p>${msg2}</p>
+  <div class="ip">${clientIp}</div>
+</div>
+</body>
+</html>`);
 		}
 
 		next();

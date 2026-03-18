@@ -943,6 +943,7 @@ function normalizeSystemConfig(systemConfig, fallback = {}) {
 		displayTrackingCleanupMinutes: toMinInt(source.displayTrackingCleanupMinutes, toMinInt(fallback.displayTrackingCleanupMinutes, 5, 0), 0),
 		displayIpWhitelistEnabled: toBoolean(source.displayIpWhitelistEnabled, toBoolean(fallback.displayIpWhitelistEnabled, false)),
 		displayIpWhitelist: parseWebhookIps(source.displayIpWhitelist, Array.isArray(fallback.displayIpWhitelist) ? fallback.displayIpWhitelist : []),
+		trustReverseProxy: toBoolean(source.trustReverseProxy, toBoolean(fallback.trustReverseProxy, false)),
 		demoMode: toBoolean(source.demoMode, toBoolean(fallback.demoMode, false))
 	};
 }
@@ -963,7 +964,8 @@ function getSystemRuntimeConfig() {
 		displayTrackingRetentionHours: 2,
 		displayTrackingCleanupMinutes: 5,
 		displayIpWhitelistEnabled: false,
-		displayIpWhitelist: []
+		displayIpWhitelist: [],
+		trustReverseProxy: false
 	};
 
 	const rawConfig = (() => {
@@ -1031,6 +1033,7 @@ function getSystemConfig() {
 		displayTrackingCleanupMinutes: runtimeConfig.displayTrackingCleanupMinutes,
 		displayIpWhitelistEnabled: runtimeConfig.displayIpWhitelistEnabled,
 		displayIpWhitelist: runtimeConfig.displayIpWhitelist,
+		trustReverseProxy: runtimeConfig.trustReverseProxy,
 		demoMode: !oauthConfigured,
 		lastUpdated: runtimeConfig.lastUpdated
 	};
@@ -1287,7 +1290,8 @@ function saveSystemConfig(systemConfig) {
 			displayTrackingRetentionHours: 2,
 			displayTrackingCleanupMinutes: 5,
 			displayIpWhitelistEnabled: false,
-			displayIpWhitelist: []
+			displayIpWhitelist: [],
+			trustReverseProxy: false
 		})
 	);
 
@@ -1313,6 +1317,7 @@ function saveSystemConfig(systemConfig) {
 		displayTrackingCleanupMinutes: configData.displayTrackingCleanupMinutes,
 		displayIpWhitelistEnabled: configData.displayIpWhitelistEnabled,
 		displayIpWhitelist: configData.displayIpWhitelist,
+		trustReverseProxy: configData.trustReverseProxy,
 		demoMode: configData.demoMode,
 		lastUpdated: configData.lastUpdated
 	};

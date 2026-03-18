@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.43] - 2026-03-18
+
+### Added
+- New admin option "Behind Reverse Proxy" (Devices tab) — when enabled, uses `X-Forwarded-For` header to determine real client IP behind ALB/Nginx. Required for IP whitelist to work correctly behind a reverse proxy. Disabled by default for security (prevents IP spoofing without a proxy).
+
 ## [1.7.42] - 2026-03-18
 
 ### Security
