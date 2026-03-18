@@ -15,6 +15,8 @@ const DevicesTab = ({
   currentSystemDisplayIpWhitelistEnabled,
   systemDisplayIpWhitelist,
   currentSystemDisplayIpWhitelist,
+  systemTrustReverseProxy,
+  currentSystemTrustReverseProxy,
   systemMessage,
   systemMessageType,
   t,
@@ -30,6 +32,7 @@ const DevicesTab = ({
   onCleanupMinutesChange,
   onIpWhitelistEnabledChange,
   onIpWhitelistChange,
+  onTrustReverseProxyChange,
   onSaveSettings
 }) => {
   const hasMqttDisplays = connectedDisplays && connectedDisplays.filter(d => d.mqtt).length > 0;
@@ -211,10 +214,11 @@ const DevicesTab = ({
             onChange={(e) => onIpWhitelistEnabledChange(e.target.checked)}
           />
         </label>
-        <small className="admin-help-text">{t.displayIpWhitelistEnabledHelp || 'When enabled, only whitelisted IPs can use booking, check-in, and power management endpoints. Room status display remains accessible to all.'}</small>
+        <small className="admin-help-text">{t.displayIpWhitelistEnabledHelp || 'When enabled, only whitelisted IPs can access display pages (flightboard, room displays) and their APIs. Admin and WiFi pages remain open to all.'}</small>
       </div>
 
       {systemDisplayIpWhitelistEnabled && (
+        <>
         <div className="admin-form-group">
           <label htmlFor="systemDisplayIpWhitelist">{t.displayIpWhitelistLabel || 'Allowed IP Addresses (one per line)'}</label>
           <textarea
@@ -227,6 +231,19 @@ const DevicesTab = ({
           />
           <small className="admin-help-text">{t.displayIpWhitelistHelp || 'Enter one IP address or CIDR range per line (e.g., 192.168.3.0/24). IPv4 and IPv6 are supported. localhost/127.0.0.1/::1 are treated as equivalent.'}</small>
         </div>
+
+        <div className="admin-form-group">
+          <label className="inline-label">
+            <span className="label-text">{t.trustReverseProxyLabel || 'Behind Reverse Proxy (ALB, Nginx, etc.)'}</span>
+            <input
+              type="checkbox"
+              checked={systemTrustReverseProxy}
+              onChange={(e) => onTrustReverseProxyChange(e.target.checked)}
+            />
+          </label>
+          <small className="admin-help-text">{t.trustReverseProxyHelp || 'Enable this if the server runs behind a reverse proxy (e.g., AWS ALB, Nginx). Uses X-Forwarded-For header to determine the real client IP. Do not enable without a reverse proxy — clients could spoof their IP.'}</small>
+        </div>
+        </>
       )}
 
       <button 
@@ -238,7 +255,8 @@ const DevicesTab = ({
           parseInt(systemDisplayTrackingRetentionHours, 10) === currentSystemDisplayTrackingRetentionHours &&
           parseInt(systemDisplayTrackingCleanupMinutes, 10) === currentSystemDisplayTrackingCleanupMinutes &&
           systemDisplayIpWhitelistEnabled === currentSystemDisplayIpWhitelistEnabled &&
-          systemDisplayIpWhitelist === currentSystemDisplayIpWhitelist
+          systemDisplayIpWhitelist === currentSystemDisplayIpWhitelist &&
+          systemTrustReverseProxy === currentSystemTrustReverseProxy
         }
       >
         {t.systemSaveButton || 'Save System Configuration'}

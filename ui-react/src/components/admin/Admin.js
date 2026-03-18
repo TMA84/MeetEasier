@@ -398,6 +398,8 @@ class Admin extends Component {
       systemDisplayIpWhitelistEnabled: false,
       currentSystemDisplayIpWhitelist: '',
       systemDisplayIpWhitelist: '',
+      currentSystemTrustReverseProxy: false,
+      systemTrustReverseProxy: false,
       currentDemoMode: false,
       demoMode: false,
       systemLastUpdated: '',
@@ -1718,6 +1720,8 @@ class Admin extends Component {
           systemDisplayIpWhitelistEnabled: !!data.displayIpWhitelistEnabled,
           currentSystemDisplayIpWhitelist: Array.isArray(data.displayIpWhitelist) ? data.displayIpWhitelist.join('\n') : '',
           systemDisplayIpWhitelist: Array.isArray(data.displayIpWhitelist) ? data.displayIpWhitelist.join('\n') : '',
+          currentSystemTrustReverseProxy: !!data.trustReverseProxy,
+          systemTrustReverseProxy: !!data.trustReverseProxy,
           currentDemoMode: !!data.demoMode,
           demoMode: !!data.demoMode,
           systemLastUpdated: data.lastUpdated
@@ -2304,6 +2308,7 @@ class Admin extends Component {
       systemDisplayTrackingCleanupMinutes,
       systemDisplayIpWhitelistEnabled,
       systemDisplayIpWhitelist,
+      systemTrustReverseProxy,
       demoMode
     } = this.state;
 
@@ -2322,6 +2327,7 @@ class Admin extends Component {
         displayTrackingCleanupMinutes: Math.max(Math.min(parseInt(systemDisplayTrackingCleanupMinutes, 10) || 5, 60), 0),
         displayIpWhitelistEnabled: !!systemDisplayIpWhitelistEnabled,
         displayIpWhitelist: String(systemDisplayIpWhitelist || '').split('\n').map(s => s.trim()).filter(Boolean),
+        trustReverseProxy: !!systemTrustReverseProxy,
         demoMode: !!demoMode
       })
     })
@@ -3962,6 +3968,7 @@ class Admin extends Component {
       currentSystemDisplayTrackingCleanupMinutes, systemDisplayTrackingCleanupMinutes,
       currentSystemDisplayIpWhitelistEnabled, systemDisplayIpWhitelistEnabled,
       currentSystemDisplayIpWhitelist, systemDisplayIpWhitelist,
+      currentSystemTrustReverseProxy, systemTrustReverseProxy,
       currentDemoMode, demoMode,
       systemLastUpdated,
       currentTranslationApiEnabled, translationApiEnabled,
@@ -5524,6 +5531,9 @@ class Admin extends Component {
                   currentSystemDisplayIpWhitelist={currentSystemDisplayIpWhitelist}
                   onIpWhitelistEnabledChange={(value) => this.setState({ systemDisplayIpWhitelistEnabled: value })}
                   onIpWhitelistChange={(value) => this.setState({ systemDisplayIpWhitelist: value })}
+                  systemTrustReverseProxy={systemTrustReverseProxy}
+                  currentSystemTrustReverseProxy={currentSystemTrustReverseProxy}
+                  onTrustReverseProxyChange={(value) => this.setState({ systemTrustReverseProxy: value })}
                   onSaveSettings={this.handleSystemSubmit}
                 />
               )}
