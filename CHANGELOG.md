@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.40] - 2026-03-18
+
+### Added
+- New endpoint `GET /api/rooms/:alias` — returns a single room by alias, reduces payload for single-room displays
+- Socket.IO room-based targeting — single-room displays join a `room:<alias>` channel and receive only their room's updates via `updatedRoom` event
+- `broadcastRoomUpdates()` sends targeted per-room data to single-room clients and full array to flightboard/admin
+
+### Changed
+- Single-room Display.js now fetches `/api/rooms/:alias` instead of `/api/rooms`
+- `/api/rooms` now returns minimal fields only (no Email, no Appointment.Id/Subject/Private, max 2 appointments per room) — sufficient for flightboard display. Full room data available via `/api/rooms/:alias`.
+
 ## [1.7.39] - 2026-03-18
 
 ### Fixed

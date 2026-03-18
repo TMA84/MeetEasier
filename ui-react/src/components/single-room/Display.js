@@ -84,19 +84,33 @@ class Display extends Component {
   }
 
   /**
-   * Fetch all rooms data from API
-   * Called on component mount and when data needs refresh
+   * Fetch single room data from API
+   * Uses room-specific endpoint to minimize data transfer
    */
   getRoomsData = () => {
-    return fetch('/api/rooms')
-      .then((response) => response.json())
-      .then((data) => {
+    const alias = this.state.roomAlias;
+    if (!alias) return Promise.resolve();
+
+    return fetch(`/api/rooms/${encodeURIComponent(alias)}`)
+      .then((response) => {
+        if (response.status === 404) {
+          this.setState({
+            response: true,
+            room: { Name: '', Busy: true, NotFound: true, Appointments: [] }
+          });
+          return;
+        }
+        return response.json();
+      })
+      .then((room) => {
+        if (!room) return;
         this.setState({
-          rooms: data
+          rooms: [room],
+          room: room
         }, () => this.processRoomDetails());
       })
       .catch((err) => {
-        console.error('Error fetching rooms data:', err);
+        console.error('Error fetching room data:', err);
         this.setState({
           response: true,
           room: { Name: '', Appointments: [] }
@@ -302,9 +316,21 @@ class Display extends Component {
         document.documentElement.style.setProperty('--status-not-found-color', config.statusNotFoundColor || '#6b7280');
       });
 
-      // Listen for real-time room updates (replaces separate Socket component)
+      // Listen for real-time room update (single room, targeted via Socket.IO room)
+      this.socket.on('updatedRoom', (room) => {
+        if (room && room.RoomAlias === this.state.roomAlias) {
+          this.setState({ rooms: [room], room }, () => this.processRoomDetails());
+        }
+      });
+
+      // Fallback: listen for full room updates (in case server sends broadcast)
       this.socket.on('updatedRooms', (rooms) => {
-        this.setState({ rooms }, () => this.processRoomDetails());
+        if (Array.isArray(rooms)) {
+          const room = rooms.find(r => r.RoomAlias === this.state.roomAlias);
+          if (room) {
+            this.setState({ rooms: [room], room }, () => this.processRoomDetails());
+          }
+        }
       });
     }
 

@@ -556,6 +556,8 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 ### Real-Time Updates
 
 - Socket.IO integration for instant updates
+- Targeted room delivery: single-room displays receive only their own room data via a dedicated `room:<alias>` channel, reducing unnecessary payload for kiosk devices
+- Flightboard and admin clients continue to receive the full rooms array
 - WiFi configuration changes propagate immediately
 - Logo changes update across all displays
 - No page refresh required

@@ -451,6 +451,30 @@ function getClientIp(req) {
 	return req.ip || req.socket?.remoteAddress || 'unknown';
 }
 
+/**
+ * Strip room data to minimal fields needed by flightboard.
+ * Removes Email, Appointment.Id, Appointment.Subject, Appointment.Private
+ * and limits to 2 appointments per room.
+ */
+function stripRoomsForFlightboard(rooms) {
+	if (!Array.isArray(rooms)) return rooms;
+	return rooms.map(room => ({
+		Roomlist: room.Roomlist,
+		RoomlistAlias: room.RoomlistAlias,
+		Name: room.Name,
+		RoomAlias: room.RoomAlias,
+		Busy: room.Busy,
+		ErrorMessage: room.ErrorMessage,
+		Appointments: Array.isArray(room.Appointments)
+			? room.Appointments.slice(0, 2).map(a => ({
+				Organizer: a.Organizer,
+				Start: a.Start,
+				End: a.End
+			}))
+			: []
+	}));
+}
+
 function isWebhookIpAllowed(req) {
 	if (!Array.isArray(config.graphWebhook.allowedIps) || config.graphWebhook.allowedIps.length === 0) {
 		return true;
@@ -1219,12 +1243,13 @@ module.exports = function(app) {
 		});
 	};
 
-	// returns an array of room objects
+	// returns an array of room objects (minimal fields for flightboard)
+	// Full room data available via /api/rooms/:alias for single-room displays
 	app.get('/api/rooms', function(req, res) {
 		// Demo mode: return generated demo rooms
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode) {
-			return res.json(demoData.getDemoRoomsSnapshot());
+			return res.json(stripRoomsForFlightboard(demoData.getDemoRoomsSnapshot()));
 		}
 
 		const hasRequiredCreds = (
@@ -1259,8 +1284,36 @@ module.exports = function(app) {
 					});
 				}
 			} else {
-				res.json(rooms);
+				res.json(stripRoomsForFlightboard(rooms));
 			}
+		}, msalClient);
+	});
+
+	// returns a single room object by alias (lightweight endpoint for single-room displays)
+	app.get('/api/rooms/:alias', function(req, res) {
+		const alias = String(req.params.alias || '').trim().toLowerCase();
+		if (!alias || !/^[a-z0-9 _.\-]{1,100}$/.test(alias)) {
+			return res.status(400).json({ error: 'Invalid room alias' });
+		}
+
+		// Demo mode
+		const systemConfig = configManager.getSystemConfig();
+		if (systemConfig.demoMode) {
+			const demoRooms = demoData.getDemoRoomsSnapshot();
+			const room = demoRooms.find(r => String(r.RoomAlias || '').toLowerCase() === alias);
+			return room ? res.json(room) : res.status(404).json({ error: 'Room not found' });
+		}
+
+		const api = require('./msgraph/rooms.js');
+		api(function(err, rooms) {
+			if (err || !Array.isArray(rooms)) {
+				return res.status(503).json({ error: 'Failed to fetch room data' });
+			}
+			const room = rooms.find(r => String(r.RoomAlias || '').toLowerCase() === alias);
+			if (!room) {
+				return res.status(404).json({ error: 'Room not found' });
+			}
+			res.json(room);
 		}, msalClient);
 	});
 

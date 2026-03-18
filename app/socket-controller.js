@@ -500,6 +500,31 @@ function removeDisplayClient(clientId) {
   return true;
 }
 
+/**
+ * Broadcast room updates efficiently:
+ * - Single-room clients in a room:alias Socket.IO room get only their room (as single-element array)
+ * - All other clients (flightboard, admin) get the full rooms array
+ */
+function broadcastRoomUpdates(rooms) {
+  if (!socketIO || !Array.isArray(rooms)) return;
+
+  // Build a map of alias → room for targeted delivery
+  const roomsByAlias = {};
+  for (const room of rooms) {
+    if (room.RoomAlias) {
+      roomsByAlias[room.RoomAlias] = room;
+    }
+  }
+
+  // Send individual room to each room-specific Socket.IO room
+  for (const [alias, room] of Object.entries(roomsByAlias)) {
+    socketIO.of('/').to(`room:${alias}`).emit('updatedRoom', room);
+  }
+
+  // Send full array to all clients (flightboard, admin, etc.)
+  socketIO.of('/').emit('updatedRooms', rooms);
+}
+
 function fetchAndBroadcastRooms() {
   return new Promise((resolve) => {
     if (!socketIO) {
@@ -514,7 +539,7 @@ function fetchAndBroadcastRooms() {
       lastSyncTime = new Date().toISOString();
       lastSyncSuccess = true;
       syncErrorMessage = null;
-      socketIO.of('/').emit('updatedRooms', demoData.getDemoRoomsSnapshot());
+      broadcastRoomUpdates(demoData.getDemoRoomsSnapshot());
       socketIO.of('/').emit('controllerDone', 'done');
       resolve(true);
       return;
@@ -562,7 +587,7 @@ function fetchAndBroadcastRooms() {
         lastSyncSuccess = true;
         syncErrorMessage = null;
         clearGraphFailureMaintenance();
-        socketIO.of('/').emit('updatedRooms', result);
+        broadcastRoomUpdates(result);
 
         releaseNoShowAppointments(result)
           .then((releasedCount) => {
@@ -750,6 +775,13 @@ module.exports = function(io) {
     const displayType = socket.handshake.query?.displayType || 'none';
     console.log(`[Socket] Client connected: ip=${clientIp}, displayClientId=${displayClientId}, displayType=${displayType}, transport=${socket.conn?.transport?.name || 'unknown'}`);
     registerConnectedClient(socket);
+
+    // Join room-specific Socket.IO room for targeted updates
+    const rawRoomAlias = String(socket.handshake.query?.roomAlias || '').trim();
+    const roomAlias = /^[a-zA-Z0-9 _.\-]{0,100}$/.test(rawRoomAlias) ? rawRoomAlias : '';
+    if (roomAlias) {
+      socket.join(`room:${roomAlias}`);
+    }
 
     // Start API polling loop only once
     if (!isRunning) {
