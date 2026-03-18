@@ -246,38 +246,10 @@ const theserver = app.listen(port, function() {
 	// call controller functions -------------------------------------------------
 	const io = require('socket.io')(theserver);
 
-	// Socket.IO IP whitelist middleware
+	// Socket.IO middleware — allow all connections
+	// IP whitelist is enforced on sensitive HTTP endpoints (/api/rooms, booking, etc.)
+	// Socket.IO only receives broadcast updates (room data, config changes) and is safe for all clients
 	io.use((socket, next) => {
-		const systemConfig = configManager.getSystemConfig();
-		if (!systemConfig.displayIpWhitelistEnabled || !Array.isArray(systemConfig.displayIpWhitelist) || systemConfig.displayIpWhitelist.length === 0) {
-			return next();
-		}
-
-		const rawIp = socket.handshake.address || '';
-		let clientIp = rawIp.trim();
-		if (clientIp.startsWith('::ffff:')) {
-			clientIp = clientIp.substring(7);
-		}
-		if (clientIp === '::1' || clientIp === '127.0.0.1' || clientIp === 'localhost') {
-			clientIp = '127.0.0.1';
-		}
-
-		const isWhitelisted = systemConfig.displayIpWhitelist.some(allowedIp => {
-			let normalized = (allowedIp || '').trim();
-			if (normalized.startsWith('::ffff:')) {
-				normalized = normalized.substring(7);
-			}
-			if (normalized === '::1' || normalized === '127.0.0.1' || normalized === 'localhost') {
-				normalized = '127.0.0.1';
-			}
-			return clientIp === normalized;
-		});
-
-		if (!isWhitelisted) {
-			console.log(`[Socket.IO] Connection rejected: IP ${rawIp} not in whitelist`);
-			return next(new Error('IP not whitelisted'));
-		}
-
 		next();
 	});
 

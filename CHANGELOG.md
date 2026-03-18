@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.36] - 2026-03-18
+
+### Fixed
+- Removed IP whitelist check from Socket.IO middleware — whitelist was blocking all non-whitelisted clients from receiving real-time updates, causing displays to show as disconnected. IP whitelist is still enforced on sensitive HTTP endpoints.
+
 ## [1.7.35] - 2026-03-17
 
 ### Added
