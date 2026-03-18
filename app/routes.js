@@ -1243,9 +1243,40 @@ module.exports = function(app) {
 		});
 	};
 
+	// Middleware: Loose origin check for data endpoints (/api/rooms, /api/roomlists)
+	// Blocks requests with a mismatched Origin/Referer (cross-site), but allows
+	// requests with NO Origin/Referer (kiosk browsers, curl, direct fetch).
+	const checkDisplayOriginLoose = (req, res, next) => {
+		// Always allow tokens and admin cookies
+		if (hasValidApiToken(req) || hasValidWiFiApiToken(req) || hasValidAdminAuthCookie(req)) {
+			return next();
+		}
+
+		// If Origin is present, it must match
+		const origin = req.headers['origin'];
+		if (origin) {
+			try {
+				if (new URL(origin).host === req.headers['host']) return next();
+			} catch (_) {}
+			return res.status(403).json({ error: 'origin_mismatch', message: 'Cross-origin access is not allowed.' });
+		}
+
+		// If Referer is present, it must match
+		const referer = req.headers['referer'];
+		if (referer) {
+			try {
+				if (new URL(referer).host === req.headers['host']) return next();
+			} catch (_) {}
+			return res.status(403).json({ error: 'origin_mismatch', message: 'Cross-origin access is not allowed.' });
+		}
+
+		// No Origin, no Referer — allow (kiosk browsers, server-to-server, curl)
+		next();
+	};
+
 	// returns an array of room objects (minimal fields for flightboard)
 	// Full room data available via /api/rooms/:alias for single-room displays
-	app.get('/api/rooms', function(req, res) {
+	app.get('/api/rooms', checkDisplayOriginLoose, function(req, res) {
 		// Demo mode: return generated demo rooms
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode) {
@@ -1290,7 +1321,7 @@ module.exports = function(app) {
 	});
 
 	// returns a single room object by alias (lightweight endpoint for single-room displays)
-	app.get('/api/rooms/:alias', function(req, res) {
+	app.get('/api/rooms/:alias', checkDisplayOriginLoose, function(req, res) {
 		const alias = String(req.params.alias || '').trim().toLowerCase();
 		if (!alias || !/^[a-z0-9 _.\-]{1,100}$/.test(alias)) {
 			return res.status(400).json({ error: 'Invalid room alias' });
@@ -1318,7 +1349,7 @@ module.exports = function(app) {
 	});
 
 	// returns an array of roomlist objects with aliases for filtering
-	app.get('/api/roomlists', function(req, res) {
+	app.get('/api/roomlists', checkDisplayOriginLoose, function(req, res) {
 		// Demo mode: return demo roomlists
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode) {

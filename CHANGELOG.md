@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.41] - 2026-03-18
+
+### Security
+- `/api/rooms`, `/api/rooms/:alias`, and `/api/roomlists` secured with `checkDisplayOriginLoose` — blocks cross-origin requests (mismatched Origin/Referer) but allows requests without Origin/Referer (kiosk browsers, curl). Booking, check-in, and power endpoints retain strict `checkDisplayOrigin`.
+
 ## [1.7.40] - 2026-03-18
 
 ### Added
