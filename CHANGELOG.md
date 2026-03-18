@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.39] - 2026-03-18
+
+### Fixed
+- WiFi QR code no longer flickers on every re-render — QR image timestamp is now stored in state and only updated on actual WiFi config changes
+- WiFi info no longer disappears on transient network errors — error state only shown during initial load, existing data preserved on refresh failures
+- Removed direct DOM manipulation for QR code reload (now handled via React state)
+- Display error boundary no longer force-reloads the page — shows error modal instead of causing infinite reload loops from transient render errors
+
 ## [1.7.38] - 2026-03-18
 
 ### Fixed
