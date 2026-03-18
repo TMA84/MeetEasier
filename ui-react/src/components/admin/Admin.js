@@ -720,7 +720,7 @@ class Admin extends Component {
       return;
     }
 
-    this.adminSocket = io();
+    this.adminSocket = io({ transports: ['websocket'] });
     if (!this.adminSocket || !this.adminSocket.on) {
       return;
     }

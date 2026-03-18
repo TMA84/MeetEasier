@@ -222,10 +222,10 @@ const DevicesTab = ({
             value={systemDisplayIpWhitelist}
             onChange={(e) => onIpWhitelistChange(e.target.value)}
             rows={6}
-            placeholder={"192.168.1.100\n192.168.1.101\n10.0.0.50"}
+            placeholder={"192.168.3.0/24\n10.5.5.0/24\n192.168.1.100"}
             style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
           />
-          <small className="admin-help-text">{t.displayIpWhitelistHelp || 'Enter one IP address per line. IPv4 and IPv6 are supported. localhost/127.0.0.1/::1 are treated as equivalent.'}</small>
+          <small className="admin-help-text">{t.displayIpWhitelistHelp || 'Enter one IP address or CIDR range per line (e.g., 192.168.3.0/24). IPv4 and IPv6 are supported. localhost/127.0.0.1/::1 are treated as equivalent.'}</small>
         </div>
       )}
 
