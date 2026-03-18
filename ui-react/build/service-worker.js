@@ -1,7 +1,7 @@
 // Service Worker for MeetEasier
 // Network-first strategy for app assets, cache-first only for vendor libs
 
-const CACHE_NAME = 'meeteasier-cc67812082897d85';
+const CACHE_NAME = 'meeteasier-8a15641b921b5e5b';
 const RUNTIME_CACHE = 'meeteasier-runtime';
 
 // Vendor assets that never change — cache-first is safe
