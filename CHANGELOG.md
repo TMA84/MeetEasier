@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.37] - 2026-03-18
+
+### Added
+- IP whitelist now supports CIDR notation (e.g., `192.168.3.0/24`) for whitelisting entire subnets
+
+### Fixed
+- Socket.IO now uses WebSocket transport only — fixes `400 Bad Request` errors caused by polling session loss behind reverse proxies
+
 ## [1.7.36] - 2026-03-18
 
 ### Fixed

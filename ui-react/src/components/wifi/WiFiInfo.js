@@ -25,7 +25,7 @@ class WiFiInfo extends Component {
     this.loadLogoConfig();
     
     // Connect to Socket.IO for real-time updates
-    this.socket = io();
+    this.socket = io({ transports: ['websocket'] });
     
     // Listen for WiFi config updates
     if (this.socket && this.socket.on) {

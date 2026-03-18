@@ -105,6 +105,7 @@ class Flightboard extends Component {
     initPowerManagement(this.displayClientId);
 
     this.socket = io({
+      transports: ['websocket'],
       query: {
         displayClientId: this.displayClientId,
         displayType: 'flightboard',

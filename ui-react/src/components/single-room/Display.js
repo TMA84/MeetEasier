@@ -174,8 +174,9 @@ class Display extends Component {
     this.fetchBookingConfig();
     this.fetchColorsConfig();
     
-    // Connect to Socket.IO for real-time sidebar config updates
+    // Connect to Socket.IO — use WebSocket only (skip polling to avoid 400 errors with reverse proxies)
     this.socket = io({
+      transports: ['websocket'],
       query: {
         displayClientId: this.displayClientId,
         displayType: getDeviceTypeString('single-room'),

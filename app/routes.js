@@ -403,6 +403,10 @@ function isDisplayOriginAllowed(req) {
 		const normalizedClientIp = normalizeIpForWhitelist(clientIp);
 		const isWhitelisted = systemConfig.displayIpWhitelist.some(allowedIp => {
 			const normalizedAllowed = normalizeIpForWhitelist(allowedIp);
+			// Support CIDR notation (e.g., 192.168.3.0/24)
+			if (normalizedAllowed.includes('/')) {
+				return ipMatchesCidr(normalizedClientIp, normalizedAllowed);
+			}
 			return normalizedClientIp === normalizedAllowed;
 		});
 		if (isWhitelisted) {
@@ -412,6 +416,18 @@ function isDisplayOriginAllowed(req) {
 
 	// No Origin, no Referer, no token, not whitelisted → reject
 	return { allowed: false, reason: 'origin_not_allowed' };
+}
+
+/**
+ * Check if an IP matches a CIDR range (e.g., 192.168.3.0/24)
+ */
+function ipMatchesCidr(ip, cidr) {
+	const [range, bits] = cidr.split('/');
+	if (!bits) return false;
+	const mask = ~(2 ** (32 - parseInt(bits, 10)) - 1) >>> 0;
+	const ipNum = ip.split('.').reduce((acc, oct) => (acc << 8) + parseInt(oct, 10), 0) >>> 0;
+	const rangeNum = range.split('.').reduce((acc, oct) => (acc << 8) + parseInt(oct, 10), 0) >>> 0;
+	return (ipNum & mask) === (rangeNum & mask);
 }
 
 /**
