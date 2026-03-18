@@ -1220,7 +1220,7 @@ module.exports = function(app) {
 	};
 
 	// returns an array of room objects
-	app.get('/api/rooms', checkDisplayOrigin, function(req, res) {
+	app.get('/api/rooms', function(req, res) {
 		// Demo mode: return generated demo rooms
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode) {
@@ -1265,7 +1265,7 @@ module.exports = function(app) {
 	});
 
 	// returns an array of roomlist objects with aliases for filtering
-	app.get('/api/roomlists', checkDisplayOrigin, function(req, res) {
+	app.get('/api/roomlists', function(req, res) {
 		// Demo mode: return demo roomlists
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode) {

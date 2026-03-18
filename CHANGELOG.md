@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.38] - 2026-03-18
+
+### Fixed
+- Removed `checkDisplayOrigin` middleware from `/api/rooms` and `/api/roomlists` — Touchkio displays in kiosk mode have no Origin/Referer header, causing 403 rejections and black screens. These endpoints only return room status data and remain safe without origin checks. Booking, check-in, and power management endpoints keep origin validation.
+
 ## [1.7.37] - 2026-03-18
 
 ### Added
