@@ -1590,11 +1590,10 @@ function saveOAuthConfig(oauthConfig) {
 
 	if (oauthConfig && Object.prototype.hasOwnProperty.call(oauthConfig, 'clientSecret')) {
 		const incomingSecret = String(oauthConfig.clientSecret || '');
-		if (incomingSecret.trim().length === 0) {
-			encryptedSecret = null;
-		} else {
+		if (incomingSecret.trim().length > 0) {
 			encryptedSecret = encryptOAuthSecret(incomingSecret);
 		}
+		// Empty string → keep existing secret (do not clear)
 	}
 
 	const configData = {

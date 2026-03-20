@@ -2562,7 +2562,7 @@ class Admin extends Component {
   handleGenerateCertificate = () => {
     const t = this.getTranslations();
     const headers = this.getRequestHeaders();
-    this.setState({ certificateLoading: true, certificateMessage: null });
+    this.setState({ certificateLoading: true, certificateMessage: null, oauthFormDirty: true });
 
     fetch('/api/oauth-certificate/generate', {
       method: 'POST',
