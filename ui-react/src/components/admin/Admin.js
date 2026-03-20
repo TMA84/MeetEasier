@@ -4340,6 +4340,14 @@ class Admin extends Component {
             </div>
           )}
 
+          {/* Maintenance Mode Banner */}
+          {isAuthenticated && currentMaintenanceEnabled && (
+            <div className="admin-message admin-message-warning admin-mb-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5em' }}>
+              <span style={{ fontSize: '1.2em' }}>⚠️</span>
+              <span>{t.maintenanceBannerText || 'Maintenance mode is active. Some write operations may be blocked.'}</span>
+            </div>
+          )}
+
           {/* Section Navigation */}
           <div className="admin-section-tabs">
             {sectionDefinitions.map((section) => (

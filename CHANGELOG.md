@@ -7,12 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.48] - 2026-03-20
+
 ### Added
-- `package.json` with full dependency manifest, engine requirements (Node ≥18, npm ≥9), and build/dev scripts
+- Room data caching: `/api/rooms` and `/api/rooms/:alias` now serve from the last successful Graph sync cache — eliminates redundant Graph API calls on page reloads
+- Exported `getLastRoomsCache()` from `socket-controller.js` for cached room data access
+- Admin panel: maintenance mode warning banner shown when maintenance mode is active — alerts admins that some write operations may be blocked
+- Certificate SHA-1 thumbprint displayed in Admin panel alongside SHA-256 — matches Azure AD certificate view
+- Certificate generator now computes and stores SHA-1 thumbprint; existing certificates get SHA-1 calculated on the fly from stored PEM
+
+### Fixed
+- Both `refreshMsalClient()` functions (routes + socket-controller) now always read fresh OAuth config from persisted storage before creating the MSAL client — fixes stale clientSecret after switching between certificate and secret auth
+- `checkCalendarWritePermission()` now sets cached result to `false` before the async token check — prevents concurrent calls from triggering duplicate Graph API permission checks
+- Added `.catch()` handler to the room-loading promise chain in `rooms.js` — unhandled Graph API errors during room list/appointment fetching now propagate to the callback instead of silently failing
+- Certificate thumbprint now lowercase hex (MSAL requirement) and private key converted from PKCS#1 to PKCS#8 format
+- Fixed `Cannot access 'hasCalendarWritePermission' before initialization` crash — variable declaration order corrected in `routes.js`
+- Single-room light theme: improved meeting card readability with stronger background opacity and floating text-shadow on room name/status
 
 ### Changed
-- API error logging in `routes.js` now extracts `body` or `message` from error objects and logs structured detail instead of raw error; also logs `statusCode` when present
-- Certificate deletion MSAL refresh now uses `configManager.getOAuthConfig()` and conditionally applies `clientId`/`authority` only when present — no longer blindly overwrites config or sets `clientSecret` directly
+- Maintenance mode now activates only after 3 consecutive Graph API failures instead of immediately on first error
+- `ensureGraphFailureMaintenance()` tracks consecutive failure count and logs progress toward threshold
+- `clearGraphFailureMaintenance()` resets failure counter on successful sync and logs recovery
+- API error logging in `routes.js` now extracts `body` or `message` from error objects and logs structured detail instead of raw error
+- Certificate deletion MSAL refresh now uses `configManager.getOAuthConfig()` and conditionally applies `clientId`/`authority` only when present
+- Added comprehensive JSDoc documentation to `routes.js`
+
+### Security
+- `socket-controller.js`: Added debug log in `refreshMsalClient()` that outputs MSAL clientId, authority, and clientSecret length to console — **review recommended**
+- Certificate management endpoints (`/oauth-certificate`, `/oauth-certificate/generate`, `/oauth-certificate/download`) now included in maintenance mode allowed paths and admin route protection list
 
 ## [1.7.47] - 2026-03-20
 

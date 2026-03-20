@@ -38,6 +38,12 @@ let msalClient = null;
  * @returns {msal.ConfidentialClientApplication} The new MSAL client instance
  */
 function refreshMsalClient() {
+  // Always read fresh OAuth config from persisted storage
+  const runtimeOAuth = configManager.getOAuthRuntimeConfig();
+  config.msalConfig.auth.clientId = runtimeOAuth.clientId;
+  config.msalConfig.auth.authority = runtimeOAuth.authority;
+  config.msalConfig.auth.clientSecret = runtimeOAuth.clientSecret;
+
   const encryptionKey = configManager.getEffectiveApiToken();
   if (encryptionKey) {
     const certConfig = certGenerator.getMsalCertificateConfig(encryptionKey);
@@ -56,6 +62,10 @@ function refreshMsalClient() {
     }
   }
   msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
+  console.log('[SocketController] MSAL client initialized with client secret (clientId: %s, authority: %s, secretLength: %d)',
+    config.msalConfig.auth.clientId,
+    config.msalConfig.auth.authority,
+    config.msalConfig.auth.clientSecret ? config.msalConfig.auth.clientSecret.length : 0);
   return msalClient;
 }
 
@@ -76,6 +86,14 @@ let socketIO = null;
 let pollTimerHandle = null;
 /** @type {boolean} Indicates whether automatic maintenance mode was activated by the controller */
 let autoMaintenanceOwned = false;
+/** @type {Array<Object>|null} Cached room data from last successful Graph sync */
+let lastRoomsCache = null;
+/** @type {number|null} Timestamp (ms) of last successful room cache update */
+let lastRoomsCacheTime = null;
+/** @type {number} Count of consecutive Graph API sync failures */
+let consecutiveGraphFailures = 0;
+/** @type {number} Number of consecutive failures before activating maintenance mode */
+const MAINTENANCE_FAILURE_THRESHOLD = 3;
 /** @type {Map<string, Object>} Connected display clients, indexed by client identifier */
 const connectedDisplayClients = new Map();
 /** @type {Array<Object>} Ring buffer of recent disconnect events for debugging */
@@ -266,6 +284,15 @@ function ensureGraphFailureMaintenance() {
     return;
   }
 
+  consecutiveGraphFailures++;
+
+  // Only activate maintenance mode after multiple consecutive failures
+  if (consecutiveGraphFailures < MAINTENANCE_FAILURE_THRESHOLD) {
+    console.log('[Maintenance] Graph API failure %d/%d — not activating maintenance yet',
+      consecutiveGraphFailures, MAINTENANCE_FAILURE_THRESHOLD);
+    return;
+  }
+
   try {
     const currentMaintenance = configManager.getMaintenanceConfig();
 
@@ -282,6 +309,8 @@ function ensureGraphFailureMaintenance() {
       return;
     }
 
+    console.log('[Maintenance] %d consecutive Graph API failures — activating maintenance mode',
+      consecutiveGraphFailures);
     autoMaintenanceOwned = true;
     configManager.updateMaintenanceConfig(true, GRAPH_FAILURE_MAINTENANCE_MESSAGE).catch((err) => {
       logSanitizedError('Failed to auto-enable maintenance fallback:', err);
@@ -297,6 +326,11 @@ function ensureGraphFailureMaintenance() {
  * (autoMaintenanceOwned). Manually set maintenance messages remain untouched.
  */
 function clearGraphFailureMaintenance() {
+  if (consecutiveGraphFailures > 0) {
+    console.log('[Maintenance] Graph API recovered after %d consecutive failure(s)', consecutiveGraphFailures);
+  }
+  consecutiveGraphFailures = 0;
+
   if (!autoMaintenanceOwned) {
     return;
   }
@@ -703,6 +737,10 @@ function removeDisplayClient(clientId) {
 function broadcastRoomUpdates(rooms) {
   if (!socketIO || !Array.isArray(rooms)) return;
 
+  // Cache room data for serving /api/rooms requests
+  lastRoomsCache = rooms;
+  lastRoomsCacheTime = Date.now();
+
   // Build room map by alias for targeted delivery
   const roomsByAlias = {};
   for (const room of rooms) {
@@ -927,6 +965,15 @@ function getSyncStatus() {
 }
 
 /**
+ * Returns the cached room data from the last successful Graph API sync.
+ * @returns {{rooms: Array<Object>, cacheTime: number}|null} Cached rooms and timestamp, or null if no cache exists
+ */
+function getLastRoomsCache() {
+  if (!lastRoomsCache || !lastRoomsCacheTime) return null;
+  return { rooms: lastRoomsCache, cacheTime: lastRoomsCacheTime };
+}
+
+/**
  * Calculates the effective polling interval in milliseconds.
  * In webhook mode, the interval is increased to at least 300,000ms (5 minutes),
  * since webhooks are the primary update source and polling only serves as a fallback.
@@ -1079,6 +1126,7 @@ module.exports = function(io) {
   module.exports.emitToDisplayClient = emitToDisplayClient;
   module.exports.removeDisplayClient = removeDisplayClient;
   module.exports.getRecentDisconnects = function() { return [...recentDisconnects]; };
+  module.exports.getLastRoomsCache = getLastRoomsCache;
 };
 
 module.exports.getSyncStatus = getSyncStatus;
@@ -1089,3 +1137,4 @@ module.exports.getConnectedDisplayClients = getConnectedDisplayClients;
 module.exports.emitToDisplayClient = emitToDisplayClient;
 module.exports.removeDisplayClient = removeDisplayClient;
 module.exports.getRecentDisconnects = function() { return []; };
+module.exports.getLastRoomsCache = getLastRoomsCache;
