@@ -2828,6 +2828,7 @@ module.exports = {
 	getBookingConfig,
 	getSystemConfig,
 	getOAuthConfig,
+	getOAuthRuntimeConfig,
 	getApiTokenConfig,
 	getEffectiveApiToken,
 	getEffectiveWifiApiToken,

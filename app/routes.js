@@ -1722,7 +1722,9 @@ module.exports = function(app) {
 
 		api(function(err, rooms) {
 			if (err) {
-				console.error('API Error:', err);
+				const errDetail = err.body || err.message || err;
+				console.error('API Error:', typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail, null, 2));
+				if (err.statusCode) console.error('API Error statusCode:', err.statusCode);
 				if (err.responseCode === 127) {
 					res.json({
 						error:
@@ -2835,6 +2837,12 @@ module.exports = function(app) {
 
 			// Refresh MSAL clients to fall back to client secret
 			try {
+				// Re-apply persisted OAuth config to ensure config.msalConfig has current values
+				const runtimeOAuth = configManager.getOAuthRuntimeConfig();
+				config.msalConfig.auth.clientId = runtimeOAuth.clientId;
+				config.msalConfig.auth.authority = runtimeOAuth.authority;
+				config.msalConfig.auth.clientSecret = runtimeOAuth.clientSecret;
+
 				refreshMsalClient();
 				require('./socket-controller').refreshMsalClient();
 			} catch (msalErr) {
