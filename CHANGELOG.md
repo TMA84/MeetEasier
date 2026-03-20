@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `package.json` with full dependency manifest, engine requirements (Node ≥18, npm ≥9), and build/dev scripts
 
+### Changed
+- API error logging in `routes.js` now extracts `body` or `message` from error objects and logs structured detail instead of raw error; also logs `statusCode` when present
+- Certificate deletion MSAL refresh now uses `configManager.getOAuthConfig()` and conditionally applies `clientId`/`authority` only when present — no longer blindly overwrites config or sets `clientSecret` directly
+
+## [1.7.47] - 2026-03-20
+
+### Fixed
+- Certificate delete now re-applies persisted OAuth config (clientId, authority, clientSecret) to runtime before refreshing MSAL clients — fixes fallback to client secret not working after certificate deletion
+- Improved error logging for room API failures (includes response body and status code)
+
 ## [1.7.46] - 2026-03-20
 
 ### Fixed
