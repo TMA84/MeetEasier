@@ -1,3 +1,7 @@
+/**
+ * @file DisplayTab.js
+ * @description Admin panel tab for configuring display appearance settings, including WiFi visibility, upcoming meetings display, meeting titles, dark mode for single-room and flightboard views, and per-client overrides.
+ */
 import React from 'react';
 
 const DisplayTab = ({

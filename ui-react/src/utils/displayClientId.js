@@ -1,16 +1,10 @@
 /**
- * Generate display client ID
- * 
- * IMPORTANT: The actual client identifier used for tracking is determined by the server
- * based on the tracking mode (client-id vs ip-room). This function generates a temporary
- * ID that will be sent to the server via socket connection query parameters.
- * 
- * The server will:
- * - In client-id mode: Use this displayClientId directly
- * - In ip-room mode: Generate identifier as {IP}_{roomName} from socket connection
- * 
- * For power management and other server-side features, the server-generated identifier
- * is what matters, not this client-side ID.
+ * @file displayClientId.js
+ * @description Generates and persists a unique display client ID in localStorage.
+ * The server determines the actual tracking identifier based on its tracking mode
+ * (client-id vs ip-room). This client-side ID is sent via socket connection query
+ * parameters and used directly only in client-id mode; in ip-room mode the server
+ * derives the identifier from the socket's IP address and room name.
  */
 
 const STORAGE_KEY = 'meeteasier_display_client_id';

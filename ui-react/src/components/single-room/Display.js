@@ -1,3 +1,10 @@
+/**
+ * @file Display.js
+ * @description Single-room display component. Shows real-time meeting status,
+ *              current and upcoming appointments, booking controls, and check-in
+ *              functionality for a specific room. Connects to Socket.IO for
+ *              live updates and fetches room data via /api/rooms/:alias.
+ */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';

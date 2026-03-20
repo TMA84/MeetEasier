@@ -1,3 +1,6 @@
+/** @file RoomStatusBlock.js
+ *  @description Main status indicator block for the single-room view, showing room availability, current meeting details, and the next upcoming meeting with color-coded status.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 import { formatTimeRange } from '../../utils/timeFormat.js';

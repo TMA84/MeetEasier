@@ -1,3 +1,7 @@
+/**
+ * @file AuditTab.js
+ * @description Admin panel tab for viewing audit logs. Provides a button to load logs and displays them as formatted JSON.
+ */
 import React from 'react';
 
 const AuditTab = ({

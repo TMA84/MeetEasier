@@ -1,3 +1,6 @@
+/** @file Clock.js
+ *  @description Clock component for the single-room sidebar that displays the current localized time and date, refreshing every second.
+ */
 import React, { Component } from 'react';
 import { formatTime } from '../../utils/timeFormat.js';
 

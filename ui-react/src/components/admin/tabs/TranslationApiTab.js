@@ -1,3 +1,7 @@
+/**
+ * @file TranslationApiTab.js
+ * @description Admin panel tab for configuring the external translation API, including enabling auto-translation, setting the API URL, API key, and request timeout.
+ */
 import React from 'react';
 
 const TranslationApiTab = ({

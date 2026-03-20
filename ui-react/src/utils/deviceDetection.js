@@ -1,6 +1,8 @@
 /**
- * Device detection utilities
- * Detects device type and capabilities for power management
+ * @file deviceDetection.js
+ * @description Device detection utilities for identifying Raspberry Pi hardware,
+ * recommending power management modes, and generating device-type strings
+ * for display tracking based on user agent and platform information.
  */
 
 /**

@@ -1,3 +1,6 @@
+/** @file RoomFilter.js
+ *  @description Dropdown filter component that lets users filter the flightboard room list by building or location, with keyboard navigation and click-outside-to-close support.
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { getFlightboardDisplayTranslations } from '../../config/displayTranslations.js';

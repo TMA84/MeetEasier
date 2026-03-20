@@ -1,3 +1,6 @@
+/** @file SingleRoomLayout.js
+ *  @description Layout wrapper for the single-room display view, extracting the room alias from the URL and rendering the room Display or a NotFound fallback.
+ */
 import React from 'react';
 import { useParams } from 'react-router-dom';
 

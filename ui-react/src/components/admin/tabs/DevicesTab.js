@@ -1,3 +1,7 @@
+/**
+ * @file DevicesTab.js
+ * @description Admin panel tab for managing connected displays and devices. Shows a table of displays with status, connection type, metrics, and actions (power management, MQTT refresh/reboot). Also provides tracking settings, IP whitelist configuration, and reverse proxy options.
+ */
 import React from 'react';
 
 const DevicesTab = ({

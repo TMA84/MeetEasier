@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Startup validation module (`startup-validation.js`) — validates server configuration at boot, checking OAuth credentials, API token, polling interval, webhook settings, and cache file presence. Issues categorized as errors (blocking), warnings, and info. Supports strict mode where warnings also prevent startup.
+- `BookingModal` React component — modal dialog for room booking with quick-book buttons (15/30/60/120 min), custom duration slider (5–240 min in 5-min steps), dark mode support, network retry logic for unstable connections, and localized UI via `getBookingModalTranslations()`
+
+### Changed
+- Added JSDoc file header to `displayTranslations.js` documenting display-facing translation strings, i18n helpers, locale-aware text for all display views, and runtime admin translation overrides
+- Added JSDoc file header to `connectionMonitor.js` documenting singleton ConnectionMonitor class with periodic health checks, online/offline event handling, and listener support
+- Added JSDoc file header to `Display.js` documenting single-room display component purpose, Socket.IO integration, and API usage
+- Translated `audit-logger.js` JSDoc file header from German to English
+- Translated `touchkio.js` JSDoc comments for `subscribeTouchkioStates()` from German to English
+- Translated `rooms.js` JSDoc comments for `isRoomInBlacklist()` from German to English
+- Translated `demo-data.js` JSDoc comments for `getDemoRoomsSnapshot()` from German to English
+- Translated `socket-controller.js` JSDoc comment for `syncErrorMessage` from German to English
+- Added JSDoc file header to `ApiTokenTab.js` documenting admin panel tab for API token management
+- Added JSDoc file header to `TranslationsTab.js` documenting admin panel tab for managing UI translations across multiple languages
+
 ## [1.7.43] - 2026-03-18
 
 ### Added

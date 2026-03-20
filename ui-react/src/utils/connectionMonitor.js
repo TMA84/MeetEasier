@@ -1,6 +1,8 @@
 /**
- * Connection Monitor
- * Monitors network connectivity and automatically reloads the page when connection is restored
+ * @file connectionMonitor.js
+ * @description Monitors network connectivity and automatically reloads the page
+ * when the connection is restored. Provides a singleton ConnectionMonitor class
+ * with periodic health checks, online/offline event handling, and listener support.
  */
 
 class ConnectionMonitor {

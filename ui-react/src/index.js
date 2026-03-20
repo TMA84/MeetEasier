@@ -1,3 +1,6 @@
+/** @file index.js
+ *  @description Application entry point that mounts the React app with React Router, defining routes for the flightboard, single-room, WiFi info, and admin views.
+ */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';

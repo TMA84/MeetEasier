@@ -1,3 +1,7 @@
+/**
+ * @file LogoTab.js
+ * @description Admin panel tab for uploading and configuring dark and light logo variants. Supports both URL-based and file-upload modes, with a live preview of the current logos.
+ */
 import React from 'react';
 
 const LogoTab = ({

@@ -1,3 +1,6 @@
+/** @file Sidebar.js
+ *  @description Sidebar component for the single-room display, showing the logo, clock, upcoming meetings list, WiFi QR code, and action buttons for check-in, extend, or book operations.
+ */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 

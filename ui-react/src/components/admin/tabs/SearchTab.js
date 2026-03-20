@@ -1,3 +1,7 @@
+/**
+ * @file SearchTab.js
+ * @description Admin panel tab for configuring room search parameters, including Graph API usage toggle, maximum days/room lists/rooms/items, and the polling interval.
+ */
 import React from 'react';
 
 const SearchTab = ({

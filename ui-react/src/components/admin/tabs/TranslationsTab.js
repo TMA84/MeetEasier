@@ -1,3 +1,7 @@
+/**
+ * @file TranslationsTab.js
+ * @description Admin panel tab for managing UI translations across multiple languages. Supports adding/removing languages, editing maintenance and admin translation strings per language, and an advanced JSON editor for bulk edits.
+ */
 import React from 'react';
 
 const TranslationsTab = ({

@@ -1,3 +1,9 @@
+/**
+ * @file flightboard.seats.js
+ * @description Room capacity and seat-count mapping for the flightboard display.
+ * Maps room names to their maximum seating capacity.
+ */
+
 export default {
   'capacity' : {
     'SY-Lounge' : '45',

@@ -1,3 +1,10 @@
+/**
+ * @file Flightboard.js
+ * @description Flightboard overview component. Displays all rooms and their
+ *              current meeting status in a grid/list layout. Connects to
+ *              Socket.IO for real-time room updates and supports room filtering
+ *              by room list. Fetches room data via /api/rooms.
+ */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';

@@ -1,3 +1,8 @@
+/**
+ * @file registerServiceWorker.js
+ * @description Service worker registration for production builds. Enables
+ *              offline caching and faster subsequent page loads.
+ */
 // In production, we register a service worker to serve assets from local cache.
 
 // This lets the app load faster on subsequent visits in production, and gives

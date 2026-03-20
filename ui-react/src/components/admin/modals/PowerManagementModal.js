@@ -1,3 +1,6 @@
+/** @file PowerManagementModal.js
+ *  @description Modal dialog for configuring display power management schedules, supporting browser, DPMS, and MQTT modes with time-based on/off scheduling and weekend options.
+ */
 import React from 'react';
 
 const PowerManagementModal = ({

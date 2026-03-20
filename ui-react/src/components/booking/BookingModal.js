@@ -1,3 +1,8 @@
+/**
+ * @file BookingModal.js
+ * @description Modal dialog for booking a room. Supports quick booking
+ *              (15/30/60 min) and custom time selection with validation.
+ */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { getBookingModalTranslations } from '../../config/displayTranslations.js';

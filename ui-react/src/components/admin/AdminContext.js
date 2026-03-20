@@ -1,3 +1,6 @@
+/** @file AdminContext.js
+ *  @description React context provider for admin panel state management, exposing shared state, update helpers, and auto-clearing status messages to admin child components.
+ */
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const AdminContext = createContext();

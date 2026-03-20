@@ -1,3 +1,10 @@
+/**
+ * @file adminTranslations.js
+ * @description Admin panel translation strings for all supported languages (DE/EN
+ * and custom). Provides the complete set of UI labels, messages, and configuration
+ * text used throughout the admin interface, with runtime override support.
+ */
+
 const defaultAdminTranslations = {
   "de": {
     "title": "Admin Panel",

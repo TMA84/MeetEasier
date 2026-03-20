@@ -1,3 +1,7 @@
+/**
+ * @file MaintenanceTab.js
+ * @description Admin panel tab for toggling maintenance mode and editing the maintenance message displayed to users.
+ */
 import React from 'react';
 
 const MaintenanceTab = ({

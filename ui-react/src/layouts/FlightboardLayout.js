@@ -1,3 +1,6 @@
+/** @file FlightboardLayout.js
+ *  @description Layout wrapper for the flightboard view, managing room-list filter state, dark/light mode, URL sync, and rendering the Navbar and Flightboard components.
+ */
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 

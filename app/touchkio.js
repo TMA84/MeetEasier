@@ -1,21 +1,48 @@
 /**
- * Touchkio Display Controller
- * Manages Touchkio displays via MQTT using Home Assistant MQTT Discovery format
+ * @file touchkio.js
+ * @description MQTT Power Bridge for Touchkio displays.
+ *
+ * This module controls Touchkio displays (Raspberry Pi-based kiosk displays)
+ * via MQTT using the Home Assistant MQTT Discovery format.
+ * It receives status messages from the displays and sends control commands back.
+ *
+ * Main features:
+ * - Automatic detection of Touchkio displays via MQTT Discovery
+ * - Real-time tracking of display states (power, brightness, kiosk status, etc.)
+ * - Control of display properties (power, brightness, theme, volume, etc.)
+ * - Scheduled power management (night shutdown, weekend mode)
+ * - System monitoring (CPU, RAM, temperature, uptime)
+ * - Error log analysis and hardware compatibility detection
+ *
+ * MQTT topic structure:
+ * - touchkio/{deviceId}/... – Touchkio-native status and control topics
+ * - homeassistant/.../{deviceId}/... – Home Assistant Discovery topics
+ *
+ * @requires ./mqtt-client - MQTT client for broker communication
+ * @requires ./config-manager - Central configuration management
  */
 
 const mqttClient = require('./mqtt-client');
 const configManager = require('./config-manager');
 
-// Track display states
-// Key: deviceId (e.g., "rpi_1A4187")
-// Value: { hostname, power, brightness, kioskStatus, theme, ... }
+/**
+ * Stores the current states of all detected displays.
+ * Key: deviceId (e.g. "rpi_1A4187")
+ * Value: Object with hostname, power, brightness, kioskStatus, theme, etc.
+ * @type {Map<string, Object>}
+ */
 const displayStates = new Map();
 
-// Map deviceId to hostname for easier lookup
+/**
+ * Mapping of deviceId to hostname for fast reverse lookup.
+ * @type {Map<string, string>}
+ */
 const deviceIdToHostname = new Map();
 
 /**
- * Initialize Touchkio controller
+ * Initializes the Touchkio display controller.
+ * Waits for the MQTT connection and then subscribes to the relevant topics.
+ * Also starts the periodic schedule checker for power management.
  */
 function init() {
   console.log('[Touchkio] Initializing display controller');
@@ -31,8 +58,12 @@ function init() {
 }
 
 /**
- * Extract device ID from Home Assistant topic
- * Example: homeassistant/light/rpi_1A4187/display/status -> rpi_1A4187
+ * Extracts the device ID from a Home Assistant MQTT topic.
+ * Expects the format: homeassistant/{type}/{deviceId}/...
+ * @param {string} topic - The MQTT topic
+ * @returns {string|null} The extracted device ID (e.g. "rpi_1A4187") or null
+ * @example
+ * extractDeviceId('homeassistant/light/rpi_1A4187/display/status') // => 'rpi_1A4187'
  */
 function extractDeviceId(topic) {
   const match = topic.match(/homeassistant\/[^/]+\/(rpi_[^/]+)/);
@@ -40,20 +71,25 @@ function extractDeviceId(topic) {
 }
 
 /**
- * Subscribe to Touchkio display state topics
+ * Subscribes to all relevant MQTT topics for Touchkio display states.
+ * Processes two topic hierarchies:
+ * 1. homeassistant/# – For automatic device discovery
+ * 2. touchkio/# – For the actual status messages from the displays
+ *
+ * Updates the displayStates map with each incoming message.
  */
 function subscribeTouchkioStates() {
-  // Subscribe to all Home Assistant config topics (for discovery only, not for states)
+  // Subscribe to all Home Assistant config topics (only for discovery, not for states)
   mqttClient.subscribe('homeassistant/#', (payload, client) => {
     try {
       const topic = client ? client.topic : 'unknown';
       
-      // Only process config topics for discovery
+      // Only process config topics for device discovery
       if (topic.includes('/config')) {
         const deviceId = extractDeviceId(topic);
         if (deviceId) {
-          // Initialize display state if not exists
-          if (!displayStates.has(deviceId)) {
+            // Initialize display state if not already present
+            if (!displayStates.has(deviceId)) {
             displayStates.set(deviceId, { deviceId });
           }
           console.log(`[Touchkio] Discovered device via Home Assistant: ${deviceId}`);
@@ -65,7 +101,7 @@ function subscribeTouchkioStates() {
     }
   });
   
-  // Subscribe to all Touchkio topics with a single wildcard (this is where states are published)
+  // Subscribe to all Touchkio topics with a wildcard (states are published here)
   mqttClient.subscribe('touchkio/#', (payload, client) => {
     try {
       const topic = client ? client.topic : 'unknown';
@@ -76,7 +112,7 @@ function subscribeTouchkioStates() {
       const deviceId = match[1];
       const payloadStr = payload.toString().trim();
       
-      // Initialize display state if not exists
+      // Initialize display state if not already present
       if (!displayStates.has(deviceId)) {
         displayStates.set(deviceId, { deviceId });
       }
@@ -86,7 +122,7 @@ function subscribeTouchkioStates() {
       // Update lastSeen on every message from this device
       displayState.lastSeen = new Date().toISOString();
       
-      // Route based on topic pattern
+      // Route message to the correct handler based on topic pattern
       if (topic.includes('/host_name/state') || topic.includes('/host_name/status')) {
         displayState.hostname = payloadStr;
         deviceIdToHostname.set(deviceId, payloadStr);
@@ -95,7 +131,7 @@ function subscribeTouchkioStates() {
       } else if (topic.includes('/display/power/state') || topic.includes('/display/power/status')) {
         displayState.power = payloadStr;
         displayState.lastUpdate = new Date().toISOString();
-        // If we receive 'ON', power is definitely supported
+        // When 'ON', power is definitely supported
         if (payloadStr === 'ON') {
           displayState.powerUnsupported = false;
         }
@@ -103,7 +139,7 @@ function subscribeTouchkioStates() {
         
       } else if (topic.includes('/display/brightness/state') || topic.includes('/display/brightness/status')) {
         displayState.brightness = parseInt(payload, 10);
-        // If we receive a valid brightness value, brightness is supported
+        // When brightness value is valid, brightness is supported
         if (!isNaN(displayState.brightness)) {
           displayState.brightnessUnsupported = false;
         }
@@ -131,7 +167,7 @@ function subscribeTouchkioStates() {
         
       } else if (topic.includes('/page_url/state') || topic.includes('/page_url/status')) {
         displayState.pageUrl = payloadStr;
-        // Extract room name from URL
+        // Extract room name from the URL
         const roomMatch = payloadStr.match(/\/single-room\/([^/?#]+)/);
         if (roomMatch) {
           displayState.room = roomMatch[1];
@@ -157,7 +193,7 @@ function subscribeTouchkioStates() {
         console.log(`[Touchkio] Network address updated: ${deviceId} = ${payloadStr}`);
         
       } else if (topic.includes('/errors/attributes')) {
-        // Parse error log
+        // Parse error log and check for unsupported hardware features
         try {
           const errorData = JSON.parse(payloadStr);
           displayState.errors = errorData;
@@ -178,7 +214,7 @@ function subscribeTouchkioStates() {
             });
           });
           
-          // Only log if there are actual errors, not just info messages
+          // Only log when actual errors are present, not just info messages
           const hasErrors = Object.values(errorData).some(logs => 
             logs.some(log => Object.keys(log)[0] === 'ERROR')
           );
@@ -197,18 +233,21 @@ function subscribeTouchkioStates() {
 }
 
 /**
- * Get device ID from hostname
- * Returns the deviceId (e.g., "rpi_1A4187") for a given hostname
+ * Determines the device ID from a hostname.
+ * Accepts both hostnames and direct device IDs (rpi_...).
+ * Warns on ambiguous mappings (one hostname → multiple devices).
+ * @param {string} hostname - Hostname or device ID of the display
+ * @returns {string|null} The device ID or null if not found
  */
 function getDeviceIdFromHostname(hostname) {
-  // First, check if hostname is already a deviceId
+  // Check if the hostname is already a device ID
   if (hostname && hostname.startsWith('rpi_')) {
     if (displayStates.has(hostname)) {
       return hostname;
     }
   }
   
-  // Look up in the mapping — warn if hostname maps to multiple devices
+  // Search in the mapping table — warn if hostname maps to multiple devices
   const matches = [];
   for (const [deviceId, mappedHostname] of deviceIdToHostname.entries()) {
     if (mappedHostname === hostname) {
@@ -229,10 +268,12 @@ function getDeviceIdFromHostname(hostname) {
 }
 
 /**
- * Send power command to Touchkio display
- * @param {string} hostname - Display hostname (e.g., "piosk")
+ * Sends a power command to a Touchkio display.
+ * Publishes ON/OFF to the MQTT topic touchkio/{deviceId}/display/power/set.
+ * @param {string} hostname - Display hostname or device ID (e.g. "piosk" or "rpi_1A4187")
  * @param {boolean} powerState - true for ON, false for OFF
- * @param {number} brightness - Brightness level (0-100)
+ * @param {number} [brightness=100] - Brightness level (0-100), currently not used in the power command
+ * @returns {boolean} true if the command was sent successfully
  */
 function sendPowerCommand(hostname, powerState, brightness = 100) {
   const deviceId = getDeviceIdFromHostname(hostname);
@@ -255,9 +296,11 @@ function sendPowerCommand(hostname, powerState, brightness = 100) {
 }
 
 /**
- * Send brightness command to Touchkio display
- * @param {string} hostname - Display hostname
+ * Sends a brightness command to a Touchkio display.
+ * The value is clamped to the range 0-100.
+ * @param {string} hostname - Display hostname or device ID
  * @param {number} brightness - Brightness level (0-100)
+ * @returns {boolean} true if the command was sent successfully
  */
 function sendBrightnessCommand(hostname, brightness) {
   const deviceId = getDeviceIdFromHostname(hostname);
@@ -280,9 +323,11 @@ function sendBrightnessCommand(hostname, brightness) {
 }
 
 /**
- * Send kiosk status command to Touchkio display
- * @param {string} hostname - Display hostname
+ * Sends a kiosk status command to a Touchkio display.
+ * Validates the status against the allowed values.
+ * @param {string} hostname - Display hostname or device ID
  * @param {string} status - One of: Framed, Fullscreen, Maximized, Minimized
+ * @returns {boolean} true if the command was sent successfully
  */
 function sendKioskCommand(hostname, status) {
   const deviceId = getDeviceIdFromHostname(hostname);
@@ -309,9 +354,11 @@ function sendKioskCommand(hostname, status) {
 }
 
 /**
- * Send theme command to Touchkio display
- * @param {string} hostname - Display hostname
+ * Sends a theme command to a Touchkio display.
+ * Validates the theme against the allowed values (Light, Dark).
+ * @param {string} hostname - Display hostname or device ID
  * @param {string} theme - One of: Light, Dark
+ * @returns {boolean} true if the command was sent successfully
  */
 function sendThemeCommand(hostname, theme) {
   const deviceId = getDeviceIdFromHostname(hostname);
@@ -338,9 +385,11 @@ function sendThemeCommand(hostname, theme) {
 }
 
 /**
- * Send volume command to Touchkio display
- * @param {string} hostname - Display hostname
+ * Sends a volume command to a Touchkio display.
+ * The value is clamped to the range 0-100.
+ * @param {string} hostname - Display hostname or device ID
  * @param {number} volume - Volume level (0-100)
+ * @returns {boolean} true if the command was sent successfully
  */
 function sendVolumeCommand(hostname, volume) {
   const deviceId = getDeviceIdFromHostname(hostname);
@@ -363,9 +412,10 @@ function sendVolumeCommand(hostname, volume) {
 }
 
 /**
- * Send keyboard visibility command to Touchkio display
- * @param {string} hostname - Display hostname
- * @param {boolean} visible - Keyboard visibility
+ * Sends a keyboard visibility command to a Touchkio display.
+ * @param {string} hostname - Display hostname or device ID
+ * @param {boolean} visible - true for visible, false for hidden
+ * @returns {boolean} true if the command was sent successfully
  */
 function sendKeyboardCommand(hostname, visible) {
   const deviceId = getDeviceIdFromHostname(hostname);
@@ -388,9 +438,11 @@ function sendKeyboardCommand(hostname, visible) {
 }
 
 /**
- * Send page zoom command to Touchkio display
- * @param {string} hostname - Display hostname
+ * Sends a page zoom command to a Touchkio display.
+ * The value is clamped to the range 25-400%.
+ * @param {string} hostname - Display hostname or device ID
  * @param {number} zoom - Zoom level (25-400%)
+ * @returns {boolean} true if the command was sent successfully
  */
 function sendPageZoomCommand(hostname, zoom) {
   const deviceId = getDeviceIdFromHostname(hostname);
@@ -413,9 +465,11 @@ function sendPageZoomCommand(hostname, zoom) {
 }
 
 /**
- * Send page URL command to Touchkio display
- * @param {string} hostname - Display hostname
- * @param {string} url - URL to navigate to
+ * Sends a page URL command to a Touchkio display.
+ * Navigates the display to the specified URL.
+ * @param {string} hostname - Display hostname or device ID
+ * @param {string} url - The target URL
+ * @returns {boolean} true if the command was sent successfully
  */
 function sendPageUrlCommand(hostname, url) {
   const deviceId = getDeviceIdFromHostname(hostname);
@@ -437,7 +491,10 @@ function sendPageUrlCommand(hostname, url) {
 }
 
 /**
- * Send refresh command to Touchkio display
+ * Sends a refresh command to a Touchkio display.
+ * Reloads the current page in the kiosk browser.
+ * @param {string} hostname - Display hostname or device ID
+ * @returns {boolean} true if the command was sent successfully
  */
 function sendRefreshCommand(hostname) {
   const deviceId = getDeviceIdFromHostname(hostname);
@@ -458,7 +515,10 @@ function sendRefreshCommand(hostname) {
 }
 
 /**
- * Send reboot command to Touchkio display
+ * Sends a reboot command to a Touchkio display.
+ * Reboots the entire device (Raspberry Pi).
+ * @param {string} hostname - Display hostname or device ID
+ * @returns {boolean} true if the command was sent successfully
  */
 function sendRebootCommand(hostname) {
   const deviceId = getDeviceIdFromHostname(hostname);
@@ -479,7 +539,10 @@ function sendRebootCommand(hostname) {
 }
 
 /**
- * Send shutdown command to Touchkio display
+ * Sends a shutdown command to a Touchkio display.
+ * Shuts down the entire device (Raspberry Pi).
+ * @param {string} hostname - Display hostname or device ID
+ * @returns {boolean} true if the command was sent successfully
  */
 function sendShutdownCommand(hostname) {
   const deviceId = getDeviceIdFromHostname(hostname);
@@ -500,30 +563,45 @@ function sendShutdownCommand(hostname) {
 }
 
 /**
- * Check if current time is in off-range
+ * Checks whether a time falls within a time range.
+ * Supports both daytime ranges (e.g. 12:00-14:00) and
+ * overnight ranges crossing midnight (e.g. 20:00-07:00).
+ * @param {string} currentTime - Current time in "HH:MM" format
+ * @param {string} startTime - Start time of the range in "HH:MM" format
+ * @param {string} endTime - End time of the range in "HH:MM" format
+ * @returns {boolean} true if the current time falls within the range
  */
 function isTimeInRange(currentTime, startTime, endTime) {
   const [currentHour, currentMin] = currentTime.split(':').map(Number);
   const [startHour, startMin] = startTime.split(':').map(Number);
   const [endHour, endMin] = endTime.split(':').map(Number);
   
+  // Convert times to minutes for easier comparison
   const current = currentHour * 60 + currentMin;
   const start = startHour * 60 + startMin;
   const end = endHour * 60 + endMin;
   
-  // Handle overnight ranges (e.g., 20:00 to 07:00)
+  // Handle overnight ranges crossing midnight (e.g. 20:00 to 07:00)
   if (start > end) {
     return current >= start || current < end;
   }
   
-  // Handle same-day ranges (e.g., 12:00 to 14:00)
+  // Handle daytime ranges (e.g. 12:00 to 14:00)
   return current >= start && current < end;
 }
 
 /**
- * Check schedule for a specific display
- * @param {string} clientId - Display identifier (deviceId or hostname)
- * @param {object} config - Power management configuration
+ * Checks the schedule for a specific display and sends power commands if needed.
+ * Takes into account weekend mode and configured off-times.
+ * Only processes displays in MQTT mode.
+ * @param {string} clientId - Display identifier (device ID or hostname)
+ * @param {Object} config - Power management configuration
+ * @param {string} config.mode - Mode ('mqtt', 'browser', 'dpms')
+ * @param {Object} config.schedule - Schedule configuration
+ * @param {boolean} config.schedule.enabled - Schedule enabled
+ * @param {string} config.schedule.startTime - Start time of the off period (HH:MM)
+ * @param {string} config.schedule.endTime - End time of the off period (HH:MM)
+ * @param {boolean} config.schedule.weekendMode - Turn off completely on weekends
  */
 function checkDisplaySchedule(clientId, config) {
   // Only process MQTT mode
@@ -544,7 +622,7 @@ function checkDisplaySchedule(clientId, config) {
   
   let shouldBeOff = false;
   
-  // Weekend mode: turn off all weekend
+  // Weekend mode: turn off for the entire weekend
   if (weekendMode && isWeekend) {
     shouldBeOff = true;
   } else {
@@ -553,7 +631,7 @@ function checkDisplaySchedule(clientId, config) {
   }
   
   // Use deviceId directly (clientId is already deviceId from startScheduleChecker)
-  // config.mqttHostname may contain a legacy hostname — ignore it if clientId is a deviceId
+  // config.mqttHostname may contain an outdated hostname — ignore if clientId is a deviceId
   let deviceIdOrHostname = clientId.startsWith('rpi_') ? clientId : (config.mqttHostname || clientId);
   
   // Send command to Touchkio (getDeviceIdFromHostname handles both deviceId and hostname)
@@ -565,7 +643,9 @@ function checkDisplaySchedule(clientId, config) {
 }
 
 /**
- * Start periodic schedule checker
+ * Starts the periodic schedule checker for power management.
+ * Checks all MQTT displays against their configured schedules every minute
+ * and sends corresponding power commands.
  */
 function startScheduleChecker() {
   // Check every minute
@@ -574,22 +654,22 @@ function startScheduleChecker() {
       const powerConfig = configManager.getPowerManagementConfig();
       const globalConfig = powerConfig.global || {};
       
-      // Get all MQTT displays
+      // Determine all MQTT displays
       const mqttDisplays = Array.from(displayStates.entries())
         .filter(([deviceId, state]) => state.hostname || state.deviceId);
       
       // Check each MQTT display
       mqttDisplays.forEach(([deviceId, state]) => {
-        // Check if display has specific config
+        // Check if the display has a specific configuration
         let displayConfig = null;
         if (powerConfig.displays) {
-          // Try to find config by various identifiers (prefer deviceId)
+          // Search for configuration via different identifiers (deviceId preferred)
           displayConfig = powerConfig.displays[deviceId] ||
                          powerConfig.displays[state.hostname] ||
                          powerConfig.displays[state.networkAddress];
         }
         
-        // Use display-specific config if available, otherwise use global
+        // Use display-specific configuration if available, otherwise global
         const configToUse = displayConfig || globalConfig;
         
         // Only process if mode is MQTT and schedule is enabled
@@ -608,8 +688,9 @@ function startScheduleChecker() {
 }
 
 /**
- * Get display states
- * Returns array of displays with hostname as the primary identifier
+ * Returns the states of all detected displays.
+ * The hostname is used as the primary identifier, with deviceId as fallback.
+ * @returns {Array<Object>} Array of display states with all available information
  */
 function getDisplayStates() {
   return Array.from(displayStates.entries()).map(([deviceId, state]) => ({
@@ -620,14 +701,17 @@ function getDisplayStates() {
 }
 
 /**
- * Get all displays (alias for getDisplayStates)
+ * Returns all displays (alias for getDisplayStates).
+ * @returns {Array<Object>} Array of display states
  */
 function getAllDisplays() {
   return getDisplayStates();
 }
 
 /**
- * Manually trigger power command for a display
+ * Manually triggers a power command for a display based on its schedule.
+ * @param {string} clientId - Display identifier (device ID or hostname)
+ * @returns {boolean} true if the command was triggered successfully
  */
 function triggerPowerCommand(clientId) {
   try {

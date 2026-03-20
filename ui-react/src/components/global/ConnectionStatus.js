@@ -1,3 +1,6 @@
+/** @file ConnectionStatus.js
+ *  @description Network connection status indicator that listens to the connection monitor and displays an online/offline banner with retry count.
+ */
 import React, { useState, useEffect } from 'react';
 import { getConnectionMonitor } from '../../utils/connectionMonitor';
 

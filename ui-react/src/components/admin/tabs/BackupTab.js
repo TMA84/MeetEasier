@@ -1,3 +1,7 @@
+/**
+ * @file BackupTab.js
+ * @description Admin panel tab for exporting and importing configuration backups. Displays a JSON text area for the backup payload and provides export/import actions.
+ */
 import React from 'react';
 
 const BackupTab = ({

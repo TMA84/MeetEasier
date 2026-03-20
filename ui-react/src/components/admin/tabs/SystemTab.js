@@ -1,3 +1,7 @@
+/**
+ * @file SystemTab.js
+ * @description Admin panel tab for system-level configuration, including startup validation strictness, detailed error exposure, HSTS max age, rate limiter bucket limits, and demo mode status.
+ */
 import React from 'react';
 
 const SystemTab = ({

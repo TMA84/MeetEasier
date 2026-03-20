@@ -1,3 +1,11 @@
+/**
+ * @file roomlists.js
+ * @description EWS module for querying all room list names via Exchange Web Services.
+ *              Returns a sorted array of room list names from the Exchange server.
+ *
+ * @requires ews-javascript-api - Exchange Web Services JavaScript API
+ * @requires ../../config/config - Application configuration
+ */
 module.exports = function(callback) {
 	// modules -------------------------------------------------------------------
 	var ews = require('ews-javascript-api');

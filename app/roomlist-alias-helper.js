@@ -1,26 +1,34 @@
 /**
- * Room List Alias Utility
- * 
- * Provides functions to generate and manage room list aliases,
- * supporting special characters in room list names, including umlauts and accents.
+ * @file Room List Alias Management.
+ *
+ * Provides functions for creating and managing URL-friendly
+ * aliases for room lists. Supports special characters such as umlauts
+ * and accents through transliteration into ASCII equivalents.
+ *
+ * Custom aliases can be defined via the configuration file
+ * `config/roomlist-aliases`.
+ *
+ * @module roomlist-alias-helper
  */
 
 const roomlistAliasConfig = require('../config/roomlist-aliases');
 
 /**
- * Transliterate special characters to ASCII equivalents
- * Handles umlauts, accents, and other common special characters
- * 
+ * Transliterates special characters into ASCII equivalents.
+ *
+ * Converts umlauts, accents, and other common special characters into
+ * their ASCII equivalents. Characters without a mapping remain unchanged.
+ *
  * Examples:
- * - Ö, ö → o
- * - Ä, ä → a
- * - Ü, ü → u
+ * - Ö, ö → O, o
+ * - Ä, ä → A, a
+ * - Ü, ü → U, u
  * - ß → ss
  * - é, è, ê → e
  * - ñ → n
- * 
- * @param {string} text - Text to transliterate
- * @returns {string} Transliterated text
+ *
+ * @param {string} text – The text to transliterate.
+ * @returns {string} Text with replaced special characters.
  */
 function transliterateName(text) {
   // Character mapping for common special characters
@@ -50,27 +58,27 @@ function transliterateName(text) {
     'Ÿ': 'Y', 'ÿ': 'y'
   };
 
-  // Replace each character if it has a mapping
+  // Replace each character if a mapping exists
   return text.split('').map(char => charMap[char] || char).join('');
 }
 
 /**
- * Generate an alias for a room list name.
- * 
- * If an alias is configured for the room list, uses that.
- * Otherwise, generates a default alias by:
- * - Transliterating special characters (Ö → O, ä → a, etc.)
- * - Converting to lowercase
- * - Replacing spaces with dashes
- * - Removing any remaining special characters
- * 
+ * Generates a URL-friendly alias for a room list name.
+ *
+ * If a custom alias is defined in the configuration, it is used.
+ * Otherwise, a default alias is generated:
+ * 1. Transliterate special characters (Ö → O, ä → a, etc.)
+ * 2. Convert to lowercase
+ * 3. Replace spaces with hyphens
+ * 4. Remove remaining special characters
+ *
  * Examples:
  * - "Mötzing" → "motzing"
  * - "Café Munich" → "cafe-munich"
  * - "Building A & B" → "building-ab"
- * 
- * @param {string} roomlistName - The room list name
- * @returns {string} The generated alias
+ *
+ * @param {string} roomlistName – The room list name.
+ * @returns {string} The generated or configured alias.
  */
 function getAlias(roomlistName) {
   // Check if a custom alias is configured
@@ -78,18 +86,18 @@ function getAlias(roomlistName) {
     return roomlistAliasConfig.aliases[roomlistName];
   }
 
-  // Generate default alias
+  // Generate default alias: Transliteration → lowercase → hyphens → cleanup
   return transliterateName(roomlistName)
     .toLowerCase()
-    .replace(/\s+/g, '-')           // Replace spaces with dashes
-    .replace(/[^a-z0-9-]/g, '');    // Remove any remaining special characters
+    .replace(/\s+/g, '-')           // Replace spaces with hyphens
+    .replace(/[^a-z0-9-]/g, '');    // Remove remaining special characters
 }
 
 /**
- * Get a room list with its alias.
- * 
- * @param {string} roomlistName - The room list name
- * @returns {object} Object with name and alias
+ * Returns a room list together with its alias.
+ *
+ * @param {string} roomlistName – The room list name.
+ * @returns {Object} Object with `name` (original name) and `alias` (URL-friendly alias).
  */
 function getRoomlistWithAlias(roomlistName) {
   return {

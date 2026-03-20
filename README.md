@@ -291,6 +291,7 @@ For production, prefer setting a secure token via environment/secrets manager.
 - `app/` : Routes for MSGRAPH and EWS APIs
 - `app/ews/` : All EWS functionality (deprecated)
 - `app/msgraph/` : All Microsoft Graph functionality with pagination support
+- `app/startup-validation.js` : Startup configuration validator (checks OAuth, API token, polling, webhooks)
 - `app/demo-data.js` : Demo data generator (rooms & meetings without Graph API)
 - `app/wifi-manager.js` : WiFi configuration and QR code management
 - `app/socket-controller.js` : Real-time updates via Socket.IO
@@ -481,7 +482,7 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 **Booking Configuration:**
 - Enable/disable room booking feature
 - Control via admin panel or environment variable
-- Quick booking (15/30/60 minutes) or custom time selection
+- Quick booking (15/30/60/120 minutes) or custom duration slider (5–240 min)
 - Automatic conflict detection
 - Multi-language support (German/English)
 - Booking button appears in sidebar when room is available
@@ -536,9 +537,9 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 ### Room Booking
 
 - Direct booking from single-room and room-minimal displays
-- Quick booking buttons (15/30/60 minutes)
-- Custom time selection with 15-minute intervals
-- Automatic end time calculation (+15 minutes from start)
+- Quick booking buttons (15/30/60/120 minutes)
+- Custom duration slider (5–240 minutes in 5-minute steps)
+- Automatic end time calculation based on selected duration
 - Meeting subject auto-filled based on browser language
 - Conflict detection prevents double-booking
 - Fully translated interface (German/English)
