@@ -242,5 +242,9 @@ module.exports = function(callback, msalClient) {
 	};
 
 	// Execute promise chain: room lists → rooms → appointments → callback
-	getListOfRooms().then(getRoomsInLists).then(getAppointmentsForRooms).then((rooms) => callback(null, rooms));
+	getListOfRooms()
+		.then(getRoomsInLists)
+		.then(getAppointmentsForRooms)
+		.then((rooms) => callback(null, rooms))
+		.catch((err) => callback(err, null));
 };

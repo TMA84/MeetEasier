@@ -69,10 +69,17 @@ function generateCertificate(options = {}) {
     .digest('hex')
     .toUpperCase();
 
+  // Calculate SHA-1 thumbprint (used by Azure AD for certificate matching)
+  const thumbprintSHA1 = crypto.createHash('sha1')
+    .update(Buffer.from(derBytes, 'binary'))
+    .digest('hex')
+    .toUpperCase();
+
   return {
     privateKeyPem,
     publicCertPem,
     thumbprintSHA256,
+    thumbprintSHA1,
     notBefore: notBefore.toISOString(),
     notAfter: notAfter.toISOString(),
     commonName
@@ -129,6 +136,7 @@ function saveCertificate(certData, encryptionKey) {
     publicCertPem: certData.publicCertPem,
     encryptedPrivateKey: encryptPrivateKey(certData.privateKeyPem, encryptionKey),
     thumbprintSHA256: certData.thumbprintSHA256,
+    thumbprintSHA1: certData.thumbprintSHA1,
     notBefore: certData.notBefore,
     notAfter: certData.notAfter,
     commonName: certData.commonName,
@@ -171,9 +179,17 @@ function getMsalCertificateConfig(encryptionKey) {
 
   try {
     const privateKeyPem = decryptPrivateKey(stored.encryptedPrivateKey, encryptionKey);
+
+    // Convert PKCS#1 (RSA PRIVATE KEY) to PKCS#8 (PRIVATE KEY) if needed — MSAL expects PKCS#8
+    let pkcs8Key = privateKeyPem;
+    if (privateKeyPem.includes('BEGIN RSA PRIVATE KEY')) {
+      const privateKeyObj = crypto.createPrivateKey({ key: privateKeyPem, format: 'pem' });
+      pkcs8Key = privateKeyObj.export({ format: 'pem', type: 'pkcs8' });
+    }
+
     return {
-      thumbprintSha256: stored.thumbprintSHA256,
-      privateKey: privateKeyPem
+      thumbprintSha256: stored.thumbprintSHA256.toLowerCase(),
+      privateKey: pkcs8Key
     };
   } catch (err) {
     console.error('[CertGenerator] Failed to decrypt private key:', err.message);
@@ -203,8 +219,22 @@ function getCertificateInfo() {
   const stored = loadCertificate();
   if (!stored) return null;
 
+  // Calculate SHA-1 on the fly for certificates stored before this field was added
+  let thumbprintSHA1 = stored.thumbprintSHA1 || null;
+  if (!thumbprintSHA1 && stored.publicCertPem) {
+    try {
+      const cert = forge.pki.certificateFromPem(stored.publicCertPem);
+      const derBytes = forge.asn1.toDer(forge.pki.certificateToAsn1(cert)).getBytes();
+      thumbprintSHA1 = crypto.createHash('sha1')
+        .update(Buffer.from(derBytes, 'binary'))
+        .digest('hex')
+        .toUpperCase();
+    } catch (_) { /* ignore */ }
+  }
+
   return {
     thumbprintSHA256: stored.thumbprintSHA256,
+    thumbprintSHA1,
     notBefore: stored.notBefore,
     notAfter: stored.notAfter,
     commonName: stored.commonName,

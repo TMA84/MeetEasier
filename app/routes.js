@@ -239,6 +239,12 @@ async function graphFetch(url, options = {}) {
  * @returns {msal.ConfidentialClientApplication} The new MSAL client instance
  */
 function refreshMsalClient() {
+	// Always read fresh OAuth config from persisted storage
+	const runtimeOAuth = configManager.getOAuthRuntimeConfig();
+	config.msalConfig.auth.clientId = runtimeOAuth.clientId;
+	config.msalConfig.auth.authority = runtimeOAuth.authority;
+	config.msalConfig.auth.clientSecret = runtimeOAuth.clientSecret;
+
 	// Try certificate-based auth first
 	const encryptionKey = configManager.getEffectiveApiToken();
 	if (encryptionKey) {
@@ -254,14 +260,22 @@ function refreshMsalClient() {
 			};
 			msalClient = new msal.ConfidentialClientApplication(msalConfigCopy);
 			console.log('[Routes] MSAL client initialized with certificate authentication');
+
+			// Invalidate caches that depend on the MSAL client
+			hasCalendarWritePermission = null;
+			graphAuthHealthCache = { checkedAt: 0, result: null };
+
 			return msalClient;
 		}
 	}
 	msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
+
+	// Invalidate caches that depend on the MSAL client
+	hasCalendarWritePermission = null;
+	graphAuthHealthCache = { checkedAt: 0, result: null };
+
 	return msalClient;
 }
-
-refreshMsalClient();
 
 /** @type {boolean|null} Cache for Calendars.ReadWrite permission (null = not yet checked) */
 let hasCalendarWritePermission = null;
@@ -271,6 +285,8 @@ let graphAuthHealthCache = {
 	checkedAt: 0,
 	result: null
 };
+
+refreshMsalClient();
 
 /** @const {string} Name of the admin authentication cookie */
 const ADMIN_AUTH_COOKIE_NAME = 'meeteasier_admin_auth';
@@ -1077,6 +1093,9 @@ async function checkCalendarWritePermission() {
 		return hasCalendarWritePermission;
 	}
 
+	// Mark as checking to prevent concurrent duplicate checks
+	hasCalendarWritePermission = false;
+
 	try {
 		// Try to acquire token with Calendars.ReadWrite scope
 		const tokenRequest = {
@@ -1443,6 +1462,9 @@ module.exports = function(app) {
 			'/maintenance',
 			'/api-token-config',
 			'/oauth-config',
+			'/oauth-certificate',
+			'/oauth-certificate/generate',
+			'/oauth-certificate/download',
 			'/system-config',
 			'/graph/webhook'
 		]);
@@ -1692,12 +1714,18 @@ module.exports = function(app) {
 	};
 
 	// GET /api/rooms — Returns all rooms (minimal fields for flightboard)
-	// Full room data available via /api/rooms/:alias for single-room displays
+	// Serves from sync cache when available, falls back to direct Graph API call
 	app.get('/api/rooms', checkDisplayOriginLoose, function(req, res) {
 		// Demo mode: Return generated demo rooms
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode) {
 			return res.json(stripRoomsForFlightboard(demoData.getDemoRoomsSnapshot()));
+		}
+
+		// Serve from sync cache if available
+		const cache = require('./socket-controller').getLastRoomsCache();
+		if (cache && cache.rooms) {
+			return res.json(stripRoomsForFlightboard(cache.rooms));
 		}
 
 		const hasRequiredCreds = (
@@ -1754,6 +1782,14 @@ module.exports = function(app) {
 			const demoRooms = demoData.getDemoRoomsSnapshot();
 			const room = demoRooms.find(r => String(r.RoomAlias || '').toLowerCase() === alias);
 			return room ? res.json(room) : res.status(404).json({ error: 'Room not found' });
+		}
+
+		// Serve from sync cache if available
+		const cache = require('./socket-controller').getLastRoomsCache();
+		if (cache && cache.rooms) {
+			const room = cache.rooms.find(r => String(r.RoomAlias || '').toLowerCase() === alias);
+			if (room) return res.json(room);
+			return res.status(404).json({ error: 'Room not found' });
 		}
 
 		const api = require('./msgraph/rooms.js');
@@ -2774,6 +2810,7 @@ module.exports = function(app) {
 			try {
 				refreshMsalClient();
 				require('./socket-controller').refreshMsalClient();
+				triggerRoomRefreshWithFollowUp();
 			} catch (msalErr) {
 				console.warn('[CertGenerate] MSAL client refresh after cert generation failed (will retry on next poll):', msalErr.message);
 			}
@@ -2837,14 +2874,9 @@ module.exports = function(app) {
 
 			// Refresh MSAL clients to fall back to client secret
 			try {
-				// Re-apply persisted OAuth config to ensure config.msalConfig has current values
-				const runtimeOAuth = configManager.getOAuthRuntimeConfig();
-				config.msalConfig.auth.clientId = runtimeOAuth.clientId;
-				config.msalConfig.auth.authority = runtimeOAuth.authority;
-				config.msalConfig.auth.clientSecret = runtimeOAuth.clientSecret;
-
 				refreshMsalClient();
 				require('./socket-controller').refreshMsalClient();
+				triggerRoomRefreshWithFollowUp();
 			} catch (msalErr) {
 				console.warn('[CertDelete] MSAL client refresh after cert deletion failed (will retry on next poll):', msalErr.message);
 			}
