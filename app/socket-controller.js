@@ -42,9 +42,14 @@ function refreshMsalClient() {
   if (encryptionKey) {
     const certConfig = certGenerator.getMsalCertificateConfig(encryptionKey);
     if (certConfig) {
-      const msalConfigCopy = JSON.parse(JSON.stringify(config.msalConfig));
-      msalConfigCopy.auth.clientCertificate = certConfig;
-      delete msalConfigCopy.auth.clientSecret;
+      const msalConfigCopy = {
+        auth: {
+          clientId: config.msalConfig.auth.clientId,
+          authority: config.msalConfig.auth.authority,
+          clientCertificate: certConfig
+        },
+        system: config.msalConfig.system
+      };
       msalClient = new msal.ConfidentialClientApplication(msalConfigCopy);
       console.log('[SocketController] MSAL client initialized with certificate authentication');
       return msalClient;
