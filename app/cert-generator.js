@@ -172,7 +172,7 @@ function getMsalCertificateConfig(encryptionKey) {
   try {
     const privateKeyPem = decryptPrivateKey(stored.encryptedPrivateKey, encryptionKey);
     return {
-      thumbprintSHA256: stored.thumbprintSHA256,
+      thumbprintSha256: stored.thumbprintSHA256,
       privateKey: privateKeyPem
     };
   } catch (err) {

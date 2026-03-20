@@ -7,10 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- MSAL certificate config construction now uses explicit property assignment instead of deep-cloning the full msalConfig — avoids copying unrelated properties and removes the `delete` mutation
+
+### Fixed
+- MSAL client refresh after certificate generation now wrapped in try/catch — prevents unhandled errors from crashing the request; logs a warning and retries on next poll cycle
+- Certificate thumbprint property in `getMsalCertificateConfig()` now uses `thumbprintSha256` (camelCase) matching MSAL's expected format — fixes certificate auth failing due to unrecognized property name
+
 ## [1.7.45] - 2026-03-20
 
 ### Fixed
 - OAuthTab.js was missing JSX body — restored complete OAuth config form, certificate management UI, and Graph runtime settings
+- Fixed MSAL certificate property name: `thumbprintSha256` (not `thumbprintSHA256`) — caused `state_not_found` error
+- Fixed MSAL config deep copy destroying `loggerCallback` function — use shallow object spread instead of `JSON.parse(JSON.stringify())`
+- Wrapped `refreshMsalClient()` calls in certificate endpoints with try/catch to prevent MSAL cache errors from blocking certificate operations
 
 ### Changed
 - OAuthTab admin component: implemented OAuth configuration UI with current config display (Client ID, Tenant ID) replacing placeholder stub

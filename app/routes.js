@@ -244,9 +244,14 @@ function refreshMsalClient() {
 	if (encryptionKey) {
 		const certConfig = certGenerator.getMsalCertificateConfig(encryptionKey);
 		if (certConfig) {
-			const msalConfigCopy = JSON.parse(JSON.stringify(config.msalConfig));
-			msalConfigCopy.auth.clientCertificate = certConfig;
-			delete msalConfigCopy.auth.clientSecret;
+			const msalConfigCopy = {
+				auth: {
+					clientId: config.msalConfig.auth.clientId,
+					authority: config.msalConfig.auth.authority,
+					clientCertificate: certConfig
+				},
+				system: config.msalConfig.system
+			};
 			msalClient = new msal.ConfidentialClientApplication(msalConfigCopy);
 			console.log('[Routes] MSAL client initialized with certificate authentication');
 			return msalClient;
@@ -2763,8 +2768,12 @@ module.exports = function(app) {
 			certGenerator.saveCertificate(certData, encryptionKey);
 
 			// Refresh MSAL clients to use the new certificate
-			refreshMsalClient();
-			require('./socket-controller').refreshMsalClient();
+			try {
+				refreshMsalClient();
+				require('./socket-controller').refreshMsalClient();
+			} catch (msalErr) {
+				console.warn('[CertGenerate] MSAL client refresh after cert generation failed (will retry on next poll):', msalErr.message);
+			}
 
 			appendAuditLog({
 				event: 'config.oauth-certificate.generate',
@@ -2824,8 +2833,12 @@ module.exports = function(app) {
 			}
 
 			// Refresh MSAL clients to fall back to client secret
-			refreshMsalClient();
-			require('./socket-controller').refreshMsalClient();
+			try {
+				refreshMsalClient();
+				require('./socket-controller').refreshMsalClient();
+			} catch (msalErr) {
+				console.warn('[CertDelete] MSAL client refresh after cert deletion failed (will retry on next poll):', msalErr.message);
+			}
 
 			appendAuditLog({
 				event: 'config.oauth-certificate.delete',
