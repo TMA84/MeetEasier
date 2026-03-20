@@ -2821,6 +2821,7 @@ function deletePowerManagementConfig(clientId) {
 module.exports = {
 	setSocketIO,
 	getSocketIO,
+	getOAuthEncryptionKey,
 	getWiFiConfig,
 	getLogoConfig,
 	getSidebarConfig,

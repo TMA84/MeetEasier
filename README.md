@@ -397,19 +397,16 @@ There are four main directories in the `ui-react/src/` folder:
 8. Copy the "Application (client) ID" and save it for later
 9. Copy the "Directory (tenant) ID" and save it for later
 10. Click "Certificates & secrets"
-11. Click "New client secret"
-12. Enter a description, e.g. "MeetEasier secret"
-13. Set the expiration to "Custom" and set to however long you want the secret to last
-14. Click "Add"
-15. Copy the secret and save it for later
-16. Click "API permissions"
-17. Click "Add a permission"
-18. Select "Microsoft Graph"
-19. Select "Application permissions"
-20. Select "Calendars.Read, Calendars.ReadWrite, Place.Read.All, User.Read.All"
-21. Click "Add permissions"
-22. Click "Grant admin consent for your tenant"
-23. Click "Yes"
+11. **Option A – Client Secret:** Click "New client secret", enter a description, set expiration, click "Add", and copy the secret
+12. **Option B – Certificate:** Generate a certificate via the MeetEasier admin panel (`POST /api/oauth-certificate/generate`), download the public `.pem` file, and upload it under "Certificates" in Azure AD
+13. Click "API permissions"
+14. Click "Add a permission"
+15. Select "Microsoft Graph"
+16. Select "Application permissions"
+17. Select "Calendars.Read, Calendars.ReadWrite, Place.Read.All, User.Read.All"
+18. Click "Add permissions"
+19. Click "Grant admin consent for your tenant"
+20. Click "Yes"
 
 And you're done!
 
@@ -427,7 +424,7 @@ Use a .env file (recommended method). See .env.template for all available variab
    # Microsoft Graph API Configuration
    OAUTH_CLIENT_ID=your-client-id-from-step-8
    OAUTH_AUTHORITY=https://login.microsoftonline.com/your-tenant-id-from-step-9
-   OAUTH_CLIENT_SECRET=your-client-secret-from-step-15
+   OAUTH_CLIENT_SECRET=your-client-secret-from-step-11
    
    # Search Configuration
    SEARCH_USE_GRAPHAPI=true
@@ -517,6 +514,12 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 - `GET /api/booking-config` - Get booking configuration (public)
 - `POST /api/booking-config` - Update booking configuration (requires token)
 - `POST /api/book/:roomEmail` - Book a room (public, requires room availability)
+
+**OAuth Certificate:**
+- `GET /api/oauth-certificate` - Get certificate metadata (requires token)
+- `POST /api/oauth-certificate/generate` - Generate a new self-signed certificate (requires token)
+- `GET /api/oauth-certificate/download` - Download public certificate as .pem (requires token)
+- `DELETE /api/oauth-certificate` - Delete stored certificate (requires token)
 
 **Configuration Locks:**
 - `GET /api/config-locks` - Check which settings are locked by environment variables (public)

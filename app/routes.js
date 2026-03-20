@@ -23,6 +23,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const roomlistAliasHelper = require('./roomlist-alias-helper');
 const configManager = require('./config-manager');
+const certGenerator = require('./cert-generator');
 const { createRateLimiter } = require('./rate-limiter');
 const { appendAuditLog, getAuditLogs } = require('./audit-logger');
 const checkinManager = require('./checkin-manager');
@@ -233,10 +234,24 @@ async function graphFetch(url, options = {}) {
 
 /**
  * Creates a new MSAL client instance with the current configuration.
+ * Uses certificate-based auth if available, otherwise falls back to client secret.
  * Called at startup and after OAuth configuration changes.
  * @returns {msal.ConfidentialClientApplication} The new MSAL client instance
  */
 function refreshMsalClient() {
+	// Try certificate-based auth first
+	const encryptionKey = configManager.getEffectiveApiToken();
+	if (encryptionKey) {
+		const certConfig = certGenerator.getMsalCertificateConfig(encryptionKey);
+		if (certConfig) {
+			const msalConfigCopy = JSON.parse(JSON.stringify(config.msalConfig));
+			msalConfigCopy.auth.clientCertificate = certConfig;
+			delete msalConfigCopy.auth.clientSecret;
+			msalClient = new msal.ConfidentialClientApplication(msalConfigCopy);
+			console.log('[Routes] MSAL client initialized with certificate authentication');
+			return msalClient;
+		}
+	}
 	msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
 	return msalClient;
 }
@@ -1685,8 +1700,10 @@ module.exports = function(app) {
 			&& config.msalConfig.auth.clientId !== 'OAUTH_CLIENT_ID_NOT_SET'
 			&& !!config.msalConfig.auth.authority
 			&& config.msalConfig.auth.authority !== 'OAUTH_AUTHORITY_NOT_SET'
-			&& !!config.msalConfig.auth.clientSecret
-			&& config.msalConfig.auth.clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET'
+			&& (
+				(!!config.msalConfig.auth.clientSecret && config.msalConfig.auth.clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET')
+				|| !!certGenerator.getCertificateInfo()
+			)
 		);
 		
 		if (!hasRequiredCreds) {
@@ -2708,6 +2725,121 @@ module.exports = function(app) {
 		} catch (err) {
 			logSanitizedError('Error updating OAuth config:', err);
 			res.status(500).json({ error: getClientSafeErrorMessage(err, 'Failed to update OAuth configuration') });
+		}
+	});
+
+	// ============================================================================
+	// OAuth Certificate Management
+	// ============================================================================
+
+	// GET /api/oauth-certificate — Returns certificate metadata (thumbprint, expiry, etc.)
+	app.get('/api/oauth-certificate', checkApiToken, function(req, res) {
+		try {
+			const info = certGenerator.getCertificateInfo();
+			res.json({ certificate: info });
+		} catch (err) {
+			logSanitizedError('Error retrieving certificate info:', err);
+			res.status(500).json({ error: 'Failed to retrieve certificate information' });
+		}
+	});
+
+	// POST /api/oauth-certificate/generate — Generates a new self-signed certificate
+	app.post('/api/oauth-certificate/generate', checkApiToken, function(req, res) {
+		try {
+			const encryptionKey = configManager.getEffectiveApiToken();
+			if (!encryptionKey) {
+				return res.status(400).json({
+					error: 'API token required',
+					message: 'An API token must be configured before generating a certificate.'
+				});
+			}
+
+			const { commonName, validityYears } = req.body || {};
+			const certData = certGenerator.generateCertificate({
+				commonName: commonName || 'MeetEasier OAuth',
+				validityYears: validityYears || 3
+			});
+
+			certGenerator.saveCertificate(certData, encryptionKey);
+
+			// Refresh MSAL clients to use the new certificate
+			refreshMsalClient();
+			require('./socket-controller').refreshMsalClient();
+
+			appendAuditLog({
+				event: 'config.oauth-certificate.generate',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				details: {
+					thumbprintSHA256: certData.thumbprintSHA256,
+					commonName: certData.commonName,
+					notBefore: certData.notBefore,
+					notAfter: certData.notAfter
+				}
+			});
+
+			res.json({
+				success: true,
+				certificate: {
+					thumbprintSHA256: certData.thumbprintSHA256,
+					commonName: certData.commonName,
+					notBefore: certData.notBefore,
+					notAfter: certData.notAfter
+				}
+			});
+		} catch (err) {
+			logSanitizedError('Error generating certificate:', err);
+			res.status(500).json({ error: getClientSafeErrorMessage(err, 'Failed to generate certificate') });
+		}
+	});
+
+	// GET /api/oauth-certificate/download — Downloads the public certificate as .pem file
+	app.get('/api/oauth-certificate/download', checkApiToken, function(req, res) {
+		try {
+			const stored = certGenerator.loadCertificate();
+			if (!stored || !stored.publicCertPem) {
+				return res.status(404).json({ error: 'No certificate found' });
+			}
+
+			const filename = `meeteasier-oauth-${stored.thumbprintSHA256.substring(0, 8).toLowerCase()}.pem`;
+			res.setHeader('Content-Type', 'application/x-pem-file');
+			res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+			res.send(stored.publicCertPem);
+		} catch (err) {
+			logSanitizedError('Error downloading certificate:', err);
+			res.status(500).json({ error: 'Failed to download certificate' });
+		}
+	});
+
+	// DELETE /api/oauth-certificate — Deletes the stored certificate
+	app.delete('/api/oauth-certificate', checkApiToken, function(req, res) {
+		try {
+			const info = certGenerator.getCertificateInfo();
+			const deleted = certGenerator.deleteCertificate();
+
+			if (!deleted) {
+				return res.status(404).json({ error: 'No certificate found to delete' });
+			}
+
+			// Refresh MSAL clients to fall back to client secret
+			refreshMsalClient();
+			require('./socket-controller').refreshMsalClient();
+
+			appendAuditLog({
+				event: 'config.oauth-certificate.delete',
+				path: req.path,
+				method: req.method,
+				ip: getClientIp(req),
+				userAgent: req.headers['user-agent'] || null,
+				details: info
+			});
+
+			res.json({ success: true, message: 'Certificate deleted. Reverted to client secret authentication.' });
+		} catch (err) {
+			logSanitizedError('Error deleting certificate:', err);
+			res.status(500).json({ error: getClientSafeErrorMessage(err, 'Failed to delete certificate') });
 		}
 	});
 

@@ -25,6 +25,7 @@
 const msal = require('@azure/msal-node');
 const config = require('../config/config');
 const configManager = require('./config-manager');
+const certGenerator = require('./cert-generator');
 const checkinManager = require('./checkin-manager');
 
 /** @type {msal.ConfidentialClientApplication|null} MSAL client for Microsoft Graph authentication */
@@ -32,10 +33,23 @@ let msalClient = null;
 
 /**
  * Creates a new MSAL ConfidentialClientApplication instance.
+ * Uses certificate-based auth if available, otherwise falls back to client secret.
  * Called at startup and after OAuth configuration changes.
  * @returns {msal.ConfidentialClientApplication} The new MSAL client instance
  */
 function refreshMsalClient() {
+  const encryptionKey = configManager.getEffectiveApiToken();
+  if (encryptionKey) {
+    const certConfig = certGenerator.getMsalCertificateConfig(encryptionKey);
+    if (certConfig) {
+      const msalConfigCopy = JSON.parse(JSON.stringify(config.msalConfig));
+      msalConfigCopy.auth.clientCertificate = certConfig;
+      delete msalConfigCopy.auth.clientSecret;
+      msalClient = new msal.ConfidentialClientApplication(msalConfigCopy);
+      console.log('[SocketController] MSAL client initialized with certificate authentication');
+      return msalClient;
+    }
+  }
   msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
   return msalClient;
 }

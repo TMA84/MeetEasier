@@ -40,7 +40,7 @@ OAUTH_CLIENT_SECRET=your~client~secret~value~here
 2. Navigate to Azure Active Directory > App registrations
 3. Select your MeetEasier app
 4. Copy Application (client) ID and Directory (tenant) ID
-5. Create a client secret under Certificates & secrets
+5. Create a client secret under Certificates & secrets, or use the admin panel to generate a certificate (see [OAuth & Certificate Configuration](#5-oauth--certificate-configuration))
 
 ---
 
@@ -374,6 +374,31 @@ WIFI:T:WPA;S:YourSSID;P:YourPassword;;
 
 ---
 
+#### 5. OAuth & Certificate Configuration
+
+**Authentication Method Toggle:**
+- Client Secret (default)
+- Certificate (self-signed X.509)
+
+**Client Secret Mode:**
+- Client ID, Tenant ID, and Client Secret fields
+- Secret is encrypted before writing to disk
+
+**Certificate Mode:**
+- Generate a self-signed X.509 certificate directly from the admin panel
+- View active certificate details (thumbprint, common name, validity dates)
+- Download the public `.pem` file for upload to Azure AD
+- Delete the certificate to revert to client secret authentication
+- Certificates don't expire annually like client secrets (default validity: 3 years)
+
+**Graph Runtime Settings (when not locked):**
+- Webhook enabled/disabled, client state, allowed IPs
+- Fetch timeout, retry attempts, retry base delay
+
+**Locked when:** `OAUTH_CLIENT_ID`, `OAUTH_AUTHORITY`, or `OAUTH_CLIENT_SECRET` environment variables are set (OAuth section); system settings have a separate lock
+
+---
+
 ## Display Customization
 
 ### URL Parameters
@@ -640,6 +665,114 @@ socket.on('wifiConfigUpdated', (config) => {
 - Body: `{ "subject": "string", "startTime": "ISO8601", "endTime": "ISO8601" }`
 - Returns: Booking confirmation
 - Checks for conflicts before booking
+
+---
+
+### OAuth Certificate Management API
+
+Manage self-signed certificates for Microsoft Graph API authentication as an alternative to client secrets.
+
+#### Get Certificate Info
+
+**Endpoint:** `GET /api/oauth-certificate`
+
+**Authentication:** Required
+
+**Response (certificate exists):**
+```json
+{
+  "certificate": {
+    "thumbprintSHA256": "AB12CD34...",
+    "commonName": "MeetEasier OAuth",
+    "notBefore": "2026-03-20T00:00:00.000Z",
+    "notAfter": "2029-03-20T00:00:00.000Z"
+  }
+}
+```
+
+**Example:**
+```bash
+curl http://localhost:8080/api/oauth-certificate \
+  -H "Authorization: Bearer ${API_TOKEN}"
+```
+
+#### Generate Certificate
+
+**Endpoint:** `POST /api/oauth-certificate/generate`
+
+**Authentication:** Required
+
+**Request Body (all fields optional):**
+```json
+{
+  "commonName": "MeetEasier OAuth",
+  "validityYears": 3
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "certificate": {
+    "thumbprintSHA256": "AB12CD34...",
+    "commonName": "MeetEasier OAuth",
+    "notBefore": "2026-03-20T00:00:00.000Z",
+    "notAfter": "2029-03-20T00:00:00.000Z"
+  }
+}
+```
+
+**Notes:**
+- Requires a configured `API_TOKEN` (used as encryption key for the private key at rest)
+- MSAL clients are automatically refreshed to use the new certificate
+- Upload the downloaded `.pem` public certificate to your Azure AD app registration under "Certificates & secrets"
+
+**Example:**
+```bash
+curl -X POST http://localhost:8080/api/oauth-certificate/generate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${API_TOKEN}" \
+  -d '{"commonName": "MeetEasier OAuth", "validityYears": 3}'
+```
+
+#### Download Public Certificate
+
+**Endpoint:** `GET /api/oauth-certificate/download`
+
+**Authentication:** Required
+
+**Response:** `.pem` file download (Content-Type: `application/x-pem-file`)
+
+**Example:**
+```bash
+curl -o meeteasier-oauth.pem http://localhost:8080/api/oauth-certificate/download \
+  -H "Authorization: Bearer ${API_TOKEN}"
+```
+
+#### Delete Certificate
+
+**Endpoint:** `DELETE /api/oauth-certificate`
+
+**Authentication:** Required
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Certificate deleted. Reverted to client secret authentication."
+}
+```
+
+**Notes:**
+- MSAL clients automatically fall back to client secret authentication
+- Ensure a valid `OAUTH_CLIENT_SECRET` is configured before deleting
+
+**Example:**
+```bash
+curl -X DELETE http://localhost:8080/api/oauth-certificate \
+  -H "Authorization: Bearer ${API_TOKEN}"
+```
 
 ---
 
