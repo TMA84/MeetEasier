@@ -2675,14 +2675,11 @@ module.exports = function(app) {
 				}
 			}
 
-			if (clientSecret !== undefined) {
-				const normalizedClientSecret = String(clientSecret || '');
-				if (!normalizedClientSecret.trim()) {
-					return res.status(400).json({
-						error: 'Invalid OAuth client secret',
-						message: 'Client secret must not be empty.'
-					});
-				}
+			// Treat empty clientSecret as "do not change" (user may only update clientId/tenantId)
+			const hasNewSecret = clientSecret !== undefined && String(clientSecret || '').trim().length > 0;
+
+			if (hasNewSecret) {
+				const normalizedClientSecret = String(clientSecret);
 				if (normalizedClientSecret.length > 4096) {
 					return res.status(400).json({
 						error: 'Invalid OAuth client secret',
@@ -2692,11 +2689,15 @@ module.exports = function(app) {
 			}
 
 			const beforeConfig = configManager.getOAuthConfig();
-			const updatedConfig = await configManager.updateOAuthConfig({
+			const updatePayload = {
 				clientId,
-				authority: tenantId !== undefined ? tenantId : authority,
-				clientSecret
-			});
+				authority: tenantId !== undefined ? tenantId : authority
+			};
+			// Only include clientSecret when a new non-empty value was provided
+			if (hasNewSecret) {
+				updatePayload.clientSecret = clientSecret;
+			}
+			const updatedConfig = await configManager.updateOAuthConfig(updatePayload);
 
 			refreshMsalClient();
 			require('./socket-controller').refreshMsalClient();

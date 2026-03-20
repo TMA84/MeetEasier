@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- MSAL certificate config construction now uses explicit property assignment instead of deep-cloning the full msalConfig — avoids copying unrelated properties and removes the `delete` mutation
+### Added
+- `package.json` with full dependency manifest, engine requirements (Node ≥18, npm ≥9), and build/dev scripts
+
+## [1.7.46] - 2026-03-20
+
+### Fixed
+- OAuth save no longer requires a Client Secret — Client ID and Tenant ID can be saved independently (e.g. when using certificate auth)
+- Empty Client Secret on save now preserves the existing secret instead of deleting it
+- Generating or deleting a certificate no longer resets unsaved Client ID / Tenant ID form values
+- Rebuilt `Admin.js` as a single consolidated component — full tabbed admin interface with section navigation (Displays, Operations, Content), Socket.IO real-time config updates, session-based auth with login/logout, sync status banner, and delegation to extracted tab components (OAuthTab, RateLimitTab, SearchTab, SystemTab, DevicesTab, MqttTab, etc.)
 
 ### Fixed
 - MSAL client refresh after certificate generation now wrapped in try/catch — prevents unhandled errors from crashing the request; logs a warning and retries on next poll cycle
