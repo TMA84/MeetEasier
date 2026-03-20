@@ -1,3 +1,7 @@
+/**
+ * @file ColorsTab.js
+ * @description Admin panel tab for customizing the color theme, including the booking button color and room status colors (available, busy, upcoming, not found) with preset palettes and HSL sliders.
+ */
 import React from 'react';
 
 const ColorsTab = ({

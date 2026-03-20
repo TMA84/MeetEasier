@@ -1,3 +1,7 @@
+/**
+ * @file ExtendMeetingModal.js
+ * @description Modal dialog for extending the current meeting by 15 or 30 minutes.
+ */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { getMeetingActionModalTranslations } from '../../config/displayTranslations.js';

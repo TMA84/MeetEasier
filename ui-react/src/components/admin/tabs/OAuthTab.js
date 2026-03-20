@@ -1,3 +1,7 @@
+/**
+ * @file OAuthTab.js
+ * @description Admin panel tab for configuring OAuth / Microsoft Graph credentials (client ID, tenant, client secret) and Graph runtime settings such as webhook configuration, fetch timeout, and retry parameters.
+ */
 import React from 'react';
 
 const OAuthTab = ({

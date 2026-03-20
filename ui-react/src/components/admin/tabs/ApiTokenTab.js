@@ -1,3 +1,7 @@
+/**
+ * @file ApiTokenTab.js
+ * @description Admin panel tab for managing API tokens, including the main admin API token and the WiFi API token. Allows setting, confirming, and saving new tokens, with environment-lock support.
+ */
 import React from 'react';
 
 const ApiTokenTab = ({

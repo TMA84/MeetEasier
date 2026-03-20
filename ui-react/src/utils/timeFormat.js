@@ -1,4 +1,9 @@
-// Time formatting utilities with locale support
+/**
+ * @file timeFormat.js
+ * @description Time formatting utilities with locale support. Provides helpers
+ * to detect the browser locale, determine 12-hour vs 24-hour clock preference,
+ * and format times and time ranges accordingly.
+ */
 
 // Get browser locale
 export function getLocale() {

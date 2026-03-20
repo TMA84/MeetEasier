@@ -1,3 +1,15 @@
+/**
+ * @file rooms.js
+ * @description EWS module for querying all meeting rooms and their appointments
+ *              via Exchange Web Services. Loads room lists, determines the associated
+ *              rooms, filters out blacklisted entries, and enriches each room with
+ *              its current appointments.
+ *
+ * @requires ews-javascript-api - Exchange Web Services JavaScript API
+ * @requires ../../config/config - Application configuration
+ * @requires ../../config/room-blacklist.js - List of blocked room email addresses
+ * @requires ../roomlist-alias-helper - Helper function for generating room list aliases
+ */
 module.exports = function(callback) {
 	// modules -------------------------------------------------------------------
 	var ews = require('ews-javascript-api');

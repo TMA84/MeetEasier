@@ -1,3 +1,6 @@
+/** @file FlightboardRow.js
+ *  @description Single row component for the flightboard grid, displaying a room's availability status, current meeting organizer and time, next meeting details, and seating capacity.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 import seats from '../../config/flightboard.seats.js';

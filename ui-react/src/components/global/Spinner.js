@@ -1,3 +1,7 @@
+/**
+ * @file Spinner.js
+ * @description Loading spinner indicator displayed while data is being fetched.
+ */
 import React from 'react';
 
 /**

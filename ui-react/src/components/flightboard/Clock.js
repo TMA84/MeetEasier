@@ -1,3 +1,6 @@
+/** @file Clock.js
+ *  @description Clock component for the flightboard navbar that displays the current localized date and time, refreshing every second.
+ */
 import React, { Component } from 'react';
 import { formatTime } from '../../utils/timeFormat.js';
 

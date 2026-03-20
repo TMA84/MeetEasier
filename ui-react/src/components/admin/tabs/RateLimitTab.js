@@ -1,3 +1,7 @@
+/**
+ * @file RateLimitTab.js
+ * @description Admin panel tab for configuring rate limiting rules for API, write, and authentication endpoints, including window duration and maximum request counts.
+ */
 import React from 'react';
 
 const RateLimitTab = ({

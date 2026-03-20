@@ -1,3 +1,12 @@
+/**
+ * @file booking.js
+ * @description EWS room booking module using Exchange Web Services.
+ *              Creates calendar events in a meeting room's calendar via EWS impersonation.
+ *              Includes validation of booking parameters and conflict checking before booking.
+ *
+ * @requires ews-javascript-api - Exchange Web Services JavaScript API
+ * @requires ../../config/config - Application configuration
+ */
 module.exports = function(roomEmail, bookingDetails, callback) {
 	const ews = require('ews-javascript-api');
 	const config = require('../../config/config');

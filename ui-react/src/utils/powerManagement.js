@@ -1,7 +1,9 @@
 /**
- * Power Management Utility
- * Handles display power management for browser-based displays
- * Supports time-based scheduling for turning display on/off
+ * @file powerManagement.js
+ * @description Handles display power management for browser-based displays.
+ * Supports time-based scheduling to turn the display on/off via a black overlay,
+ * weekend mode, and Wake Lock API integration. Acts as a browser-level fallback
+ * even when DPMS mode is configured on Raspberry Pi hardware.
  */
 
 class PowerManagement {

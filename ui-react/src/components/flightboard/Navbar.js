@@ -1,3 +1,6 @@
+/** @file Navbar.js
+ *  @description Navigation bar for the flightboard view, rendering the logo, title, room-list filter dropdown, and a live clock with real-time logo updates via Socket.IO.
+ */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { applyI18nConfig, loadMaintenanceMessages } from '../../config/maintenanceMessages.js';

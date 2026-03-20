@@ -1,3 +1,7 @@
+/**
+ * @file NotFound.js
+ * @description 404 error page displayed when navigating to a non-existent route.
+ */
 import React from 'react';
 
 /**

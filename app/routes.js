@@ -1,3 +1,20 @@
+/**
+ * @file app/routes.js
+ * @description Central route definitions for the Meet-Easier application.
+ *
+ * This file defines all Express API endpoints, middleware functions
+ * and helper functions for:
+ * - Microsoft Graph API communication (calendars, rooms, room lists)
+ * - Room booking, meeting extension and early termination
+ * - Check-in management for meetings
+ * - Admin authentication (token, cookie, CSRF)
+ * - Configuration management (OAuth, system, MQTT, WiFi, logo, sidebar, etc.)
+ * - Power management and display control via MQTT
+ * - Maintenance mode, audit logging and configuration backup/restore
+ * - IP whitelisting and rate limiting
+ * - Automatic translation via external translation API
+ */
+
 const msal = require('@azure/msal-node');
 const config = require('../config/config');
 const multer = require('multer');
@@ -11,9 +28,20 @@ const { appendAuditLog, getAuditLogs } = require('./audit-logger');
 const checkinManager = require('./checkin-manager');
 const demoData = require('./demo-data');
 
+/** @type {msal.ConfidentialClientApplication|null} MSAL client instance for Microsoft Graph authentication */
 let msalClient = null;
+
+/** @type {boolean} Indicates whether the application is running in production mode */
 const isProductionEnv = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 
+/**
+ * Returns a safe error message for the client.
+ * In production mode or when detailed errors are disabled,
+ * the fallback message is returned to hide internal details.
+ * @param {Error} error - The error object that occurred
+ * @param {string} fallbackMessage - Safe default message for the client
+ * @returns {string} The safe error message
+ */
 function getClientSafeErrorMessage(error, fallbackMessage) {
 	if (isProductionEnv || config.systemDefaults?.exposeDetailedErrors !== true) {
 		return fallbackMessage;
@@ -23,6 +51,13 @@ function getClientSafeErrorMessage(error, fallbackMessage) {
 	return message || fallbackMessage;
 }
 
+/**
+ * Sanitizes an error object for safe logging.
+ * Extracts only relevant fields (name, message, code, status)
+ * and prevents logging of sensitive data.
+ * @param {Error|*} error - The error object to sanitize
+ * @returns {Object} Sanitized error object with safe fields
+ */
 function sanitizeErrorForLog(error) {
 	if (!error || typeof error !== 'object') {
 		return {
@@ -38,6 +73,12 @@ function sanitizeErrorForLog(error) {
 	};
 }
 
+/**
+ * Logs a sanitized error with optional additional information.
+ * @param {string} label - Descriptive label for the error context
+ * @param {Error} error - The error object that occurred
+ * @param {*} [extra] - Optional additional information about the error context
+ */
 function logSanitizedError(label, error, extra = undefined) {
 	if (extra) {
 		console.error(label, {
@@ -50,6 +91,12 @@ function logSanitizedError(label, error, extra = undefined) {
 	console.error(label, sanitizeErrorForLog(error));
 }
 
+/**
+ * Checks whether a value is a valid email address.
+ * Validates format and maximum length (320 characters).
+ * @param {string} value - The value to check
+ * @returns {boolean} true if valid email address
+ */
 function isValidEmailAddress(value) {
 	const normalized = String(value || '').trim();
 	if (!normalized || normalized.length > 320) {
@@ -59,10 +106,21 @@ function isValidEmailAddress(value) {
 	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
 }
 
+/**
+ * Checks whether a value is a valid GUID (UUID v1-v5).
+ * @param {string} value - The value to check
+ * @returns {boolean} true if valid GUID
+ */
 function isValidGuid(value) {
 	return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim());
 }
 
+/**
+ * Checks whether a URL is a valid Microsoft authority URL.
+ * Only accepts login.microsoftonline.com with a tenant segment in the path.
+ * @param {string} authorityValue - The authority URL to check
+ * @returns {boolean} true if valid Microsoft authority
+ */
 function isValidMicrosoftAuthority(authorityValue) {
 	const normalized = String(authorityValue || '').trim();
 	if (!normalized) {
@@ -83,6 +141,11 @@ function isValidMicrosoftAuthority(authorityValue) {
 	}
 }
 
+/**
+ * Returns the configured settings for Graph API requests.
+ * Includes timeout, retry attempts and base wait time.
+ * @returns {{timeoutMs: number, retryAttempts: number, retryBaseMs: number}} Graph fetch settings
+ */
 function getGraphFetchSettings() {
 	return {
 		timeoutMs: Math.max(Number.parseInt(config.systemDefaults?.graphFetchTimeoutMs, 10) || 10000, 1000),
@@ -91,6 +154,12 @@ function getGraphFetchSettings() {
 	};
 }
 
+/**
+ * Checks whether a Graph API error is retryable.
+ * Retryable errors are: aborts, timeouts, network errors, HTTP 429 and 5xx.
+ * @param {Error} error - The error object to check
+ * @returns {boolean} true if the error is retryable
+ */
 function isRetryableGraphError(error) {
 	if (!error) {
 		return false;
@@ -105,10 +174,24 @@ function isRetryableGraphError(error) {
 	return status === 429 || status >= 500;
 }
 
+/**
+ * Creates a delay (Promise-based).
+ * @param {number} ms - Wait time in milliseconds
+ * @returns {Promise<void>}
+ */
 function delay(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Performs an HTTP fetch against the Microsoft Graph API.
+ * Supports automatic retries with exponential backoff
+ * for timeouts, network errors, HTTP 429 (rate limit) and 5xx errors.
+ * @param {string} url - The Graph API URL
+ * @param {Object} [options={}] - Fetch options (headers, method, body etc.)
+ * @returns {Promise<Response>} The HTTP response
+ * @throws {Error} When all retry attempts fail
+ */
 async function graphFetch(url, options = {}) {
 	const settings = getGraphFetchSettings();
 	let lastError = null;
@@ -148,6 +231,11 @@ async function graphFetch(url, options = {}) {
 	throw lastError || new Error('Graph request failed');
 }
 
+/**
+ * Creates a new MSAL client instance with the current configuration.
+ * Called at startup and after OAuth configuration changes.
+ * @returns {msal.ConfidentialClientApplication} The new MSAL client instance
+ */
 function refreshMsalClient() {
 	msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
 	return msalClient;
@@ -155,35 +243,60 @@ function refreshMsalClient() {
 
 refreshMsalClient();
 
-// Check if Calendars.ReadWrite permission is available
+/** @type {boolean|null} Cache for Calendars.ReadWrite permission (null = not yet checked) */
 let hasCalendarWritePermission = null;
+
+/** @type {{checkedAt: number, result: Object|null}} Cache for Graph auth health check */
 let graphAuthHealthCache = {
 	checkedAt: 0,
 	result: null
 };
 
+/** @const {string} Name of the admin authentication cookie */
 const ADMIN_AUTH_COOKIE_NAME = 'meeteasier_admin_auth';
+/** @const {string} Name of the CSRF protection cookie */
 const CSRF_COOKIE_NAME = 'meeteasier_csrf';
 
+/**
+ * Checks whether an environment variable is defined.
+ * @param {string} name - Name of the environment variable
+ * @returns {boolean} true if the variable is defined
+ */
 function isEnvDefined(name) {
 	return process.env[name] !== undefined;
 }
 
+/**
+ * Checks whether OAuth configuration is set via environment variables.
+ * @returns {boolean} true if at least one OAuth environment variable is defined
+ */
 function isOAuthEnvConfigured() {
 	return isEnvDefined('OAUTH_CLIENT_ID')
 		|| isEnvDefined('OAUTH_AUTHORITY')
 		|| isEnvDefined('OAUTH_CLIENT_SECRET');
 }
 
+/**
+ * Checks whether the system configuration is locked via environment variables.
+ * @returns {boolean} true if system configuration is locked by env
+ */
 function isSystemEnvConfigured() {
 	return configManager.isSystemEnvLocked();
 }
 
+/**
+ * Checks whether the maintenance mode configuration is set via environment variables.
+ * @returns {boolean} true if maintenance mode is configured by env
+ */
 function isMaintenanceEnvConfigured() {
 	return isEnvDefined('MAINTENANCE_MODE')
 		|| isEnvDefined('MAINTENANCE_MESSAGE');
 }
 
+/**
+ * Checks whether the translation API configuration is set via environment variables.
+ * @returns {boolean} true if at least one AUTO_TRANSLATE environment variable is defined
+ */
 function isTranslationApiEnvConfigured() {
 	return isEnvDefined('AUTO_TRANSLATE_ENABLED')
 		|| isEnvDefined('AUTO_TRANSLATE_URL')
@@ -191,6 +304,11 @@ function isTranslationApiEnvConfigured() {
 		|| isEnvDefined('AUTO_TRANSLATE_TIMEOUT_MS');
 }
 
+/**
+ * Normalizes an auth token: removes "Bearer " prefix and whitespace.
+ * @param {string} rawToken - The raw token from the header
+ * @returns {string} The sanitized token
+ */
 function normalizeAuthToken(rawToken) {
 	if (typeof rawToken !== 'string') {
 		return '';
@@ -199,6 +317,11 @@ function normalizeAuthToken(rawToken) {
 	return rawToken.replace(/^Bearer\s+/i, '').trim();
 }
 
+/**
+ * Parses the cookies from the request header into a key-value object.
+ * @param {Object} req - Express request object
+ * @returns {Object.<string, string>} Object with cookie name as key and cookie value as value
+ */
 function parseCookies(req) {
 	const rawCookie = String(req?.headers?.cookie || '').trim();
 	if (!rawCookie) {
@@ -223,11 +346,21 @@ function parseCookies(req) {
 	}, {});
 }
 
+/**
+ * Reads the admin authentication cookie from the request.
+ * @param {Object} req - Express request object
+ * @returns {string} The cookie value or empty string
+ */
 function getAdminAuthCookie(req) {
 	const cookies = parseCookies(req);
 	return cookies[ADMIN_AUTH_COOKIE_NAME] || '';
 }
 
+/**
+ * Returns the cookie options for the admin auth cookie.
+ * In production mode the secure flag is set.
+ * @returns {Object} Cookie options (httpOnly, sameSite, secure, path, maxAge)
+ */
 function getAdminCookieOptions() {
 	const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 	return {
@@ -235,23 +368,41 @@ function getAdminCookieOptions() {
 		sameSite: 'strict',
 		secure: isProduction,
 		path: '/',
-		maxAge: 60 * 60 * 1000 // 1 hour
+		maxAge: 60 * 60 * 1000 // 1 hour validity
 	};
 }
 
+/**
+ * Sets the admin authentication cookie in the response.
+ * @param {Object} res - Express response object
+ * @param {string} token - The auth token to set
+ */
 function setAdminAuthCookie(res, token) {
 	res.cookie(ADMIN_AUTH_COOKIE_NAME, String(token || ''), getAdminCookieOptions());
 }
 
+/**
+ * Clears the admin auth cookie and the CSRF cookie from the response.
+ * @param {Object} res - Express response object
+ */
 function clearAdminAuthCookie(res) {
 	res.clearCookie(ADMIN_AUTH_COOKIE_NAME, getAdminCookieOptions());
 	res.clearCookie(CSRF_COOKIE_NAME, getCsrfCookieOptions());
 }
 
+/**
+ * Generates a cryptographically secure CSRF token (64 hex characters).
+ * @returns {string} The generated CSRF token
+ */
 function generateCsrfToken() {
 	return crypto.randomBytes(32).toString('hex');
 }
 
+/**
+ * Returns the cookie options for the CSRF cookie.
+ * httpOnly is false so that JavaScript can read the cookie.
+ * @returns {Object} Cookie options
+ */
 function getCsrfCookieOptions() {
 	const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 	return {
@@ -259,24 +410,36 @@ function getCsrfCookieOptions() {
 		sameSite: 'strict',
 		secure: isProduction,
 		path: '/',
-		maxAge: 60 * 60 * 1000 // 1 hour
+		maxAge: 60 * 60 * 1000 // 1 hour validity
 	};
 }
 
+/**
+ * Sets a new CSRF cookie in the response and returns the token.
+ * @param {Object} res - Express response object
+ * @returns {string} The generated CSRF token
+ */
 function setCsrfCookie(res) {
 	const token = generateCsrfToken();
 	res.cookie(CSRF_COOKIE_NAME, token, getCsrfCookieOptions());
 	return token;
 }
 
+/**
+ * Validates CSRF protection for a request.
+ * CSRF protection only applies to cookie-based authentication.
+ * Token-based auth (Authorization/X-API-Token header) is not vulnerable to CSRF.
+ * @param {Object} req - Express request object
+ * @returns {boolean} true if CSRF validation passed
+ */
 function validateCsrf(req) {
-	// CSRF only applies to cookie-based auth
+	// CSRF only applies to cookie-based authentication
 	const hasAuthHeader = !!(req.headers['authorization'] || req.headers['x-api-token']);
 	if (hasAuthHeader) {
 		return true; // Token-based auth is not vulnerable to CSRF
 	}
 
-	// For cookie-based auth, validate CSRF token
+	// For cookie-based auth: validate CSRF token
 	const cookies = parseCookies(req);
 	const csrfCookie = cookies[CSRF_COOKIE_NAME] || '';
 	const csrfHeader = req.headers['x-csrf-token'] || '';
@@ -288,12 +451,23 @@ function validateCsrf(req) {
 	return csrfCookie === csrfHeader;
 }
 
+/**
+ * Checks whether the request contains a valid admin auth cookie.
+ * @param {Object} req - Express request object
+ * @returns {boolean} true if valid admin cookie is present
+ */
 function hasValidAdminAuthCookie(req) {
 	const providedToken = normalizeAuthToken(getAdminAuthCookie(req));
 	const expectedToken = configManager.getEffectiveApiToken();
 	return secureTokenEquals(providedToken, expectedToken);
 }
 
+/**
+ * Compares two tokens in constant time (timing-safe) to prevent timing attacks.
+ * @param {string} providedToken - The token provided by the client
+ * @param {string} expectedToken - The expected token
+ * @returns {boolean} true if the tokens match
+ */
 function secureTokenEquals(providedToken, expectedToken) {
 	const providedBuffer = Buffer.from(String(providedToken || ''), 'utf8');
 	const expectedBuffer = Buffer.from(String(expectedToken || ''), 'utf8');
@@ -305,6 +479,12 @@ function secureTokenEquals(providedToken, expectedToken) {
 	return crypto.timingSafeEqual(providedBuffer, expectedBuffer);
 }
 
+/**
+ * Checks whether the request contains a valid admin API token.
+ * Accepts token from Authorization header, X-API-Token header or admin cookie.
+ * @param {Object} req - Express request object
+ * @returns {boolean} true if valid API token is present
+ */
 function hasValidApiToken(req) {
 	const token = req.headers['authorization'] || req.headers['x-api-token'];
 	const providedToken = normalizeAuthToken(token);
@@ -316,6 +496,12 @@ function hasValidApiToken(req) {
 	return hasValidAdminAuthCookie(req);
 }
 
+/**
+ * Checks whether the request contains a valid WiFi API token or admin token.
+ * Accepts both the WiFi-specific token and the admin token.
+ * @param {Object} req - Express request object
+ * @returns {boolean} true if valid WiFi or admin token is present
+ */
 function hasValidWiFiApiToken(req) {
 	if (hasValidAdminAuthCookie(req)) {
 		return true;
@@ -338,6 +524,11 @@ function hasValidWiFiApiToken(req) {
 	return secureTokenEquals(providedToken, wifiToken);
 }
 
+/**
+ * Checks whether the initial admin token setup is required.
+ * Returns true if no token is locked by env and no token has been configured yet.
+ * @returns {boolean} true if initial admin token setup is needed
+ */
 function isInitialAdminTokenSetupRequired() {
 	if (configManager.isApiTokenEnvLocked()) {
 		return false;
@@ -348,25 +539,27 @@ function isInitialAdminTokenSetupRequired() {
 }
 
 /**
- * Validates that a request originates from the application itself (same-origin)
- * or carries a valid API token. When IP whitelisting is enabled, also checks
- * the client IP against the configured whitelist.
- * Protects display-facing endpoints (booking, check-in, power-management)
- * from external/scripted access while allowing the embedded display UI
- * to function normally.
+ * Validates whether a request originates from the application itself (same-origin)
+ * or carries a valid API token. When IP whitelisting is enabled,
+ * the client IP is additionally checked against the configured whitelist.
+ * Protects display endpoints (booking, check-in, power management)
+ * from external/scripted access, while the embedded display UI
+ * functions normally.
+ * @param {Object} req - Express request object
+ * @returns {{allowed: boolean, reason?: string}} Result of the check
  */
 function isDisplayOriginAllowed(req) {
-	// Always allow if a valid admin or WiFi API token is provided
+	// Always allow if a valid admin or WiFi API token is present
 	if (hasValidApiToken(req) || hasValidWiFiApiToken(req)) {
 		return { allowed: true };
 	}
 
-	// Always allow admin session cookie (logged-in admin users)
+	// Always allow if admin session cookie is present (logged-in admin)
 	if (hasValidAdminAuthCookie(req)) {
 		return { allowed: true };
 	}
 
-	// Check Same-Origin via Origin header (set by browsers on fetch requests)
+	// Same-origin check via Origin header (set by browsers on fetch requests)
 	const origin = req.headers['origin'];
 	if (origin) {
 		try {
@@ -381,7 +574,7 @@ function isDisplayOriginAllowed(req) {
 		return { allowed: false, reason: 'origin_mismatch' };
 	}
 
-	// Check Same-Origin via Referer header (fallback for GET requests)
+	// Same-origin check via Referer header (fallback for GET requests)
 	const referer = req.headers['referer'];
 	if (referer) {
 		try {
@@ -401,12 +594,15 @@ function isDisplayOriginAllowed(req) {
 		return { allowed: true };
 	}
 
-	// No Origin, no Referer, no token, not whitelisted → reject
+	// No Origin, no Referer, no token, not on whitelist → reject
 	return { allowed: false, reason: 'origin_not_allowed' };
 }
 
 /**
- * Check if an IP matches a CIDR range (e.g., 192.168.3.0/24)
+ * Checks whether an IP address is within a CIDR range (e.g. 192.168.3.0/24).
+ * @param {string} ip - The IP address to check
+ * @param {string} cidr - The CIDR range (e.g. "192.168.1.0/24")
+ * @returns {boolean} true if the IP is within the CIDR range
  */
 function ipMatchesCidr(ip, cidr) {
 	const [range, bits] = cidr.split('/');
@@ -418,12 +614,16 @@ function ipMatchesCidr(ip, cidr) {
 }
 
 /**
- * Normalize IP address for comparison (handles IPv4-mapped IPv6 like ::ffff:192.168.1.1)
+ * Normalizes an IP address for comparison.
+ * Handles IPv4-mapped IPv6 addresses (e.g. ::ffff:192.168.1.1)
+ * and normalizes localhost variants to 127.0.0.1.
+ * @param {string} ip - The IP address to normalize
+ * @returns {string} The normalized IP address
  */
 function normalizeIpForWhitelist(ip) {
 	if (!ip || typeof ip !== 'string') return '';
 	let normalized = ip.trim();
-	// Strip IPv4-mapped IPv6 prefix
+	// Remove IPv4-mapped IPv6 prefix
 	if (normalized.startsWith('::ffff:')) {
 		normalized = normalized.substring(7);
 	}
@@ -434,10 +634,17 @@ function normalizeIpForWhitelist(ip) {
 	return normalized;
 }
 
+/**
+ * Determines the client IP address from the request.
+ * When trustReverseProxy is enabled, the X-Forwarded-For header is evaluated.
+ * Uses the rightmost entry to prevent spoofing via client-set headers.
+ * @param {Object} req - Express request object
+ * @returns {string} The determined client IP address
+ */
 function getClientIp(req) {
-	// When trustReverseProxy is enabled, use X-Forwarded-For header (set by ALB, Nginx, etc.)
-	// ALB appends the real client IP as the last entry — always use the rightmost IP
-	// to prevent spoofing via client-supplied X-Forwarded-For values.
+	// When trustReverseProxy is enabled, use the X-Forwarded-For header (set by ALB, Nginx etc.)
+	// ALB appends the real client IP as the last entry — always use the rightmost IP,
+	// to prevent spoofing via client-set X-Forwarded-For values.
 	const systemConfig = configManager.getSystemConfig();
 	if (systemConfig.trustReverseProxy) {
 		const forwarded = req.headers['x-forwarded-for'];
@@ -450,8 +657,11 @@ function getClientIp(req) {
 }
 
 /**
- * Check if client IP is whitelisted.
- * Returns true if whitelist is disabled or IP matches an entry.
+ * Checks whether the client IP is on the whitelist.
+ * Returns true if the whitelist is disabled or the IP matches an entry.
+ * Supports both individual IPs and CIDR ranges.
+ * @param {Object} req - Express request object
+ * @returns {boolean} true if IP is allowed or whitelist is disabled
  */
 function isClientIpWhitelisted(req) {
 	const systemConfig = configManager.getSystemConfig();
@@ -470,9 +680,11 @@ function isClientIpWhitelisted(req) {
 }
 
 /**
- * Strip room data to minimal fields needed by flightboard.
- * Removes Email, Appointment.Id, Appointment.Subject, Appointment.Private
- * and limits to 2 appointments per room.
+ * Reduces room data to minimal fields for the flightboard view.
+ * Removes email, appointment ID, subject and private flag.
+ * Limits to a maximum of 2 appointments per room.
+ * @param {Array} rooms - Array of room objects
+ * @returns {Array} Reduced room objects for the flightboard
  */
 function stripRoomsForFlightboard(rooms) {
 	if (!Array.isArray(rooms)) return rooms;
@@ -493,6 +705,11 @@ function stripRoomsForFlightboard(rooms) {
 	}));
 }
 
+/**
+ * Checks whether the webhook sender's IP is in the allowed IP list.
+ * @param {Object} req - Express request object
+ * @returns {boolean} true if IP is allowed or no IP restriction is configured
+ */
 function isWebhookIpAllowed(req) {
 	if (!Array.isArray(config.graphWebhook.allowedIps) || config.graphWebhook.allowedIps.length === 0) {
 		return true;
@@ -502,6 +719,11 @@ function isWebhookIpAllowed(req) {
 	return config.graphWebhook.allowedIps.includes(ip);
 }
 
+/**
+ * Checks whether the webhook security configuration is complete.
+ * Requires both clientState and allowedIps when webhooks are enabled.
+ * @returns {boolean} true if security configuration is complete or webhooks are disabled
+ */
 function hasWebhookSecurityConfig() {
 	if (!config.graphWebhook.enabled) {
 		return true;
@@ -513,18 +735,38 @@ function hasWebhookSecurityConfig() {
 	return hasClientState && hasAllowedIps;
 }
 
+/**
+ * Normalizes a room email address as a key (lowercase, trimmed).
+ * @param {string} roomEmail - The room email address
+ * @returns {string} Normalized key
+ */
 function normalizeRoomKey(roomEmail) {
 	return String(roomEmail || '').trim().toLowerCase();
 }
 
+/**
+ * Normalizes a room group name as a key (lowercase, trimmed).
+ * @param {string} roomGroup - The room group name
+ * @returns {string} Normalized key
+ */
 function normalizeRoomGroupKey(roomGroup) {
 	return String(roomGroup || '').trim().toLowerCase();
 }
 
+/**
+ * Normalizes a language code (lowercase, trimmed).
+ * @param {string} value - The language code (e.g. "DE", "en-US")
+ * @returns {string} Normalized language code
+ */
 function normalizeLanguageCode(value) {
 	return String(value || '').trim().toLowerCase();
 }
 
+/**
+ * Returns the effective configuration of the automatic translation API.
+ * Combines runtime configuration with the API key.
+ * @returns {{enabled: boolean, url: string, apiKey: string, timeoutMs: number}} Translation API configuration
+ */
 function getAutoTranslateConfig() {
 	const runtimeConfig = configManager.getTranslationApiConfig();
 	const runtimeSecret = configManager.getTranslationApiRuntimeConfig
@@ -540,6 +782,16 @@ function getAutoTranslateConfig() {
 	};
 }
 
+/**
+ * Translates an array of texts via the configured translation API.
+ * Supports Google Translate API and LibreTranslate-compatible APIs.
+ * Tries different source/target language combinations as fallback.
+ * On error, the original text is returned.
+ * @param {string[]} texts - Array of texts to translate
+ * @param {string} sourceLanguage - Source language (e.g. "en")
+ * @param {string} targetLanguage - Target language (e.g. "de")
+ * @returns {Promise<string[]>} Array of translated texts
+ */
 async function translateTextBatch(texts, sourceLanguage, targetLanguage) {
 	if (!Array.isArray(texts) || texts.length === 0) {
 		return [];
@@ -660,6 +912,14 @@ async function translateTextBatch(texts, sourceLanguage, targetLanguage) {
 	return sourceTexts;
 }
 
+/**
+ * Translates all values of an object into the target language.
+ * Processes entries in chunks of 40.
+ * @param {Object} sourceObject - Object with values to translate
+ * @param {string} sourceLanguage - Source language
+ * @param {string} targetLanguage - Target language
+ * @returns {Promise<Object>} Object with translated values
+ */
 async function translateObjectValues(sourceObject, sourceLanguage, targetLanguage) {
 	const entries = Object.entries(sourceObject || {});
 	if (entries.length === 0) {
@@ -683,6 +943,16 @@ async function translateObjectValues(sourceObject, sourceLanguage, targetLanguag
 	return translated;
 }
 
+/**
+ * Calculates the effective booking configuration for a specific room.
+ * Takes into account global settings, room group overrides and room-specific overrides.
+ * Room overrides take precedence over group overrides, which in turn take precedence over global settings.
+ * @param {Object} bookingConfig - The global booking configuration
+ * @param {string} roomEmail - Email address of the room
+ * @param {string} roomGroup - Name of the room group
+ * @param {boolean} hasPermission - Whether Calendars.ReadWrite permission is available
+ * @returns {{enableBooking: boolean, enableExtendMeeting: boolean, groupOverrideApplied: boolean, roomOverrideApplied: boolean}}
+ */
 function getEffectiveBookingConfig(bookingConfig, roomEmail, roomGroup, hasPermission) {
 	const roomKey = normalizeRoomKey(roomEmail);
 	const roomGroupKey = normalizeRoomGroupKey(roomGroup);
@@ -710,6 +980,12 @@ function getEffectiveBookingConfig(bookingConfig, roomEmail, roomGroup, hasPermi
 	};
 }
 
+/**
+ * Checks the health status of the Graph API authentication.
+ * Result is cached for 60 seconds.
+ * @param {boolean} [forceRefresh=false] - Ignore cache and re-check
+ * @returns {Promise<{status: string, message: string}>} Health status
+ */
 async function getGraphAuthHealth(forceRefresh = false) {
 	const ttlMs = 60000;
 	const now = Date.now();
@@ -739,6 +1015,10 @@ async function getGraphAuthHealth(forceRefresh = false) {
 	}
 }
 
+/**
+ * Checks the health status of the cache file (data/cache.json).
+ * @returns {{exists: boolean, readable: boolean, lastModified: string|null, sizeBytes?: number}} Cache status
+ */
 function getCacheHealth() {
 	const cachePath = path.join(__dirname, '../data/cache.json');
 	if (!fs.existsSync(cachePath)) {
@@ -767,6 +1047,11 @@ function getCacheHealth() {
 	}
 }
 
+/**
+ * Checks whether the Calendars.ReadWrite permission is available in Azure AD.
+ * The result is cached so the check is only performed once.
+ * @returns {Promise<boolean>} true if write permission is available
+ */
 async function checkCalendarWritePermission() {
 	if (hasCalendarWritePermission !== null) {
 		return hasCalendarWritePermission;
@@ -781,7 +1066,7 @@ async function checkCalendarWritePermission() {
 		const response = await msalClient.acquireTokenByClientCredential(tokenRequest);
 		
 		if (response && response.accessToken) {
-			// Token acquired successfully - we have the permission
+			// Token successfully obtained - permission available
 			hasCalendarWritePermission = true;
 			console.log('✓ Calendars.ReadWrite permission detected - Booking feature enabled');
 		} else {
@@ -789,7 +1074,7 @@ async function checkCalendarWritePermission() {
 			console.log('✗ Calendars.ReadWrite permission missing - Booking feature disabled');
 		}
 	} catch (error) {
-		// If we can't get a token, assume no write permission
+		// If no token can be obtained, assume no write permission
 		hasCalendarWritePermission = false;
 		console.log('✗ Unable to verify Calendars.ReadWrite permission - Booking feature disabled');
 		console.log('  Error:', error.message);
@@ -798,6 +1083,9 @@ async function checkCalendarWritePermission() {
 	return hasCalendarWritePermission;
 }
 
+/**
+ * Triggers an immediate room data refresh via the socket controller.
+ */
 function triggerImmediateRoomRefresh() {
 	try {
 		const socketController = require('./socket-controller');
@@ -809,6 +1097,11 @@ function triggerImmediateRoomRefresh() {
 	}
 }
 
+/**
+ * Triggers an immediate room refresh, followed by a second one after 4 seconds.
+ * The delayed second refresh ensures that Graph API changes
+ * have fully propagated.
+ */
 function triggerRoomRefreshWithFollowUp() {
 	triggerImmediateRoomRefresh();
 	setTimeout(() => {
@@ -816,6 +1109,12 @@ function triggerRoomRefreshWithFollowUp() {
 	}, 4000);
 }
 
+/**
+ * Formats a Date object as a UTC time string for the Graph API.
+ * Format: YYYY-MM-DDTHH:MM:SS
+ * @param {Date} date - The date to format
+ * @returns {string} Formatted time string
+ */
 function formatDateForGraphUtc(date) {
 	const year = date.getUTCFullYear();
 	const month = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -826,6 +1125,14 @@ function formatDateForGraphUtc(date) {
 	return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
 
+/**
+ * Formats a Date object as a time string in a specific timezone for the Graph API.
+ * Uses Intl.DateTimeFormat for timezone conversion.
+ * Falls back to UTC formatting on error.
+ * @param {Date} date - The date to format
+ * @param {string} timeZone - IANA timezone name (e.g. "Europe/Berlin")
+ * @returns {string} Formatted time string in the specified timezone
+ */
 function formatDateForGraphInTimeZone(date, timeZone) {
 	const zone = String(timeZone || '').trim() || 'UTC';
 
@@ -852,6 +1159,13 @@ function formatDateForGraphInTimeZone(date, timeZone) {
 	}
 }
 
+/**
+ * Parses a Graph API DateTime value into a JavaScript Date object.
+ * Takes into account explicit timezones (Z, +/-offset) and UTC specifications.
+ * @param {string} dateTimeValue - The DateTime string from the Graph API
+ * @param {string} timeZoneValue - The associated timezone
+ * @returns {Date|null} The parsed Date object or null for invalid values
+ */
 function parseGraphDateTime(dateTimeValue, timeZoneValue) {
 	const dateTimeString = String(dateTimeValue || '').trim();
 	if (!dateTimeString) {
@@ -873,6 +1187,14 @@ function parseGraphDateTime(dateTimeValue, timeZoneValue) {
 	return Number.isNaN(localDate.getTime()) ? null : localDate;
 }
 
+/**
+ * Calculates the new end time when ending a meeting early.
+ * If the meeting has not started yet, sets to 1 minute after start.
+ * Otherwise uses the current time.
+ * @param {Date} startDate - Start time of the meeting
+ * @param {Date} [nowDate=new Date()] - Current time
+ * @returns {Date} The calculated new end time
+ */
 function calculateEarlyEndTime(startDate, nowDate = new Date()) {
 	if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) {
 		return nowDate;
@@ -885,6 +1207,14 @@ function calculateEarlyEndTime(startDate, nowDate = new Date()) {
 	return nowDate;
 }
 
+/**
+ * Ends a Graph calendar event early by setting the end time to now.
+ * First loads the event, calculates the new end time and updates it via PATCH.
+ * @param {string} roomEmail - Email address of the room
+ * @param {string} appointmentId - ID of the calendar entry
+ * @returns {Promise<Date>} The new end time
+ * @throws {Error} If the event cannot be loaded or updated
+ */
 async function endGraphEventEarly(roomEmail, appointmentId) {
 	const tokenRequest = {
 		scopes: ['https://graph.microsoft.com/.default']
@@ -932,6 +1262,14 @@ async function endGraphEventEarly(roomEmail, appointmentId) {
 	return newEnd;
 }
 
+/**
+ * Moves the start time of a Graph calendar entry to the current time.
+ * Used during check-in before meeting start to start the meeting immediately.
+ * @param {string} roomEmail - Email address of the room
+ * @param {string} appointmentId - ID of the calendar entry
+ * @param {Date} [nowDate=new Date()] - Current time
+ * @throws {Error} If the start time cannot be updated
+ */
 async function moveGraphEventStartToNow(roomEmail, appointmentId, nowDate = new Date()) {
 	const tokenRequest = {
 		scopes: ['https://graph.microsoft.com/.default']
@@ -961,11 +1299,11 @@ async function moveGraphEventStartToNow(roomEmail, appointmentId, nowDate = new 
 	}
 }
 
-// Configure multer for logo uploads
+// Multer configuration for logo uploads
 const storage = multer.diskStorage({
 	destination: function (req, file, cb) {
 		const uploadDir = path.join(__dirname, '../static/img/uploads');
-		// Create uploads directory if it doesn't exist
+		// Create upload directory if it doesn't exist
 		if (!fs.existsSync(uploadDir)) {
 			fs.mkdirSync(uploadDir, { recursive: true });
 		}
@@ -979,13 +1317,14 @@ const storage = multer.diskStorage({
 	}
 });
 
+/** Multer upload instance with size limit and file type filter */
 const upload = multer({
 	storage: storage,
 	limits: {
-		fileSize: 5 * 1024 * 1024 // 5MB limit
+		fileSize: 5 * 1024 * 1024 // 5MB Limit
 	},
 	fileFilter: function (req, file, cb) {
-		// Accept only safe raster image files (SVG excluded - XSS vector)
+		// Only accept safe raster image files (SVG excluded - XSS vector)
 		const allowedTypes = /jpeg|jpg|png|gif|webp/;
 		const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
 		const mimetype = allowedTypes.test(file.mimetype);
@@ -998,14 +1337,26 @@ const upload = multer({
 	}
 });
 
+/**
+ * Main function: Registers all Express routes and middleware.
+ * @param {import('express').Application} app - The Express application instance
+ */
 module.exports = function(app) {
 	var path = require('path');
 
+	/** @type {Function|null} Rate limiter for general API requests */
 	let apiRateLimiter = null;
+	/** @type {Function|null} Rate limiter for write operations (POST, PUT, PATCH, DELETE) */
 	let writeRateLimiter = null;
+	/** @type {Function|null} Rate limiter for authentication endpoints */
 	let authRateLimiter = null;
+	/** @type {Function|null} Rate limiter for booking endpoints */
 	let bookingRateLimiter = null;
 
+	/**
+	 * Recreates all rate limiters with the current configuration.
+	 * Called at startup and after configuration changes.
+	 */
 	const rebuildRateLimiters = () => {
 		const maxBuckets = config.systemDefaults?.rateLimitMaxBuckets;
 
@@ -1040,9 +1391,12 @@ module.exports = function(app) {
 
 	rebuildRateLimiters();
 
+	// Middleware: General API rate limiter for all /api routes
 	app.use('/api', function(req, res, next) {
 		return apiRateLimiter(req, res, next);
 	});
+
+	// Middleware: Additional rate limiter for write /api operations
 	app.use('/api', function(req, res, next) {
 		if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
 			return writeRateLimiter(req, res, next);
@@ -1050,6 +1404,8 @@ module.exports = function(app) {
 		next();
 	});
 
+	// Middleware: Maintenance mode check for /api routes
+	// In maintenance mode only read requests and certain paths are allowed
 	app.use('/api', function(req, res, next) {
 		const maintenanceConfig = configManager.getMaintenanceConfig();
 		if (!maintenanceConfig.enabled) {
@@ -1082,11 +1438,13 @@ module.exports = function(app) {
 		});
 	});
 
-	// Health check endpoint for connection monitoring
+	// Health check: HEAD endpoint for connection monitoring (no auth required)
 	app.head('/api/health', function(req, res) {
 		res.status(200).end();
 	});
 
+	// GET /api/graph/webhook — Webhook validation for Microsoft Graph notifications
+	// Returns the validationToken to confirm the webhook subscription
 	app.get('/api/graph/webhook', function(req, res) {
 		if (!config.graphWebhook.enabled) {
 			return res.status(503).json({
@@ -1115,6 +1473,8 @@ module.exports = function(app) {
 		res.status(400).json({ error: 'Missing validationToken query parameter' });
 	});
 
+	// POST /api/graph/webhook — Receives Graph webhook notifications on calendar changes
+	// Validates clientState and triggers room refresh
 	app.post('/api/graph/webhook', function(req, res) {
 		if (!config.graphWebhook.enabled) {
 			return res.status(503).json({
@@ -1147,12 +1507,13 @@ module.exports = function(app) {
 		res.status(202).json({ accepted: true, processed: validNotifications.length });
 	});
 
+	// GET /api/maintenance-status — Returns the current maintenance mode status (public)
 	app.get('/api/maintenance-status', function(req, res) {
 		const maintenanceConfig = configManager.getMaintenanceConfig();
 		res.json(maintenanceConfig);
 	});
 
-	// Debug endpoint for Socket.IO disconnect reasons (requires auth)
+	// GET /api/debug/socket-disconnects — Debug endpoint for Socket.IO disconnections (auth required)
 	app.get('/api/debug/socket-disconnects', function(req, res, next) {
 		if (!hasValidWiFiApiToken(req)) {
 			return res.status(401).json({ error: 'Unauthorized', message: 'Valid API token required.' });
@@ -1163,6 +1524,7 @@ module.exports = function(app) {
 		res.json({ disconnects: socketController.getRecentDisconnects() });
 	});
 
+	// GET /api/health — Comprehensive health check with Graph auth, cache, MQTT and display status
 	app.get('/api/health', function(req, res, next) {
 		if (!hasValidWiFiApiToken(req)) {
 			return res.status(401).json({ error: 'Unauthorized', message: 'Valid API token required.' });
@@ -1178,7 +1540,7 @@ module.exports = function(app) {
 		const touchkio = require('./touchkio');
 		const displays = touchkio.getDisplayStates();
 
-		// Count displays that reported state within last 5 minutes as online
+		// Count displays that reported a status within the last 5 minutes
 		const fiveMinAgo = Date.now() - 5 * 60 * 1000;
 		const onlineDisplays = displays.filter(d => d.lastSeen && new Date(d.lastSeen).getTime() > fiveMinAgo);
 
@@ -1202,6 +1564,7 @@ module.exports = function(app) {
 		});
 	});
 
+	// GET /api/readiness — Readiness check: Returns 503 if system is not ready
 	app.get('/api/readiness', async function(req, res) {
 		const graphAuth = await getGraphAuthHealth();
 		const syncStatus = require('./socket-controller').getSyncStatus();
@@ -1225,7 +1588,7 @@ module.exports = function(app) {
 		res.json({ status: 'ready' });
 	});
 
-	// Version endpoint - returns application version
+	// GET /api/version — Returns the application version from package.json (auth required)
 	app.get('/api/version', function(req, res, next) {
 		if (!hasValidWiFiApiToken(req)) {
 			return res.status(401).json({ error: 'Unauthorized', message: 'Valid API token required.' });
@@ -1239,9 +1602,12 @@ module.exports = function(app) {
 		});
 	});
 
-	// api routes ================================================================
+	// ======================== API Routes ========================
 
-	// Middleware: Validates request originates from application UI (same-origin) or carries valid API token
+	/**
+	 * Middleware: Checks whether the request originates from the application UI (same-origin)
+	 * or carries a valid API token. Protects display endpoints.
+	 */
 	const checkDisplayOrigin = (req, res, next) => {
 		const result = isDisplayOriginAllowed(req);
 		if (result.allowed) {
@@ -1261,8 +1627,10 @@ module.exports = function(app) {
 		});
 	};
 
-	// Middleware: Loose origin check for data endpoints (/api/rooms, /api/roomlists)
-	// Blocks cross-origin requests. When IP whitelist is enabled, also checks client IP.
+	/**
+	 * Middleware: Loose origin check for data endpoints (/api/rooms, /api/roomlists).
+	 * Blocks cross-origin requests. When IP whitelist is enabled, the client IP is also checked.
+	 */
 	const checkDisplayOriginLoose = (req, res, next) => {
 		// Always allow tokens and admin cookies
 		if (hasValidApiToken(req) || hasValidWiFiApiToken(req) || hasValidAdminAuthCookie(req)) {
@@ -1303,10 +1671,10 @@ module.exports = function(app) {
 		next();
 	};
 
-	// returns an array of room objects (minimal fields for flightboard)
+	// GET /api/rooms — Returns all rooms (minimal fields for flightboard)
 	// Full room data available via /api/rooms/:alias for single-room displays
 	app.get('/api/rooms', checkDisplayOriginLoose, function(req, res) {
-		// Demo mode: return generated demo rooms
+		// Demo mode: Return generated demo rooms
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode) {
 			return res.json(stripRoomsForFlightboard(demoData.getDemoRoomsSnapshot()));
@@ -1349,7 +1717,7 @@ module.exports = function(app) {
 		}, msalClient);
 	});
 
-	// returns a single room object by alias (lightweight endpoint for single-room displays)
+	// GET /api/rooms/:alias — Returns a single room by alias (for single-room displays)
 	app.get('/api/rooms/:alias', checkDisplayOriginLoose, function(req, res) {
 		const alias = String(req.params.alias || '').trim().toLowerCase();
 		if (!alias || !/^[a-z0-9 _.\-]{1,100}$/.test(alias)) {
@@ -1377,9 +1745,9 @@ module.exports = function(app) {
 		}, msalClient);
 	});
 
-	// returns an array of roomlist objects with aliases for filtering
+	// GET /api/roomlists — Returns all room lists with aliases
 	app.get('/api/roomlists', checkDisplayOriginLoose, function(req, res) {
-		// Demo mode: return demo roomlists
+		// Demo mode: Return demo room lists
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode) {
 			return res.json(demoData.getDemoRoomlists());
@@ -1409,12 +1777,12 @@ module.exports = function(app) {
 		}, msalClient);
 	});
 
-	// heartbeat-service to check if server is alive
+	// GET /api/heartbeat — Simple heartbeat endpoint to check if the server is reachable
 	app.get('/api/heartbeat', function(req, res) {
 		res.json({ status: 'OK' });
 	});
 
-	// Get calendar sync status
+	// GET /api/sync-status — Returns the calendar synchronization status
 	app.get('/api/sync-status', function(req, res) {
 		try {
 			const socketController = require('./socket-controller');
@@ -1435,14 +1803,15 @@ module.exports = function(app) {
 		}
 	});
 
-	// Room booking endpoint
+	// POST /api/rooms/:roomEmail/book — Books a room via the Graph API
+	// Validates inputs, checks booking permission and creates the calendar entry
 	app.post('/api/rooms/:roomEmail/book', checkDisplayOrigin, function(req, res, next) {
 		return bookingRateLimiter(req, res, next);
 	}, async function(req, res) {
 		const { roomEmail } = req.params;
 		const { subject, startTime, endTime, description, roomGroup } = req.body;
 
-		// Demo mode: simulate booking
+		// Demo mode: Simulate booking
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode && demoData.isDemoEmail(roomEmail)) {
 			const result = demoData.bookDemoRoom(roomEmail, subject, startTime, endTime);
@@ -1468,7 +1837,7 @@ module.exports = function(app) {
 			});
 		}
 
-		// Validate input
+		// Input validation
 		if (!subject || !startTime || !endTime) {
 			return res.status(400).json({ 
 				error: 'Missing required fields',
@@ -1511,7 +1880,7 @@ module.exports = function(app) {
 		}
 
 		// Security: Prevent booking with attendees or additional resources
-		// Only allow the specific fields we need
+		// Only allow the specifically needed fields
 		const disallowedFields = ['attendees', 'requiredAttendees', 'optionalAttendees', 'resources', 'locations'];
 		for (const field of disallowedFields) {
 			if (req.body[field] !== undefined) {
@@ -1550,13 +1919,14 @@ module.exports = function(app) {
 		}
 	});
 
-	// Extend existing meeting endpoint
+	// POST /api/extend-meeting — Extends an existing meeting by a specified number of minutes
+	// Checks for conflicts with subsequent appointments and end of day
 	app.post('/api/extend-meeting', checkDisplayOrigin, function(req, res, next) {
 		return bookingRateLimiter(req, res, next);
 	}, async function(req, res) {
 		const { roomEmail, appointmentId, minutes, roomGroup } = req.body;
 
-		// Demo mode: simulate extend meeting
+		// Demo mode: Simulate meeting extension
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode && demoData.isDemoEmail(roomEmail)) {
 			const minutesValue = Number(minutes);
@@ -1571,12 +1941,12 @@ module.exports = function(app) {
 			return res.json({ success: true, newEnd: result.newEnd });
 		}
 
-		// Detect language from Accept-Language header
+		// Determine language from Accept-Language header
 		const acceptLanguage = req.headers['accept-language'] || 'en';
 		const lang = acceptLanguage.split(',')[0].split('-')[0]; // Extract primary language code
 		const isGerman = lang === 'de';
 
-		// Translation helper
+		// Translation helper for error messages
 		const t = {
 			missingFields: isGerman ? 'Fehlende erforderliche Felder' : 'Missing required fields',
 			missingFieldsDetails: isGerman 
@@ -1600,7 +1970,7 @@ module.exports = function(app) {
 			updateError: isGerman ? 'Fehler beim Aktualisieren des Termins' : 'Failed to update event',
 			generalError: isGerman ? 'Fehler beim Verlängern des Meetings' : 'Error extending meeting'
 		};
-		// Validate input
+		// Input validation
 		if (!roomEmail || !appointmentId || !minutes) {
 			return res.status(400).json({ 
 				error: t.missingFields,
@@ -1620,7 +1990,7 @@ module.exports = function(app) {
 			});
 		}
 
-		// Validate minutes value (5..240, step 5)
+		// Validate minutes value (5..240, steps of 5)
 		const minutesValue = Number(minutes);
 		if (!Number.isFinite(minutesValue) || minutesValue < 5 || minutesValue > 240 || minutesValue % 5 !== 0) {
 			return res.status(400).json({ 
@@ -1639,7 +2009,7 @@ module.exports = function(app) {
 			const authResult = await msalClient.acquireTokenByClientCredential(tokenRequest);
 			const accessToken = authResult.accessToken;
 
-			// Get the current event
+			// Load current event
 			const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
 			const eventResponse = await graphFetch(eventUrl, {
 				headers: {
@@ -1665,7 +2035,7 @@ module.exports = function(app) {
 			const newEnd = new Date(currentEnd.getTime() + (minutesValue * 60 * 1000));
 
 			// Check for conflicts with the extension
-			// We need to check if extending from currentEnd to newEnd would overlap with any other meeting
+			// Check if the extension from currentEnd to newEnd overlaps with another meeting
 			const calendarView = await graphApi.getCalendarView(msalClient, roomEmail);
 			const calendarEvents = calendarView.value || [];
 
@@ -1674,8 +2044,7 @@ module.exports = function(app) {
 				const eventStart = new Date(e.start.dateTime);
 				const eventEnd = new Date(e.end.dateTime);
 				
-				// Check if there's any overlap between the extended meeting and this event
-				// Overlap exists if: (extendedStart < eventEnd) AND (extendedEnd > eventStart)
+				// Check for overlap: (extendedStart < eventEnd) AND (extendedEnd > eventStart)
 				// The extended meeting runs from currentStart to newEnd
 				return currentStart < eventEnd && newEnd > eventStart;
 			});
@@ -1687,7 +2056,7 @@ module.exports = function(app) {
 				});
 			}
 
-			// Additional check: ensure the extension doesn't go beyond a reasonable time (e.g., end of business day)
+			// Additional check: Extension must not go beyond end of day
 			const maxEndTime = new Date(currentStart);
 			maxEndTime.setHours(23, 59, 59, 999); // End of day
 			
@@ -1698,7 +2067,7 @@ module.exports = function(app) {
 				});
 			}
 
-			// Update the event end time
+			// Update event end time
 			const updateUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
 			const updateResponse = await graphFetch(updateUrl, {
 				method: 'PATCH',
@@ -1734,12 +2103,13 @@ module.exports = function(app) {
 		}
 	});
 
+	// POST /api/end-meeting — Ends a running meeting early
 	app.post('/api/end-meeting', checkDisplayOrigin, function(req, res, next) {
 		return bookingRateLimiter(req, res, next);
 	}, async function(req, res) {
 		const { roomEmail, appointmentId, roomGroup } = req.body || {};
 
-		// Demo mode: simulate end meeting early
+		// Demo mode: Simulate early termination
 		const systemConfig = configManager.getSystemConfig();
 		if (systemConfig.demoMode && demoData.isDemoEmail(roomEmail)) {
 			const result = demoData.endDemoMeetingEarly(roomEmail, appointmentId);
@@ -1809,6 +2179,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// GET /api/check-in-status — Returns the check-in status for a meeting
 	app.get('/api/check-in-status', checkDisplayOrigin, function(req, res) {
 		const { roomEmail, appointmentId, organizer, roomName, startTimestamp } = req.query;
 
@@ -1832,6 +2203,8 @@ module.exports = function(app) {
 		res.json(status);
 	});
 
+	// POST /api/check-in — Performs the check-in for a meeting
+	// Can move the meeting start time to now on early check-in
 	app.post('/api/check-in', checkDisplayOrigin, async function(req, res) {
 		const { roomEmail, appointmentId, organizer, roomName, startTimestamp } = req.body || {};
 
@@ -1908,7 +2281,11 @@ module.exports = function(app) {
 		});
 	});
 
-	// Middleware to check API token
+	/**
+	 * Middleware: Checks whether a valid admin API token is present.
+	 * Logs failed authentication attempts in the audit log.
+	 * Additionally validates CSRF token on state-changing requests with cookie auth.
+	 */
 	const checkApiToken = (req, res, next) => {
 		if (!hasValidApiToken(req)) {
 			appendAuditLog({
@@ -1925,7 +2302,7 @@ module.exports = function(app) {
 			});
 		}
 
-		// CSRF validation for state-changing requests using cookie auth
+		// CSRF validation for state-changing requests with cookie authentication
 		if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !validateCsrf(req)) {
 			return res.status(403).json({
 				error: 'CSRF validation failed',
@@ -1936,6 +2313,10 @@ module.exports = function(app) {
 		return next();
 	};
 
+	/**
+	 * Middleware: Checks whether a valid WiFi API token or admin token is present.
+	 * Logs failed attempts in the audit log.
+	 */
 	const checkWiFiApiToken = (req, res, next) => {
 		if (hasValidWiFiApiToken(req)) {
 			return next();
@@ -1955,6 +2336,7 @@ module.exports = function(app) {
 		});
 	};
 
+	// GET /api/admin/bootstrap-status — Checks whether the initial admin token setup is needed
 	app.get('/api/admin/bootstrap-status', function(req, res) {
 		res.json({
 			requiresSetup: isInitialAdminTokenSetupRequired(),
@@ -1962,6 +2344,7 @@ module.exports = function(app) {
 		});
 	});
 
+	// POST /api/admin/bootstrap-token — Creates the initial admin API token during first setup
 	app.post('/api/admin/bootstrap-token', function(req, res) {
 		authRateLimiter(req, res, () => {});
 		if (res.headersSent) {
@@ -2010,6 +2393,7 @@ module.exports = function(app) {
 			});
 	});
 
+	// POST /api/admin/login — Admin login: Validates token and sets auth cookie + CSRF cookie
 	app.post('/api/admin/login', function(req, res) {
 		authRateLimiter(req, res, () => {});
 		if (res.headersSent) {
@@ -2051,16 +2435,18 @@ module.exports = function(app) {
 		return res.json({ success: true, csrfToken });
 	});
 
+	// POST /api/admin/logout — Admin logout: Clears auth and CSRF cookies
 	app.post('/api/admin/logout', function(req, res) {
 		clearAdminAuthCookie(res);
 		res.json({ success: true });
 	});
 
+	// GET /api/admin/session — Checks whether the current admin session is valid
 	app.get('/api/admin/session', checkApiToken, function(req, res) {
 		res.json({ authenticated: true });
 	});
 
-	// Get current WiFi configuration (public - no auth required)
+	// GET /api/wifi — Returns the current WiFi configuration (public, no auth required)
 	app.get('/api/wifi', function(req, res) {
 		try {
 			const wifiConfig = configManager.getWiFiConfig();
@@ -2070,7 +2456,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get current Logo configuration (public - no auth required)
+	// GET /api/logo — Returns the current logo configuration (public, no auth required)
 	app.get('/api/logo', function(req, res) {
 		try {
 			const logoConfig = configManager.getLogoConfig();
@@ -2080,6 +2466,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// GET /api/oauth-config — Returns the OAuth configuration (auth required)
 	app.get('/api/oauth-config', checkApiToken, function(req, res) {
 		try {
 			const oauthConfig = configManager.getOAuthConfig();
@@ -2090,6 +2477,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// GET /api/api-token-config — Returns the API token configuration (auth required)
 	app.get('/api/api-token-config', checkApiToken, function(req, res) {
 		try {
 			res.json(configManager.getApiTokenConfig());
@@ -2099,6 +2487,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// POST /api/api-token-config — Updates admin and/or WiFi API token
 	app.post('/api/api-token-config', checkApiToken, async function(req, res) {
 		try {
 			const { newToken, newWifiToken } = req.body || {};
@@ -2184,6 +2573,8 @@ module.exports = function(app) {
 		}
 	});
 
+	// POST /api/oauth-config — Updates the OAuth configuration (client ID, authority, secret)
+	// Locked when OAuth is configured via environment variables
 	app.post('/api/oauth-config', checkApiToken, async function(req, res) {
 		try {
 			if (isOAuthEnvConfigured()) {
@@ -2289,7 +2680,7 @@ module.exports = function(app) {
 			require('./socket-controller').refreshMsalClient();
 			triggerRoomRefreshWithFollowUp();
 
-			// Auto-disable demo mode when OAuth is configured
+			// Automatically disable demo mode when OAuth is configured
 			const systemConfig = configManager.getSystemConfig();
 			if (systemConfig.demoMode) {
 				const normalizedClientId = String(clientId || updatedConfig.clientId || '').trim();
@@ -2320,6 +2711,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// GET /api/system-config — Returns the system configuration (auth required)
 	app.get('/api/system-config', checkApiToken, function(req, res) {
 		try {
 			const systemConfig = configManager.getSystemConfig();
@@ -2330,6 +2722,8 @@ module.exports = function(app) {
 		}
 	});
 
+	// POST /api/system-config — Updates the system configuration
+	// Includes: webhook, graph fetch, HSTS, rate limit, display tracking, IP whitelist, demo mode
 	app.post('/api/system-config', checkApiToken, async function(req, res) {
 		try {
 			if (isSystemEnvConfigured()) {
@@ -2403,7 +2797,7 @@ module.exports = function(app) {
 			});
 
 			require('./socket-controller').refreshPollingSchedule();
-			// If demoMode changed, trigger immediate room data refresh
+			// If demo mode changed, trigger immediate room data refresh
 			if (beforeConfig.demoMode !== updatedConfig.demoMode) {
 				require('./socket-controller').triggerImmediateRefresh();
 			}
@@ -2430,7 +2824,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get power management configuration (protected - requires token)
+	// GET /api/power-management — Returns the power management configuration (auth required)
 	app.get('/api/power-management', checkApiToken, function(req, res) {
 		try {
 			const config = configManager.getPowerManagementConfig();
@@ -2441,7 +2835,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Update global power management configuration (protected - requires token)
+	// POST /api/power-management — Updates the global power management configuration (auth required)
 	app.post('/api/power-management', checkApiToken, function(req, res) {
 		try {
 			const { mode, schedule, mqttHostname } = req.body;
@@ -2460,7 +2854,7 @@ module.exports = function(app) {
 				}
 			};
 			
-			// Add MQTT hostname if mode is mqtt
+			// Add MQTT hostname when mode is mqtt
 			if (mode === 'mqtt' && mqttHostname) {
 				configData.mqttHostname = mqttHostname;
 			}
@@ -2487,14 +2881,12 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get power management configuration for specific display (display-origin only)
+	// GET /api/power-management/:clientId — Returns the power management configuration for a specific display
 	app.get('/api/power-management/:clientId', checkDisplayOrigin, function(req, res) {
 		try {
 			const { clientId } = req.params;
 			
 			// Security: Validate clientId format to prevent injection attacks
-			// Allow alphanumeric, dots, underscores, colons, hyphens, parentheses, and spaces
-			// Max length 250 characters (as defined in socket-controller)
 			if (!clientId || typeof clientId !== 'string') {
 				return res.status(400).json({ error: 'Invalid client ID' });
 			}
@@ -2516,12 +2908,12 @@ module.exports = function(app) {
 				return res.status(400).json({ error: 'Client ID length must be between 3 and 250 characters' });
 			}
 			
-			// Allow: alphanumeric, dots, underscores, colons, hyphens, parentheses, spaces
+			// Allowed: Alphanumeric, dots, underscores, colons, hyphens, parentheses, spaces
 			if (!/^[a-zA-Z0-9._:\-() ]{3,250}$/.test(sanitizedClientId)) {
 				return res.status(400).json({ error: 'Client ID contains invalid characters' });
 			}
 			
-			// This returns display-specific config or falls back to global config
+			// Returns display-specific configuration or falls back to global configuration
 			const config = configManager.getPowerManagementConfigForDisplay(sanitizedClientId);
 			res.json(config);
 		} catch (err) {
@@ -2530,7 +2922,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Update power management configuration for a display (protected - requires token)
+	// POST /api/power-management/:clientId — Updates the power management configuration for a display
 	app.post('/api/power-management/:clientId', checkApiToken, function(req, res) {
 		try {
 			const { clientId } = req.params;
@@ -2550,7 +2942,7 @@ module.exports = function(app) {
 				}
 			};
 			
-			// Add MQTT hostname if mode is mqtt
+			// Add MQTT hostname when mode is mqtt
 			if (mode === 'mqtt' && mqttHostname) {
 				configData.mqttHostname = mqttHostname;
 			}
@@ -2578,7 +2970,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Delete power management configuration for a display (protected - requires token)
+	// DELETE /api/power-management/:clientId — Deletes the power management configuration of a display
 	app.delete('/api/power-management/:clientId', checkApiToken, function(req, res) {
 		try {
 			const { clientId } = req.params;
@@ -2603,13 +2995,13 @@ module.exports = function(app) {
 		}
 	});
 
-	// MQTT Configuration Endpoints ============================================
+	// ======================== MQTT Configuration Endpoints ========================
 	
-	// Get MQTT configuration (protected - requires token)
+	// GET /api/mqtt-config — Returns the MQTT configuration (without password, auth required)
 	app.get('/api/mqtt-config', checkApiToken, function(req, res) {
 		try {
 			const mqttConfig = configManager.getMqttConfig();
-			// Don't send password to client
+			// Don't send password to the client
 			const safeConfig = { ...mqttConfig };
 			if (safeConfig.password) {
 				safeConfig.hasPassword = true;
@@ -2622,7 +3014,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Update MQTT configuration (protected - requires token)
+	// POST /api/mqtt-config — Updates the MQTT configuration and restarts the client if needed
 	app.post('/api/mqtt-config', checkApiToken, function(req, res) {
 		try {
 			const { enabled, brokerUrl, authentication, username, password, discovery } = req.body;
@@ -2647,7 +3039,7 @@ module.exports = function(app) {
 				after: { ...updatedConfig, password: updatedConfig.password ? '***' : '' }
 			});
 
-			// Restart MQTT client if enabled changed
+			// Restart MQTT client if enabled status changed
 			if (enabled !== beforeConfig.enabled) {
 				const mqttClient = require('./mqtt-client');
 				if (enabled) {
@@ -2657,8 +3049,7 @@ module.exports = function(app) {
 				}
 			}
 
-			// Don't send password to client
-			const safeConfig = { ...updatedConfig };
+			// Don't send password to the client
 			if (safeConfig.password) {
 				safeConfig.hasPassword = true;
 				delete safeConfig.password;
@@ -2675,7 +3066,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get MQTT client status (protected - requires token)
+	// GET /api/mqtt-status — Returns the MQTT client connection status (auth required)
 	app.get('/api/mqtt-status', checkApiToken, function(req, res) {
 		try {
 			const mqttClient = require('./mqtt-client');
@@ -2687,7 +3078,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get MQTT display states (protected - requires token)
+	// GET /api/mqtt-displays — Returns the MQTT display states (auth required)
 	app.get('/api/mqtt-displays', checkApiToken, function(req, res) {
 		try {
 			const mqttPowerBridge = require('./touchkio');
@@ -2699,14 +3090,14 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger power command for a display (protected - requires token)
+	// POST /api/mqtt-power-trigger/:hostname — Sends a power command to a display (auth required)
 	app.post('/api/mqtt-power-trigger/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
 			const { powerState, brightness } = req.body;
 			const mqttPowerBridge = require('./touchkio');
 			
-			// Send power command directly to hostname
+			// Send power command directly to the hostname
 			const success = mqttPowerBridge.sendPowerCommand(
 				hostname, 
 				powerState !== undefined ? powerState : true,
@@ -2727,7 +3118,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger brightness command for a display (protected - requires token)
+	// POST /api/mqtt-brightness/:hostname — Sends a brightness command to a display
 	app.post('/api/mqtt-brightness/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
@@ -2747,7 +3138,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger kiosk status command for a display (protected - requires token)
+	// POST /api/mqtt-kiosk/:hostname — Sends a kiosk status command to a display
 	app.post('/api/mqtt-kiosk/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
@@ -2767,7 +3158,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger theme command for a display (protected - requires token)
+	// POST /api/mqtt-theme/:hostname — Sends a theme command to a display
 	app.post('/api/mqtt-theme/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
@@ -2787,7 +3178,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger volume command for a display (protected - requires token)
+	// POST /api/mqtt-volume/:hostname — Sends a volume command to a display
 	app.post('/api/mqtt-volume/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
@@ -2807,7 +3198,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger keyboard visibility command for a display (protected - requires token)
+	// POST /api/mqtt-keyboard/:hostname — Sends a keyboard visibility command to a display
 	app.post('/api/mqtt-keyboard/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
@@ -2827,7 +3218,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger page zoom command for a display (protected - requires token)
+	// POST /api/mqtt-page-zoom/:hostname — Sends a page zoom command to a display
 	app.post('/api/mqtt-page-zoom/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
@@ -2847,7 +3238,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger page URL command for a display (protected - requires token)
+	// POST /api/mqtt-page-url/:hostname — Sends a page URL command to a display
 	app.post('/api/mqtt-page-url/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
@@ -2867,7 +3258,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger refresh command for a display (protected - requires token)
+	// POST /api/mqtt-refresh/:hostname — Sends a refresh command to a display
 	app.post('/api/mqtt-refresh/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
@@ -2886,7 +3277,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger reboot command for a display (protected - requires token)
+	// POST /api/mqtt-reboot/:hostname — Sends a reboot command to a display
 	app.post('/api/mqtt-reboot/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
@@ -2905,7 +3296,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger shutdown command for a display (protected - requires token)
+	// POST /api/mqtt-shutdown/:hostname — Sends a shutdown command to a display
 	app.post('/api/mqtt-shutdown/:hostname', checkApiToken, function(req, res) {
 		try {
 			const { hostname } = req.params;
@@ -2924,7 +3315,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger refresh command for ALL displays (protected - requires token)
+	// POST /api/mqtt-refresh-all — Sends a refresh command to ALL displays
 	app.post('/api/mqtt-refresh-all', checkApiToken, function(req, res) {
 		try {
 			const mqttPowerBridge = require('./touchkio');
@@ -2956,7 +3347,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Trigger reboot command for ALL displays (protected - requires token)
+	// POST /api/mqtt-reboot-all — Sends a reboot command to ALL displays
 	app.post('/api/mqtt-reboot-all', checkApiToken, function(req, res) {
 		try {
 			const mqttPowerBridge = require('./touchkio');
@@ -2988,7 +3379,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Update WiFi configuration and regenerate QR code (protected - requires token)
+	// POST /api/wifi — Updates the WiFi configuration and regenerates QR code (WiFi token required)
 	app.post('/api/wifi', checkWiFiApiToken, async function(req, res) {
 		try {
 			const { ssid, password } = req.body;
@@ -3019,7 +3410,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Update logo configuration (protected - requires token)
+	// POST /api/logo — Updates the logo configuration (auth required)
 	app.post('/api/logo', checkApiToken, async function(req, res) {
 		try {
 			const { logoDarkUrl, logoLightUrl } = req.body;
@@ -3050,7 +3441,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Upload logo file (protected - requires token)
+	// POST /api/logo/upload — Uploads a logo file and updates the configuration (auth required)
 	app.post('/api/logo/upload', checkApiToken, upload.single('logo'), async function(req, res) {
 		try {
 			if (!req.file) {
@@ -3063,17 +3454,17 @@ module.exports = function(app) {
 				return res.status(400).json({ error: 'Logo type must be "dark" or "light"' });
 			}
 
-			// Generate the URL path for the uploaded file
+			// Generate URL path for the uploaded file
 			const logoUrl = `/img/uploads/${req.file.filename}`;
 			
-			// Get current config
+			// Load current configuration
 			const currentConfig = configManager.getLogoConfig();
 			
-			// Update only the specified logo
+			// Only update the specified logo
 			const logoDarkUrl = logoType === 'dark' ? logoUrl : currentConfig.logoDarkUrl;
 			const logoLightUrl = logoType === 'light' ? logoUrl : currentConfig.logoLightUrl;
 			
-			// Update the logo configuration with the new file path
+			// Update logo configuration with the new file path
 			const config = await configManager.updateLogoConfig(logoDarkUrl, logoLightUrl);
 			
 			res.json({ 
@@ -3084,7 +3475,7 @@ module.exports = function(app) {
 			});
 		} catch (err) {
 			console.error('Error uploading logo:', err);
-			// Clean up uploaded file if there was an error
+			// Clean up uploaded file on error
 			if (req.file) {
 				fs.unlink(req.file.path, (unlinkErr) => {
 					if (unlinkErr) console.error('Error deleting file:', unlinkErr);
@@ -3094,7 +3485,8 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get current information configuration (public - no auth required)
+	// GET /api/sidebar — Returns the current sidebar/information configuration (public)
+	// Supports optional displayClientId parameter for client-specific configuration
 	app.get('/api/sidebar', function(req, res) {
 		try {
 			const displayClientId = String(req.query.displayClientId || '').trim();
@@ -3107,6 +3499,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// GET /api/connected-clients — Returns the connected display clients (auth required)
 	app.get('/api/connected-clients', checkApiToken, function(req, res) {
 		try {
 			const socketController = require('./socket-controller');
@@ -3120,10 +3513,11 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get merged displays (Socket.IO + MQTT) - protected
+	// GET /api/displays — Returns merged displays (Socket.IO + MQTT) (auth required)
+	// Combines Socket.IO-connected displays with MQTT displays via different matching strategies
 	app.get('/api/displays', checkApiToken, function(req, res) {
 		try {
-			// Demo mode: return demo displays
+			// Demo mode: Return demo displays
 			const systemConfig = configManager.getSystemConfig();
 			if (systemConfig.demoMode) {
 				return res.json({ displays: demoData.getDemoDisplays() });
@@ -3132,21 +3526,21 @@ module.exports = function(app) {
 			const socketController = require('./socket-controller');
 			const mqttPowerBridge = require('./touchkio');
 			
-			// Get Socket.IO connected displays
+			// Load Socket.IO-connected displays
 			const socketDisplays = typeof socketController.getConnectedDisplayClients === 'function'
 				? socketController.getConnectedDisplayClients()
 				: [];
 			
-			// Get MQTT displays
+			// Load MQTT displays
 			const mqttDisplays = mqttPowerBridge.getDisplayStates();
 			
-			// Create a map for quick lookup
+			// Create map for fast lookup
 			const displayMap = new Map();
 			
 			// Add Socket.IO displays first
 			socketDisplays.forEach(display => {
 				const key = display.clientId.toLowerCase();
-				// Strip IP prefix from clientId for display name (e.g. "192.168.3.220_flightboard" → "flightboard")
+				// Remove IP prefix from clientId for display name (e.g. "192.168.3.220_flightboard" → "flightboard")
 				let displayName = display.roomAlias || display.clientId;
 				if (!display.roomAlias && /^\d+\.\d+\.\d+\.\d+_/.test(displayName)) {
 					displayName = displayName.replace(/^\d+\.\d+\.\d+\.\d+_/, '');
@@ -3177,7 +3571,7 @@ module.exports = function(app) {
 				
 				// Try multiple matching strategies (only match same physical device, not same room!)
 				for (const [key, display] of displayMap.entries()) {
-					// Strategy 1: IP address exact match (most reliable for same physical device)
+					// Strategy 1: Exact IP address match (most reliable method for same physical device)
 					if (mqttIp && display.ipAddress) {
 						const socketIp = display.ipAddress.toLowerCase();
 						if (socketIp === mqttIp || socketIp.includes(mqttIp)) {
@@ -3186,7 +3580,7 @@ module.exports = function(app) {
 						}
 					}
 					
-					// Strategy 2: clientId contains deviceId (e.g., "192.168.1.10_rpi_1A4187")
+					// Strategy 2: clientId contains deviceId (e.g. "192.168.1.10_rpi_1A4187")
 					if (mqtt.deviceId && display.id.toLowerCase().includes(mqtt.deviceId.toLowerCase())) {
 						existingDisplay = display;
 						break;
@@ -3220,11 +3614,11 @@ module.exports = function(app) {
 				if (existingDisplay) {
 					// Merge MQTT data into existing Socket.IO display
 					existingDisplay.mqtt = mqttData;
-					// Update IP if we have it from MQTT
+					// Update IP if available from MQTT
 					if (mqtt.networkAddress && !existingDisplay.ipAddress) {
 						existingDisplay.ipAddress = mqtt.networkAddress;
 					}
-					// Use MQTT room name as display name if current name contains IP (raw clientId)
+					// Use MQTT room name as display name if current name contains an IP (raw clientId)
 					if (mqtt.room && existingDisplay.name && /\d+\.\d+\.\d+\.\d+/.test(existingDisplay.name)) {
 						existingDisplay.name = mqtt.room;
 					}
@@ -3255,7 +3649,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Delete a disconnected display client
+	// DELETE /api/connected-clients/:clientId — Removes a disconnected display client
 	app.delete('/api/connected-clients/:clientId', checkApiToken, function(req, res) {
 		try {
 			const socketController = require('./socket-controller');
@@ -3281,7 +3675,8 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get configuration lock status (which settings are configured via .env)
+	// GET /api/config-locks — Returns the lock status of configurations
+	// Shows which settings are configured via environment variables (.env) and thus locked
 	app.get('/api/config-locks', function(req, res) {
 		try {
 			const isEnvConfigured = (name) => process.env[name] !== undefined;
@@ -3326,6 +3721,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// GET /api/translation-api-config — Returns the translation API configuration
 	app.get('/api/translation-api-config', function(req, res) {
 		try {
 			const translationApiConfig = configManager.getTranslationApiConfig();
@@ -3336,6 +3732,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// POST /api/translation-api-config — Updates the translation API configuration
 	app.post('/api/translation-api-config', checkApiToken, async function(req, res) {
 		try {
 			if (isTranslationApiEnvConfigured()) {
@@ -3390,6 +3787,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// GET /api/search-config — Returns the search configuration
 	app.get('/api/search-config', function(req, res) {
 		try {
 			const searchConfig = configManager.getSearchConfig();
@@ -3400,6 +3798,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// POST /api/search-config — Updates the search configuration (Graph API, limits, polling interval)
 	app.post('/api/search-config', checkApiToken, async function(req, res) {
 		try {
 			const {
@@ -3456,6 +3855,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// GET /api/rate-limit-config — Returns the rate limit configuration
 	app.get('/api/rate-limit-config', function(req, res) {
 		try {
 			const rateLimitConfig = configManager.getRateLimitConfig();
@@ -3466,6 +3866,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// POST /api/rate-limit-config — Updates the rate limit configuration and rebuilds limiters
 	app.post('/api/rate-limit-config', checkApiToken, async function(req, res) {
 		try {
 			const {
@@ -3527,7 +3928,8 @@ module.exports = function(app) {
 		}
 	});
 
-	// Update information configuration (protected - requires token)
+	// POST /api/sidebar — Updates the sidebar/information configuration
+	// Supports global and client-specific settings
 	app.post('/api/sidebar', checkApiToken, async function(req, res) {
 		try {
 			const {
@@ -3606,18 +4008,19 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get current booking configuration (public - no auth required)
+	// GET /api/booking-config — Returns the effective booking configuration (public)
+	// Takes into account room/group overrides and Calendars.ReadWrite permission
 	app.get('/api/booking-config', async function(req, res) {
 		try {
 			const bookingConfig = configManager.getBookingConfig();
 			const roomEmail = req.query.roomEmail;
 			const roomGroup = req.query.roomGroup;
 			
-			// Check if Calendars.ReadWrite permission is available
+			// Check whether Calendars.ReadWrite permission is available
 			const hasPermission = await checkCalendarWritePermission();
 			const effectiveBooking = getEffectiveBookingConfig(bookingConfig, roomEmail, roomGroup, hasPermission);
 			
-			// If permission is missing, force disable booking regardless of config
+			// If permission is missing, disable booking regardless of configuration
 			const effectiveConfig = {
 				...bookingConfig,
 				enableBooking: effectiveBooking.enableBooking,
@@ -3634,7 +4037,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get colors configuration
+	// GET /api/colors — Returns the color configuration
 	app.get('/api/colors', async function(req, res) {
 		try {
 			const colorsConfig = configManager.getColorsConfig();
@@ -3645,7 +4048,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Get i18n configuration
+	// GET /api/i18n — Returns the internationalization configuration
 	app.get('/api/i18n', function(req, res) {
 		try {
 			const i18nConfig = configManager.getI18nConfig();
@@ -3656,7 +4059,8 @@ module.exports = function(app) {
 		}
 	});
 
-	// Update booking configuration (protected - requires token)
+	// POST /api/booking-config — Updates the booking configuration (auth required)
+	// Includes: enable booking, button color, meeting extension, feature flags, check-in
 	app.post('/api/booking-config', checkApiToken, async function(req, res) {
 		try {
 			const { enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist, roomFeatureFlags, roomGroupFeatureFlags, checkIn } = req.body;
@@ -3666,7 +4070,7 @@ module.exports = function(app) {
 				return res.status(400).json({ error: 'At least one booking configuration option is required' });
 			}
 
-			// Check if Calendars.ReadWrite permission is available
+			// Check whether Calendars.ReadWrite permission is available
 			const hasPermission = await checkCalendarWritePermission();
 			
 			if (enableBooking === true && !hasPermission) {
@@ -3698,7 +4102,7 @@ module.exports = function(app) {
 		}
 	});
 
-	// Color Configuration Endpoint
+	// POST /api/colors — Updates the color configuration (booking button, status colors)
 	app.post('/api/colors', checkApiToken, async function(req, res) {
 		try {
 			const { bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor, statusNotFoundColor } = req.body;
@@ -3733,6 +4137,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// POST /api/maintenance — Updates the maintenance mode configuration
 	app.post('/api/maintenance', checkApiToken, async function(req, res) {
 		try {
 			if (isMaintenanceEnvConfigured()) {
@@ -3770,6 +4175,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// POST /api/i18n — Updates the internationalization configuration (maintenance texts, admin translations)
 	app.post('/api/i18n', checkApiToken, async function(req, res) {
 		try {
 			const { maintenanceMessages, adminTranslations } = req.body || {};
@@ -3807,6 +4213,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// POST /api/i18n/auto-translate — Automatically translates maintenance and admin texts into the target language
 	app.post('/api/i18n/auto-translate', checkApiToken, async function(req, res) {
 		try {
 			const { targetLanguage, sourceLanguage, maintenanceSource, adminSource } = req.body || {};
@@ -3851,6 +4258,7 @@ module.exports = function(app) {
 		}
 	});
 
+	// GET /api/audit-logs — Returns the audit logs (auth required, default: 200 entries)
 	app.get('/api/audit-logs', checkApiToken, function(req, res) {
 		const limit = req.query.limit ? parseInt(req.query.limit, 10) : 200;
 		res.json({
@@ -3858,6 +4266,7 @@ module.exports = function(app) {
 		});
 	});
 
+	// GET /api/config/backup — Exports the entire configuration as a backup (auth required)
 	app.get('/api/config/backup', checkApiToken, function(req, res) {
 		const backup = {
 			createdAt: new Date().toISOString(),
@@ -3886,6 +4295,8 @@ module.exports = function(app) {
 		res.json(backup);
 	});
 
+	// POST /api/config/restore — Restores a configuration from a backup (auth required)
+	// Updates all configuration areas and triggers necessary restarts/refreshes
 	app.post('/api/config/restore', checkApiToken, async function(req, res) {
 		try {
 			const payload = req.body;
@@ -4031,9 +4442,12 @@ module.exports = function(app) {
 		}
 	});
 
-	// Middleware: IP whitelist check for display pages (flightboard, single-room)
-	// When IP whitelist is enabled, only whitelisted IPs can access display pages.
-	// Admin and WiFi pages remain open to all.
+	/**
+	 * Middleware: IP whitelist check for display pages (flightboard, single room).
+	 * When IP whitelisting is enabled, only approved IPs can access display pages.
+	 * Admin and WiFi pages remain accessible to everyone.
+	 * Shows a localized error page (DE/EN) with the client IP on rejection.
+	 */
 	const checkDisplayPageAccess = (req, res, next) => {
 		if (hasValidApiToken(req) || hasValidWiFiApiToken(req) || hasValidAdminAuthCookie(req)) {
 			return next();
@@ -4082,7 +4496,9 @@ module.exports = function(app) {
 		next();
 	};
 
-	// Helper: serve React index.html with no-cache headers
+	/**
+	 * Helper function: Serves the React app (index.html) with no-cache headers.
+	 */
 	const serveReactApp = (req, res) => {
 		res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 		res.setHeader('Pragma', 'no-cache');
@@ -4090,15 +4506,15 @@ module.exports = function(app) {
 		res.sendFile(path.join(__dirname, '../ui-react/build/', 'index.html'));
 	};
 
-	// Display pages — IP whitelist enforced when enabled
+	// Display pages — IP whitelist is enforced when enabled
 	app.get('/', checkDisplayPageAccess, serveReactApp);
 	app.get('/single-room/*', checkDisplayPageAccess, serveReactApp);
 	app.get('/room-minimal/*', checkDisplayPageAccess, serveReactApp);
 
-	// Admin and WiFi pages — open to all
+	// Admin and WiFi pages — accessible to everyone
 	app.get('/admin', serveReactApp);
 	app.get('/wifi-info', serveReactApp);
 
-	// Everything else (404 page, static assets not caught by express.static, etc.)
+	// All other paths (404 page, static assets not caught by express.static etc.)
 	app.get('*', serveReactApp);
 };

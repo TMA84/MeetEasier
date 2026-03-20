@@ -1,3 +1,6 @@
+/** @file TouchkioModal.js
+ *  @description Modal dialog for managing Touchkio displays, providing controls for power, brightness, volume, zoom, kiosk mode, theme, page URL, and system operations like reboot and shutdown.
+ */
 import React, { useState, useEffect } from 'react';
 
 const TouchkioModal = ({

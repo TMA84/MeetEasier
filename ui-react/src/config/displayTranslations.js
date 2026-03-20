@@ -1,3 +1,11 @@
+/**
+ * @file displayTranslations.js
+ * @description Display-facing translation strings and i18n helpers. Provides
+ * locale-aware text for single-room displays, flightboard views, booking modals,
+ * meeting action modals, WiFi info panels, and check-in UI. Supports runtime
+ * overrides via admin translation configuration.
+ */
+
 import { getAdminTranslations } from './adminTranslations.js';
 
 let adminTranslationOverrides = {};

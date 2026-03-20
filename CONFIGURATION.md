@@ -99,6 +99,34 @@ SEARCH_MAXITEMS=100
 
 ---
 
+#### Startup Validation
+
+```env
+# Enable strict startup validation
+# When true, warnings (not just errors) will also prevent the server from starting
+# Default: false
+STARTUP_VALIDATION_STRICT=false
+```
+
+**Behavior:**
+- On every startup, MeetEasier validates the configuration and reports issues in three categories:
+  - **Errors** (blocking): Critical problems that always prevent startup (e.g., invalid polling interval)
+  - **Warnings**: Potential issues logged to console (e.g., legacy default API token, missing webhook client state)
+  - **Info**: Informational notes (e.g., OAuth not yet configured, cache file missing)
+- In strict mode (`STARTUP_VALIDATION_STRICT=true`), warnings also prevent startup
+- Can also be toggled via the Admin Panel under **Operations → System** (Startup Validation Strict)
+
+**Validated settings:**
+- OAuth credentials (client ID, authority, client secret)
+- API token presence and default value detection
+- Polling interval (`SEARCH_POLL_INTERVAL_MS` must be ≥ 5000 ms)
+- Graph webhook configuration (client state and allowed IPs when enabled)
+- Cache file existence (`data/cache.json`)
+
+**Valid values:** `true`, `false`
+
+---
+
 #### Security Configuration
 
 ```env

@@ -1,3 +1,9 @@
+/**
+ * @file WiFiInfo.js
+ * @description WiFi information display component. Shows the configured WiFi
+ *              network name and a QR code for easy mobile device connection.
+ *              Connects to Socket.IO for real-time WiFi config updates.
+ */
 import React, { Component } from 'react';
 import io from 'socket.io-client';
 import { getWiFiInfoTranslations, applyDisplayI18nConfig } from '../../config/displayTranslations.js';

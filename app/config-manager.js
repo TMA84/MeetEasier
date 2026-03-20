@@ -1,3 +1,39 @@
+/**
+ * @file config-manager.js
+ * @description Central configuration management for all application settings.
+ *
+ * This module manages all configuration files of the application and provides
+ * a unified API for reading, writing, and updating settings.
+ * Changes are distributed in real-time to all connected clients via Socket.IO.
+ *
+ * Managed configuration areas:
+ * - WiFi settings and QR code generation
+ * - Logo configuration (dark/light mode)
+ * - Sidebar/display settings with client-specific overrides
+ * - Booking and check-in configuration
+ * - Color scheme configuration
+ * - Maintenance mode
+ * - Internationalization (i18n) with maintenance messages
+ * - OAuth/MSAL configuration for Microsoft Graph
+ * - API token management with AES-256-GCM encryption
+ * - System configuration (Graph webhook, HSTS, rate limiting, etc.)
+ * - Search and calendar settings
+ * - Translation API configuration
+ * - Power management for displays (browser, DPMS, MQTT)
+ * - MQTT broker configuration
+ *
+ * Security features:
+ * - Encryption of sensitive data (passwords, tokens, OAuth secrets) with AES-256-GCM
+ * - Automatic migration from plaintext passwords to encrypted storage
+ * - Environment variable lock for critical settings
+ *
+ * @requires fs - File system operations
+ * @requires path - Path manipulation
+ * @requires crypto - Cryptographic functions (AES-256-GCM)
+ * @requires qrcode - QR code generation for WiFi credentials
+ * @requires ../config/config - Base configuration with default values
+ */
+
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -5,34 +41,66 @@ const QRCode = require('qrcode');
 const config = require('../config/config');
 
 /**
- * Configuration Manager - Handles WiFi, logo, information, and booking configuration
- * Manages configuration files and generates WiFi QR codes
- * Broadcasts configuration updates via Socket.IO for real-time updates
+ * Configuration management – Manages WiFi, logo, sidebar, booking, and other configurations.
+ * Manages configuration files and generates WiFi QR codes.
+ * Distributes configuration changes via Socket.IO for real-time updates.
  */
 
+// ============================================================================
 // Configuration file paths
+// ============================================================================
+/** @type {string} Path to the WiFi configuration file */
 const configPath = path.join(__dirname, '../data/wifi-config.json');
+/** @type {string} Path to the logo configuration file */
 const logoConfigPath = path.join(__dirname, '../data/logo-config.json');
+/** @type {string} Path to the sidebar configuration file */
 const sidebarConfigPath = path.join(__dirname, '../data/sidebar-config.json');
+/** @type {string} Path to the booking configuration file */
 const bookingConfigPath = path.join(__dirname, '../data/booking-config.json');
+/** @type {string} Path to the colors configuration file */
 const colorsConfigPath = path.join(__dirname, '../data/colors-config.json');
+/** @type {string} Path to the maintenance mode configuration file */
 const maintenanceConfigPath = path.join(__dirname, '../data/maintenance-config.json');
+/** @type {string} Path to the i18n configuration file */
 const i18nConfigPath = path.join(__dirname, '../data/i18n-config.json');
+/** @type {string} Path to the search configuration file */
 const searchConfigPath = path.join(__dirname, '../data/search-config.json');
+/** @type {string} Path to the rate limit configuration file */
 const rateLimitConfigPath = path.join(__dirname, '../data/rate-limit-config.json');
+/** @type {string} Path to the OAuth configuration file */
 const oauthConfigPath = path.join(__dirname, '../data/oauth-config.json');
+/** @type {string} Path to the system configuration file */
 const systemConfigPath = path.join(__dirname, '../data/system-config.json');
+/** @type {string} Path to the translation API configuration file */
 const translationApiConfigPath = path.join(__dirname, '../data/translation-api-config.json');
+/** @type {string} Path to the API token configuration file */
 const apiTokenConfigPath = path.join(__dirname, '../data/api-token-config.json');
+/** @type {string} Path to the power management configuration file */
 const powerManagementConfigPath = path.join(__dirname, '../data/power-management-config.json');
+/** @type {string} Path to the API token encryption key */
 const apiTokenEncryptionKeyPath = path.join(__dirname, '../data/.api-token-key');
+/** @type {string} Path to the generated WiFi QR code image */
 const qrPath = path.join(__dirname, '../static/img/wifi-qr.png');
 
+// ============================================================================
+// Encryption and security constants
+// ============================================================================
+/** @type {string} Algorithm for OAuth secret encryption */
 const OAUTH_SECRET_ALGO = 'aes-256-gcm';
+/** @type {string} Algorithm for API token encryption */
 const API_TOKEN_ENCRYPTION_ALGO = 'aes-256-gcm';
+/** @type {string} Name of the environment variable for the encryption key */
 const API_TOKEN_ENCRYPTION_ENV = 'API_TOKEN_ENCRYPTION_KEY';
+/** @type {string} Initial API token value from the environment variable (frozen at startup) */
 const INITIAL_API_TOKEN_ENV_VALUE = String(process.env.API_TOKEN || '').trim();
+/** @type {string} Initial WiFi API token value from the environment variable (frozen at startup) */
 const INITIAL_WIFI_API_TOKEN_ENV_VALUE = String(process.env.WIFI_API_TOKEN || '').trim();
+
+/**
+ * List of environment variable keys that lock the
+ * system configuration via the admin interface when present.
+ * @type {string[]}
+ */
 const SYSTEM_ENV_LOCK_KEYS = [
 	'STARTUP_VALIDATION_STRICT',
 	'GRAPH_WEBHOOK_ENABLED',
@@ -45,28 +113,40 @@ const SYSTEM_ENV_LOCK_KEYS = [
 	'HSTS_MAX_AGE',
 	'RATE_LIMIT_MAX_BUCKETS'
 ];
+/** @type {boolean} Indicates whether at least one system environment variable was set at startup */
 const INITIAL_SYSTEM_ENV_LOCKED = SYSTEM_ENV_LOCK_KEYS.some((key) => process.env[key] !== undefined);
+
+/**
+ * Set of placeholder values that are treated as "not set".
+ * @type {Set<string>}
+ */
 const API_TOKEN_PLACEHOLDERS = new Set([
 	'',
 	'api_token_not_set'
 ]);
 
+/** @type {Object|null} Socket.IO instance for real-time configuration updates */
 let io = null;
 
 /**
- * Set Socket.IO instance for broadcasting configuration updates
+ * Sets the Socket.IO instance for distributing configuration changes.
  * @param {Object} socketIO - Socket.IO server instance
  */
 function setSocketIO(socketIO) {
 	io = socketIO;
 }
 
+/**
+ * Returns the current Socket.IO instance.
+ * @returns {Object|null} The Socket.IO instance or null
+ */
 function getSocketIO() {
 	return io;
 }
 
 /**
- * Read WiFi configuration from file or return defaults
+ * Reads the WiFi configuration from the file or returns default values.
+ * Performs automatic migration from plaintext passwords to encrypted storage.
  * @returns {Object} WiFi configuration with ssid, password, and lastUpdated
  */
 function getWiFiConfig() {
@@ -74,12 +154,12 @@ function getWiFiConfig() {
 		const data = fs.readFileSync(configPath, 'utf8');
 		const parsed = JSON.parse(data);
 
-		// Migration: decrypt passwordEncrypted if present
+		// Migration: decrypt encrypted password if present
 		if (parsed.passwordEncrypted && typeof parsed.passwordEncrypted === 'object') {
 			const decrypted = decryptApiToken(parsed.passwordEncrypted);
 			parsed.password = decrypted || '';
 
-			// Migrate on read: remove legacy plaintext if still present
+			// Migration on read: remove legacy plaintext if still present
 			if (parsed.passwordEncrypted && !parsed.password_migrated) {
 				parsed.password_migrated = true;
 				try {
@@ -111,7 +191,7 @@ function getWiFiConfig() {
 			lastUpdated: parsed.lastUpdated || null
 		};
 	} catch (err) {
-		// Return default config from environment variables if file doesn't exist
+		// Return default configuration from environment variables if file does not exist
 		return {
 			ssid: config.wifiDefaults.ssid,
 			password: config.wifiDefaults.password,
@@ -121,7 +201,7 @@ function getWiFiConfig() {
 }
 
 /**
- * Read Logo configuration from file or return defaults
+ * Reads the logo configuration from the file or returns default values.
  * @returns {Object} Logo configuration with logoDarkUrl, logoLightUrl, and lastUpdated
  */
 function getLogoConfig() {
@@ -129,7 +209,7 @@ function getLogoConfig() {
 		const data = fs.readFileSync(logoConfigPath, 'utf8');
 		return JSON.parse(data);
 	} catch (err) {
-		// Return default config from environment variables if file doesn't exist
+		// Return default configuration from environment variables if file does not exist
 		return {
 			logoDarkUrl: config.logoDefaults.logoDarkUrl,
 			logoLightUrl: config.logoDefaults.logoLightUrl,
@@ -139,8 +219,9 @@ function getLogoConfig() {
 }
 
 /**
- * Read Information configuration from file or return defaults
- * @returns {Object} Information configuration with display settings and lastUpdated
+ * Reads the sidebar configuration from the file or returns default values.
+ * Contains settings for WiFi display, upcoming meetings, dark mode, etc.
+ * @returns {Object} Sidebar configuration with display settings and lastUpdated
  */
 function getSidebarConfig() {
 	const parsedConfig = readSidebarConfigSnapshot();
@@ -157,7 +238,7 @@ function getSidebarConfig() {
 		};
 	}
 
-	// Return default config from environment variables if file doesn't exist
+	// Return default configuration from environment variables if file does not exist
 	return {
 		showWiFi: config.sidebarDefaults.showWiFi,
 		showUpcomingMeetings: config.sidebarDefaults.showUpcomingMeetings,
@@ -170,6 +251,12 @@ function getSidebarConfig() {
 	};
 }
 
+/**
+ * Normalizes and validates a client ID.
+ * Allows alphanumeric characters, dots, underscores, colons, and hyphens (3-120 characters).
+ * @param {*} value - The value to normalize
+ * @returns {string} The normalized client ID or empty string for invalid input
+ */
 function normalizeClientId(value) {
 	const normalized = String(value || '').trim();
 	if (!normalized) {
@@ -183,6 +270,12 @@ function normalizeClientId(value) {
 	return normalized;
 }
 
+/**
+ * Normalizes client-specific sidebar overrides.
+ * Validates client IDs and override objects, keeping only valid entries.
+ * @param {Object} overrides - Raw client override data
+ * @returns {Object} Normalized overrides with validated client IDs as keys
+ */
 function normalizeSidebarClientOverrides(overrides) {
 	if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) {
 		return {};
@@ -209,6 +302,11 @@ function normalizeSidebarClientOverrides(overrides) {
 	return normalized;
 }
 
+/**
+ * Reads a snapshot of the sidebar configuration directly from the file.
+ * Normalizes all values and applies default values.
+ * @returns {Object|null} Normalized sidebar configuration or null on error
+ */
 function readSidebarConfigSnapshot() {
 	try {
 		const data = fs.readFileSync(sidebarConfigPath, 'utf8');
@@ -235,6 +333,12 @@ function readSidebarConfigSnapshot() {
 	}
 }
 
+/**
+ * Returns the sidebar configuration for a specific client.
+ * Applies client-specific overrides if available.
+ * @param {string} clientId - The client ID
+ * @returns {Object} Sidebar configuration with client overrides applied if applicable
+ */
 function getSidebarConfigForClient(clientId) {
 	const baseConfig = getSidebarConfig();
 	const normalizedClientId = normalizeClientId(clientId);
@@ -257,8 +361,9 @@ function getSidebarConfigForClient(clientId) {
 }
 
 /**
- * Read Booking configuration from file or return defaults
- * @returns {Object} Booking configuration with enableBooking, buttonColor, and lastUpdated
+ * Reads the booking configuration from the file or returns default values.
+ * Normalizes room feature flags, room group feature flags, and check-in settings.
+ * @returns {Object} Booking configuration with enableBooking, buttonColor, checkIn, etc.
  */
 function getBookingConfig() {
 	try {
@@ -271,7 +376,7 @@ function getBookingConfig() {
 			checkIn: normalizeCheckInConfig(parsed.checkIn)
 		};
 	} catch (err) {
-		// Return default config from environment variables if file doesn't exist
+		// Return default configuration from environment variables if file does not exist
 		return {
 			enableBooking: config.bookingDefaults.enableBooking,
 			buttonColor: '#334155',
@@ -286,8 +391,8 @@ function getBookingConfig() {
 }
 
 /**
- * Read maintenance configuration from file or return defaults
- * @returns {Object} Maintenance configuration with enabled, message and lastUpdated
+ * Reads the maintenance mode configuration from the file or returns default values.
+ * @returns {Object} Maintenance configuration with enabled, message, and lastUpdated
  */
 function getMaintenanceConfig() {
 	try {
@@ -302,6 +407,11 @@ function getMaintenanceConfig() {
 	}
 }
 
+/**
+ * Normalizes room feature flags (booking/meeting extension per room).
+ * @param {Object} flags - Raw feature flag data
+ * @returns {Object} Normalized flags with room keys in lowercase
+ */
 function normalizeRoomFeatureFlags(flags) {
 	if (!flags || typeof flags !== 'object' || Array.isArray(flags)) {
 		return {};
@@ -323,6 +433,11 @@ function normalizeRoomFeatureFlags(flags) {
 	return normalized;
 }
 
+/**
+ * Normalizes room group feature flags (booking/meeting extension per group).
+ * @param {Object} flags - Raw feature flag data
+ * @returns {Object} Normalized flags with group keys in lowercase
+ */
 function normalizeRoomGroupFeatureFlags(flags) {
 	if (!flags || typeof flags !== 'object' || Array.isArray(flags)) {
 		return {};
@@ -344,6 +459,11 @@ function normalizeRoomGroupFeatureFlags(flags) {
 	return normalized;
 }
 
+/**
+ * Normalizes the check-in configuration with default values.
+ * @param {Object} checkInConfig - Raw check-in configuration
+ * @returns {Object} Normalized check-in configuration
+ */
 function normalizeCheckInConfig(checkInConfig) {
 	const defaults = config.checkIn || {};
 	const source = checkInConfig && typeof checkInConfig === 'object' && !Array.isArray(checkInConfig)
@@ -377,6 +497,13 @@ function normalizeCheckInConfig(checkInConfig) {
 	};
 }
 
+/**
+ * Converts a value to a boolean with fallback.
+ * Recognizes string values 'true'/'false' (case-insensitive).
+ * @param {*} value - The value to convert
+ * @param {boolean} fallback - Default value for undefined/null
+ * @returns {boolean} The converted boolean value
+ */
 function toBoolean(value, fallback) {
 	if (value === undefined || value === null) {
 		return fallback;
@@ -399,6 +526,13 @@ function toBoolean(value, fallback) {
 	return !!value;
 }
 
+/**
+ * Converts a value to an integer with minimum value and fallback.
+ * @param {*} value - The value to convert
+ * @param {number} fallback - Default value for invalid input
+ * @param {number} min - Minimum value
+ * @returns {number} The converted integer (at least min)
+ */
 function toMinInt(value, fallback, min) {
 	const parsed = Number.parseInt(value, 10);
 	if (!Number.isFinite(parsed)) {
@@ -408,6 +542,12 @@ function toMinInt(value, fallback, min) {
 }
 
 
+/**
+ * Creates the encryption key for OAuth secrets.
+ * Derives the key from the API token (SHA-256 hash).
+ * @param {string} [tokenOverride] - Optional token override instead of the effective token
+ * @returns {Buffer|null} 32-byte key or null if no token is available
+ */
 function getOAuthEncryptionKey(tokenOverride) {
 	const keyMaterial = normalizeApiTokenValue(tokenOverride) || getEffectiveApiToken();
 	if (!keyMaterial) {
@@ -417,6 +557,11 @@ function getOAuthEncryptionKey(tokenOverride) {
 	return crypto.createHash('sha256').update(keyMaterial).digest();
 }
 
+/**
+ * Normalizes an API token value and removes placeholders.
+ * @param {*} value - The value to normalize
+ * @returns {string} The normalized token or empty string
+ */
 function normalizeApiTokenValue(value) {
 	const normalized = String(value || '').trim();
 	if (!normalized) {
@@ -430,23 +575,45 @@ function normalizeApiTokenValue(value) {
 	return normalized;
 }
 
+/**
+ * Checks whether a value is a known placeholder token.
+ * @param {*} value - The value to check
+ * @returns {boolean} true if the value is a placeholder
+ */
 function isPlaceholderApiTokenValue(value) {
 	const normalized = String(value || '').trim().toLowerCase();
 	return normalized === 'your-secure-token-here' || normalized === 'api_token_not_set';
 }
 
+/**
+ * Checks whether the API token is locked by an environment variable.
+ * @returns {boolean} true if API_TOKEN was set at startup
+ */
 function isApiTokenEnvLocked() {
 	return !!INITIAL_API_TOKEN_ENV_VALUE;
 }
 
+/**
+ * Checks whether the WiFi API token is locked by an environment variable.
+ * @returns {boolean} true if WIFI_API_TOKEN was set at startup
+ */
 function isWifiApiTokenEnvLocked() {
 	return !!INITIAL_WIFI_API_TOKEN_ENV_VALUE;
 }
 
+/**
+ * Checks whether the system configuration is locked by environment variables.
+ * @returns {boolean} true if at least one system environment variable was set at startup
+ */
 function isSystemEnvLocked() {
 	return INITIAL_SYSTEM_ENV_LOCKED;
 }
 
+/**
+ * Creates or reads the encryption key for API tokens.
+ * Priority: 1. Environment variable, 2. Stored key file, 3. New key
+ * @returns {Buffer} 32-byte AES-256 key
+ */
 function getApiTokenEncryptionKey() {
 	const envKeyMaterial = String(process.env[API_TOKEN_ENCRYPTION_ENV] || '').trim();
 	if (envKeyMaterial) {
@@ -470,6 +637,11 @@ function getApiTokenEncryptionKey() {
 	return generatedKey;
 }
 
+/**
+ * Encrypts an API token value with AES-256-GCM.
+ * @param {string} tokenValue - The token to encrypt
+ * @returns {Object} Encrypted payload object with algorithm, iv, authTag, and value
+ */
 function encryptApiToken(tokenValue) {
 	const key = getApiTokenEncryptionKey();
 	const iv = crypto.randomBytes(12);
@@ -485,6 +657,14 @@ function encryptApiToken(tokenValue) {
 	};
 }
 
+/**
+ * Decrypts an encrypted API token.
+ * @param {Object} payload - Encrypted payload object
+ * @param {string} payload.iv - Initialization vector (Base64)
+ * @param {string} payload.authTag - Authentication tag (Base64)
+ * @param {string} payload.value - Encrypted value (Base64)
+ * @returns {string|null} The decrypted token or null on error
+ */
 function decryptApiToken(payload) {
 	if (!payload || typeof payload !== 'object') {
 		return null;
@@ -509,6 +689,11 @@ function decryptApiToken(payload) {
 	}
 }
 
+/**
+ * Reads the raw API token configuration from the file.
+ * Performs automatic migration of legacy plaintext tokens.
+ * @returns {Object|null} Raw configuration or null on error
+ */
 function readRawApiTokenConfig() {
 	try {
 		const data = fs.readFileSync(apiTokenConfigPath, 'utf8');
@@ -540,6 +725,11 @@ function readRawApiTokenConfig() {
 	}
 }
 
+/**
+ * Determines the runtime configuration of the API token.
+ * Priority: 1. Environment variable, 2. Encrypted file, 3. Not set
+ * @returns {Object} Token configuration with token, source, isDefault, and lastUpdated
+ */
 function getApiTokenRuntimeConfig() {
 	const envToken = normalizeApiTokenValue(INITIAL_API_TOKEN_ENV_VALUE);
 	if (envToken) {
@@ -571,10 +761,19 @@ function getApiTokenRuntimeConfig() {
 	};
 }
 
+/**
+ * Returns the currently effective API token.
+ * @returns {string} The active API token or empty string
+ */
 function getEffectiveApiToken() {
 	return getApiTokenRuntimeConfig().token;
 }
 
+/**
+ * Determines the runtime configuration of the WiFi API token.
+ * Priority: 1. Environment variable, 2. Encrypted file, 3. Default
+ * @returns {Object} Token configuration with token, source, isDefault, and lastUpdated
+ */
 function getWifiApiTokenRuntimeConfig() {
 	const envToken = normalizeApiTokenValue(INITIAL_WIFI_API_TOKEN_ENV_VALUE);
 	if (envToken) {
@@ -606,10 +805,19 @@ function getWifiApiTokenRuntimeConfig() {
 	};
 }
 
+/**
+ * Returns the currently effective WiFi API token.
+ * @returns {string} The active WiFi API token or empty string
+ */
 function getEffectiveWifiApiToken() {
 	return getWifiApiTokenRuntimeConfig().token;
 }
 
+/**
+ * Returns the combined API token configuration (API + WiFi).
+ * Contains source information and configuration status of both tokens.
+ * @returns {Object} Combined token configuration
+ */
 function getApiTokenConfig() {
 	const runtimeConfig = getApiTokenRuntimeConfig();
 	const wifiRuntimeConfig = getWifiApiTokenRuntimeConfig();
@@ -624,6 +832,13 @@ function getApiTokenConfig() {
 	};
 }
 
+/**
+ * Saves a new API token encrypted in the configuration file.
+ * Preserves existing WiFi token configuration.
+ * @param {string} apiToken - The new API token
+ * @returns {Object} Saved configuration with token and lastUpdated
+ * @throws {Error} If token is empty
+ */
 function saveApiTokenConfig(apiToken) {
 	const normalizedToken = normalizeApiTokenValue(apiToken);
 	if (!normalizedToken) {
@@ -648,6 +863,13 @@ function saveApiTokenConfig(apiToken) {
 	};
 }
 
+/**
+ * Saves a new WiFi API token encrypted in the configuration file.
+ * Preserves existing API token configuration.
+ * @param {string} wifiApiToken - The new WiFi API token
+ * @returns {Object} Saved configuration with token and lastUpdated
+ * @throws {Error} If token is empty
+ */
 function saveWifiApiTokenConfig(wifiApiToken) {
 	const normalizedToken = normalizeApiTokenValue(wifiApiToken);
 	if (!normalizedToken) {
@@ -671,6 +893,13 @@ function saveWifiApiTokenConfig(wifiApiToken) {
 	};
 }
 
+/**
+ * Migrates an encrypted OAuth secret when the token changes.
+ * Decrypts with the old token and encrypts with the new one.
+ * @param {string} oldToken - The previous API token
+ * @param {string} newToken - The new API token
+ * @throws {Error} If decryption with the old token fails
+ */
 function migrateEncryptedOAuthSecretForTokenChange(oldToken, newToken) {
 	const rawOauthConfig = readRawOAuthConfig();
 	if (!rawOauthConfig || !rawOauthConfig.clientSecretEncrypted) {
@@ -686,6 +915,10 @@ function migrateEncryptedOAuthSecretForTokenChange(oldToken, newToken) {
 	fs.writeFileSync(oauthConfigPath, JSON.stringify(rawOauthConfig, null, 2));
 }
 
+/**
+ * Removes the stored OAuth client secret from the configuration.
+ * Called when the API token is set for the first time (source: 'unset').
+ */
 function clearStoredOAuthClientSecret() {
 	const rawOauthConfig = readRawOAuthConfig();
 	if (!rawOauthConfig || !rawOauthConfig.clientSecretEncrypted) {
@@ -697,6 +930,14 @@ function clearStoredOAuthClientSecret() {
 	fs.writeFileSync(oauthConfigPath, JSON.stringify(rawOauthConfig, null, 2));
 }
 
+/**
+ * Encrypts an OAuth client secret with AES-256-GCM.
+ * The key is derived from the API token.
+ * @param {string} secretValue - The secret to encrypt
+ * @param {string} [tokenOverride] - Optional token override for key derivation
+ * @returns {Object} Encrypted payload object
+ * @throws {Error} If no encryption key is available
+ */
 function encryptOAuthSecret(secretValue, tokenOverride) {
 	const key = getOAuthEncryptionKey(tokenOverride);
 	if (!key) {
@@ -716,6 +957,13 @@ function encryptOAuthSecret(secretValue, tokenOverride) {
 	};
 }
 
+/**
+ * Decrypts an OAuth client secret.
+ * Tries multiple token candidates (override, effective token, environment variable).
+ * @param {Object} payload - Encrypted payload object
+ * @param {string} [tokenOverride] - Optional token override
+ * @returns {string|null} The decrypted secret or null on error
+ */
 function decryptOAuthSecret(payload, tokenOverride) {
 	if (!payload || typeof payload !== 'object') {
 		return null;
@@ -761,6 +1009,10 @@ function decryptOAuthSecret(payload, tokenOverride) {
 	return null;
 }
 
+/**
+ * Reads the raw OAuth configuration from the file.
+ * @returns {Object|null} Raw OAuth configuration or null on error
+ */
 function readRawOAuthConfig() {
 	try {
 		const data = fs.readFileSync(oauthConfigPath, 'utf8');
@@ -770,6 +1022,12 @@ function readRawOAuthConfig() {
 	}
 }
 
+/**
+ * Extracts the tenant ID from a Microsoft authority URL.
+ * Supports full URLs and short forms.
+ * @param {string} authorityValue - The authority URL or tenant ID
+ * @returns {string} The extracted tenant ID or empty string
+ */
 function extractTenantIdFromAuthority(authorityValue) {
 	const raw = String(authorityValue || '').trim();
 	if (!raw) {
@@ -800,6 +1058,11 @@ function extractTenantIdFromAuthority(authorityValue) {
 	}
 }
 
+/**
+ * Creates a full authority URL from a tenant ID.
+ * @param {string} tenantId - The Microsoft tenant ID
+ * @returns {string} The full authority URL or empty string
+ */
 function authorityFromTenantId(tenantId) {
 	const normalizedTenant = String(tenantId || '').trim();
 	if (!normalizedTenant) {
@@ -808,6 +1071,11 @@ function authorityFromTenantId(tenantId) {
 	return `https://login.microsoftonline.com/${normalizedTenant}`;
 }
 
+/**
+ * Normalizes an OAuth authority input to a full URL.
+ * @param {string} value - The authority to normalize (URL or tenant ID)
+ * @returns {string} The normalized authority URL or empty string
+ */
 function normalizeOAuthAuthorityInput(value) {
 	const tenantId = extractTenantIdFromAuthority(value);
 	if (!tenantId) {
@@ -816,6 +1084,13 @@ function normalizeOAuthAuthorityInput(value) {
 	return authorityFromTenantId(tenantId);
 }
 
+/**
+ * Normalizes the base OAuth configuration (clientId and authority).
+ * Removes placeholder values and normalizes the authority URL.
+ * @param {Object} oauthConfig - Raw OAuth configuration
+ * @param {Object} [fallback={}] - Fallback values
+ * @returns {Object} Normalized configuration with clientId and authority
+ */
 function normalizeOAuthConfigBase(oauthConfig, fallback = {}) {
 	const source = oauthConfig && typeof oauthConfig === 'object' && !Array.isArray(oauthConfig)
 		? oauthConfig
@@ -841,6 +1116,11 @@ function normalizeOAuthConfigBase(oauthConfig, fallback = {}) {
 	};
 }
 
+/**
+ * Determines the full OAuth runtime configuration.
+ * Priority: 1. Environment variables, 2. Configuration file, 3. Default values
+ * @returns {Object} OAuth configuration with clientId, authority, clientSecret, and lastUpdated
+ */
 function getOAuthRuntimeConfig() {
 	const fallback = {
 		clientId: config.msalConfig?.auth?.clientId || '',
@@ -883,6 +1163,11 @@ function getOAuthRuntimeConfig() {
 	};
 }
 
+/**
+ * Returns the public OAuth configuration (without secret).
+ * Contains clientId, authority, tenantId, and whether a secret is configured.
+ * @returns {Object} Public OAuth configuration
+ */
 function getOAuthConfig() {
 	const runtimeConfig = getOAuthRuntimeConfig();
 	const normalizedAuthority = runtimeConfig.authority === 'OAUTH_AUTHORITY_NOT_SET' ? '' : runtimeConfig.authority;
@@ -896,6 +1181,13 @@ function getOAuthConfig() {
 	};
 }
 
+/**
+ * Normalizes the system configuration with default values and validation.
+ * Processes Graph webhook, HSTS, rate limiting, display tracking, and other settings.
+ * @param {Object} systemConfig - Raw system configuration
+ * @param {Object} [fallback={}] - Fallback values
+ * @returns {Object} Normalized system configuration
+ */
 function normalizeSystemConfig(systemConfig, fallback = {}) {
 	const source = systemConfig && typeof systemConfig === 'object' && !Array.isArray(systemConfig)
 		? systemConfig
@@ -948,6 +1240,11 @@ function normalizeSystemConfig(systemConfig, fallback = {}) {
 	};
 }
 
+/**
+ * Determines the system runtime configuration.
+ * Combines file configuration with default values from the base configuration.
+ * @returns {Object} Complete system configuration with lastUpdated
+ */
 function getSystemRuntimeConfig() {
 	const fallback = {
 		startupValidationStrict: config.startupValidation?.strict === true,
@@ -992,14 +1289,20 @@ function getSystemRuntimeConfig() {
 	};
 }
 
+/**
+ * Returns the public system configuration.
+ * Demo mode is automatically determined based on the OAuth status:
+ * No OAuth configured → demo mode ON, OAuth configured → demo mode OFF.
+ * @returns {Object} System configuration with all settings
+ */
 function getSystemConfig() {
 	const runtimeConfig = getSystemRuntimeConfig();
 
-	// Demo mode is tied to OAuth status:
-	// - No OAuth configured → demo mode ON (regardless of saved value)
-	// - OAuth configured → demo mode OFF (regardless of saved value)
+	// Demo mode is tied to the OAuth status:
+	// - No OAuth configured → demo mode ON (regardless of stored value)
+	// - OAuth configured → demo mode OFF (regardless of stored value)
 	const oauthConfigured = (() => {
-		// Check env-based OAuth
+		// Check environment variable-based OAuth configuration
 		const clientId = String(config?.msalConfig?.auth?.clientId || '').trim();
 		const authority = String(config?.msalConfig?.auth?.authority || '').trim();
 		const clientSecret = String(config?.msalConfig?.auth?.clientSecret || '').trim();
@@ -1008,7 +1311,7 @@ function getSystemConfig() {
 			&& clientSecret && clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET') {
 			return true;
 		}
-		// Check file-based OAuth
+		// Check file-based OAuth configuration
 		const oauthConfig = getOAuthRuntimeConfig();
 		const fileClientId = String(oauthConfig.clientId || '').trim();
 		const fileAuthority = String(oauthConfig.authority || '').trim();
@@ -1039,6 +1342,11 @@ function getSystemConfig() {
 	};
 }
 
+/**
+ * Normalizes the search/calendar configuration with default values.
+ * @param {Object} searchConfig - Raw search configuration
+ * @returns {Object} Normalized configuration with maxDays, maxRooms, pollIntervalMs, etc.
+ */
 function normalizeSearchConfig(searchConfig) {
 	const defaults = config.calendarSearch || {};
 	const source = searchConfig && typeof searchConfig === 'object' && !Array.isArray(searchConfig)
@@ -1061,6 +1369,11 @@ function normalizeSearchConfig(searchConfig) {
 	};
 }
 
+/**
+ * Normalizes the rate limit configuration with default values.
+ * @param {Object} rateLimitConfig - Raw rate limit configuration
+ * @returns {Object} Normalized configuration with time windows and maximum values
+ */
 function normalizeRateLimitConfig(rateLimitConfig) {
 	const defaults = config.rateLimit || {};
 	const source = rateLimitConfig && typeof rateLimitConfig === 'object' && !Array.isArray(rateLimitConfig)
@@ -1088,6 +1401,12 @@ function normalizeRateLimitConfig(rateLimitConfig) {
 	};
 }
 
+/**
+ * Normalizes the translation API configuration with default values.
+ * @param {Object} translationApiConfig - Raw translation API configuration
+ * @param {Object} [fallback={}] - Fallback values
+ * @returns {Object} Normalized configuration with enabled, url, timeoutMs, and apiKey
+ */
 function normalizeTranslationApiConfig(translationApiConfig, fallback = {}) {
 	const fallbackEnabled = toBoolean(fallback.enabled, true);
 	const fallbackUrl = String(fallback.url || 'https://translation.googleapis.com/language/translate/v2').trim() || 'https://translation.googleapis.com/language/translate/v2';
@@ -1108,6 +1427,11 @@ function normalizeTranslationApiConfig(translationApiConfig, fallback = {}) {
 	};
 }
 
+/**
+ * Determines the translation API runtime configuration.
+ * Combines environment variables with file configuration.
+ * @returns {Object} Translation API configuration with lastUpdated
+ */
 function getTranslationApiRuntimeConfig() {
 	const fallback = normalizeTranslationApiConfig({
 		enabled: process.env.AUTO_TRANSLATE_ENABLED !== 'false',
@@ -1141,6 +1465,11 @@ function getTranslationApiRuntimeConfig() {
 	};
 }
 
+/**
+ * Returns the public translation API configuration.
+ * The API is only enabled when both enabled=true and an API key is present.
+ * @returns {Object} Configuration with enabled, url, timeoutMs, hasApiKey, and lastUpdated
+ */
 function getTranslationApiConfig() {
 	const runtimeConfig = getTranslationApiRuntimeConfig();
 	const hasApiKey = !!String(runtimeConfig.apiKey || '').trim();
@@ -1153,6 +1482,12 @@ function getTranslationApiConfig() {
 	};
 }
 
+/**
+ * Saves the translation API configuration.
+ * Preserves the existing API key if none is included in the update.
+ * @param {Object} translationApiConfig - Configuration to save
+ * @returns {Object} Saved configuration with lastUpdated
+ */
 function saveTranslationApiConfig(translationApiConfig) {
 	let existingRaw = {};
 	try {
@@ -1197,6 +1532,10 @@ function saveTranslationApiConfig(translationApiConfig) {
 	};
 }
 
+/**
+ * Reads the search configuration from the file or returns default values.
+ * @returns {Object} Search configuration with maxDays, maxRooms, pollIntervalMs, etc.
+ */
 function getSearchConfig() {
 	try {
 		const data = fs.readFileSync(searchConfigPath, 'utf8');
@@ -1213,6 +1552,10 @@ function getSearchConfig() {
 	}
 }
 
+/**
+ * Reads the rate limit configuration from the file or returns default values.
+ * @returns {Object} Rate limit configuration with time windows and maximum values
+ */
 function getRateLimitConfig() {
 	try {
 		const data = fs.readFileSync(rateLimitConfigPath, 'utf8');
@@ -1229,6 +1572,12 @@ function getRateLimitConfig() {
 	}
 }
 
+/**
+ * Saves the OAuth configuration to the file.
+ * Encrypts the client secret with AES-256-GCM.
+ * @param {Object} oauthConfig - OAuth configuration with clientId, authority, and clientSecret
+ * @returns {Object} Saved configuration (without secret, only hasClientSecret flag)
+ */
 function saveOAuthConfig(oauthConfig) {
 	const existingRaw = readRawOAuthConfig() || {};
 	const existingBase = normalizeOAuthConfigBase(existingRaw, {
@@ -1264,13 +1613,19 @@ function saveOAuthConfig(oauthConfig) {
 	};
 }
 
+/**
+ * Saves the system configuration to the file.
+ * Combines existing with new settings and normalizes all values.
+ * @param {Object} systemConfig - System configuration to save
+ * @returns {Object} Saved configuration with timestamp
+ */
 function saveSystemConfig(systemConfig) {
 	let existingRaw = {};
 	try {
 		const data = fs.readFileSync(systemConfigPath, 'utf8');
 		existingRaw = JSON.parse(data);
 	} catch (err) {
-		// File doesn't exist or is invalid, use defaults
+		// File does not exist or is invalid, use defaults
 	}
 
 	const normalized = normalizeSystemConfig(
@@ -1323,6 +1678,11 @@ function saveSystemConfig(systemConfig) {
 	};
 }
 
+/**
+ * Returns the default i18n configuration with maintenance messages in multiple languages.
+ * Contains predefined translations for: en, de, fr, es, it, nl, pl, pt, cs.
+ * @returns {Object} Default i18n configuration
+ */
 function getDefaultI18nConfig() {
 	return {
 		maintenanceMessages: {
@@ -1368,6 +1728,12 @@ function getDefaultI18nConfig() {
 	};
 }
 
+/**
+ * Normalizes admin translations.
+ * Validates language keys and converts all values to strings.
+ * @param {Object} rawTranslations - Raw translation data
+ * @returns {Object} Normalized translations grouped by language
+ */
 function normalizeAdminTranslations(rawTranslations) {
 	const normalized = {};
 	if (!rawTranslations || typeof rawTranslations !== 'object' || Array.isArray(rawTranslations)) {
@@ -1397,6 +1763,13 @@ function normalizeAdminTranslations(rawTranslations) {
 	return normalized;
 }
 
+/**
+ * Normalizes the i18n configuration.
+ * Can optionally include default values (includeDefaults).
+ * @param {Object} rawConfig - Raw i18n configuration
+ * @param {Object} [options={}] - Options (includeDefaults: boolean)
+ * @returns {Object} Normalized i18n configuration
+ */
 function normalizeI18nConfig(rawConfig, options = {}) {
 	const includeDefaults = options.includeDefaults !== false;
 	const defaults = getDefaultI18nConfig();
@@ -1441,7 +1814,7 @@ function normalizeI18nConfig(rawConfig, options = {}) {
 }
 
 /**
- * Read i18n configuration from file or return defaults
+ * Reads the i18n configuration from the file or returns default values.
  * @returns {Object} i18n configuration with maintenanceMessages and lastUpdated
  */
 function getI18nConfig() {
@@ -1454,7 +1827,7 @@ function getI18nConfig() {
 }
 
 /**
- * Read Colors configuration from file or return defaults
+ * Reads the colors configuration from the file or returns default values.
  * @returns {Object} Colors configuration with bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor, and lastUpdated
  */
 function getColorsConfig() {
@@ -1475,7 +1848,8 @@ function getColorsConfig() {
 }
 
 /**
- * Save WiFi configuration to file
+ * Saves the WiFi configuration to the file.
+ * The password is stored encrypted but returned in plaintext.
  * @param {Object} config - WiFi configuration with ssid and password
  * @returns {Object} Saved configuration with timestamp
  */
@@ -1490,7 +1864,7 @@ function saveWiFiConfig(config) {
 	
 	fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
 
-	// Return plaintext for callers (e.g. QR code generation)
+	// Return plaintext for caller (e.g. QR code generation)
 	return {
 		ssid: configData.ssid,
 		password: plainPassword,
@@ -1499,7 +1873,7 @@ function saveWiFiConfig(config) {
 }
 
 /**
- * Save Logo configuration to file
+ * Saves the logo configuration to the file.
  * @param {Object} config - Logo configuration with logoDarkUrl and logoLightUrl
  * @returns {Object} Saved configuration with timestamp
  */
@@ -1515,9 +1889,9 @@ function saveLogoConfig(config) {
 }
 
 /**
- * Save Information configuration to file
- * Preserves existing fields that are not being updated
- * @param {Object} config - Information configuration with display settings
+ * Saves the sidebar configuration to the file.
+ * Preserves existing fields that are not being updated.
+ * @param {Object} sidebarConfig - Sidebar configuration with display settings
  * @returns {Object} Saved configuration with timestamp
  */
 function saveSidebarConfig(sidebarConfig) {
@@ -1562,18 +1936,19 @@ function saveSidebarConfig(sidebarConfig) {
 }
 
 /**
- * Save Booking configuration to file
+ * Saves the booking configuration to the file.
+ * Preserves existing fields that are not being updated.
  * @param {Object} config - Booking configuration with enableBooking and buttonColor
  * @returns {Object} Saved configuration with timestamp
  */
 function saveBookingConfig(config) {
-	// Read existing config first to preserve fields not being updated
+	// Read existing configuration to preserve fields that are not being updated
 	let existingConfig = {};
 	try {
 		const data = fs.readFileSync(bookingConfigPath, 'utf8');
 		existingConfig = JSON.parse(data);
 	} catch (err) {
-		// File doesn't exist or is invalid, use defaults
+		// File does not exist or is invalid, use defaults
 	}
 	
 	const configData = {
@@ -1604,7 +1979,7 @@ function saveBookingConfig(config) {
 }
 
 /**
- * Save Maintenance configuration to file
+ * Saves the maintenance mode configuration to the file.
  * @param {Object} maintenanceConfig - Maintenance configuration
  * @returns {Object} Saved configuration with timestamp
  */
@@ -1614,7 +1989,7 @@ function saveMaintenanceConfig(maintenanceConfig) {
 		const data = fs.readFileSync(maintenanceConfigPath, 'utf8');
 		existingConfig = JSON.parse(data);
 	} catch (err) {
-		// File doesn't exist or is invalid, use defaults
+		// File does not exist or is invalid, use defaults
 	}
 
 	const configData = {
@@ -1632,8 +2007,9 @@ function saveMaintenanceConfig(maintenanceConfig) {
 }
 
 /**
- * Save i18n configuration to file
- * @param {Object} i18nConfig - i18n configuration payload
+ * Saves the i18n configuration to the file.
+ * Protects the languages 'en' and 'de' from accidental deletion.
+ * @param {Object} i18nConfig - i18n configuration
  * @returns {Object} Saved configuration with timestamp
  */
 function saveI18nConfig(i18nConfig) {
@@ -1677,8 +2053,8 @@ function saveI18nConfig(i18nConfig) {
 }
 
 /**
- * Save Colors configuration to file
- * @param {Object} config - Colors configuration with bookingButtonColor and status colors
+ * Saves the colors configuration to the file.
+ * @param {Object} config - Colors configuration with status and button colors
  * @returns {Object} Saved configuration with timestamp
  */
 function saveColorsConfig(config) {
@@ -1695,13 +2071,19 @@ function saveColorsConfig(config) {
 	return configData;
 }
 
+/**
+ * Saves the search configuration to the file.
+ * Combines existing with new settings.
+ * @param {Object} searchConfig - Search configuration to save
+ * @returns {Object} Saved configuration with timestamp
+ */
 function saveSearchConfig(searchConfig) {
 	let existingConfig = {};
 	try {
 		const data = fs.readFileSync(searchConfigPath, 'utf8');
 		existingConfig = JSON.parse(data);
 	} catch (err) {
-		// File doesn't exist or is invalid, use defaults
+		// File does not exist or is invalid, use defaults
 	}
 
 	const configData = {
@@ -1716,13 +2098,19 @@ function saveSearchConfig(searchConfig) {
 	return configData;
 }
 
+/**
+ * Saves the rate limit configuration to the file.
+ * Combines existing with new settings.
+ * @param {Object} rateLimitConfig - Rate limit configuration to save
+ * @returns {Object} Saved configuration with timestamp
+ */
 function saveRateLimitConfig(rateLimitConfig) {
 	let existingConfig = {};
 	try {
 		const data = fs.readFileSync(rateLimitConfigPath, 'utf8');
 		existingConfig = JSON.parse(data);
 	} catch (err) {
-		// File doesn't exist or is invalid, use defaults
+		// File does not exist or is invalid, use defaults
 	}
 
 	const configData = {
@@ -1738,11 +2126,11 @@ function saveRateLimitConfig(rateLimitConfig) {
 }
 
 /**
- * Generate WiFi QR code image
- * Creates a QR code in standard WiFi format: WIFI:T:WPA;S:<SSID>;P:<PASSWORD>;H:false;;
+ * Generates a WiFi QR code image.
+ * Creates a QR code in the standard WiFi format: WIFI:T:WPA;S:<SSID>;P:<PASSWORD>;H:false;;
  * @param {string} ssid - WiFi network name
  * @param {string} password - WiFi password
- * @returns {Promise<boolean>} True if successful, false otherwise
+ * @returns {Promise<boolean>} true on success, false on error
  */
 async function generateQRCode(ssid, password) {
 	const wifiString = `WIFI:T:WPA;S:${ssid};P:${password};H:false;;`;
@@ -1766,8 +2154,8 @@ async function generateQRCode(ssid, password) {
 }
 
 /**
- * Update WiFi configuration and regenerate QR code
- * Broadcasts update to all connected clients via Socket.IO
+ * Updates the WiFi configuration and regenerates the QR code.
+ * Distributes the change via Socket.IO to all connected clients.
  * @param {string} ssid - WiFi network name
  * @param {string} password - WiFi password
  * @returns {Promise<Object>} Updated configuration
@@ -1786,10 +2174,10 @@ async function updateWiFiConfig(ssid, password) {
 }
 
 /**
- * Update Logo configuration
- * Broadcasts update to all connected clients via Socket.IO
- * @param {string} logoDarkUrl - URL for dark logo (light backgrounds)
- * @param {string} logoLightUrl - URL for light logo (dark backgrounds)
+ * Updates the logo configuration.
+ * Distributes the change via Socket.IO to all connected clients.
+ * @param {string} logoDarkUrl - URL for the dark logo (light backgrounds)
+ * @param {string} logoLightUrl - URL for the light logo (dark backgrounds)
  * @returns {Promise<Object>} Updated configuration
  */
 async function updateLogoConfig(logoDarkUrl, logoLightUrl) {
@@ -1805,13 +2193,15 @@ async function updateLogoConfig(logoDarkUrl, logoLightUrl) {
 }
 
 /**
- * Update Information configuration
- * Broadcasts update to all connected clients via Socket.IO
- * @param {boolean} showWiFi - Whether to show WiFi section
- * @param {boolean} showUpcomingMeetings - Whether to show upcoming meetings
- * @param {boolean} showMeetingTitles - Whether to show meeting titles
- * @param {string} minimalHeaderStyle - Header style for minimal display ('filled' or 'transparent')
-	* @param {number} upcomingMeetingsCount - Number of upcoming meetings to display
+ * Updates the sidebar configuration.
+ * Supports client-specific overrides via options.targetClientId.
+ * Distributes the change via Socket.IO to all connected clients.
+ * @param {boolean} showWiFi - Show WiFi section
+ * @param {boolean} showUpcomingMeetings - Show upcoming meetings
+ * @param {boolean} showMeetingTitles - Show meeting titles
+ * @param {string} minimalHeaderStyle - Header style ('filled' or 'transparent')
+ * @param {number} upcomingMeetingsCount - Number of upcoming meetings to display
+ * @param {Object} [options={}] - Additional options (targetClientId, singleRoomDarkMode, etc.)
  * @returns {Promise<Object>} Updated configuration
  */
 async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount, options = {}) {
@@ -1874,10 +2264,15 @@ async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTi
 }
 
 /**
- * Update Booking configuration
- * Broadcasts update to all connected clients via Socket.IO
- * @param {boolean} enableBooking - Whether to enable booking feature
+ * Updates the booking configuration.
+ * Distributes the change via Socket.IO to all connected clients.
+ * @param {boolean} enableBooking - Enable booking functionality
  * @param {string} buttonColor - Hex color for booking buttons
+ * @param {boolean} enableExtendMeeting - Enable meeting extension
+ * @param {Array<string>} extendMeetingUrlAllowlist - Allowed URLs for meeting extension
+ * @param {Object} roomFeatureFlags - Room-specific feature flags
+ * @param {Object} roomGroupFeatureFlags - Room group-specific feature flags
+ * @param {Object} checkIn - Check-in configuration
  * @returns {Promise<Object>} Updated configuration
  */
 async function updateBookingConfig(enableBooking, buttonColor, enableExtendMeeting, extendMeetingUrlAllowlist, roomFeatureFlags, roomGroupFeatureFlags, checkIn) {
@@ -1901,8 +2296,8 @@ async function updateBookingConfig(enableBooking, buttonColor, enableExtendMeeti
 }
 
 /**
- * Update maintenance configuration
- * Broadcasts update to all connected clients via Socket.IO
+ * Updates the maintenance mode configuration.
+ * Distributes the change via Socket.IO to all connected clients.
  * @param {boolean} enabled - Maintenance mode enabled/disabled
  * @param {string} message - Maintenance message
  * @returns {Promise<Object>} Updated configuration
@@ -1919,9 +2314,9 @@ async function updateMaintenanceConfig(enabled, message) {
 }
 
 /**
- * Update i18n configuration
- * Broadcasts update to all connected clients via Socket.IO
- * @param {Object} i18nConfig - i18n configuration payload
+ * Updates the i18n configuration.
+ * Distributes the change via Socket.IO to all connected clients.
+ * @param {Object} i18nConfig - i18n configuration
  * @returns {Promise<Object>} Updated configuration
  */
 async function updateI18nConfig(i18nConfig) {
@@ -1936,12 +2331,13 @@ async function updateI18nConfig(i18nConfig) {
 }
 
 /**
- * Update Colors configuration
- * Broadcasts update to all connected clients via Socket.IO
+ * Updates the colors configuration.
+ * Distributes the change via Socket.IO to all connected clients.
  * @param {string} bookingButtonColor - Hex color for booking buttons
- * @param {string} statusAvailableColor - Hex color for available status
- * @param {string} statusBusyColor - Hex color for busy status
- * @param {string} statusUpcomingColor - Hex color for upcoming status
+ * @param {string} statusAvailableColor - Hex color for "Available" status
+ * @param {string} statusBusyColor - Hex color for "Busy" status
+ * @param {string} statusUpcomingColor - Hex color for "Upcoming" status
+ * @param {string} statusNotFoundColor - Hex color for "Not found" status
  * @returns {Promise<Object>} Updated configuration
  */
 async function updateColorsConfig(bookingButtonColor, statusAvailableColor, statusBusyColor, statusUpcomingColor, statusNotFoundColor) {
@@ -1962,6 +2358,12 @@ async function updateColorsConfig(bookingButtonColor, statusAvailableColor, stat
 	return config;
 }
 
+/**
+ * Updates the search configuration and applies it to the runtime configuration.
+ * Distributes the change via Socket.IO to all connected clients.
+ * @param {Object} searchConfig - Search configuration to update
+ * @returns {Promise<Object>} Updated configuration
+ */
 async function updateSearchConfig(searchConfig) {
 	const updatedConfig = saveSearchConfig(searchConfig || {});
 
@@ -1980,6 +2382,12 @@ async function updateSearchConfig(searchConfig) {
 	return updatedConfig;
 }
 
+/**
+ * Updates the rate limit configuration and applies it to the runtime configuration.
+ * Distributes the change via Socket.IO to all connected clients.
+ * @param {Object} rateLimitConfig - Rate limit configuration to update
+ * @returns {Promise<Object>} Updated configuration
+ */
 async function updateRateLimitConfig(rateLimitConfig) {
 	const updatedConfig = saveRateLimitConfig(rateLimitConfig || {});
 
@@ -2000,6 +2408,12 @@ async function updateRateLimitConfig(rateLimitConfig) {
 	return updatedConfig;
 }
 
+/**
+ * Updates the OAuth configuration and applies it to the MSAL runtime configuration.
+ * Distributes the change via Socket.IO to all connected clients.
+ * @param {Object} oauthConfig - OAuth configuration to update
+ * @returns {Promise<Object>} Updated configuration
+ */
 async function updateOAuthConfig(oauthConfig) {
 	const savedConfig = saveOAuthConfig(oauthConfig || {});
 	const runtimeConfig = getOAuthRuntimeConfig();
@@ -2016,6 +2430,13 @@ async function updateOAuthConfig(oauthConfig) {
 	return savedConfig;
 }
 
+/**
+ * Updates the system configuration and applies it to the runtime configuration.
+ * Also sets the corresponding environment variables.
+ * Distributes the change via Socket.IO to all connected clients.
+ * @param {Object} systemConfig - System configuration to update
+ * @returns {Promise<Object>} Updated configuration
+ */
 async function updateSystemConfig(systemConfig) {
 	const savedConfig = saveSystemConfig(systemConfig || {});
 	const runtimeConfig = getSystemRuntimeConfig();
@@ -2047,6 +2468,12 @@ async function updateSystemConfig(systemConfig) {
 	return savedConfig;
 }
 
+/**
+ * Updates the translation API configuration.
+ * Distributes the change via Socket.IO to all connected clients.
+ * @param {Object} translationApiConfig - Configuration to update
+ * @returns {Promise<Object>} Updated configuration
+ */
 async function updateTranslationApiConfig(translationApiConfig) {
 	const savedConfig = saveTranslationApiConfig(translationApiConfig || {});
 
@@ -2058,6 +2485,14 @@ async function updateTranslationApiConfig(translationApiConfig) {
 	return savedConfig;
 }
 
+/**
+ * Updates the API token.
+ * Migrates encrypted OAuth secrets when the token changes.
+ * Distributes the change via Socket.IO to all connected clients.
+ * @param {string} nextToken - The new API token
+ * @returns {Promise<Object>} Updated token configuration
+ * @throws {Error} If token is empty or environment variable is locked
+ */
 async function updateApiToken(nextToken) {
 	const normalizedNextToken = normalizeApiTokenValue(nextToken);
 	if (!normalizedNextToken) {
@@ -2087,6 +2522,13 @@ async function updateApiToken(nextToken) {
 	return getApiTokenConfig();
 }
 
+/**
+ * Updates the WiFi API token.
+ * Distributes the change via Socket.IO to all connected clients.
+ * @param {string} nextToken - The new WiFi API token
+ * @returns {Promise<Object>} Updated token configuration
+ * @throws {Error} If token is empty or environment variable is locked
+ */
 async function updateWifiApiToken(nextToken) {
 	const normalizedNextToken = normalizeApiTokenValue(nextToken);
 	if (!normalizedNextToken) {
@@ -2108,6 +2550,11 @@ async function updateWifiApiToken(nextToken) {
 	return getApiTokenConfig();
 }
 
+/**
+ * Applies all persisted configuration changes to the runtime configuration.
+ * Called at module startup to load saved settings from the
+ * configuration files into the active configuration and environment variables.
+ */
 function applyRuntimeConfigOverrides() {
 	const persistedSystemConfig = getSystemRuntimeConfig();
 	config.startupValidation.strict = persistedSystemConfig.startupValidationStrict;
@@ -2165,7 +2612,9 @@ function applyRuntimeConfigOverrides() {
 applyRuntimeConfigOverrides();
 
 /**
- * Get power management configuration
+ * Reads the power management configuration from the file or returns default values.
+ * Ensures backward compatibility by adding missing global configuration.
+ * @returns {Object} Power management configuration with global, displays, and lastUpdated
  */
 function getPowerManagementConfig() {
 	try {
@@ -2187,7 +2636,7 @@ function getPowerManagementConfig() {
 		const data = fs.readFileSync(powerManagementConfigPath, 'utf8');
 		const config = JSON.parse(data);
 		
-		// Ensure global config exists (for backward compatibility)
+		// Ensure global configuration exists (for backward compatibility)
 		if (!config.global) {
 			config.global = {
 				mode: 'browser',
@@ -2220,15 +2669,19 @@ function getPowerManagementConfig() {
 }
 
 /**
- * Update power management configuration for a specific display
+ * Updates the power management configuration for a specific display.
+ * Distributes the change via Socket.IO to the affected display.
  * @param {string} clientId - Display client ID
- * @param {object} config - Power management configuration
- * @param {string} config.mode - 'dpms', 'browser', or 'mqtt'
- * @param {string} config.mqttHostname - Touchkio hostname (required for mqtt mode)
- * @param {object} config.schedule - Schedule configuration
- * @param {string} config.schedule.startTime - Start time (HH:MM)
- * @param {string} config.schedule.endTime - End time (HH:MM)
- * @param {boolean} config.schedule.weekendMode - Enable weekend mode
+ * @param {Object} displayConfig - Power management configuration
+ * @param {string} displayConfig.mode - Mode: 'dpms', 'browser', or 'mqtt'
+ * @param {string} [displayConfig.mqttHostname] - Touchkio hostname (required for MQTT mode)
+ * @param {Object} displayConfig.schedule - Schedule configuration
+ * @param {boolean} displayConfig.schedule.enabled - Schedule enabled
+ * @param {string} displayConfig.schedule.startTime - Start time (HH:MM)
+ * @param {string} displayConfig.schedule.endTime - End time (HH:MM)
+ * @param {boolean} displayConfig.schedule.weekendMode - Enable weekend mode
+ * @returns {Object} Saved display configuration
+ * @throws {Error} On write error
  */
 function updatePowerManagementConfig(clientId, displayConfig) {
 	try {
@@ -2245,7 +2698,7 @@ function updatePowerManagementConfig(clientId, displayConfig) {
 			lastUpdated: new Date().toISOString()
 		};
 		
-		// Add MQTT hostname if mode is mqtt
+		// Add MQTT hostname if mode is MQTT
 		if (displayConfig.mode === 'mqtt' && displayConfig.mqttHostname) {
 			updatedConfig.mqttHostname = displayConfig.mqttHostname;
 		}
@@ -2255,7 +2708,7 @@ function updatePowerManagementConfig(clientId, displayConfig) {
 		
 		fs.writeFileSync(powerManagementConfigPath, JSON.stringify(config, null, 2));
 		
-		// Broadcast update to specific display
+		// Distribute update to the affected display
 		if (io) {
 			io.emit('power-management-update', {
 				clientId,
@@ -2271,8 +2724,11 @@ function updatePowerManagementConfig(clientId, displayConfig) {
 }
 
 /**
- * Update global power management configuration (default for all displays)
- * @param {object} globalConfig - Global power management configuration
+ * Updates the global power management configuration (default for all displays).
+ * Distributes the change via Socket.IO to all displays without specific configuration.
+ * @param {Object} globalConfig - Global power management configuration
+ * @returns {Object} Saved global configuration
+ * @throws {Error} On write error
  */
 function updateGlobalPowerManagementConfig(globalConfig) {
 	try {
@@ -2288,7 +2744,7 @@ function updateGlobalPowerManagementConfig(globalConfig) {
 			}
 		};
 		
-		// Add MQTT hostname if mode is mqtt
+		// Add MQTT hostname if mode is MQTT
 		if (globalConfig.mode === 'mqtt' && globalConfig.mqttHostname) {
 			updatedGlobal.mqttHostname = globalConfig.mqttHostname;
 		}
@@ -2298,7 +2754,7 @@ function updateGlobalPowerManagementConfig(globalConfig) {
 		
 		fs.writeFileSync(powerManagementConfigPath, JSON.stringify(config, null, 2));
 		
-		// Broadcast update to all displays that don't have specific config
+		// Distribute update to all displays that have no specific configuration
 		if (io) {
 			io.emit('power-management-global-update', {
 				config: config.global
@@ -2313,18 +2769,20 @@ function updateGlobalPowerManagementConfig(globalConfig) {
 }
 
 /**
- * Get power management configuration for a specific display
- * Falls back to global config if no display-specific config exists
+ * Returns the power management configuration for a specific display.
+ * Falls back to the global configuration if no display-specific one exists.
+ * @param {string} clientId - Display client ID
+ * @returns {Object} Power management configuration for the display
  */
 function getPowerManagementConfigForDisplay(clientId) {
 	const config = getPowerManagementConfig();
 	
-	// Return display-specific config if it exists
+	// Return display-specific configuration if available
 	if (config.displays[clientId]) {
 		return config.displays[clientId];
 	}
 	
-	// Fall back to global config
+	// Fall back to global configuration
 	return config.global || {
 		mode: 'browser',
 		schedule: {
@@ -2337,7 +2795,11 @@ function getPowerManagementConfigForDisplay(clientId) {
 }
 
 /**
- * Delete power management configuration for a specific display
+ * Deletes the power management configuration for a specific display.
+ * The display will then fall back to the global configuration.
+ * @param {string} clientId - Display client ID
+ * @returns {boolean} true on success
+ * @throws {Error} On write error
  */
 function deletePowerManagementConfig(clientId) {
 	try {
@@ -2404,18 +2866,23 @@ module.exports = {
 };
 
 
-// MQTT Configuration Path
+// ============================================================================
+// MQTT configuration
+// ============================================================================
+/** @type {string} Path to the MQTT configuration file */
 const mqttConfigPath = path.join(__dirname, '../data/mqtt-config.json');
 
 /**
- * Get MQTT configuration
+ * Reads the MQTT configuration from the file or returns default values.
+ * Performs automatic migration from plaintext passwords to encrypted storage.
+ * @returns {Object} MQTT configuration with enabled, brokerUrl, authentication, username, password, etc.
  */
 function getMqttConfig() {
 	try {
 		const data = fs.readFileSync(mqttConfigPath, 'utf8');
 		const parsed = JSON.parse(data);
 
-		// Migration: decrypt passwordEncrypted if present
+		// Migration: decrypt encrypted password if present
 		if (parsed.passwordEncrypted && typeof parsed.passwordEncrypted === 'object') {
 			const decrypted = decryptApiToken(parsed.passwordEncrypted);
 			parsed.password = decrypted || '';
@@ -2439,7 +2906,7 @@ function getMqttConfig() {
 			lastUpdated: parsed.lastUpdated || null
 		};
 	} catch (err) {
-		// Return default config if file doesn't exist
+		// Return default configuration if file does not exist
 		return {
 			enabled: false,
 			port: 1883,
@@ -2454,7 +2921,17 @@ function getMqttConfig() {
 }
 
 /**
- * Update MQTT configuration
+ * Updates the MQTT configuration and saves it encrypted.
+ * Distributes the change (without password) via Socket.IO to all clients.
+ * @param {Object} mqttConfig - MQTT configuration
+ * @param {boolean} mqttConfig.enabled - MQTT enabled/disabled
+ * @param {string} mqttConfig.brokerUrl - Broker URL (e.g. mqtt://localhost:1883)
+ * @param {boolean} mqttConfig.authentication - Authentication enabled
+ * @param {string} mqttConfig.username - Username
+ * @param {string} mqttConfig.password - Password (stored encrypted)
+ * @param {string} mqttConfig.discovery - Discovery protocol (e.g. 'homeassistant')
+ * @returns {Object} Saved configuration with plaintext password for the caller
+ * @throws {Error} On write error
  */
 function updateMqttConfig(mqttConfig) {
 	try {
@@ -2471,7 +2948,7 @@ function updateMqttConfig(mqttConfig) {
 
 		fs.writeFileSync(mqttConfigPath, JSON.stringify(configToStore, null, 2));
 
-		// Return plaintext for callers (mqtt-client needs it)
+		// Return plaintext for caller (mqtt-client needs it)
 		const configResult = {
 			enabled: configToStore.enabled,
 			brokerUrl: configToStore.brokerUrl,
@@ -2482,7 +2959,7 @@ function updateMqttConfig(mqttConfig) {
 			lastUpdated: configToStore.lastUpdated
 		};
 
-		// Broadcast update via Socket.IO (without password)
+		// Distribute configuration without password via Socket.IO
 		if (io) {
 			const safeConfig = { ...configResult };
 			delete safeConfig.password;

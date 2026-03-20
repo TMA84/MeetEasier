@@ -1,3 +1,11 @@
+/**
+ * @file maintenanceMessages.js
+ * @description Maintenance mode message configuration. Provides default
+ * maintenance title and body text in multiple languages, runtime override
+ * support via the i18n API, and browser-locale detection for automatic
+ * language selection.
+ */
+
 import { applyDisplayI18nConfig } from './displayTranslations.js';
 
 const defaultMaintenanceMessages = {

@@ -1,3 +1,10 @@
+/**
+ * @file Admin.js
+ * @description Main admin panel component. Provides a tabbed interface for
+ *              managing all application settings: OAuth, display configuration,
+ *              booking, translations, devices, MQTT, system config, and more.
+ *              Connects to Socket.IO for real-time config update broadcasts.
+ */
 import React, { Component } from 'react';
 import io from 'socket.io-client';
 import defaultAdminTranslations, { getAdminTranslations } from '../../config/adminTranslations.js';

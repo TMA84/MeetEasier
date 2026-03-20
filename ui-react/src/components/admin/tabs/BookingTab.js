@@ -1,3 +1,7 @@
+/**
+ * @file BookingTab.js
+ * @description Admin panel tab for configuring room booking settings, including enable/disable booking, meeting extension, check-in options, and per-room or per-room-group feature flag overrides.
+ */
 import React from 'react';
 
 const BookingTab = ({

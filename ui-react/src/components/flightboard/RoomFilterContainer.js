@@ -1,3 +1,6 @@
+/** @file RoomFilterContainer.js
+ *  @description Container component that fetches available room lists from the API and passes them to the RoomFilter dropdown for selection.
+ */
 import React, { Component } from 'react';
 
 import RoomFilter from './RoomFilter';

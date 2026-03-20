@@ -1,21 +1,52 @@
+/**
+ * @file Startup Validation – Server configuration check at startup.
+ *
+ * Validates the configuration before server startup and categorizes
+ * issues into errors (blocking), warnings, and informational messages.
+ * In strict mode, warnings also cause an abort.
+ *
+ * @module startup-validation
+ */
+
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Checks whether a value is considered "truthy" (boolean `true` or string `'true'`).
+ *
+ * @param {*} value – The value to check.
+ * @returns {boolean} `true` if the value is truthy.
+ */
 function isTruthy(value) {
 	return value === true || value === 'true';
 }
 
+/**
+ * Validates the server configuration and returns a report.
+ *
+ * Checks OAuth configuration, API token, polling interval, webhook
+ * settings, and the existence of the cache file. Issues are
+ * categorized into three groups:
+ * - `errors`: Critical errors that should prevent startup.
+ * - `warnings`: Potential issues that should be noted.
+ * - `info`: Informational notes about the current configuration status.
+ *
+ * @param {Object} config – The server configuration object.
+ * @returns {Object} Validation report with errors, warnings, info, hasErrors, and hasWarnings.
+ */
 function validateStartupConfig(config) {
 	const errors = [];
 	const warnings = [];
 	const info = [];
 
+	// --- Check OAuth / Graph API configuration ---
 	const useGraphApi = true;
 	const hasGraphClientId = config?.msalConfig?.auth?.clientId && config.msalConfig.auth.clientId !== 'OAUTH_CLIENT_ID_NOT_SET';
 	const hasGraphAuthority = config?.msalConfig?.auth?.authority && config.msalConfig.auth.authority !== 'OAUTH_AUTHORITY_NOT_SET';
 	const hasGraphSecret = config?.msalConfig?.auth?.clientSecret && config.msalConfig.auth.clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET';
 
 	if (useGraphApi) {
+		// Collect missing OAuth values and report as info
 		const missingOAuthValues = [];
 		if (!hasGraphClientId) {
 			missingOAuthValues.push('OAUTH_CLIENT_ID');
@@ -32,16 +63,19 @@ function validateStartupConfig(config) {
 		}
 	}
 
+	// --- Check API token ---
 	if (!config.apiToken) {
 		info.push('Admin API token is not configured yet. First admin login will require creating an initial token.');
 	} else if (config.apiToken === 'change-me-admin-token') {
 		warnings.push('Legacy default API token is active. Change it in Admin panel or set API_TOKEN in environment.');
 	}
 
+	// --- Validate polling interval (minimum 5000 ms) ---
 	if (!Number.isFinite(config.calendarSearch.pollIntervalMs) || config.calendarSearch.pollIntervalMs < 5000) {
 		errors.push('SEARCH_POLL_INTERVAL_MS must be a number >= 5000.');
 	}
 
+	// --- Check Graph webhook configuration ---
 	if (config.graphWebhook.enabled && !config.graphWebhook.clientState) {
 		warnings.push('GRAPH_WEBHOOK_ENABLED is true but GRAPH_WEBHOOK_CLIENT_STATE is empty. Signature validation is weakened.');
 	}
@@ -50,6 +84,7 @@ function validateStartupConfig(config) {
 		warnings.push('GRAPH_WEBHOOK_ENABLED is true but GRAPH_WEBHOOK_ALLOWED_IPS is empty. Origin filtering is disabled.');
 	}
 
+	// --- Check cache file ---
 	const cacheFile = path.join(__dirname, '../data/cache.json');
 	if (!fs.existsSync(cacheFile)) {
 		info.push('MS Graph cache file does not exist yet (data/cache.json). It will be created on first token caching event.');
@@ -64,25 +99,42 @@ function validateStartupConfig(config) {
 	};
 }
 
+/**
+ * Prints the validation report to the console and aborts on errors.
+ *
+ * Errors are output via `console.error`, warnings via `console.warn`, and
+ * informational messages via `console.log`. If errors are present,
+ * an Error is thrown. In strict mode (`strictMode`), warnings also
+ * cause an abort.
+ *
+ * @param {Object} report – The validation report from {@link validateStartupConfig}.
+ * @param {boolean} strictMode – If `true`, warnings also cause an abort.
+ * @throws {Error} On validation errors or (in strict mode) on warnings.
+ */
 function printStartupValidation(report, strictMode) {
+	// Output errors
 	if (report.errors.length) {
 		console.error('Startup validation errors:');
 		report.errors.forEach(item => console.error(`  - ${item}`));
 	}
 
+	// Output warnings
 	if (report.warnings.length) {
 		console.warn('Startup validation warnings:');
 		report.warnings.forEach(item => console.warn(`  - ${item}`));
 	}
 
+	// Output informational messages
 	if (report.info.length) {
 		report.info.forEach(item => console.log(`Startup info: ${item}`));
 	}
 
+	// Abort server startup on errors
 	if (report.errors.length) {
 		throw new Error('Startup validation failed. Resolve required configuration errors and restart.');
 	}
 
+	// In strict mode, also abort on warnings
 	if (strictMode && report.warnings.length) {
 		throw new Error('Startup validation failed in strict mode.');
 	}

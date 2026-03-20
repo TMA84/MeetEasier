@@ -1,3 +1,7 @@
+/**
+ * @file MqttTab.js
+ * @description Admin panel tab for configuring the MQTT client connection, including broker URL, authentication credentials, Home Assistant discovery, and displaying the current MQTT connection status.
+ */
 import React from 'react';
 
 const MqttTab = ({

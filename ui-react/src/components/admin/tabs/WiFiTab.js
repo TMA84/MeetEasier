@@ -1,3 +1,7 @@
+/**
+ * @file WiFiTab.js
+ * @description Admin panel tab for configuring WiFi credentials (SSID and password) used to generate a WiFi QR code displayed on room screens.
+ */
 import React from 'react';
 
 const WiFiTab = ({
