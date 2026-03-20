@@ -7,14 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Startup validation module (`startup-validation.js`) — validates server configuration at boot, checking OAuth credentials, API token, polling interval, webhook settings, and cache file presence. Issues categorized as errors (blocking), warnings, and info. Supports strict mode where warnings also prevent startup.
-- `BookingModal` React component — modal dialog for room booking with quick-book buttons (15/30/60/120 min), custom duration slider (5–240 min in 5-min steps), dark mode support, network retry logic for unstable connections, and localized UI via `getBookingModalTranslations()`
+## [1.7.44] - 2026-03-20
 
-### Changed
-- Added JSDoc file header to `displayTranslations.js` documenting display-facing translation strings, i18n helpers, locale-aware text for all display views, and runtime admin translation overrides
-- Added JSDoc file header to `connectionMonitor.js` documenting singleton ConnectionMonitor class with periodic health checks, online/offline event handling, and listener support
-- Added JSDoc file header to `Display.js` documenting single-room display component purpose, Socket.IO integration, and API usage
+### Added
+- Certificate-based OAuth authentication as alternative to Client Secret — eliminates yearly secret rotation
+- Self-signed X.509 certificate generation (RSA 2048-bit, SHA-256, 3-year validity) via `cert-generator.js`
+- Certificate management API: `POST /api/oauth-certificate/generate`, `GET /api/oauth-certificate`, `GET /api/oauth-certificate/download`, `DELETE /api/oauth-certificate`
+- Certificate UI section in OAuth tab: generate, download (.pem), delete, status display (thumbprint, validity, CN)
+- MSAL client auto-switches between certificate and client secret auth (certificate takes priority)
+- Private key encrypted on disk with AES-256-GCM (derived from API token)
+- Startup validation accepts certificate as alternative to client secret
+- DE/EN translations for all certificate UI elements
 - Translated `audit-logger.js` JSDoc file header from German to English
 - Translated `touchkio.js` JSDoc comments for `subscribeTouchkioStates()` from German to English
 - Translated `rooms.js` JSDoc comments for `isRoomInBlacklist()` from German to English

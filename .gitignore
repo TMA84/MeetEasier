@@ -59,6 +59,7 @@ _OLD_TODO.md
 /data/maintenance-config.json
 /data/mqtt-config.json
 /data/power-management-config.json
+/data/oauth-certificate.json
 # Generated runtime assets
 /static/img/wifi-qr.png
 

@@ -52,7 +52,8 @@ When deploying MeetEasier, please follow these security best practices:
 2. **Microsoft Graph API Permissions**: Use the principle of least privilege
    - Only grant necessary permissions (Calendars.Read, Calendars.ReadWrite, Place.Read.All, User.Read.All)
    - Use application permissions, not delegated permissions
-   - Regularly review and rotate client secrets (recommended: every 90 days)
+   - Prefer certificate-based authentication over client secrets for stronger security (generate via `POST /api/oauth-certificate/generate`)
+   - If using client secrets, regularly review and rotate them (recommended: every 90 days)
 
 3. **Environment Variables**: Never commit `.env` files to version control
    - Use `.env.template` as a reference

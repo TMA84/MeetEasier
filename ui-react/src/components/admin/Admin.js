@@ -427,6 +427,10 @@ class Admin extends Component {
       oauthClientSecret: '',
       oauthLastUpdated: '',
       oauthFormDirty: false,
+      certificateInfo: null,
+      certificateLoading: false,
+      certificateMessage: null,
+      certificateMessageType: null,
       searchMessage: null,
       searchMessageType: null,
       rateLimitMessage: null,
@@ -1783,6 +1787,23 @@ class Admin extends Component {
         console.error('Error loading oauth config:', err);
       });
 
+    // Load certificate info
+    fetch('/api/oauth-certificate', {
+      method: 'GET',
+      headers: oauthHeaders
+    })
+      .then(response => {
+        if (response.status === 401) return null;
+        return response.json();
+      })
+      .then(data => {
+        if (!data) return;
+        this.setState({ certificateInfo: data.certificate || null });
+      })
+      .catch(err => {
+        console.error('Error loading certificate info:', err);
+      });
+
     const apiTokenHeaders = this.getRequestHeaders(false);
 
     fetch('/api/api-token-config', {
@@ -2534,6 +2555,104 @@ class Admin extends Component {
         this.setState({
           oauthMessage: `${t.errorPrefix} ${err.message}`,
           oauthMessageType: 'error'
+        });
+      });
+  }
+
+  handleGenerateCertificate = () => {
+    const t = this.getTranslations();
+    const headers = this.getRequestHeaders();
+    this.setState({ certificateLoading: true, certificateMessage: null });
+
+    fetch('/api/oauth-certificate/generate', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ validityYears: 3 })
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) throw new Error(data.error || t.errorUnknown);
+        this.setState({
+          certificateMessage: t.certGenerateSuccess || 'Certificate generated successfully. Download the .pem file and upload it to Azure AD.',
+          certificateMessageType: 'success',
+          certificateLoading: false
+        });
+        this.loadCurrentConfig();
+        setTimeout(() => this.setState({ certificateMessage: null, certificateMessageType: null }), 8000);
+      })
+      .catch(err => {
+        this.setState({
+          certificateMessage: `${t.errorPrefix} ${err.message}`,
+          certificateMessageType: 'error',
+          certificateLoading: false
+        });
+      });
+  }
+
+  handleDownloadCertificate = () => {
+    const headers = this.getRequestHeaders();
+    fetch('/api/oauth-certificate/download', { headers })
+      .then(response => {
+        if (!response.ok) throw new Error('Download failed');
+        const disposition = response.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename="(.+)"/);
+        const filename = match ? match[1] : 'meeteasier-oauth.pem';
+        return response.blob().then(blob => ({ blob, filename }));
+      })
+      .then(({ blob, filename }) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(err => {
+        const t = this.getTranslations();
+        this.setState({
+          certificateMessage: `${t.errorPrefix} ${err.message}`,
+          certificateMessageType: 'error'
+        });
+      });
+  }
+
+  handleDeleteCertificate = () => {
+    const t = this.getTranslations();
+    if (!window.confirm(t.certDeleteConfirm || 'Delete the certificate? Authentication will revert to Client Secret.')) return;
+
+    const headers = this.getRequestHeaders();
+    fetch('/api/oauth-certificate', {
+      method: 'DELETE',
+      headers
+    })
+      .then(response => {
+        if (response.status === 401) {
+          this.handleUnauthorizedAccess();
+          throw new Error(t.errorUnauthorized);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) throw new Error(data.error || t.errorUnknown);
+        this.setState({
+          certificateMessage: t.certDeleteSuccess || 'Certificate deleted. Reverted to Client Secret authentication.',
+          certificateMessageType: 'success'
+        });
+        this.loadCurrentConfig();
+        setTimeout(() => this.setState({ certificateMessage: null, certificateMessageType: null }), 5000);
+      })
+      .catch(err => {
+        this.setState({
+          certificateMessage: `${t.errorPrefix} ${err.message}`,
+          certificateMessageType: 'error'
         });
       });
   }
@@ -5425,6 +5544,13 @@ class Admin extends Component {
                   onOAuthSubmit={this.handleOAuthSubmit}
                   onGraphRuntimeChange={(field, value) => this.setState({ [field]: value })}
                   onGraphRuntimeSubmit={this.handleGraphRuntimeSubmit}
+                  certificateInfo={this.state.certificateInfo}
+                  certificateLoading={this.state.certificateLoading}
+                  certificateMessage={this.state.certificateMessage}
+                  certificateMessageType={this.state.certificateMessageType}
+                  onGenerateCertificate={this.handleGenerateCertificate}
+                  onDownloadCertificate={this.handleDownloadCertificate}
+                  onDeleteCertificate={this.handleDeleteCertificate}
                 />
               )}
 

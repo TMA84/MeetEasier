@@ -10,6 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const certGenerator = require('./cert-generator');
 
 /**
  * Checks whether a value is considered "truthy" (boolean `true` or string `'true'`).
@@ -44,6 +45,7 @@ function validateStartupConfig(config) {
 	const hasGraphClientId = config?.msalConfig?.auth?.clientId && config.msalConfig.auth.clientId !== 'OAUTH_CLIENT_ID_NOT_SET';
 	const hasGraphAuthority = config?.msalConfig?.auth?.authority && config.msalConfig.auth.authority !== 'OAUTH_AUTHORITY_NOT_SET';
 	const hasGraphSecret = config?.msalConfig?.auth?.clientSecret && config.msalConfig.auth.clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET';
+	const hasCertificate = !!certGenerator.getCertificateInfo();
 
 	if (useGraphApi) {
 		// Collect missing OAuth values and report as info
@@ -54,8 +56,8 @@ function validateStartupConfig(config) {
 		if (!hasGraphAuthority) {
 			missingOAuthValues.push('OAUTH_AUTHORITY');
 		}
-		if (!hasGraphSecret) {
-			missingOAuthValues.push('OAUTH_CLIENT_SECRET');
+		if (!hasGraphSecret && !hasCertificate) {
+			missingOAuthValues.push('OAUTH_CLIENT_SECRET or Certificate');
 		}
 
 		if (missingOAuthValues.length > 0) {
