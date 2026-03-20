@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.45] - 2026-03-20
+
+### Fixed
+- OAuthTab.js was missing JSX body — restored complete OAuth config form, certificate management UI, and Graph runtime settings
+
+### Changed
+- OAuthTab admin component: implemented OAuth configuration UI with current config display (Client ID, Tenant ID) replacing placeholder stub
+- OAuthTab admin component: added auth method display (Certificate/Client Secret), OAuth credentials form, and certificate management section (generate, download, delete) via build helper script
+- OAuthTab admin component: added Graph Runtime Configuration section with webhook settings (enabled toggle, client state, allowed IPs), fetch timeout, retry attempts, and retry base delay — includes current config display, editable form, and env-locked fallback
+
 ## [1.7.44] - 2026-03-20
 
 ### Added
