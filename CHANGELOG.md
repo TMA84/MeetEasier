@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.49] - 2026-03-20
+
+### Changed
+- Single-room light theme: stronger floating text-shadow on room name, status text and dot with triple-layer shadow for more pronounced depth effect
+
 ## [1.7.48] - 2026-03-20
 
 ### Added
