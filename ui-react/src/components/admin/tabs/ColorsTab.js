@@ -1,10 +1,11 @@
 /**
  * @file ColorsTab.js
- * @description Admin panel tab for customizing the color theme, including the booking button color and room status colors (available, busy, upcoming, not found) with preset palettes and HSL sliders.
+ * @description Admin panel tab for customizing the color theme, including the booking button color and room status colors (available, busy, upcoming, not found) with native color picker and dynamic lightness palette.
  */
 import React from 'react';
 
 const ColorsTab = ({
+  isActive,
   t,
   currentBookingButtonColor,
   currentStatusAvailableColor,
@@ -24,94 +25,61 @@ const ColorsTab = ({
   onResetColor,
   onSubmit
 }) => {
-  const greenColors = ['#dcfce7', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d'];
-  const redColors = ['#fee2e2', '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d'];
-  const yellowColors = ['#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#a16207', '#854d0e'];
-  const grayColors = ['#f3f4f6', '#e5e7eb', '#d1d5db', '#9ca3af', '#6b7280', '#4b5563', '#374151', '#1f2937', '#111827'];
+  /**
+   * Generates 9 lightness variations of the current color (light to dark).
+   * Keeps hue and saturation fixed, varies lightness from 90% down to 15%.
+   */
+  const generatePalette = (hexColor) => {
+    const hsl = hexToHSL(hexColor);
+    const steps = [90, 80, 68, 56, 45, 38, 30, 22, 15];
+    return steps.map(l => hslToHex(hsl.h, hsl.s, l));
+  };
 
-  const renderColorPicker = (label, colorKey, currentColor, presetColors, hueMin, hueMax, defaultColor, helpText) => {
-    const hsl = hexToHSL(currentColor);
-    
+  const renderColorPicker = (label, colorKey, currentColor, defaultColor, helpText) => {
+    const palette = generatePalette(currentColor);
+
     return (
       <div className="admin-form-group">
         <label>{label}</label>
-        <div className="color-preset-grid">
-          {presetColors.map(color => (
+        <div className="color-input-row">
+          <input
+            type="color"
+            value={currentColor}
+            onChange={(e) => onColorChange(colorKey, e.target.value)}
+            className="color-input-picker"
+          />
+          <input
+            type="text"
+            value={currentColor}
+            onChange={(e) => onColorChange(colorKey, e.target.value)}
+            placeholder={defaultColor}
+            className="color-input-text"
+          />
+          <button type="button" onClick={() => onResetColor(colorKey, defaultColor)} className="admin-secondary-button">
+            {t.resetToDefaultButton}
+          </button>
+        </div>
+        <div className="color-preset-grid" style={{ marginTop: '0.5rem' }}>
+          {palette.map((color, i) => (
             <button
-              key={color}
+              key={`${colorKey}-${i}`}
               type="button"
               onClick={() => onColorChange(colorKey, color)}
-              className={`color-preset-button ${currentColor === color ? 'color-preset-button--selected' : 'color-preset-button--unselected'}`}
+              className={`color-preset-button ${currentColor.toLowerCase() === color.toLowerCase() ? 'color-preset-button--selected' : 'color-preset-button--unselected'}`}
               style={{ backgroundColor: color }}
               title={color}
             >
-              {currentColor === color ? '✓' : ''}
+              {currentColor.toLowerCase() === color.toLowerCase() ? '✓' : ''}
             </button>
           ))}
         </div>
-
-        <div>
-          <div className="color-slider-row">
-            <div className="color-slider-column">
-              <label className="color-slider-label">
-                {t.colorPickerHue}: {hsl.h}°
-              </label>
-              <input
-                type="range" min={hueMin} max={hueMax}
-                value={hsl.h <= hueMax && hsl.h >= hueMin ? hsl.h : hueMin}
-                onChange={(e) => {
-                  const newHsl = { h: parseInt(e.target.value), s: hsl.s, l: hsl.l };
-                  onColorChange(colorKey, hslToHex(newHsl.h, newHsl.s, newHsl.l));
-                }}
-                className="color-slider"
-              />
-            </div>
-            <div className="color-preview-box" style={{ backgroundColor: currentColor }}></div>
-          </div>
-          
-          <div className="color-slider-row">
-            <div className="color-slider-column">
-              <label className="color-slider-label">
-                {t.colorPickerSaturation}: {hsl.s}%
-              </label>
-              <input
-                type="range" min="0" max="100" value={hsl.s}
-                onChange={(e) => {
-                  const newHsl = { h: hsl.h, s: parseInt(e.target.value), l: hsl.l };
-                  onColorChange(colorKey, hslToHex(newHsl.h, newHsl.s, newHsl.l));
-                }}
-                className="color-slider"
-              />
-            </div>
-          </div>
-
-          <div className="color-slider-row">
-            <div className="color-slider-column">
-              <label className="color-slider-label">
-                {t.colorPickerLightness}: {hsl.l}%
-              </label>
-              <input
-                type="range" min="0" max="100" value={hsl.l}
-                onChange={(e) => {
-                  const newHsl = { h: hsl.h, s: hsl.s, l: parseInt(e.target.value) };
-                  onColorChange(colorKey, hslToHex(newHsl.h, newHsl.s, newHsl.l));
-                }}
-                className="color-slider"
-              />
-            </div>
-          </div>
-        </div>
-
-        <button type="button" onClick={() => onResetColor(colorKey, defaultColor)} className="admin-secondary-button admin-mt-05">
-          {t.resetToDefaultButton}
-        </button>
         <small>{helpText}</small>
       </div>
     );
   };
 
   return (
-    <div className={`admin-tab-content ${true ? 'active' : ''}`}>
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
       <div className="admin-section">
         <h2>{t.colorsSectionTitle}</h2>
         
@@ -160,10 +128,10 @@ const ColorsTab = ({
             <small>{t.bookingButtonColorHelp}</small>
           </div>
 
-          {renderColorPicker(`${t.statusAvailableColorLabel} - ${t.colorPickerGreenVariations}`, 'statusAvailableColor', statusAvailableColor, greenColors, 80, 150, '#22c55e', t.statusAvailableColorHelp)}
-          {renderColorPicker(`${t.statusBusyColorLabel} - ${t.colorPickerRedVariations}`, 'statusBusyColor', statusBusyColor, redColors, 0, 20, '#ef4444', t.statusBusyColorHelp)}
-          {renderColorPicker(`${t.statusUpcomingColorLabel} - ${t.colorPickerYellowVariations}`, 'statusUpcomingColor', statusUpcomingColor, yellowColors, 20, 60, '#f59e0b', t.statusUpcomingColorHelp)}
-          {renderColorPicker(`${t.statusNotFoundColorLabel} - ${t.colorPickerGrayVariations}`, 'statusNotFoundColor', statusNotFoundColor, grayColors, 0, 360, '#6b7280', t.statusNotFoundColorHelp)}
+          {renderColorPicker(t.statusAvailableColorLabel, 'statusAvailableColor', statusAvailableColor, '#22c55e', t.statusAvailableColorHelp)}
+          {renderColorPicker(t.statusBusyColorLabel, 'statusBusyColor', statusBusyColor, '#ef4444', t.statusBusyColorHelp)}
+          {renderColorPicker(t.statusUpcomingColorLabel, 'statusUpcomingColor', statusUpcomingColor, '#f59e0b', t.statusUpcomingColorHelp)}
+          {renderColorPicker(t.statusNotFoundColorLabel, 'statusNotFoundColor', statusNotFoundColor, '#6b7280', t.statusNotFoundColorHelp)}
 
           <button 
             type="submit" 

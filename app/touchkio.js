@@ -24,6 +24,8 @@
 
 const mqttClient = require('./mqtt-client');
 const configManager = require('./config-manager');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Stores the current states of all detected displays.
@@ -38,6 +40,143 @@ const displayStates = new Map();
  * @type {Map<string, string>}
  */
 const deviceIdToHostname = new Map();
+
+/** @type {string} Path to the persisted desired config file */
+const DESIRED_CONFIG_PATH = path.join(__dirname, '../data/touchkio-desired-config.json');
+
+/**
+ * Desired configuration per device, keyed by deviceId.
+ * Persisted to disk so settings survive server restarts.
+ * @type {Map<string, Object>}
+ */
+const desiredConfig = new Map();
+
+/**
+ * Tracks whether errors were previously detected per device.
+ * Used to avoid spamming the log with repeated error messages.
+ * @type {Map<string, boolean>}
+ */
+const lastErrorState = new Map();
+
+/**
+ * Loads the desired config from disk into the desiredConfig Map.
+ */
+function loadDesiredConfig() {
+  try {
+    if (fs.existsSync(DESIRED_CONFIG_PATH)) {
+      const data = JSON.parse(fs.readFileSync(DESIRED_CONFIG_PATH, 'utf8'));
+      for (const [deviceId, config] of Object.entries(data)) {
+        desiredConfig.set(deviceId, config);
+      }
+      console.log(`[Touchkio] Loaded desired config for ${desiredConfig.size} device(s)`);
+    }
+  } catch (err) {
+    console.error('[Touchkio] Failed to load desired config:', err.message);
+  }
+}
+
+/**
+ * Saves the desiredConfig Map to disk.
+ */
+function saveDesiredConfig() {
+  try {
+    const obj = {};
+    for (const [deviceId, config] of desiredConfig) {
+      obj[deviceId] = config;
+    }
+    fs.writeFileSync(DESIRED_CONFIG_PATH, JSON.stringify(obj, null, 2));
+  } catch (err) {
+    console.error('[Touchkio] Failed to save desired config:', err.message);
+  }
+}
+
+/**
+ * Updates a single property in the desired config for a device.
+ * @param {string} deviceId - The device ID
+ * @param {string} key - Config key (e.g. 'brightness', 'pageUrl')
+ * @param {*} value - The desired value
+ */
+function setDesiredValue(deviceId, key, value) {
+  if (!deviceId) return;
+  const config = desiredConfig.get(deviceId) || {};
+  config[key] = value;
+  config.lastUpdated = new Date().toISOString();
+  desiredConfig.set(deviceId, config);
+  saveDesiredConfig();
+}
+
+/**
+ * Re-applies the persisted desired config to a device after it reconnects.
+ * Sends commands with a small delay between each to avoid overwhelming the device.
+ * @param {string} deviceId - The device ID that just came online
+ */
+function reapplyDesiredConfig(deviceId) {
+  const config = desiredConfig.get(deviceId);
+  if (!config) return;
+
+  const hostname = deviceIdToHostname.get(deviceId) || deviceId;
+  console.log(`[Touchkio] Re-applying desired config to ${hostname} (${deviceId}):`, Object.keys(config).filter(k => k !== 'lastUpdated').join(', '));
+
+  let delay = 2000; // Start after 2s to let the device finish booting
+  const step = 500; // 500ms between commands
+
+  if (config.brightness !== undefined) {
+    setTimeout(() => {
+      const did = deviceId;
+      const topic = `touchkio/${did}/display/brightness/set`;
+      mqttClient.publish(topic, Math.max(0, Math.min(100, config.brightness)).toString(), { qos: 1, retain: false });
+      console.log(`[Touchkio] Re-applied brightness to ${did}: ${config.brightness}`);
+    }, delay);
+    delay += step;
+  }
+  if (config.pageUrl) {
+    setTimeout(() => {
+      const did = deviceId;
+      const topic = `touchkio/${did}/page_url/set`;
+      mqttClient.publish(topic, config.pageUrl, { qos: 1, retain: false });
+      console.log(`[Touchkio] Re-applied page URL to ${did}: ${config.pageUrl}`);
+    }, delay);
+    delay += step;
+  }
+  if (config.pageZoom !== undefined) {
+    setTimeout(() => {
+      const did = deviceId;
+      const topic = `touchkio/${did}/page_zoom/set`;
+      mqttClient.publish(topic, Math.max(25, Math.min(400, config.pageZoom)).toString(), { qos: 1, retain: false });
+      console.log(`[Touchkio] Re-applied page zoom to ${did}: ${config.pageZoom}%`);
+    }, delay);
+    delay += step;
+  }
+  if (config.volume !== undefined) {
+    setTimeout(() => {
+      const did = deviceId;
+      const topic = `touchkio/${did}/volume/set`;
+      mqttClient.publish(topic, Math.max(0, Math.min(100, config.volume)).toString(), { qos: 1, retain: false });
+      console.log(`[Touchkio] Re-applied volume to ${did}: ${config.volume}`);
+    }, delay);
+    delay += step;
+  }
+  if (config.theme) {
+    setTimeout(() => {
+      const did = deviceId;
+      const topic = `touchkio/${did}/theme/set`;
+      mqttClient.publish(topic, config.theme, { qos: 1, retain: false });
+      console.log(`[Touchkio] Re-applied theme to ${did}: ${config.theme}`);
+    }, delay);
+    delay += step;
+  }
+  if (config.kioskStatus) {
+    setTimeout(() => {
+      const did = deviceId;
+      const topic = `touchkio/${did}/kiosk/set`;
+      mqttClient.publish(topic, config.kioskStatus, { qos: 1, retain: false });
+      console.log(`[Touchkio] Re-applied kiosk status to ${did}: ${config.kioskStatus}`);
+    }, delay);
+  }
+}
+
+// Load desired config at module startup
+loadDesiredConfig();
 
 /**
  * Initializes the Touchkio display controller.
@@ -68,6 +207,45 @@ function init() {
 function extractDeviceId(topic) {
   const match = topic.match(/homeassistant\/[^/]+\/(rpi_[^/]+)/);
   return match ? match[1] : null;
+}
+
+/**
+ * Captures the initial configuration of a newly connected device.
+ * Only saves if the device is displaying an app page (pageUrl contains /single-room/ or /room-minimal/ or root path).
+ * Devices without an app URL remain marked as "NEW" in the admin panel.
+ * @param {string} deviceId - The device ID to capture config for
+ */
+function captureInitialConfig(deviceId) {
+  if (desiredConfig.has(deviceId)) return;
+  const state = displayStates.get(deviceId);
+  if (!state) return;
+
+  // Only capture if the device is actually showing an app page
+  // Recognized patterns: /single-room/*, /room-minimal/*, or root URL (flightboard)
+  const url = state.pageUrl || '';
+  const isAppPage = url.includes('/single-room/') || url.includes('/room-minimal/') || /^https?:\/\/[^/]+\/?(\?.*)?$/.test(url);
+  if (!isAppPage) {
+    const hn = deviceIdToHostname.get(deviceId) || deviceId;
+    console.log(`[Touchkio] Skipping initial config capture for ${hn} (${deviceId}) — no app page loaded yet (URL: ${url || 'none'})`);
+    return;
+  }
+
+  const initial = {};
+  if (state.brightness !== undefined) initial.brightness = state.brightness;
+  if (state.pageUrl) initial.pageUrl = state.pageUrl;
+  if (state.pageZoom !== undefined) initial.pageZoom = state.pageZoom;
+  if (state.volume !== undefined) initial.volume = state.volume;
+  if (state.theme) initial.theme = state.theme;
+  if (state.kioskStatus) initial.kioskStatus = state.kioskStatus;
+
+  if (Object.keys(initial).length > 0) {
+    initial.lastUpdated = new Date().toISOString();
+    initial.source = 'auto-captured';
+    desiredConfig.set(deviceId, initial);
+    saveDesiredConfig();
+    const hn = deviceIdToHostname.get(deviceId) || deviceId;
+    console.log(`[Touchkio] Auto-captured initial config for ${hn} (${deviceId}):`, Object.keys(initial).filter(k => k !== 'lastUpdated' && k !== 'source').join(', '));
+  }
 }
 
 /**
@@ -124,56 +302,102 @@ function subscribeTouchkioStates() {
       
       // Route message to the correct handler based on topic pattern
       if (topic.includes('/host_name/state') || topic.includes('/host_name/status')) {
+        const isNewOrRebooted = !displayState.hostname;
         displayState.hostname = payloadStr;
         deviceIdToHostname.set(deviceId, payloadStr);
         console.log(`[Touchkio] Hostname mapped: ${deviceId} -> ${payloadStr}`);
+
+        // Re-apply desired config when device comes online after reboot
+        if (isNewOrRebooted && desiredConfig.has(deviceId)) {
+          reapplyDesiredConfig(deviceId);
+        }
+
+        // Capture initial config for brand-new devices (no desired config yet)
+        // Wait 8s for all state messages to arrive, then snapshot — but only
+        // if the device is actually showing an app page (pageUrl contains our app path)
+        if (isNewOrRebooted && !desiredConfig.has(deviceId)) {
+          setTimeout(() => {
+            captureInitialConfig(deviceId);
+          }, 8000);
+        }
         
       } else if (topic.includes('/display/power/state') || topic.includes('/display/power/status')) {
+        const oldPower = displayState.power;
         displayState.power = payloadStr;
         displayState.lastUpdate = new Date().toISOString();
         // When 'ON', power is definitely supported
         if (payloadStr === 'ON') {
           displayState.powerUnsupported = false;
         }
-        console.log(`[Touchkio] Display power updated: ${deviceId} = ${payloadStr}`);
+        if (oldPower !== payloadStr) {
+          console.log(`[Touchkio] Display power updated: ${deviceId} = ${payloadStr}`);
+        }
         
       } else if (topic.includes('/display/brightness/state') || topic.includes('/display/brightness/status')) {
+        const oldBrightness = displayState.brightness;
         displayState.brightness = parseInt(payload, 10);
         // When brightness value is valid, brightness is supported
         if (!isNaN(displayState.brightness)) {
           displayState.brightnessUnsupported = false;
         }
-        console.log(`[Touchkio] Brightness updated: ${deviceId} = ${displayState.brightness}`);
+        if (oldBrightness !== displayState.brightness) {
+          console.log(`[Touchkio] Brightness updated: ${deviceId} = ${displayState.brightness}`);
+        }
         
       } else if (topic.includes('/kiosk/state') || topic.includes('/kiosk/status')) {
+        const oldKiosk = displayState.kioskStatus;
         displayState.kioskStatus = payloadStr;
-        console.log(`[Touchkio] Kiosk status updated: ${deviceId} = ${payloadStr}`);
+        if (oldKiosk !== payloadStr) {
+          console.log(`[Touchkio] Kiosk status updated: ${deviceId} = ${payloadStr}`);
+        }
         
       } else if (topic.includes('/theme/state') || topic.includes('/theme/status')) {
+        const oldTheme = displayState.theme;
         displayState.theme = payloadStr;
-        console.log(`[Touchkio] Theme updated: ${deviceId} = ${payloadStr}`);
+        if (oldTheme !== payloadStr) {
+          console.log(`[Touchkio] Theme updated: ${deviceId} = ${payloadStr}`);
+        }
         
       } else if (topic.includes('/volume/state') || topic.includes('/volume/status')) {
+        const oldVolume = displayState.volume;
         displayState.volume = parseInt(payload, 10);
-        console.log(`[Touchkio] Volume updated: ${deviceId} = ${displayState.volume}`);
+        if (oldVolume !== displayState.volume) {
+          console.log(`[Touchkio] Volume updated: ${deviceId} = ${displayState.volume}`);
+        }
         
       } else if (topic.includes('/keyboard/state') || topic.includes('/keyboard/status')) {
+        const oldKeyboard = displayState.keyboardVisible;
         displayState.keyboardVisible = payloadStr === 'ON';
-        console.log(`[Touchkio] Keyboard visibility updated: ${deviceId} = ${displayState.keyboardVisible}`);
+        if (oldKeyboard !== displayState.keyboardVisible) {
+          console.log(`[Touchkio] Keyboard visibility updated: ${deviceId} = ${displayState.keyboardVisible}`);
+        }
         
       } else if (topic.includes('/page_zoom/state') || topic.includes('/page_zoom/status')) {
+        const oldZoom = displayState.pageZoom;
         displayState.pageZoom = parseInt(payload, 10);
-        console.log(`[Touchkio] Page zoom updated: ${deviceId} = ${displayState.pageZoom}%`);
+        if (oldZoom !== displayState.pageZoom) {
+          console.log(`[Touchkio] Page zoom updated: ${deviceId} = ${displayState.pageZoom}%`);
+        }
         
       } else if (topic.includes('/page_url/state') || topic.includes('/page_url/status')) {
+        const oldUrl = displayState.pageUrl;
         displayState.pageUrl = payloadStr;
         // Extract room name from the URL
         const roomMatch = payloadStr.match(/\/single-room\/([^/?#]+)/);
         if (roomMatch) {
           displayState.room = roomMatch[1];
-          console.log(`[Touchkio] Page URL updated: ${deviceId} = ${payloadStr} (room: ${displayState.room})`);
-        } else {
-          console.log(`[Touchkio] Page URL updated: ${payloadStr}`);
+        }
+        if (oldUrl !== payloadStr) {
+          if (roomMatch) {
+            console.log(`[Touchkio] Page URL updated: ${deviceId} = ${payloadStr} (room: ${displayState.room})`);
+          } else {
+            console.log(`[Touchkio] Page URL updated: ${payloadStr}`);
+          }
+        }
+
+        // Try to capture initial config when an app page URL arrives
+        if (!desiredConfig.has(deviceId)) {
+          captureInitialConfig(deviceId);
         }
         
       } else if (topic.includes('/processor_usage/state') || topic.includes('/processor_usage/status')) {
@@ -189,8 +413,11 @@ function subscribeTouchkioStates() {
         displayState.uptime = parseFloat(payload);
         
       } else if (topic.includes('/network_address/state') || topic.includes('/network_address/status')) {
+        const oldAddress = displayState.networkAddress;
         displayState.networkAddress = payloadStr;
-        console.log(`[Touchkio] Network address updated: ${deviceId} = ${payloadStr}`);
+        if (oldAddress !== payloadStr) {
+          console.log(`[Touchkio] Network address updated: ${deviceId} = ${payloadStr}`);
+        }
         
       } else if (topic.includes('/errors/attributes')) {
         // Parse error log and check for unsupported hardware features
@@ -214,12 +441,18 @@ function subscribeTouchkioStates() {
             });
           });
           
-          // Only log when actual errors are present, not just info messages
+          // Only log when error state changes for this device (avoid spam)
           const hasErrors = Object.values(errorData).some(logs => 
             logs.some(log => Object.keys(log)[0] === 'ERROR')
           );
-          if (hasErrors) {
-            console.log(`[Touchkio] Errors detected for ${deviceId}`);
+          const hadErrors = lastErrorState.get(deviceId) || false;
+          if (hasErrors !== hadErrors) {
+            lastErrorState.set(deviceId, hasErrors);
+            if (hasErrors) {
+              console.log(`[Touchkio] Errors detected for ${deviceId}`);
+            } else {
+              console.log(`[Touchkio] Errors cleared for ${deviceId}`);
+            }
           }
         } catch (e) {
           console.error(`[Touchkio] Failed to parse error data for ${deviceId}:`, e);
@@ -317,6 +550,7 @@ function sendBrightnessCommand(hostname, brightness) {
   
   if (success) {
     console.log(`[Touchkio] Sent brightness command to ${hostname} (${deviceId}): ${value}`);
+    setDesiredValue(deviceId, 'brightness', value);
   }
   
   return success;
@@ -348,6 +582,7 @@ function sendKioskCommand(hostname, status) {
   
   if (success) {
     console.log(`[Touchkio] Sent kiosk command to ${hostname} (${deviceId}): ${status}`);
+    setDesiredValue(deviceId, 'kioskStatus', status);
   }
   
   return success;
@@ -379,6 +614,7 @@ function sendThemeCommand(hostname, theme) {
   
   if (success) {
     console.log(`[Touchkio] Sent theme command to ${hostname} (${deviceId}): ${theme}`);
+    setDesiredValue(deviceId, 'theme', theme);
   }
   
   return success;
@@ -406,6 +642,7 @@ function sendVolumeCommand(hostname, volume) {
   
   if (success) {
     console.log(`[Touchkio] Sent volume command to ${hostname} (${deviceId}): ${value}`);
+    setDesiredValue(deviceId, 'volume', value);
   }
   
   return success;
@@ -459,6 +696,7 @@ function sendPageZoomCommand(hostname, zoom) {
   
   if (success) {
     console.log(`[Touchkio] Sent page zoom command to ${hostname} (${deviceId}): ${value}%`);
+    setDesiredValue(deviceId, 'pageZoom', value);
   }
   
   return success;
@@ -485,6 +723,7 @@ function sendPageUrlCommand(hostname, url) {
   
   if (success) {
     console.log(`[Touchkio] Sent page URL command to ${hostname} (${deviceId}): ${url}`);
+    setDesiredValue(deviceId, 'pageUrl', url);
   }
   
   return success;
@@ -696,6 +935,7 @@ function getDisplayStates() {
   return Array.from(displayStates.entries()).map(([deviceId, state]) => ({
     hostname: state.hostname || deviceId,
     deviceId,
+    hasDesiredConfig: desiredConfig.has(deviceId),
     ...state
   }));
 }

@@ -6,6 +6,7 @@ import React from 'react';
 
 const BackupTab = ({
   // Data
+  isActive,
   backupPayloadText,
   backupMessage,
   backupMessageType,
@@ -19,6 +20,7 @@ const BackupTab = ({
   onImport
 }) => {
   return (
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
     <div className="admin-card" id="ops-backup">
       <div className="admin-form-group">
         <label htmlFor="backupPayloadText">{t.backupPayloadLabel}</label>
@@ -45,6 +47,7 @@ const BackupTab = ({
           {backupMessage}
         </div>
       )}
+    </div>
     </div>
   );
 };

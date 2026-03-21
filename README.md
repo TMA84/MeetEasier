@@ -79,7 +79,7 @@ In the event of wanting to commercially distribute a closed source modification 
 
 ## Version
 
-**Current Version:** 1.7.29
+**Current Version:** 1.7.51
 
 For detailed version history and changelog, see [CHANGELOG.md](CHANGELOG.md).
 
@@ -102,7 +102,7 @@ Demo mode activates automatically when no Microsoft Graph API credentials are co
 
 This application requires:
 
-- **Node.js 20+** and **npm 9+**
+- **Node.js 18+** and **npm 9+**
 - Microsoft Graph API (Microsoft 365) — *or use [Demo Mode](#demo-mode) without any API credentials*
 - Conference room mailboxes organized in room lists
 - A registered application in Azure AD (see [here](#setup-the-application-in-microsoft-365) for more information)
@@ -127,9 +127,9 @@ This application requires:
 
 ## Installation
 
-1. **Prerequisites**: Ensure Node.js 20+ and npm 9+ are installed
+1. **Prerequisites**: Ensure Node.js 18+ and npm 9+ are installed
    ```bash
-   node --version  # Should be 20+
+   node --version  # Should be 18+
    npm --version   # Should be 9+
    ```
 
@@ -294,6 +294,8 @@ For production, prefer setting a secure token via environment/secrets manager.
 - `app/startup-validation.js` : Startup configuration validator (checks OAuth, API token, polling, webhooks)
 - `app/demo-data.js` : Demo data generator (rooms & meetings without Graph API)
 - `app/wifi-manager.js` : WiFi configuration and QR code management
+- `app/cert-generator.js` : Self-signed X.509 certificate generator for OAuth certificate-based authentication
+- `app/touchkio.js` : MQTT Power Bridge for Touchkio displays (auto-discovery, control, scheduling, desired config persistence)
 - `app/socket-controller.js` : Real-time updates via Socket.IO
 - `config/` : All server side configuration settings
 - `data/` : Configuration files (wifi-config.json, logo-config.json)
@@ -488,6 +490,22 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 - Protected by API token authentication
 - Set API_TOKEN in .env file
 - Token required in Authorization header or X-API-Token header
+- CSRF protection for cookie-based admin sessions
+- Rate limiting on authentication, write operations, and booking endpoints
+- Timing-safe token comparison to prevent timing attacks
+
+**Display IP Whitelist:**
+- Restrict display access to specific IP addresses or CIDR ranges
+- Localized error pages (German/English) for rejected clients
+- Supports IPv4, IPv6, and IPv4-mapped IPv6 addresses
+- Configurable via admin panel under Operations → System
+
+**Maintenance Mode:**
+- Block write API requests during maintenance
+- Custom maintenance message
+- Read-only and health endpoints remain accessible
+- Warning banner displayed in admin panel when maintenance mode is active
+- Configurable via admin panel or environment variables
 
 **Environment Variable Configuration:**
 - Settings can be configured via .env file
@@ -513,7 +531,11 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 **Booking:**
 - `GET /api/booking-config` - Get booking configuration (public)
 - `POST /api/booking-config` - Update booking configuration (requires token)
-- `POST /api/book/:roomEmail` - Book a room (public, requires room availability)
+- `POST /api/rooms/:roomEmail/book` - Book a room (display origin check)
+- `POST /api/extend-meeting` - Extend a running meeting (display origin check)
+- `POST /api/end-meeting` - End a meeting early (display origin check)
+- `GET /api/check-in-status` - Get check-in status for a meeting (display origin check)
+- `POST /api/check-in` - Perform meeting check-in (display origin check)
 
 **OAuth Certificate:**
 - `GET /api/oauth-certificate` - Get certificate metadata (requires token)
@@ -523,6 +545,56 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 
 **Configuration Locks:**
 - `GET /api/config-locks` - Check which settings are locked by environment variables (public)
+
+**System & Operations:**
+- `GET /api/system-config` - Get system configuration (requires token)
+- `POST /api/system-config` - Update system configuration (requires token)
+- `GET /api/search-config` - Get search configuration (public)
+- `POST /api/search-config` - Update search configuration (requires token)
+- `GET /api/rate-limit-config` - Get rate limit configuration (public)
+- `POST /api/rate-limit-config` - Update rate limit configuration (requires token)
+- `GET /api/colors` - Get color configuration (public)
+- `POST /api/colors` - Update color configuration (requires token)
+- `POST /api/maintenance` - Update maintenance mode (requires token)
+- `GET /api/version` - Get application version (requires token)
+- `GET /api/audit-logs` - Get audit log entries (requires token)
+- `GET /api/config/backup` - Export configuration backup (requires token)
+- `POST /api/config/restore` - Restore configuration from backup (requires token)
+
+**Internationalization:**
+- `GET /api/i18n` - Get i18n configuration (public)
+- `POST /api/i18n` - Update i18n configuration (requires token)
+- `POST /api/i18n/auto-translate` - Auto-translate texts (requires token)
+- `GET /api/translation-api-config` - Get translation API config (public)
+- `POST /api/translation-api-config` - Update translation API config (requires token)
+
+**Display Management:**
+- `GET /api/displays` - Get merged displays (Socket.IO + MQTT) (requires token)
+- `GET /api/connected-clients` - Get Socket.IO-connected clients (requires token)
+- `DELETE /api/connected-clients/:clientId` - Remove disconnected client (requires token)
+
+**MQTT:**
+- `GET /api/mqtt-config` - Get MQTT configuration (requires token)
+- `POST /api/mqtt-config` - Update MQTT configuration (requires token)
+- `GET /api/mqtt-status` - Get MQTT connection status (requires token)
+- `GET /api/mqtt-displays` - Get MQTT display states (requires token)
+- `POST /api/mqtt-power-trigger/:hostname` - Send power command (requires token)
+- `POST /api/mqtt-refresh-all` - Refresh all displays (requires token)
+- `POST /api/mqtt-reboot-all` - Reboot all displays (requires token)
+
+**Power Management:**
+- `GET /api/power-management` - Get global power config (requires token)
+- `POST /api/power-management` - Update global power config (requires token)
+- `GET /api/power-management/:clientId` - Get display power config (display origin check)
+- `POST /api/power-management/:clientId` - Update display power config (requires token)
+- `DELETE /api/power-management/:clientId` - Delete display power config (requires token)
+
+**Admin Authentication:**
+- `GET /api/admin/bootstrap-status` - Check if initial setup needed (public)
+- `POST /api/admin/bootstrap-token` - Create initial admin token (public, rate limited)
+- `POST /api/admin/login` - Admin login (public, rate limited)
+- `POST /api/admin/logout` - Admin logout (public)
+- `GET /api/admin/session` - Check session validity (requires token)
 
 ---
 
@@ -565,6 +637,57 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 - WiFi configuration changes propagate immediately
 - Logo changes update across all displays
 - No page refresh required
+
+### Meeting Management
+
+- Extend running meetings by 5–240 minutes (in 5-minute steps)
+- End meetings early with a single action
+- Conflict detection prevents extending into subsequent bookings
+- End-of-day boundary enforcement
+- Multi-language error messages (German/English)
+
+### Check-In System
+
+- Optional meeting check-in requirement
+- Configurable early check-in window (minutes before start)
+- Configurable check-in expiry window (minutes after start)
+- Early check-in moves meeting start time to now
+- Auto-release for no-shows (optional)
+- Per-room and per-group configuration
+
+### MQTT Display Management
+
+- Remote control of TouchKio displays via MQTT
+- Power on/off, brightness, kiosk mode, theme, volume control
+- Page URL and zoom management
+- Keyboard visibility control
+- Refresh, reboot, and shutdown commands
+- Bulk operations (refresh all, reboot all)
+- Display health monitoring (CPU, memory, temperature, uptime)
+- Auto-discovery of MQTT-connected devices
+- Merged display view combining Socket.IO and MQTT connections
+- Desired config persistence: brightness, URL, zoom, volume, and theme settings are saved per device and automatically re-applied after device reconnect
+- Auto-capture of initial device configuration: new devices get their current state saved as baseline once they load an app page (`/single-room/`, `/room-minimal/`, or root path including query strings). Devices without an app URL remain marked as "NEW" in the admin panel.
+- Error log analysis and hardware compatibility detection (unsupported display power/brightness)
+
+### Power Management
+
+- Per-display and global power management configuration
+- Three modes: DPMS, browser-based, MQTT
+- Scheduled power on/off with weekend mode support
+
+### Automatic Translation
+
+- Translate admin and maintenance texts via external API
+- Supports Google Translate API and LibreTranslate-compatible APIs
+- Batch translation with fallback strategies
+- Configurable via admin panel or environment variables
+
+### Configuration Backup & Restore
+
+- Export entire runtime configuration as JSON backup
+- Restore from backup with automatic conflict handling
+- Audit-logged for traceability
 
 ### URL-Based Filtering
 

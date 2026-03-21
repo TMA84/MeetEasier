@@ -343,9 +343,9 @@ Für die Verwaltung von 20+ Raspberry Pis empfehlen wir:
 
 Beispiel Ansible Playbook auf Anfrage verfügbar.
 
-## Alternative: MQTT-basiertes Power Management (Touchkio)
+## MQTT-basiertes Power Management (Touchkio) ✅ Implementiert
 
-Wenn Sie **Touchkio** auf Ihren Raspberry Pis verwenden, können Sie das Display über MQTT steuern. Dies ist eine elegantere Lösung als DPMS, da Touchkio bereits MQTT-Integration bietet.
+Wenn Sie **Touchkio** auf Ihren Raspberry Pis verwenden, steuert MeetEasier die Displays direkt über MQTT. Das Modul `app/touchkio.js` übernimmt die vollständige Kommunikation.
 
 ### Vorteile von MQTT:
 - ✅ Zentrale Steuerung über MQTT Broker
@@ -354,155 +354,49 @@ Wenn Sie **Touchkio** auf Ihren Raspberry Pis verwenden, können Sie das Display
 - ✅ Geringerer Netzwerk-Traffic
 - ✅ Bessere Skalierbarkeit für viele Displays
 - ✅ Integration mit Home Assistant, Node-RED, etc.
+- ✅ Desired Config Persistence: Einstellungen werden pro Gerät gespeichert und nach Reconnect automatisch erneut angewendet
 
 ### Architektur:
 
 ```
-MeetEasier Server
+MeetEasier Server (app/touchkio.js)
        ↓
   MQTT Broker (z.B. Mosquitto)
        ↓
   Touchkio Displays (Raspberry Pi)
 ```
 
-### Geplante Features (v1.6.0):
+### Unterstützte Features:
 
-1. **MQTT-Modus** als dritte Power Management Option:
-   - Browser-Modus (alle Geräte)
-   - DPMS-Modus (Raspberry Pi mit vcgencmd)
-   - **MQTT-Modus** (Touchkio Displays)
+| Feature | Command Topic | Werte |
+|---|---|---|
+| Power | `touchkio/{deviceId}/display/power/set` | `ON`, `OFF` |
+| Brightness | `touchkio/{deviceId}/display/brightness/set` | `0-100` |
+| Kiosk Mode | `touchkio/{deviceId}/kiosk/set` | `Framed`, `Fullscreen`, `Maximized`, `Minimized` |
+| Theme | `touchkio/{deviceId}/theme/set` | `Light`, `Dark` |
+| Volume | `touchkio/{deviceId}/volume/set` | `0-100` |
+| Keyboard | `touchkio/{deviceId}/keyboard/set` | `ON`, `OFF` |
+| Page Zoom | `touchkio/{deviceId}/page_zoom/set` | `25-400` |
+| Page URL | `touchkio/{deviceId}/page_url/set` | URL string |
+| Refresh | `touchkio/{deviceId}/refresh/execute` | `PRESS` |
+| Reboot | `touchkio/{deviceId}/reboot/execute` | `PRESS` |
+| Shutdown | `touchkio/{deviceId}/shutdown/execute` | `PRESS` |
 
-2. **MQTT-Konfiguration im Admin-Panel**:
-   - MQTT Broker URL
-   - Authentifizierung (Username/Password)
-   - Topic-Struktur konfigurierbar
-   - TLS/SSL Support
+### Desired Config Persistence:
 
-3. **Automatische Erkennung**:
-   - System erkennt Touchkio-Displays automatisch
-   - Empfiehlt MQTT-Modus für Touchkio
+Einstellungen für Brightness, Page URL, Page Zoom, Volume und Theme werden pro Gerät in `data/touchkio-desired-config.json` gespeichert. Wenn ein Gerät sich neu verbindet, werden die gespeicherten Einstellungen automatisch mit kurzer Verzögerung erneut gesendet.
 
-4. **Topic-Struktur**:
-   ```
-   # Touchkio verwendet Home Assistant MQTT Discovery Format:
-   
-   # State Topic (Touchkio → Broker)
-   # Unterstützt sowohl /state als auch /status Suffix
-   homeassistant/light/touchkio_{hostname}/display/state
-   homeassistant/light/touchkio_{hostname}/display/status
-   Payload: {"state": "ON", "brightness": 255}
-   
-   # Command Topic (MeetEasier → Touchkio)
-   homeassistant/light/touchkio_{hostname}/display/set
-   Payload: {"state": "OFF"}  # oder {"state": "ON", "brightness": 200}
-   
-   # Hostname ist der Raspberry Pi Hostname (z.B. "raspberrypi" oder "saturn")
-   # Beispiel: homeassistant/light/touchkio_saturn/display/set
-   
-   # Hinweis: MeetEasier empfängt automatisch beide Topic-Formate (/state und /status)
-   # für maximale Kompatibilität mit verschiedenen Touchkio Firmware-Versionen
-   ```
+### Auto-Capture der Initialkonfiguration:
 
-### Temporäre Lösung (bis v1.6.0):
+Wenn sich ein neues Gerät erstmals verbindet und eine App-Seite anzeigt (`/single-room/`, `/room-minimal/` oder Root-Pfad inkl. Query-Parameter), wird dessen aktuelle Konfiguration (Brightness, URL, Zoom, Volume, Theme, Kiosk-Status) automatisch als Baseline gespeichert. Geräte ohne App-URL bleiben im Admin Panel als "NEW" markiert, bis sie eine gültige Seite laden. Die automatisch erfasste Konfiguration enthält das Feld `source: 'auto-captured'`.
 
-Sie können bereits jetzt MQTT mit einem eigenen Skript nutzen:
+### Konfiguration:
 
-```bash
-#!/bin/bash
-# meeteasier-mqtt-bridge.sh
-# Bridge zwischen MeetEasier Power Management und Touchkio MQTT
-
-MQTT_BROKER="mqtt://your-broker:1883"
-MQTT_USER="meeteasier"
-MQTT_PASS="your-password"
-SERVER_URL="https://meeteasier.your-domain.com"
-ROOM_NAME="Saturn"
-HOSTNAME=$(hostname)  # z.B. "saturn" oder "raspberrypi"
-
-# Touchkio MQTT Topics (Home Assistant Discovery Format)
-TOUCHKIO_COMMAND_TOPIC="homeassistant/light/touchkio_${HOSTNAME}/display/set"
-TOUCHKIO_STATE_TOPIC="homeassistant/light/touchkio_${HOSTNAME}/display/state"
-
-echo "MeetEasier → Touchkio MQTT Bridge"
-echo "Hostname: $HOSTNAME"
-echo "Command Topic: $TOUCHKIO_COMMAND_TOPIC"
-
-# Fetch schedule from MeetEasier and publish MQTT commands
-while true; do
-  LOCAL_IP=$(hostname -I | awk '{print $1}')
-  CLIENT_ID="${LOCAL_IP}_${ROOM_NAME}"
-  
-  # Fetch power management config from MeetEasier
-  CONFIG=$(curl -s "$SERVER_URL/api/power-management/$CLIENT_ID")
-  
-  if [ $? -eq 0 ] && [ -n "$CONFIG" ]; then
-    # Parse JSON (requires jq)
-    MODE=$(echo "$CONFIG" | jq -r '.mode // "browser"')
-    ENABLED=$(echo "$CONFIG" | jq -r '.schedule.enabled // false')
-    START_TIME=$(echo "$CONFIG" | jq -r '.schedule.startTime // "20:00"')
-    END_TIME=$(echo "$CONFIG" | jq -r '.schedule.endTime // "07:00"')
-    WEEKEND_MODE=$(echo "$CONFIG" | jq -r '.schedule.weekendMode // false')
-    
-    # Only proceed if MQTT mode and schedule is enabled
-    if [ "$MODE" = "mqtt" ] && [ "$ENABLED" = "true" ]; then
-      CURRENT_TIME=$(date +%H:%M)
-      DAY_OF_WEEK=$(date +%u)  # 1=Monday, 7=Sunday
-      
-      SHOULD_BE_OFF=false
-      
-      # Check weekend mode
-      if [ "$WEEKEND_MODE" = "true" ] && ([ "$DAY_OF_WEEK" = "6" ] || [ "$DAY_OF_WEEK" = "7" ]); then
-        SHOULD_BE_OFF=true
-      else
-        # Check if current time is in off-range
-        # (Simplified - for production use proper time comparison)
-        CURRENT_MINUTES=$((10#${CURRENT_TIME:0:2} * 60 + 10#${CURRENT_TIME:3:2}))
-        START_MINUTES=$((10#${START_TIME:0:2} * 60 + 10#${START_TIME:3:2}))
-        END_MINUTES=$((10#${END_TIME:0:2} * 60 + 10#${END_TIME:3:2}))
-        
-        if [ $START_MINUTES -gt $END_MINUTES ]; then
-          # Overnight range
-          if [ $CURRENT_MINUTES -ge $START_MINUTES ] || [ $CURRENT_MINUTES -lt $END_MINUTES ]; then
-            SHOULD_BE_OFF=true
-          fi
-        else
-          # Same-day range
-          if [ $CURRENT_MINUTES -ge $START_MINUTES ] && [ $CURRENT_MINUTES -lt $END_MINUTES ]; then
-            SHOULD_BE_OFF=true
-          fi
-        fi
-      fi
-      
-      # Publish MQTT command to Touchkio
-      if [ "$SHOULD_BE_OFF" = true ]; then
-        echo "$(date): Turning display OFF"
-        mosquitto_pub -h $MQTT_BROKER -u $MQTT_USER -P $MQTT_PASS \
-          -t "$TOUCHKIO_COMMAND_TOPIC" \
-          -m '{"state":"OFF"}'
-      else
-        echo "$(date): Turning display ON"
-        mosquitto_pub -h $MQTT_BROKER -u $MQTT_USER -P $MQTT_PASS \
-          -t "$TOUCHKIO_COMMAND_TOPIC" \
-          -m '{"state":"ON","brightness":255}'
-      fi
-    fi
-  else
-    echo "$(date): Failed to fetch configuration from MeetEasier"
-  fi
-  
-  sleep 60
-done
-```
-
-### Interesse an MQTT-Integration?
-
-Wenn Sie MQTT-basiertes Power Management benötigen, können wir dies priorisieren. Bitte erstellen Sie ein GitHub Issue mit:
-- Touchkio Version
-- MQTT Broker (Mosquitto, HiveMQ, etc.)
-- Gewünschte Topic-Struktur
-- Anzahl der Displays
-
-**Geschätzte Entwicklungszeit**: 2-3 Tage für vollständige MQTT-Integration
+1. MQTT im Admin Panel aktivieren (Operations → MQTT)
+2. Broker URL, Username und Password konfigurieren
+3. Touchkio Displays verbinden sich automatisch
+4. Power Management im Admin Panel konfigurieren (Operations → Devices)
+5. MQTT-Modus als Power Management Modus wählen
 
 ### Weitere Informationen:
 

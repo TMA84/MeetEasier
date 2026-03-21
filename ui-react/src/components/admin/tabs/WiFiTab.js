@@ -5,6 +5,7 @@
 import React from 'react';
 
 const WiFiTab = ({
+  isActive,
   wifiLocked,
   t,
   currentSsid,
@@ -18,7 +19,7 @@ const WiFiTab = ({
   onSubmit
 }) => {
   return (
-    <div className={`admin-tab-content ${true ? 'active' : ''}`}>
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
       {!wifiLocked && (
         <div className="admin-section">
           <h2>{t.wifiSectionTitle}</h2>

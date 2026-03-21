@@ -6,6 +6,7 @@ import React from 'react';
 
 const AuditTab = ({
   // Data
+  isActive,
   auditLogs,
   auditMessage,
   auditMessageType,
@@ -17,6 +18,7 @@ const AuditTab = ({
   onLoadLogs
 }) => {
   return (
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
     <div className="admin-card" id="ops-audit">
       <div className="admin-form-divider"></div>
 
@@ -42,6 +44,7 @@ const AuditTab = ({
           <pre className="admin-json-pre">{JSON.stringify(auditLogs, null, 2)}</pre>
         </div>
       )}
+    </div>
     </div>
   );
 };

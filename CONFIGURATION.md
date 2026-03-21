@@ -90,6 +90,10 @@ SEARCH_MAXROOMS=50
 # Maximum number of appointments per room
 # Default: 100
 SEARCH_MAXITEMS=100
+
+# Polling interval for room data refresh (milliseconds)
+# Default: 60000 (1 minute), minimum: 5000
+SEARCH_POLL_INTERVAL_MS=60000
 ```
 
 **Performance considerations:**
@@ -284,7 +288,173 @@ ENABLE_BOOKING=true
 
 ---
 
-## Admin Panel Configuration
+#### Graph Fetch Configuration
+
+```env
+# Timeout for Graph API requests (milliseconds)
+# Default: 10000, minimum: 1000
+GRAPH_FETCH_TIMEOUT_MS=10000
+
+# Number of retry attempts for failed Graph API requests
+# Default: 2, minimum: 0
+GRAPH_FETCH_RETRY_ATTEMPTS=2
+
+# Base delay between retries (milliseconds, exponential backoff)
+# Default: 250, minimum: 50
+GRAPH_FETCH_RETRY_BASE_MS=250
+```
+
+**Retry behavior:**
+- Retries on: timeouts, network errors, HTTP 429 (rate limit), HTTP 5xx
+- Uses exponential backoff: `retryBaseMs * 2^attempt`
+- Non-retryable errors (4xx except 429) fail immediately
+
+---
+
+#### Graph Webhook Configuration
+
+```env
+# Enable Microsoft Graph webhook notifications for real-time calendar updates
+# Default: false
+GRAPH_WEBHOOK_ENABLED=false
+
+# Shared secret for webhook notification validation
+GRAPH_WEBHOOK_CLIENT_STATE=your-webhook-secret
+
+# Comma-separated list of allowed IP addresses for webhook notifications
+GRAPH_WEBHOOK_ALLOWED_IPS=52.159.23.0,52.159.24.0
+```
+
+**Security:** Both `GRAPH_WEBHOOK_CLIENT_STATE` and `GRAPH_WEBHOOK_ALLOWED_IPS` must be configured when webhooks are enabled. Notifications with mismatched `clientState` are silently ignored.
+
+---
+
+#### Reverse Proxy Configuration
+
+```env
+# Trust X-Forwarded-For header from reverse proxy (ALB, Nginx, etc.)
+# When enabled, the rightmost IP in X-Forwarded-For is used as client IP
+# Default: false
+TRUST_REVERSE_PROXY=false
+```
+
+**Security:** Only enable this when running behind a trusted reverse proxy. The rightmost entry in `X-Forwarded-For` is used to prevent client-side spoofing.
+
+---
+
+#### MQTT Configuration
+
+```env
+# Enable MQTT integration for display management (TouchKio devices)
+# Default: false
+MQTT_ENABLED=false
+
+# MQTT broker URL
+MQTT_BROKER_URL=mqtt://localhost:1883
+
+# MQTT authentication
+MQTT_USERNAME=your-mqtt-user
+MQTT_PASSWORD=your-mqtt-password
+```
+
+**Features:**
+- Remote display management (power, brightness, kiosk mode, theme, volume)
+- Display health monitoring (CPU, memory, temperature, uptime)
+- Bulk operations (refresh all, reboot all)
+- Auto-discovery of TouchKio devices
+
+---
+
+#### Automatic Translation Configuration
+
+```env
+# Enable automatic translation of admin and maintenance texts
+# Default: false
+AUTO_TRANSLATE_ENABLED=false
+
+# Translation API URL (Google Translate API or LibreTranslate-compatible)
+AUTO_TRANSLATE_URL=https://translation.googleapis.com/language/translate/v2
+
+# Translation API key
+AUTO_TRANSLATE_API_KEY=your-api-key
+
+# Translation request timeout (milliseconds)
+# Default: 5000
+AUTO_TRANSLATE_TIMEOUT_MS=5000
+```
+
+**Supported APIs:**
+- Google Translate API (`translation.googleapis.com`)
+- LibreTranslate-compatible APIs
+
+---
+
+#### Check-In Configuration
+
+```env
+# Enable meeting check-in feature
+# Default: false
+CHECKIN_ENABLED=false
+
+# Require check-in for external organizers only
+# Default: false
+CHECKIN_REQUIRED_FOR_EXTERNAL=false
+
+# Minutes before meeting start when check-in opens
+# Default: 10
+CHECKIN_EARLY_MINUTES=10
+
+# Minutes after meeting start when check-in window closes
+# Default: 15
+CHECKIN_WINDOW_MINUTES=15
+
+# Automatically release room if no check-in (no-show)
+# Default: false
+CHECKIN_AUTO_RELEASE_NO_SHOW=false
+```
+
+---
+
+#### Maintenance Mode
+
+```env
+# Enable maintenance mode (blocks write API requests)
+# Default: false
+MAINTENANCE_MODE=false
+
+# Custom maintenance message displayed to users
+MAINTENANCE_MESSAGE=System maintenance in progress
+```
+
+---
+
+#### Rate Limiting
+
+```env
+# General API rate limit window (milliseconds)
+RATE_LIMIT_API_WINDOW_MS=60000
+
+# Maximum requests per window for general API
+RATE_LIMIT_API_MAX=100
+
+# Write operation rate limit window (milliseconds)
+RATE_LIMIT_WRITE_WINDOW_MS=60000
+
+# Maximum write requests per window
+RATE_LIMIT_WRITE_MAX=30
+
+# Authentication rate limit window (milliseconds)
+RATE_LIMIT_AUTH_WINDOW_MS=900000
+
+# Maximum auth attempts per window
+RATE_LIMIT_AUTH_MAX=10
+
+# Booking rate limit window (milliseconds)
+RATE_LIMIT_BOOKING_WINDOW_MS=60000
+
+# Maximum booking requests per window
+RATE_LIMIT_BOOKING_MAX=10
+```
 
 The admin panel provides a web interface for managing runtime configuration.
 
@@ -383,13 +553,15 @@ WIFI:T:WPA;S:YourSSID;P:YourPassword;;
 **Client Secret Mode:**
 - Client ID, Tenant ID, and Client Secret fields
 - Secret is encrypted before writing to disk
+- Changes take effect on the next polling cycle without a server restart
 
 **Certificate Mode:**
 - Generate a self-signed X.509 certificate directly from the admin panel
-- View active certificate details (thumbprint, common name, validity dates)
+- View active certificate details (SHA-256 and SHA-1 thumbprints, common name, validity dates)
 - Download the public `.pem` file for upload to Azure AD
 - Delete the certificate to revert to client secret authentication
 - Certificates don't expire annually like client secrets (default validity: 3 years)
+- Changes take effect on the next polling cycle without a server restart
 
 **Graph Runtime Settings (when not locked):**
 - Webhook enabled/disabled, client state, allowed IPs
@@ -482,10 +654,24 @@ All runtime configuration is stored in JSON files:
 
 ```
 data/
-├── wifi-config.json      # WiFi settings
-├── logo-config.json      # Logo URLs
-├── sidebar-config.json   # Sidebar settings
-└── booking-config.json   # Booking settings
+├── wifi-config.json        # WiFi settings
+├── logo-config.json        # Logo URLs
+├── sidebar-config.json     # Sidebar settings
+├── booking-config.json     # Booking settings
+├── oauth-config.json       # OAuth credentials (client ID, authority, encrypted secret)
+├── oauth-certificate.json  # Self-signed certificate for OAuth (encrypted private key, SHA-256/SHA-1 thumbprints, validity)
+├── system-config.json      # System settings (webhooks, graph fetch, IP whitelist, demo mode)
+├── search-config.json      # Search parameters (maxDays, maxRooms, pollInterval)
+├── rate-limit-config.json  # Rate limit settings per endpoint category
+├── colors-config.json      # Color configuration (booking button, status colors)
+├── maintenance-config.json # Maintenance mode settings
+├── i18n-config.json        # Internationalization (maintenance messages, admin translations)
+├── mqtt-config.json        # MQTT broker and display settings
+├── touchkio-desired-config.json # Persisted desired display settings (brightness, URL, zoom, volume, theme per device)
+├── translation-api-config.json # Translation API settings
+├── api-token-config.json   # Admin and WiFi API token configuration
+├── cache.json              # Cached room data
+└── audit-log.jsonl         # Audit log (JSONL format, one JSON entry per line)
 ```
 
 **Format examples:**
@@ -666,6 +852,204 @@ socket.on('wifiConfigUpdated', (config) => {
 - Returns: Booking confirmation
 - Checks for conflicts before booking
 
+**POST /api/extend-meeting**
+- Body: `{ "roomEmail": "string", "appointmentId": "string", "minutes": number, "roomGroup"?: "string" }`
+- Returns: `{ "success": true, "newEndTime": "ISO8601" }`
+- Minutes must be 5–240 in steps of 5
+- Checks for conflicts with subsequent meetings and end of day
+
+**POST /api/end-meeting**
+- Body: `{ "roomEmail": "string", "appointmentId": "string", "roomGroup"?: "string" }`
+- Returns: `{ "success": true, "newEndTime": "ISO8601" }`
+- Sets meeting end time to current time
+
+**GET /api/check-in-status**
+- Query: `?roomEmail=...&appointmentId=...&organizer=...&roomName=...&startTimestamp=...`
+- Returns: Check-in status (required, tooEarly, expired, checkedIn)
+
+**POST /api/check-in**
+- Body: `{ "roomEmail": "string", "appointmentId": "string", "organizer"?: "string", "roomName"?: "string", "startTimestamp"?: number }`
+- Returns: Updated check-in status
+- Moves meeting start to now on early check-in
+
+**GET /api/version**
+- Returns: `{ "version": "string", "name": "string" }` from package.json
+- Requires WiFi or admin API token
+
+**GET /api/oauth-config**
+- Returns: Current OAuth configuration (client ID, authority, has secret)
+
+**POST /api/oauth-config**
+- Body: `{ "clientId"?: "string", "authority"?: "string", "tenantId"?: "string", "clientSecret"?: "string" }`
+- Returns: Updated OAuth configuration
+- Locked when OAuth env variables are set
+- Refreshes MSAL client and triggers room data refresh
+
+**GET /api/api-token-config**
+- Returns: API token configuration status
+
+**POST /api/api-token-config**
+- Body: `{ "newToken"?: "string", "newWifiToken"?: "string" }`
+- Returns: Updated token configuration
+- Tokens must be at least 8 characters
+
+**GET /api/system-config**
+- Returns: Full system configuration
+
+**POST /api/system-config**
+- Body: Partial system config (webhook, graph fetch, HSTS, rate limit, display tracking, IP whitelist, demo mode, etc.)
+- Returns: Updated system configuration
+
+**GET /api/search-config**
+- Returns: Search configuration (maxDays, maxRooms, pollInterval, etc.)
+
+**POST /api/search-config**
+- Body: `{ "useGraphAPI"?: boolean, "maxDays"?: number, "maxRoomLists"?: number, "maxRooms"?: number, "maxItems"?: number, "pollIntervalMs"?: number }`
+- Returns: Updated search configuration
+
+**GET /api/rate-limit-config**
+- Returns: Rate limit configuration for all endpoint categories
+
+**POST /api/rate-limit-config**
+- Body: `{ "apiWindowMs"?: number, "apiMax"?: number, "writeWindowMs"?: number, "writeMax"?: number, "authWindowMs"?: number, "authMax"?: number, "bookingWindowMs"?: number, "bookingMax"?: number }`
+- Returns: Updated rate limit configuration
+
+**GET /api/colors**
+- Returns: Color configuration (booking button, status colors)
+
+**POST /api/colors**
+- Body: `{ "bookingButtonColor"?: "string", "statusAvailableColor"?: "string", "statusBusyColor"?: "string", "statusUpcomingColor"?: "string", "statusNotFoundColor"?: "string" }`
+- Returns: Updated color configuration
+
+**GET /api/i18n**
+- Returns: Internationalization configuration (maintenance messages, admin translations)
+
+**POST /api/i18n**
+- Body: `{ "maintenanceMessages"?: object, "adminTranslations"?: object }`
+- Returns: Updated i18n configuration
+
+**POST /api/i18n/auto-translate**
+- Body: `{ "targetLanguage": "string", "sourceLanguage"?: "string", "maintenanceSource": object, "adminSource": object }`
+- Returns: `{ "success": true, "maintenance": object, "admin": object }`
+- Translates texts via configured translation API
+
+**GET /api/translation-api-config**
+- Returns: Translation API configuration (public, no auth)
+
+**POST /api/translation-api-config**
+- Body: `{ "enabled"?: boolean, "url"?: "string", "apiKey"?: "string", "timeoutMs"?: number }`
+- Returns: Updated translation API configuration
+
+**GET /api/displays**
+- Returns: Merged display list (Socket.IO + MQTT) with connection status
+- Matches displays across protocols by IP, device ID
+
+**GET /api/connected-clients**
+- Returns: Socket.IO-connected display clients
+
+**DELETE /api/connected-clients/:clientId**
+- Removes a disconnected display client from tracking
+
+**GET /api/mqtt-config**
+- Returns: MQTT configuration (password excluded)
+
+**POST /api/mqtt-config**
+- Body: `{ "enabled"?: boolean, "brokerUrl"?: "string", "authentication"?: boolean, "username"?: "string", "password"?: "string", "discovery"?: object }`
+- Returns: Updated MQTT configuration
+- Restarts MQTT client when enabled status changes
+
+**GET /api/mqtt-status**
+- Returns: MQTT client connection status
+
+**GET /api/mqtt-displays**
+- Returns: MQTT display states (power, brightness, kiosk, theme, etc.)
+
+**POST /api/mqtt-power-trigger/:hostname**
+- Body: `{ "powerState"?: boolean, "brightness"?: number }`
+- Sends power command to a specific display
+
+**POST /api/mqtt-brightness/:hostname**
+- Body: `{ "brightness": number }`
+- Sends brightness command to a display
+
+**POST /api/mqtt-kiosk/:hostname**
+- Body: `{ "status": "string" }`
+- Sends kiosk status command to a display
+
+**POST /api/mqtt-theme/:hostname**
+- Body: `{ "theme": "string" }`
+- Sends theme command to a display
+
+**POST /api/mqtt-volume/:hostname**
+- Body: `{ "volume": number }`
+- Sends volume command to a display
+
+**POST /api/mqtt-page-url/:hostname**
+- Body: `{ "url": "string" }`
+- Sends page URL command to a display
+
+**POST /api/mqtt-page-zoom/:hostname**
+- Body: `{ "zoom": number }`
+- Sends page zoom command to a display
+
+**POST /api/mqtt-keyboard/:hostname**
+- Body: `{ "visible": boolean }`
+- Sends keyboard visibility command to a display
+
+**POST /api/mqtt-refresh/:hostname**
+- Sends refresh command to a specific display
+
+**POST /api/mqtt-reboot/:hostname**
+- Sends reboot command to a specific display
+
+**POST /api/mqtt-shutdown/:hostname**
+- Sends shutdown command to a specific display
+
+**POST /api/mqtt-refresh-all**
+- Sends refresh command to all connected displays
+
+**POST /api/mqtt-reboot-all**
+- Sends reboot command to all connected displays
+
+**GET /api/power-management**
+- Returns: Global power management configuration
+
+**POST /api/power-management**
+- Body: `{ "mode": "dpms"|"browser"|"mqtt", "schedule"?: object, "mqttHostname"?: "string" }`
+- Returns: Updated global power management configuration
+
+**GET /api/power-management/:clientId**
+- Returns: Power management configuration for a specific display (falls back to global)
+
+**POST /api/power-management/:clientId**
+- Body: `{ "mode": "dpms"|"browser"|"mqtt", "schedule"?: object, "mqttHostname"?: "string" }`
+- Returns: Updated display-specific power management configuration
+
+**DELETE /api/power-management/:clientId**
+- Deletes display-specific power management configuration (reverts to global)
+
+**Admin Authentication Endpoints:**
+
+**GET /api/admin/bootstrap-status**
+- Returns: `{ "requiresSetup": boolean, "lockedByEnv": boolean }`
+- Public endpoint to check if initial token setup is needed
+
+**POST /api/admin/bootstrap-token**
+- Body: `{ "token": "string" }` (min 8 characters)
+- Creates the initial admin API token during first setup
+- Rate limited
+
+**POST /api/admin/login**
+- Body: `{ "token": "string" }`
+- Validates token and sets auth cookie + CSRF cookie
+- Rate limited
+
+**POST /api/admin/logout**
+- Clears auth and CSRF cookies
+
+**GET /api/admin/session**
+- Returns: `{ "authenticated": true }` if session is valid
+
 ---
 
 ### OAuth Certificate Management API
@@ -682,7 +1066,8 @@ Manage self-signed certificates for Microsoft Graph API authentication as an alt
 ```json
 {
   "certificate": {
-    "thumbprintSHA256": "AB12CD34...",
+    "thumbprintSha256": "AB12CD34...",
+    "thumbprintSha1": "EF56AB78...",
     "commonName": "MeetEasier OAuth",
     "notBefore": "2026-03-20T00:00:00.000Z",
     "notAfter": "2029-03-20T00:00:00.000Z"
@@ -715,7 +1100,8 @@ curl http://localhost:8080/api/oauth-certificate \
 {
   "success": true,
   "certificate": {
-    "thumbprintSHA256": "AB12CD34...",
+    "thumbprintSha256": "AB12CD34...",
+    "thumbprintSha1": "EF56AB78...",
     "commonName": "MeetEasier OAuth",
     "notBefore": "2026-03-20T00:00:00.000Z",
     "notAfter": "2029-03-20T00:00:00.000Z"
@@ -727,6 +1113,7 @@ curl http://localhost:8080/api/oauth-certificate \
 - Requires a configured `API_TOKEN` (used as encryption key for the private key at rest)
 - MSAL clients are automatically refreshed to use the new certificate
 - Upload the downloaded `.pem` public certificate to your Azure AD app registration under "Certificates & secrets"
+- The SHA-1 thumbprint is included for Azure AD certificate matching compatibility
 
 **Example:**
 ```bash

@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.51] - 2026-03-21
+
+### Added
+- ColorsTab: native color picker input alongside hex text input for each color setting — allows visual color selection in addition to manual hex entry
+- Extracted `ApiTokenTab` component — dedicated admin panel tab for managing admin API token and WiFi API token
+
+### Removed
+- Removed unused `currentBookingButtonColor` display from BookingTab current config section — color configuration is managed exclusively in ColorsTab
+
+### Changed
+- Extracted all remaining inline tab content from `Admin.js` into dedicated components: DisplayTab, WiFiTab, LogoTab, BookingTab, ColorsTab, TranslationsTab — reduces Admin component size and improves maintainability
+- Wired all 11 operations tab components into `Admin.js` render — SystemTab, TranslationApiTab, OAuthTab, MaintenanceTab, ApiTokenTab, SearchTab, RateLimitTab, BackupTab, AuditTab, MqttTab, and DevicesTab now receive full props and callbacks from the parent component
+- All tab components now accept `isActive` prop for parent-controlled visibility instead of hardcoded `active` class
+- Touchkio MQTT state handlers now only log when a value actually changes — suppresses duplicate log messages for power, brightness, kiosk, theme, volume, keyboard, page zoom, page URL, network address, and error state updates
+- Touchkio error log deduplication: errors are only logged on state change (detected/cleared) instead of on every MQTT message
+
+### Fixed
+- Fixed admin panel tabs showing all content stacked instead of switching — tab components now correctly use `isActive` prop from parent for visibility control
+- Fixed OAuthTab.js syntax errors from broken JSX fragment nesting
+- Touchkio auto-capture URL pattern now correctly matches root URLs with query parameters
+
+## [1.7.50] - 2026-03-21
+
+### Added
+- Touchkio MQTT Power Bridge module (`touchkio.js`) — full rewrite as dedicated display controller with MQTT-based command and status management for Raspberry Pi kiosk displays
+- Automatic Touchkio display discovery via Home Assistant MQTT Discovery topics
+- Real-time display state tracking (power, brightness, kiosk status, theme, volume, page URL/zoom, keyboard visibility, system metrics)
+- Persistent desired config per device (`touchkio-desired-config.json`) — settings survive server restarts and are re-applied on device reconnect with staggered command delays
+- Auto-capture of initial device configuration — new devices get their current state (brightness, URL, zoom, volume, theme, kiosk) saved as baseline once they load an app page (single-room or flightboard), removing the "NEW" badge automatically. Devices without an app URL remain marked as new.
+- `hasDesiredConfig` flag included in Touchkio display state objects — indicates whether a device has persisted desired configuration
+- Scheduled power management with configurable off-times, overnight range support (crossing midnight), and weekend mode
+- Hardware compatibility detection via error log analysis (`powerUnsupported`, `brightnessUnsupported` flags)
+- System monitoring: CPU usage, memory usage, processor temperature, uptime, and network address tracking
+- Display control commands: power, brightness, kiosk mode, theme, volume, keyboard, page zoom, page URL, refresh, reboot, shutdown
+- Display error auto-recovery — single-room display automatically reloads after 10 seconds on render errors
+
+### Fixed
+- `sendPageUrlCommand` now persists the page URL to desired config after successful command — URL is re-applied on device reconnect, matching behavior of brightness, theme, volume, and zoom commands
+
 ## [1.7.49] - 2026-03-20
 
 ### Changed

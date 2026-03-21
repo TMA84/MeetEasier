@@ -5,6 +5,7 @@
 import React from 'react';
 
 const ApiTokenTab = ({
+  isActive,
   apiTokenLocked,
   wifiApiTokenLocked,
   t,
@@ -30,6 +31,7 @@ const ApiTokenTab = ({
   onWifiApiTokenSubmit
 }) => {
   return (
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
     <div className="admin-card" id="ops-api-token">
       <h3>{t.apiTokenConfigSectionTitle || 'API Tokens'}</h3>
       <div className="admin-current-config">
@@ -169,6 +171,7 @@ const ApiTokenTab = ({
       )}
 
       <div className="admin-form-divider"></div>
+    </div>
     </div>
   );
 };

@@ -5,6 +5,7 @@
 import React from 'react';
 
 const BookingTab = ({
+  isActive,
   bookingLocked,
   t,
   bookingPermissionMissing,
@@ -15,7 +16,6 @@ const BookingTab = ({
   currentCheckInEarlyMinutes,
   currentCheckInWindowMinutes,
   currentCheckInAutoReleaseNoShow,
-  currentBookingButtonColor,
   bookingLastUpdated,
   currentRoomFeatureFlags,
   currentRoomGroupFeatureFlags,
@@ -46,7 +46,7 @@ const BookingTab = ({
   onSubmit
 }) => {
   return (
-    <div className={`admin-tab-content ${true ? 'active' : ''}`}>
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
       {!bookingLocked && (
         <div className="admin-section">
           <h2>{t.bookingSectionTitle}</h2>
@@ -91,13 +91,7 @@ const BookingTab = ({
                 <span className="config-label">Auto-release on no-show</span>
                 <span className="config-value">{booleanLabel(currentCheckInAutoReleaseNoShow)}</span>
               </div>
-              <div className="config-item">
-                <span className="config-label">{t.bookingButtonColorLabel}</span>
-                <span className="config-value color-value-display">
-                  <span className="color-swatch-inline" style={{ backgroundColor: currentBookingButtonColor }}></span>
-                  {currentBookingButtonColor}
-                </span>
-              </div>
+
               {bookingPermissionMissing && (
                 <div className="config-item">
                   <span className="config-label">Status</span>

@@ -4,7 +4,7 @@
 ## Voraussetzungen
 Stellen Sie sicher, dass die folgenden Bedingungen erfüllt sind, bevor Sie mit der Installation fortfahren:
 
-- **Node.js** Version 20 oder höher
+- **Node.js** Version 18 oder höher
 - **npm** Version 9 oder höher
 - Eine bestehende Microsoft 365-Integration, einschließlich:
   - Microsoft Graph API Anmeldung

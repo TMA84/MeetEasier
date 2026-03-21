@@ -48,18 +48,9 @@ _OLD_TODO.md
 !/static/img/uploads/.gitkeep
 
 # Runtime configuration files (created via API or environment)
-/data/wifi-config.json
-/data/logo-config.json
-/data/audit-log.jsonl
-/data/maintenance-config.json
-/data/api-token-config.json
-/data/oauth-config.json
-/data/wifi-config.json
+/data/*.json
+/data/*.jsonl
 /data/.api-token-key
-/data/maintenance-config.json
-/data/mqtt-config.json
-/data/power-management-config.json
-/data/oauth-certificate.json
 # Generated runtime assets
 /static/img/wifi-qr.png
 
@@ -83,7 +74,6 @@ docker-compose.override.yml
 
 # Shrinkwrap (optional - some prefer to commit this)
 # npm-shrinkwrap.json
-data/maintenance-config.json
 
 # External Touchkio repository (submodule/clone)
 /touchkio/

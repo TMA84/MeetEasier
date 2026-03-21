@@ -46,14 +46,16 @@ homeassistant/button/rpi_1A4187/shutdown/execute          → "PRESS"
 - **Shutdown:** Device shutdown über `homeassistant/button/{deviceId}/shutdown/execute`
 - **Monitoring:** CPU, Memory, Temperature, Uptime
 
-### ❌ Noch nicht unterstützt
+### ✅ Vollständig unterstützt
 
-Diese Features sind im aktuellen Touchkio Home Assistant Format noch nicht verfügbar:
-- **Theme:** Light/Dark mode
-- **Volume:** Audio volume control
-- **Page Zoom:** Browser zoom level
-- **Page URL:** Navigate to URL
-- **Keyboard:** Virtual keyboard visibility
+Alle Touchkio Features werden jetzt unterstützt:
+- **Theme:** Light/Dark mode über `touchkio/{deviceId}/theme/set`
+- **Volume:** Audio volume (0-100) über `touchkio/{deviceId}/volume/set`
+- **Page Zoom:** Browser zoom (25-400%) über `touchkio/{deviceId}/page_zoom/set`
+- **Page URL:** Navigate to URL über `touchkio/{deviceId}/page_url/set`
+- **Keyboard:** Virtual keyboard ON/OFF über `touchkio/{deviceId}/keyboard/set`
+
+Zusätzlich werden Einstellungen (Brightness, Page URL, Page Zoom, Volume, Theme) pro Gerät in `data/touchkio-desired-config.json` persistiert und nach einem Geräte-Reconnect automatisch erneut angewendet.
 
 ## Hostname Mapping
 
@@ -71,6 +73,7 @@ Display States werden jetzt mit Device ID als Key gespeichert:
 displayStates.set("rpi_1A4187", {
   deviceId: "rpi_1A4187",
   hostname: "piosk",
+  hasDesiredConfig: true,
   power: "ON",
   brightness: 100,
   kioskStatus: "Fullscreen",
@@ -208,10 +211,10 @@ mosquitto_pub -h localhost -p 1883 -t "homeassistant/select/rpi_1A4187/kiosk/set
 
 ## Nächste Schritte
 
-1. **Theme Support hinzufügen:** Wenn Touchkio Theme über Home Assistant unterstützt
-2. **Volume Support hinzufügen:** Wenn Touchkio Volume über Home Assistant unterstützt
-3. **Page URL Support hinzufügen:** Wenn Touchkio URL Navigation über Home Assistant unterstützt
-4. **Page Zoom Support hinzufügen:** Wenn Touchkio Zoom über Home Assistant unterstützt
+Alle geplanten Features (Theme, Volume, Page URL, Page Zoom, Keyboard) sind jetzt implementiert. Mögliche Erweiterungen:
+1. **Device Information im Admin Panel anzeigen** (Modell, Seriennummer, SW-Version)
+2. **Update Management:** App-Updates über MQTT auslösen
+3. **Page Number Support:** Seitennavigation für Multi-Page Setups
 
 ## Device Information
 

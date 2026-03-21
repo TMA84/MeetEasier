@@ -5,6 +5,7 @@
 import React from 'react';
 
 const RateLimitTab = ({
+  isActive,
   rateLimitLocked,
   t,
   currentRateLimitApiWindowMs,
@@ -26,6 +27,7 @@ const RateLimitTab = ({
   onRateLimitSubmit
 }) => {
   return (
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
     <div className="admin-card" id="ops-ratelimit">
       {!rateLimitLocked && (
         <>
@@ -169,6 +171,7 @@ const RateLimitTab = ({
           <div className="admin-form-divider"></div>
         </>
       )}
+    </div>
     </div>
   );
 };

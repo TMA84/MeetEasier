@@ -6,6 +6,7 @@ import React from 'react';
 
 const SystemTab = ({
   // Data
+  isActive,
   systemLocked,
   currentSystemStartupValidationStrict,
   currentSystemExposeDetailedErrors,
@@ -36,6 +37,7 @@ const SystemTab = ({
   onSubmit
 }) => {
   return (
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
     <div className="admin-card" id="ops-system">
       {!systemLocked && (
         <>
@@ -188,6 +190,7 @@ const SystemTab = ({
           <div className="admin-form-divider"></div>
         </>
       )}
+    </div>
     </div>
   );
 };

@@ -36,6 +36,10 @@ class Display extends Component {
       showErrorModal: true,
       errorMessage: 'A display error occurred. The page will recover automatically.'
     });
+    // Auto-recover after 10 seconds by reloading the page
+    setTimeout(() => {
+      window.location.reload();
+    }, 10000);
   }
 
   constructor(props) {

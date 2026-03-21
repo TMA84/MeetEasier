@@ -5,6 +5,7 @@
 import React from 'react';
 
 const TranslationsTab = ({
+  isActive,
   t,
   availableTranslationLanguages,
   activeTranslationLanguage,
@@ -37,7 +38,7 @@ const TranslationsTab = ({
   onSubmit
 }) => {
   return (
-    <div className={`admin-tab-content ${true ? 'active' : ''}`}>
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
       <div className="admin-tabs admin-submenu-tabs" role="tablist" aria-label={t.translationLanguageLabel}>
         {availableTranslationLanguages.map((language) => {
           const isActive = activeTranslationLanguage === language;
