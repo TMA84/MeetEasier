@@ -5,6 +5,7 @@
 import React from 'react';
 
 const DisplayTab = ({
+  isActive,
   informationLocked,
   t,
   currentShowWiFi,
@@ -33,7 +34,7 @@ const DisplayTab = ({
   onSubmit
 }) => {
   return (
-    <div className={`admin-tab-content ${true ? 'active' : ''}`}>
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
       {!informationLocked && (
         <div className="admin-section">
           <h2>{t.sidebarSectionTitle}</h2>

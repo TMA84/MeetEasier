@@ -3794,7 +3794,8 @@ module.exports = function(app) {
 					lastUpdate: mqtt.lastUpdate,
 					lastSeen: mqtt.lastSeen,
 					errors: mqtt.errors,
-					lastErrorUpdate: mqtt.lastErrorUpdate
+					lastErrorUpdate: mqtt.lastErrorUpdate,
+					hasDesiredConfig: mqtt.hasDesiredConfig
 				};
 				
 				if (existingDisplay) {

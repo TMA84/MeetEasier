@@ -4377,1839 +4377,468 @@ class Admin extends Component {
           )}
 
           {/* Display Configuration Tab */}
-          <div className={`admin-tab-content ${activeTab === 'display' ? 'active' : ''}`}>
-            {!informationLocked && (
-            <div className="admin-section">
-              <h2>{t.sidebarSectionTitle}</h2>
-              
-              <div className="admin-current-config">
-                <h3>{t.currentConfigTitle}</h3>
-                <div className="config-grid">
-                  <div className="config-item">
-                    <span className="config-label">{t.showWiFiLabel}</span>
-                    <span className="config-value">{booleanLabel(currentShowWiFi)}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.showUpcomingMeetingsLabel}</span>
-                    <span className="config-value">{booleanLabel(currentShowUpcomingMeetings)}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.showMeetingTitlesLabel}</span>
-                    <span className="config-value">{booleanLabel(currentShowMeetingTitles)}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.upcomingMeetingsCountLabel}</span>
-                    <span className="config-value">{currentUpcomingMeetingsCount}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.minimalHeaderStyleLabel}</span>
-                    <span className="config-value">{currentMinimalHeaderStyle === 'filled' ? t.minimalHeaderStyleFilled : t.minimalHeaderStyleTransparent}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.singleRoomDarkModeLabel || 'Single-Room Dark Mode'}</span>
-                    <span className="config-value">{booleanLabel(currentSingleRoomDarkMode)}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.flightboardDarkModeLabel || 'Flightboard Dark Mode'}</span>
-                    <span className="config-value">{booleanLabel(currentFlightboardDarkMode)}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.lastUpdatedLabel}</span>
-                    <span className="config-value">{informationLastUpdated}</span>
-                  </div>
-                </div>
-              </div>
-
-              <form onSubmit={this.handleSidebarSubmit}>
-                <div className="admin-form-group">
-                  <label htmlFor="sidebarTargetClientId">
-                    {t.sidebarTargetClientLabel || 'Target Client'}
-                  </label>
-                  <select
-                    id="sidebarTargetClientId"
-                    value={sidebarTargetClientId}
-                    onChange={(e) => {
-                      const nextTargetClientId = e.target.value;
-                      this.setState({ sidebarTargetClientId: nextTargetClientId }, () => {
-                        if (nextTargetClientId) {
-                          fetch(`/api/sidebar?displayClientId=${encodeURIComponent(nextTargetClientId)}`)
-                            .then((response) => response.json())
-                            .then((data) => {
-                              this.setState({
-                                singleRoomDarkMode: data.singleRoomDarkMode !== undefined
-                                  ? !!data.singleRoomDarkMode
-                                  : this.state.currentSingleRoomDarkMode
-                              });
-                            })
-                            .catch((err) => {
-                              console.error('Error loading selected client sidebar config:', err);
-                            });
-                        } else {
-                          this.setState({ singleRoomDarkMode: this.state.currentSingleRoomDarkMode });
-                        }
+          <DisplayTab
+            isActive={activeTab === 'display'}
+            informationLocked={informationLocked}
+            t={t}
+            currentShowWiFi={currentShowWiFi}
+            currentShowUpcomingMeetings={currentShowUpcomingMeetings}
+            currentShowMeetingTitles={currentShowMeetingTitles}
+            currentUpcomingMeetingsCount={currentUpcomingMeetingsCount}
+            currentMinimalHeaderStyle={currentMinimalHeaderStyle}
+            currentSingleRoomDarkMode={currentSingleRoomDarkMode}
+            currentFlightboardDarkMode={currentFlightboardDarkMode}
+            informationLastUpdated={informationLastUpdated}
+            sidebarTargetClientId={sidebarTargetClientId}
+            connectedClients={connectedClients}
+            connectedClientsLoading={connectedClientsLoading}
+            showWiFi={showWiFi}
+            showUpcomingMeetings={showUpcomingMeetings}
+            showMeetingTitles={showMeetingTitles}
+            upcomingMeetingsCount={upcomingMeetingsCount}
+            minimalHeaderStyle={minimalHeaderStyle}
+            singleRoomDarkMode={singleRoomDarkMode}
+            flightboardDarkMode={flightboardDarkMode}
+            informationMessage={informationMessage}
+            informationMessageType={informationMessageType}
+            booleanLabel={booleanLabel}
+            onTargetClientChange={(e) => {
+              const nextTargetClientId = e.target.value;
+              this.setState({ sidebarTargetClientId: nextTargetClientId }, () => {
+                if (nextTargetClientId) {
+                  fetch(`/api/sidebar?displayClientId=${encodeURIComponent(nextTargetClientId)}`)
+                    .then((response) => response.json())
+                    .then((data) => {
+                      this.setState({
+                        singleRoomDarkMode: data.singleRoomDarkMode !== undefined
+                          ? !!data.singleRoomDarkMode
+                          : this.state.currentSingleRoomDarkMode
                       });
-                    }}
-                    className="admin-w-full"
-                  >
-                    <option value="">{t.sidebarTargetGlobalOption || 'Global default (all displays)'}</option>
-                    {(connectedClients || []).map((client) => {
-                      const clientId = String(client?.clientId || '');
-                      const displayType = String(client?.displayType || 'unknown');
-                      const roomAlias = String(client?.roomAlias || '').trim();
-                      const roomInfo = roomAlias ? ` · ${roomAlias}` : '';
-                      return (
-                        <option key={clientId} value={clientId}>
-                          {`${clientId} (${displayType}${roomInfo})`}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <small className="admin-help-text">
-                    {connectedClientsLoading
-                      ? (t.sidebarTargetLoading || 'Loading connected clients...')
-                      : (t.sidebarTargetHelp || 'Select a connected client to override Single-Room dark mode only for that client.')}
-                  </small>
-                </div>
-
-                <hr className="admin-form-divider" />
-
-                <div className="admin-form-group">
-                  <label className="inline-label">
-                    <span className="label-text">{t.showWiFiLabel}</span>
-                    <input
-                      type="checkbox"
-                      checked={showWiFi}
-                      disabled={!!sidebarTargetClientId}
-                      onChange={(e) => this.setState({ showWiFi: e.target.checked })}
-                    />
-                  </label>
-                </div>
-                
-                <div className="admin-form-group">
-                  <label className="inline-label">
-                    <span className="label-text">{t.showUpcomingMeetingsLabel}</span>
-                    <input
-                      type="checkbox"
-                      checked={showUpcomingMeetings}
-                      disabled={!!sidebarTargetClientId}
-                      onChange={(e) => this.setState({ showUpcomingMeetings: e.target.checked })}
-                    />
-                  </label>
-                </div>
-                
-                <hr className="admin-form-divider" />
-                
-                <div className="admin-form-group">
-                  <label className="inline-label">
-                    <span className="label-text">{t.showMeetingTitlesLabel}</span>
-                    <input
-                      type="checkbox"
-                      checked={showMeetingTitles}
-                      disabled={!!sidebarTargetClientId}
-                      onChange={(e) => this.setState({ showMeetingTitles: e.target.checked })}
-                    />
-                  </label>
-                  <small>{t.showMeetingTitlesHelp}</small>
-                </div>
-
-                <div className="admin-form-group">
-                  <label htmlFor="upcomingMeetingsCount">
-                    {t.upcomingMeetingsCountLabel}
-                  </label>
-                  <input
-                    id="upcomingMeetingsCount"
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={upcomingMeetingsCount}
-                    disabled={!!sidebarTargetClientId}
-                    onChange={(e) => this.setState({ upcomingMeetingsCount: e.target.value })}
-                    className="display-input-narrow"
-                  />
-                  <small className="admin-help-text">{t.upcomingMeetingsCountHelp}</small>
-                </div>
-                
-                <hr className="admin-form-divider" />
-                
-                <div className="admin-form-group">
-                  <label className="inline-label">
-                    <span className="label-text">{t.singleRoomDarkModeLabel || 'Single-Room Dark Mode'}</span>
-                    <input
-                      type="checkbox"
-                      checked={singleRoomDarkMode}
-                      onChange={(e) => this.setState({ singleRoomDarkMode: e.target.checked })}
-                    />
-                  </label>
-                  <small>{t.singleRoomDarkModeHelp || 'Uses the dark visual style for single-room displays.'}</small>
-                </div>
-
-                {singleRoomDarkMode && (
-                  <div className="admin-form-group">
-                    <label>
-                      {t.minimalHeaderStyleLabel}
-                    </label>
-                    <small className="display-header-style-help">
-                      {t.minimalHeaderStyleHelp}
-                    </small>
-                    <label className="inline-label">
-                      <span className="label-text">{t.minimalHeaderStyleFilled}</span>
-                      <input
-                        type="radio"
-                        name="minimalHeaderStyle"
-                        value="filled"
-                        checked={minimalHeaderStyle === 'filled'}
-                        disabled={!!sidebarTargetClientId}
-                        onChange={(e) => this.setState({ minimalHeaderStyle: e.target.value })}
-                      />
-                    </label>
-                    <label className="inline-label admin-inline-label-mt">
-                      <span className="label-text">{t.minimalHeaderStyleTransparent}</span>
-                      <input
-                        type="radio"
-                        name="minimalHeaderStyle"
-                        value="transparent"
-                        checked={minimalHeaderStyle === 'transparent'}
-                        disabled={!!sidebarTargetClientId}
-                        onChange={(e) => this.setState({ minimalHeaderStyle: e.target.value })}
-                      />
-                    </label>
-                  </div>
-                )}
-
-                {!singleRoomDarkMode && (
-                  <div className="admin-form-group">
-                    <small className="display-dark-mode-hint">
-                      {t.minimalHeaderStyleDarkModeRequired}
-                    </small>
-                  </div>
-                )}
-
-                <hr className="admin-form-divider" />
-
-                <div className="admin-form-group">
-                  <label className="inline-label">
-                    <span className="label-text">{t.flightboardDarkModeLabel || 'Flightboard Dark Mode'}</span>
-                    <input
-                      type="checkbox"
-                      checked={flightboardDarkMode}
-                      onChange={(e) => this.setState({ flightboardDarkMode: e.target.checked })}
-                    />
-                  </label>
-                  <small>{t.flightboardDarkModeHelp || 'Enables the dark visual style for flightboard displays.'}</small>
-                </div>
-                
-                <button 
-                  type="submit" 
-                  className="admin-submit-button"
-                  disabled={
-                    showWiFi === currentShowWiFi &&
-                    showUpcomingMeetings === currentShowUpcomingMeetings &&
-                    showMeetingTitles === currentShowMeetingTitles &&
-                    parseInt(upcomingMeetingsCount, 10) === currentUpcomingMeetingsCount &&
-                    minimalHeaderStyle === currentMinimalHeaderStyle &&
-                    singleRoomDarkMode === currentSingleRoomDarkMode &&
-                    flightboardDarkMode === currentFlightboardDarkMode
-                  }
-                >
-                  {t.submitSidebarButton}
-                </button>
-              </form>
-
-              {informationMessage && (
-                <div className={`admin-message admin-message-${informationMessageType}`}>
-                  {informationMessage}
-                </div>
-              )}
-            </div>
-            )}
-
-            {informationLocked && (
-            <div className="admin-section">
-              <h2>{t.sidebarSectionTitle}</h2>
-              <div className="admin-locked-message">
-                <p>{t.configuredViaEnv}</p>
-              </div>
-            </div>
-            )}
-          </div>
+                    })
+                    .catch((err) => {
+                      console.error('Error loading selected client sidebar config:', err);
+                    });
+                } else {
+                  this.setState({ singleRoomDarkMode: this.state.currentSingleRoomDarkMode });
+                }
+              });
+            }}
+            onFieldChange={(key, value) => this.setState({ [key]: value })}
+            onSubmit={this.handleSidebarSubmit}
+          />
 
           {/* WiFi Configuration Tab */}
-          <div className={`admin-tab-content ${activeTab === 'wifi' ? 'active' : ''}`}>
-          {!wifiLocked && (
-          <div className="admin-section">
-            <h2>{t.wifiSectionTitle}</h2>
-            
-            <div className="admin-current-config">
-              <h3>{t.currentConfigTitle}</h3>
-              <div className="config-grid">
-                <div className="config-item">
-                  <span className="config-label">{t.ssidLabel}</span>
-                  <span className="config-value">{currentSsid}</span>
-                </div>
-                <div className="config-item">
-                  <span className="config-label">{t.passwordLabel}</span>
-                  <span className="config-value">{currentPassword}</span>
-                </div>
-                <div className="config-item">
-                  <span className="config-label">{t.lastUpdatedLabel}</span>
-                  <span className="config-value">{wifiLastUpdated}</span>
-                </div>
-              </div>
-            </div>
-
-            <form onSubmit={this.handleWiFiSubmit}>
-              <div className="admin-form-group">
-                <label htmlFor="ssid">{t.wifiSsidLabel}</label>
-                <input
-                  type="text"
-                  id="ssid"
-                  value={ssid}
-                  onChange={(e) => this.setState({ ssid: e.target.value })}
-                  required
-                  placeholder={t.wifiSsidPlaceholder}
-                />
-              </div>
-              
-              <div className="admin-form-group">
-                <label htmlFor="password">{t.wifiPasswordLabel}</label>
-                <input
-                  type="text"
-                  id="password"
-                  value={password}
-                  onChange={(e) => this.setState({ password: e.target.value })}
-                  placeholder={t.wifiPasswordPlaceholder}
-                />
-              </div>
-              
-              <button 
-                type="submit" 
-                className="admin-submit-button"
-                disabled={
-                  ssid === currentSsid &&
-                  password === currentPassword
-                }
-              >
-                {t.submitWifiButton}
-              </button>
-            </form>
-
-            {wifiMessage && (
-              <div className={`admin-message admin-message-${wifiMessageType}`}>
-                {wifiMessage}
-              </div>
-            )}
-
-            <div className="admin-qr-preview">
-              <img 
-                src={`/img/wifi-qr.png?t=${Date.now()}`} 
-                alt="WiFi QR Code" 
-                onError={(e) => e.target.style.display = 'none'}
-              />
-            </div>
-          </div>
-          )}
-
-          {wifiLocked && (
-          <div className="admin-section">
-            <h2>{t.wifiSectionTitle}</h2>
-            <div className="admin-locked-message">
-              <p>{t.configuredViaEnv}</p>
-            </div>
-          </div>
-          )}
-          </div>
+          <WiFiTab
+            isActive={activeTab === 'wifi'}
+            wifiLocked={wifiLocked}
+            t={t}
+            currentSsid={currentSsid}
+            currentPassword={currentPassword}
+            wifiLastUpdated={wifiLastUpdated}
+            ssid={ssid}
+            password={password}
+            wifiMessage={wifiMessage}
+            wifiMessageType={wifiMessageType}
+            onFieldChange={(key, value) => this.setState({ [key]: value })}
+            onSubmit={this.handleWiFiSubmit}
+          />
 
           {/* Logo Configuration Tab */}
-          <div className={`admin-tab-content ${activeTab === 'logo' ? 'active' : ''}`}>
-          {!logoLocked && (
-          <div className="admin-section">
-            <h2>{t.logoSectionTitle}</h2>
-            
-            <div className="admin-current-config">
-              <h3>{t.currentConfigTitle}</h3>
-              <div className="config-grid">
-                <div className="config-item">
-                  <span className="config-label">{t.logoDarkUrlLabel}</span>
-                  <span className="config-value">{currentLogoDarkUrl}</span>
-                </div>
-                <div className="config-item">
-                  <span className="config-label">{t.logoLightUrlLabel}</span>
-                  <span className="config-value">{currentLogoLightUrl}</span>
-                </div>
-                <div className="config-item">
-                  <span className="config-label">{t.lastUpdatedLabel}</span>
-                  <span className="config-value">{logoLastUpdated}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Upload Mode Toggle */}
-            <div className="admin-upload-mode">
-              <button 
-                type="button"
-                className={`admin-mode-button ${uploadMode === 'url' ? 'active' : ''}`}
-                onClick={() => this.setState({ uploadMode: 'url', logoDarkFile: null, logoLightFile: null })}
-              >
-                {t.uploadModeUrl}
-              </button>
-              <button 
-                type="button"
-                className={`admin-mode-button ${uploadMode === 'file' ? 'active' : ''}`}
-                onClick={() => this.setState({ uploadMode: 'file' })}
-              >
-                {t.uploadModeFile}
-              </button>
-            </div>
-
-            <form onSubmit={this.handleLogoSubmit}>
-              {uploadMode === 'url' ? (
-                <>
-                  <div className="admin-form-group">
-                    <label htmlFor="logoDarkUrl">{t.logoDarkUrlLabel}</label>
-                    <input
-                      type="text"
-                      id="logoDarkUrl"
-                      value={logoDarkUrl}
-                      onChange={(e) => this.setState({ logoDarkUrl: e.target.value })}
-                      placeholder={t.logoUrlPlaceholder}
-                    />
-                    <small>{t.logoUrlHelp}</small>
-                  </div>
-                  <div className="admin-form-group">
-                    <label htmlFor="logoLightUrl">{t.logoLightUrlLabel}</label>
-                    <input
-                      type="text"
-                      id="logoLightUrl"
-                      value={logoLightUrl}
-                      onChange={(e) => this.setState({ logoLightUrl: e.target.value })}
-                      placeholder={t.logoUrlPlaceholder}
-                    />
-                    <small>{t.logoUrlHelp}</small>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="admin-form-group">
-                    <label htmlFor="logoDarkFile">{t.logoDarkFileLabel}</label>
-                    <input
-                      type="file"
-                      id="logoDarkFile"
-                      accept="image/*"
-                      onChange={(e) => this.setState({ logoDarkFile: e.target.files[0] })}
-                      className="admin-file-input"
-                    />
-                    <small>{t.logoFileHelp}</small>
-                    {logoDarkFile && (
-                      <div className="admin-file-preview">
-                        Selected: {logoDarkFile.name} ({(logoDarkFile.size / 1024).toFixed(2)} KB)
-                      </div>
-                    )}
-                  </div>
-                  <div className="admin-form-group">
-                    <label htmlFor="logoLightFile">{t.logoLightFileLabel}</label>
-                    <input
-                      type="file"
-                      id="logoLightFile"
-                      accept="image/*"
-                      onChange={(e) => this.setState({ logoLightFile: e.target.files[0] })}
-                      className="admin-file-input"
-                    />
-                    <small>{t.logoFileHelp}</small>
-                    {logoLightFile && (
-                      <div className="admin-file-preview">
-                        Selected: {logoLightFile.name} ({(logoLightFile.size / 1024).toFixed(2)} KB)
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-              
-              <button 
-                type="submit" 
-                className="admin-submit-button"
-                disabled={
-                  uploadMode === 'file' 
-                    ? (!logoDarkFile && !logoLightFile)
-                    : (logoDarkUrl === currentLogoDarkUrl && logoLightUrl === currentLogoLightUrl)
-                }
-              >
-                {t.submitLogoButton}
-              </button>
-            </form>
-
-            {logoMessage && (
-              <div className={`admin-message admin-message-${logoMessageType}`}>
-                {logoMessage}
-              </div>
-            )}
-
-            <div className="admin-logo-preview">
-              <h3>Preview:</h3>
-              <div className="preview-grid">
-                <div className="preview-item">
-                  <p>Dark Logo:</p>
-                  <img 
-                    src={logoDarkUrl || currentLogoDarkUrl} 
-                    alt="Dark Logo Preview" 
-                    onError={(e) => { e.target.src = "/img/logo.B.png"; }}
-                  />
-                </div>
-                <div className="preview-item">
-                  <p>Light Logo:</p>
-                  <img 
-                    src={logoLightUrl || currentLogoLightUrl} 
-                    alt="Light Logo Preview" 
-                    onError={(e) => { e.target.src = "/img/logo.W.png"; }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          )}
-
-          {logoLocked && (
-          <div className="admin-section">
-            <h2>{t.logoSectionTitle}</h2>
-            <div className="admin-locked-message">
-              <p>{t.configuredViaEnv}</p>
-            </div>
-          </div>
-          )}
-          </div>
+          <LogoTab
+            isActive={activeTab === 'logo'}
+            logoLocked={logoLocked}
+            t={t}
+            currentLogoDarkUrl={currentLogoDarkUrl}
+            currentLogoLightUrl={currentLogoLightUrl}
+            logoLastUpdated={logoLastUpdated}
+            uploadMode={uploadMode}
+            logoDarkUrl={logoDarkUrl}
+            logoLightUrl={logoLightUrl}
+            logoDarkFile={logoDarkFile}
+            logoLightFile={logoLightFile}
+            logoMessage={logoMessage}
+            logoMessageType={logoMessageType}
+            onUploadModeChange={(mode) => this.setState({ uploadMode: mode, logoDarkFile: null, logoLightFile: null })}
+            onFieldChange={(key, value) => this.setState({ [key]: value })}
+            onFileChange={(key, file) => this.setState({ [key]: file })}
+            onSubmit={this.handleLogoSubmit}
+          />
 
           {/* Booking Configuration Tab */}
-          <div className={`admin-tab-content ${activeTab === 'booking' ? 'active' : ''}`}>
-          {!bookingLocked && (
-          <div className="admin-section">
-            <h2>{t.bookingSectionTitle}</h2>
-            
-            {bookingPermissionMissing && (
-              <div className="admin-message admin-message-warning admin-mb-1">
-                <div>
-                  <strong>Permission Missing:</strong> Calendars.ReadWrite permission is not granted in Azure AD. 
-                  The booking feature is automatically disabled. Please grant this permission to enable room booking.
-                </div>
-              </div>
-            )}
-            
-            <div className="admin-current-config">
-              <h3>{t.currentConfigTitle}</h3>
-              <div className="config-grid">
-                <div className="config-item">
-                  <span className="config-label">{t.enableBookingLabel}</span>
-                  <span className="config-value">{booleanLabel(currentEnableBooking)}</span>
-                </div>
-                <div className="config-item">
-                  <span className="config-label">{t.enableExtendMeetingLabel}</span>
-                  <span className="config-value">{booleanLabel(currentEnableExtendMeeting)}</span>
-                </div>
-                <div className="config-item">
-                  <span className="config-label">Check-in enabled</span>
-                  <span className="config-value">{booleanLabel(currentCheckInEnabled)}</span>
-                </div>
-                <div className="config-item">
-                  <span className="config-label">Check-in external only</span>
-                  <span className="config-value">{booleanLabel(currentCheckInRequiredForExternalMeetings)}</span>
-                </div>
-                <div className="config-item">
-                  <span className="config-label">Check-in starts before meeting</span>
-                  <span className="config-value">{currentCheckInEarlyMinutes} min</span>
-                </div>
-                <div className="config-item">
-                  <span className="config-label">Check-in window after start</span>
-                  <span className="config-value">{currentCheckInWindowMinutes} min</span>
-                </div>
-                <div className="config-item">
-                  <span className="config-label">Auto-release on no-show</span>
-                  <span className="config-value">{booleanLabel(currentCheckInAutoReleaseNoShow)}</span>
-                </div>
-                <div className="config-item">
-                  <span className="config-label">{t.bookingButtonColorLabel}</span>
-                  <span className="config-value color-value-display">
-                    <span className="color-swatch-inline" style={{ backgroundColor: currentBookingButtonColor }}></span>
-                    {currentBookingButtonColor}
-                  </span>
-                </div>
-                {bookingPermissionMissing && (
-                  <div className="config-item">
-                    <span className="config-label">Status</span>
-                    <span className="config-value booking-permission-status">Disabled (Permission Missing)</span>
-                  </div>
-                )}
-                <div className="config-item">
-                  <span className="config-label">{t.lastUpdatedLabel}</span>
-                  <span className="config-value">{bookingLastUpdated}</span>
-                </div>
-              </div>
-            </div>
-
-            <form onSubmit={this.handleBookingSubmit}>
-              <div className="admin-form-group">
-                <label className="inline-label">
-                  <span className="label-text">{t.enableBookingLabel}</span>
-                  <input
-                    type="checkbox"
-                    checked={enableBooking}
-                    onChange={(e) => this.setState({ enableBooking: e.target.checked })}
-                    disabled={bookingPermissionMissing}
-                  />
-                </label>
-                <small>
-                  {bookingPermissionMissing 
-                    ? 'Cannot enable: Calendars.ReadWrite permission is missing'
-                    : t.enableBookingHelp
-                  }
-                </small>
-              </div>
-
-              <div className="admin-form-group">
-                <label className="inline-label">
-                  <span className="label-text">{t.enableExtendMeetingLabel}</span>
-                  <input
-                    type="checkbox"
-                    checked={enableExtendMeeting}
-                    onChange={(e) => this.setState({ enableExtendMeeting: e.target.checked })}
-                  />
-                </label>
-                <small>{t.enableExtendMeetingHelp}</small>
-              </div>
-
-              <div className="admin-form-divider"></div>
-
-              <div className="admin-form-group">
-                <label className="inline-label">
-                  <span className="label-text">Check-in aktivieren</span>
-                  <input
-                    type="checkbox"
-                    checked={checkInEnabled}
-                    onChange={(e) => this.setState({ checkInEnabled: e.target.checked })}
-                  />
-                </label>
-                <small>Aktiviert den Check-in-Button für relevante Meetings.</small>
-              </div>
-
-              <div className="admin-form-group">
-                <label className="inline-label">
-                  <span className="label-text">Nur externe Meetings benötigen Check-in</span>
-                  <input
-                    type="checkbox"
-                    checked={checkInRequiredForExternalMeetings}
-                    onChange={(e) => this.setState({ checkInRequiredForExternalMeetings: e.target.checked })}
-                    disabled={!checkInEnabled}
-                  />
-                </label>
-                <small>Empfohlen: Display-erstellte Buchungen bleiben ohne Check-in/no-show.</small>
-              </div>
-
-              <div className="admin-form-group">
-                <label htmlFor="checkInEarlyMinutes">Check-in ab Minuten vor Start</label>
-                <input
-                  id="checkInEarlyMinutes"
-                  type="number"
-                  min="0"
-                  value={checkInEarlyMinutes}
-                  onChange={(e) => this.setState({ checkInEarlyMinutes: Math.max(parseInt(e.target.value, 10) || 0, 0) })}
-                  disabled={!checkInEnabled}
-                />
-                <small>Standard: 5 Minuten vor Terminbeginn.</small>
-              </div>
-
-              <div className="admin-form-group">
-                <label htmlFor="checkInWindowMinutes">Check-in-Fenster nach Start (Minuten)</label>
-                <input
-                  id="checkInWindowMinutes"
-                  type="number"
-                  min="1"
-                  value={checkInWindowMinutes}
-                  onChange={(e) => this.setState({ checkInWindowMinutes: Math.max(parseInt(e.target.value, 10) || 1, 1) })}
-                  disabled={!checkInEnabled}
-                />
-                <small>Nach Ablauf gilt das Meeting als No-Show (wenn aktiviert).</small>
-              </div>
-
-              <div className="admin-form-group">
-                <label className="inline-label">
-                  <span className="label-text">No-Show automatisch freigeben</span>
-                  <input
-                    type="checkbox"
-                    checked={checkInAutoReleaseNoShow}
-                    onChange={(e) => this.setState({ checkInAutoReleaseNoShow: e.target.checked })}
-                    disabled={!checkInEnabled}
-                  />
-                </label>
-                <small>Löscht nicht bestätigte externe Meetings automatisch nach Ablauf des Fensters.</small>
-              </div>
-
-              <div className="admin-form-group">
-                <label>{t.roomGroupFeatureFlagsLabel || 'Room Group Overrides'}</label>
-                <small>{t.roomGroupFeatureFlagsHelp || 'Optional: Override booking/extend per room group alias (e.g. roomlist-building-a).'}</small>
-
-                {availableRoomGroupOptions.length > 0 && (
-                  <div className="booking-override-select-wrapper">
-                    <select
-                      value={newRoomGroupOverrideKey}
-                      onChange={(e) => this.handleOverrideDraftChange('group', e.target.value)}
-                      className="booking-override-select"
-                    >
-                      <option value="">{t.selectRoomGroupLabel || 'Select room group'}</option>
-                      {availableRoomGroupOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className="booking-override-add-row">
-                  <input
-                    type="text"
-                    value={newRoomGroupOverrideKey}
-                    onChange={(e) => this.handleOverrideDraftChange('group', e.target.value)}
-                    placeholder={t.roomGroupOverridePlaceholder || 'room group alias'}
-                  />
-                  <button type="button" className="admin-secondary-button" onClick={() => this.handleAddOverride('group')}>
-                    {t.addOverrideButtonLabel || 'Add'}
-                  </button>
-                </div>
-
-                {roomGroupOverrideEntries.length === 0 ? (
-                  <div className="admin-locked-message admin-mb-1">
-                    <p>{t.noRoomGroupOverridesLabel || 'No room-group overrides configured.'}</p>
-                  </div>
-                ) : roomGroupOverrideEntries.map(([groupKey, groupValue]) => (
-                  <div key={groupKey} className="booking-override-grid">
-                    <input type="text" value={groupKey} readOnly />
-                    <select
-                      value={toOverrideState(groupValue?.enableBooking)}
-                      onChange={(e) => this.handleOverrideStateChange('group', groupKey, 'enableBooking', e.target.value)}
-                    >
-                      <option value="inherit">{t.inheritOverrideLabel || 'Inherit'}</option>
-                      <option value="enabled">{t.enabledOverrideLabel || 'Enabled'}</option>
-                      <option value="disabled">{t.disabledOverrideLabel || 'Disabled'}</option>
-                    </select>
-                    <select
-                      value={toOverrideState(groupValue?.enableExtendMeeting)}
-                      onChange={(e) => this.handleOverrideStateChange('group', groupKey, 'enableExtendMeeting', e.target.value)}
-                    >
-                      <option value="inherit">{t.inheritOverrideLabel || 'Inherit'}</option>
-                      <option value="enabled">{t.enabledOverrideLabel || 'Enabled'}</option>
-                      <option value="disabled">{t.disabledOverrideLabel || 'Disabled'}</option>
-                    </select>
-                    <button type="button" className="admin-secondary-button" onClick={() => this.handleRemoveOverride('group', groupKey)}>
-                      {t.removeOverrideButtonLabel || 'Remove'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <div className="admin-form-group">
-                <label>{t.roomFeatureFlagsLabel || 'Room Overrides'}</label>
-                <small>{t.roomFeatureFlagsHelp || 'Optional: Override booking/extend per room email.'}</small>
-
-                {availableRoomOptions.length > 0 && (
-                  <div className="booking-override-select-wrapper">
-                    <select
-                      value={newRoomOverrideKey}
-                      onChange={(e) => this.handleOverrideDraftChange('room', e.target.value)}
-                      className="booking-override-select"
-                    >
-                      <option value="">{t.selectRoomLabel || 'Select room'}</option>
-                      {availableRoomOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className="booking-override-add-row">
-                  <input
-                    type="text"
-                    value={newRoomOverrideKey}
-                    onChange={(e) => this.handleOverrideDraftChange('room', e.target.value)}
-                    placeholder={t.roomOverridePlaceholder || 'room@domain.com'}
-                  />
-                  <button type="button" className="admin-secondary-button" onClick={() => this.handleAddOverride('room')}>
-                    {t.addOverrideButtonLabel || 'Add'}
-                  </button>
-                </div>
-
-                {roomOverrideEntries.length === 0 ? (
-                  <div className="admin-locked-message admin-mb-1">
-                    <p>{t.noRoomOverridesLabel || 'No room overrides configured.'}</p>
-                  </div>
-                ) : roomOverrideEntries.map(([roomKey, roomValue]) => (
-                  <div key={roomKey} className="booking-override-grid">
-                    <input type="text" value={roomKey} readOnly />
-                    <select
-                      value={toOverrideState(roomValue?.enableBooking)}
-                      onChange={(e) => this.handleOverrideStateChange('room', roomKey, 'enableBooking', e.target.value)}
-                    >
-                      <option value="inherit">{t.inheritOverrideLabel || 'Inherit'}</option>
-                      <option value="enabled">{t.enabledOverrideLabel || 'Enabled'}</option>
-                      <option value="disabled">{t.disabledOverrideLabel || 'Disabled'}</option>
-                    </select>
-                    <select
-                      value={toOverrideState(roomValue?.enableExtendMeeting)}
-                      onChange={(e) => this.handleOverrideStateChange('room', roomKey, 'enableExtendMeeting', e.target.value)}
-                    >
-                      <option value="inherit">{t.inheritOverrideLabel || 'Inherit'}</option>
-                      <option value="enabled">{t.enabledOverrideLabel || 'Enabled'}</option>
-                      <option value="disabled">{t.disabledOverrideLabel || 'Disabled'}</option>
-                    </select>
-                    <button type="button" className="admin-secondary-button" onClick={() => this.handleRemoveOverride('room', roomKey)}>
-                      {t.removeOverrideButtonLabel || 'Remove'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {(currentRoomFeatureFlags && Object.keys(currentRoomFeatureFlags).length > 0) || (currentRoomGroupFeatureFlags && Object.keys(currentRoomGroupFeatureFlags).length > 0) ? (
-                <div className="admin-current-config admin-mb-15">
-                  <h3>{t.currentConfigTitle} - {t.overridePreviewLabel || 'Override Preview'}</h3>
-                  <pre className="admin-json-pre">{JSON.stringify({ roomGroupFeatureFlags: currentRoomGroupFeatureFlags, roomFeatureFlags: currentRoomFeatureFlags }, null, 2)}</pre>
-                </div>
-              ) : null}
-
-              <button 
-                type="submit" 
-                className="admin-submit-button"
-                disabled={
-                  bookingPermissionMissing ||
-                  (enableBooking === currentEnableBooking &&
-                   enableExtendMeeting === currentEnableExtendMeeting &&
-                   checkInEnabled === currentCheckInEnabled &&
-                   checkInRequiredForExternalMeetings === currentCheckInRequiredForExternalMeetings &&
-                   parseInt(checkInEarlyMinutes, 10) === currentCheckInEarlyMinutes &&
-                   parseInt(checkInWindowMinutes, 10) === currentCheckInWindowMinutes &&
-                   checkInAutoReleaseNoShow === currentCheckInAutoReleaseNoShow &&
-                   JSON.stringify(roomFeatureFlags) === JSON.stringify(currentRoomFeatureFlags) &&
-                   JSON.stringify(roomGroupFeatureFlags) === JSON.stringify(currentRoomGroupFeatureFlags))
-                }
-              >
-                {t.submitBookingButton}
-              </button>
-            </form>
-
-            {bookingMessage && (
-              <div className={`admin-message admin-message-${bookingMessageType}`}>
-                {bookingMessage}
-              </div>
-            )}
-          </div>
-          )}
-
-          {bookingLocked && (
-            <div className="admin-section">
-              <h2>{t.bookingSectionTitle}</h2>
-              <div className="admin-locked-message">
-                <p>{t.configuredViaEnv}</p>
-              </div>
-            </div>
-          )}
-          </div>
+          <BookingTab
+            isActive={activeTab === 'booking'}
+            bookingLocked={bookingLocked}
+            t={t}
+            bookingPermissionMissing={bookingPermissionMissing}
+            currentEnableBooking={currentEnableBooking}
+            currentEnableExtendMeeting={currentEnableExtendMeeting}
+            currentCheckInEnabled={currentCheckInEnabled}
+            currentCheckInRequiredForExternalMeetings={currentCheckInRequiredForExternalMeetings}
+            currentCheckInEarlyMinutes={currentCheckInEarlyMinutes}
+            currentCheckInWindowMinutes={currentCheckInWindowMinutes}
+            currentCheckInAutoReleaseNoShow={currentCheckInAutoReleaseNoShow}
+            bookingLastUpdated={bookingLastUpdated}
+            currentRoomFeatureFlags={currentRoomFeatureFlags}
+            currentRoomGroupFeatureFlags={currentRoomGroupFeatureFlags}
+            enableBooking={enableBooking}
+            enableExtendMeeting={enableExtendMeeting}
+            checkInEnabled={checkInEnabled}
+            checkInRequiredForExternalMeetings={checkInRequiredForExternalMeetings}
+            checkInEarlyMinutes={checkInEarlyMinutes}
+            checkInWindowMinutes={checkInWindowMinutes}
+            checkInAutoReleaseNoShow={checkInAutoReleaseNoShow}
+            roomFeatureFlags={roomFeatureFlags}
+            roomGroupFeatureFlags={roomGroupFeatureFlags}
+            availableRoomGroupOptions={availableRoomGroupOptions}
+            newRoomGroupOverrideKey={newRoomGroupOverrideKey}
+            roomGroupOverrideEntries={roomGroupOverrideEntries}
+            availableRoomOptions={availableRoomOptions}
+            newRoomOverrideKey={newRoomOverrideKey}
+            roomOverrideEntries={roomOverrideEntries}
+            bookingMessage={bookingMessage}
+            bookingMessageType={bookingMessageType}
+            booleanLabel={booleanLabel}
+            toOverrideState={toOverrideState}
+            onFieldChange={(key, value) => this.setState({ [key]: value })}
+            onOverrideDraftChange={(type, value) => this.handleOverrideDraftChange(type, value)}
+            onAddOverride={(type) => this.handleAddOverride(type)}
+            onOverrideStateChange={(type, key, field, value) => this.handleOverrideStateChange(type, key, field, value)}
+            onRemoveOverride={(type, key) => this.handleRemoveOverride(type, key)}
+            onSubmit={this.handleBookingSubmit}
+          />
 
           {/* Translations Tab */}
-          <div className={`admin-tab-content ${activeTab === 'translations' ? 'active' : ''}`}>
-            <div className="admin-tabs admin-submenu-tabs" role="tablist" aria-label={t.translationLanguageLabel}>
-              {availableTranslationLanguages.map((language) => {
-                const isActive = activeTranslationLanguage === language;
-                return (
-                  <button
-                    key={language}
-                    type="button"
-                    role="tab"
-                    aria-selected={isActive}
-                    className={`admin-tab ${isActive ? 'active' : ''}`}
-                    onClick={() => this.handleTranslationLanguageChange(language)}
-                  >
-                    {getLanguageDisplayName(language)}
-                  </button>
-                );
-              })}
-            </div>
-
-            {!currentTranslationApiHasApiKey && (
-              <div className="admin-message admin-message-warning">
-                {t.translationApiKeyLabel || 'Translation API Key'}: {(t.translationApiApiKeyNotConfigured || 'Not configured')}. {t.translationApiTabLabel || 'Translation API'} {(t.errorPrefix || 'Error:').replace(/:$/, '')} - Auto-Translate is disabled until an API key is set.
-              </div>
-            )}
-
-            <div className="admin-section">
-              <h2>{t.addLanguageButtonLabel}</h2>
-              <div className="admin-form-group admin-mb-0">
-                <label htmlFor="newTranslationLanguageCode">{t.addLanguageButtonLabel}</label>
-                <div className="admin-flex-row">
-                  <input
-                    type="text"
-                    id="newTranslationLanguageCode"
-                    value={newTranslationLanguageCode}
-                    placeholder={t.addLanguagePlaceholder || 'z. B. fr oder en-gb'}
-                    onChange={(e) => this.handleNewTranslationLanguageChange(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="admin-secondary-button"
-                    onClick={this.handleAddTranslationLanguage}
-                  >
-                    {t.addLanguageButtonLabel}
-                  </button>
-                </div>
-                <small>{t.addLanguageHelp}</small>
-                {translationLanguageDraftError && (
-                  <small className="translation-error-text">{translationLanguageDraftError}</small>
-                )}
-              </div>
-              <div className="admin-form-group admin-mt-1 admin-mb-0">
-                <label>{t.removeLanguageButtonLabel || 'Language removal'}</label>
-                <button
-                  type="button"
-                  className="admin-secondary-button"
-                  onClick={this.handleRemoveTranslationLanguage}
-                  disabled={['en', 'de'].includes(activeTranslationLanguage)}
-                >
-                  {t.removeLanguageButtonLabel || 'Remove selected language'}
-                </button>
-                <small>{t.removeLanguageHelp || 'English (en) and German (de) cannot be removed.'}</small>
-              </div>
-
-              {i18nMessage && (
-                <div className={`admin-message admin-message-${i18nMessageType || 'success'} admin-mt-1`}>
-                  {i18nMessage}
-                </div>
-              )}
-            </div>
-
-            <div className="admin-section">
-              <h2>{t.translationsSectionTitle}</h2>
-
-              <div className="admin-current-config">
-                <h3>{t.currentConfigTitle}</h3>
-                <div className="config-grid">
-                  <div className="config-item">
-                    <span className="config-label">{t.languagesLabel || 'Languages'}</span>
-                    <span className="config-value">{Object.keys(currentMaintenanceTranslations || {}).join(', ') || '-'}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.adminLanguagesLabel || 'Admin Languages'}</span>
-                    <span className="config-value">{Object.keys(currentAdminTranslations || {}).join(', ') || '-'}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.lastUpdatedLabel}</span>
-                    <span className="config-value">{i18nLastUpdated || '-'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <form onSubmit={this.handleI18nSubmit}>
-                <div className="admin-current-config admin-collapsible-config admin-mb-1">
-                  <button
-                    type="button"
-                    className="admin-collapsible-header"
-                    onClick={() => this.toggleTranslationGroup('maintenanceTranslationsSection')}
-                    aria-expanded={!collapsedTranslationGroups?.maintenanceTranslationsSection}
-                  >
-                    <h3>{t.maintenanceTranslationsLabel}</h3>
-                    <span className="admin-collapsible-chevron">{collapsedTranslationGroups?.maintenanceTranslationsSection ? '▸' : '▾'}</span>
-                  </button>
-                  {!collapsedTranslationGroups?.maintenanceTranslationsSection && (
-                    <>
-                      <div className="admin-form-group">
-                        <small>{t.maintenanceTranslationsHelp}</small>
-                      </div>
-                      <div className="admin-form-group">
-                        <label htmlFor="maintenanceTitleInput">{t.maintenanceTitleLabel}</label>
-                        <input
-                          type="text"
-                          id="maintenanceTitleInput"
-                          value={selectedMaintenanceTranslation.title || ''}
-                          onChange={(e) => this.handleMaintenanceTranslationFieldChange(activeTranslationLanguage, 'title', e.target.value)}
-                        />
-                      </div>
-                      <div className="admin-form-group admin-mb-0">
-                        <label htmlFor="maintenanceBodyInput">{t.maintenanceBodyLabel}</label>
-                        <textarea
-                          id="maintenanceBodyInput"
-                          value={selectedMaintenanceTranslation.body || ''}
-                          onChange={(e) => this.handleMaintenanceTranslationFieldChange(activeTranslationLanguage, 'body', e.target.value)}
-                          rows={4}
-                          className="admin-textarea"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {QUICK_ADMIN_TRANSLATION_GROUPS.map((group) => (
-                  <div className="admin-current-config admin-collapsible-config admin-mb-1" key={group.labelKey}>
-                    <button
-                      type="button"
-                      className="admin-collapsible-header"
-                      onClick={() => this.toggleTranslationGroup(group.labelKey)}
-                      aria-expanded={!collapsedTranslationGroups?.[group.labelKey]}
-                    >
-                      <h3>{t[group.labelKey] || group.labelKey}</h3>
-                      <span className="admin-collapsible-chevron">{collapsedTranslationGroups?.[group.labelKey] ? '▸' : '▾'}</span>
-                    </button>
-                    {!collapsedTranslationGroups?.[group.labelKey] && group.keys.map((key) => (
-                      <div className="admin-form-group" key={key}>
-                        <label htmlFor={`adminTranslation-${key}`}>{key}</label>
-                        <input
-                          type="text"
-                          id={`adminTranslation-${key}`}
-                          value={selectedAdminTranslation[key] || ''}
-                          onChange={(e) => this.handleAdminTranslationFieldChange(activeTranslationLanguage, key, e.target.value)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ))}
-
-                <div className="admin-current-config admin-collapsible-config admin-mb-1">
-                  <button
-                    type="button"
-                    className="admin-collapsible-header"
-                    onClick={() => this.toggleTranslationGroup('advancedTranslationsSection')}
-                    aria-expanded={!collapsedTranslationGroups?.advancedTranslationsSection}
-                  >
-                    <h3>{t.advancedTranslationsToggleLabel}</h3>
-                    <span className="admin-collapsible-chevron">{collapsedTranslationGroups?.advancedTranslationsSection ? '▸' : '▾'}</span>
-                  </button>
-
-                  {!collapsedTranslationGroups?.advancedTranslationsSection && (
-                    <>
-                      <div className="admin-form-group">
-                        <label className="inline-label">
-                          <span className="label-text">{t.advancedTranslationsToggleLabel}</span>
-                          <input
-                            type="checkbox"
-                            checked={showAdvancedTranslationsEditor}
-                            onChange={(e) => this.setState({ showAdvancedTranslationsEditor: e.target.checked })}
-                          />
-                        </label>
-                        <small>{t.advancedTranslationsHelp}</small>
-                      </div>
-
-                      {showAdvancedTranslationsEditor && (
-                        <>
-                          <div className="admin-form-group">
-                            <label htmlFor="maintenanceTranslationsText">{t.maintenanceJsonLabel}</label>
-                            <textarea
-                              id="maintenanceTranslationsText"
-                              value={maintenanceTranslationsText}
-                              onChange={(e) => this.setState({ maintenanceTranslationsText: e.target.value })}
-                              rows={10}
-                              className="admin-textarea"
-                            />
-                          </div>
-
-                          <div className="admin-form-group admin-mb-0">
-                            <label htmlFor="adminTranslationsText">{t.adminJsonLabel}</label>
-                            <textarea
-                              id="adminTranslationsText"
-                              value={adminTranslationsText}
-                              onChange={(e) => this.setState({ adminTranslationsText: e.target.value })}
-                              rows={12}
-                              className="admin-textarea"
-                            />
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <button 
-                  type="submit" 
-                  className="admin-submit-button"
-                  disabled={
-                    maintenanceTranslationsText === JSON.stringify(currentMaintenanceTranslations, null, 2) &&
-                    adminTranslationsText === JSON.stringify(currentAdminTranslations, null, 2)
-                  }
-                >
-                  {t.translationsSubmitButton}
-                </button>
-              </form>
-
-            </div>
-          </div>
-
-          {/* Operations Tab */}
-          <div className={`admin-tab-content ${ADMIN_TAB_SECTIONS.operations.includes(activeTab) ? 'active' : ''}`}>
-            <div className="admin-section">
-              <h2>{t.operationsSectionTitle}</h2>
-
-              {activeTab === 'apiToken' && (
-                <ApiTokenTab
-                  apiTokenLocked={apiTokenLocked}
-                  wifiApiTokenLocked={wifiApiTokenLocked}
-                  t={t}
-                  apiTokenSourceLabelMap={apiTokenSourceLabelMap}
-                  currentApiTokenSource={currentApiTokenSource}
-                  currentApiTokenIsDefault={currentApiTokenIsDefault}
-                  apiTokenConfigLastUpdated={apiTokenConfigLastUpdated}
-                  currentWifiApiTokenSource={currentWifiApiTokenSource}
-                  currentWifiApiTokenConfigured={currentWifiApiTokenConfigured}
-                  wifiApiTokenConfigLastUpdated={wifiApiTokenConfigLastUpdated}
-                  newApiToken={newApiToken}
-                  newApiTokenConfirm={newApiTokenConfirm}
-                  newWifiApiToken={newWifiApiToken}
-                  newWifiApiTokenConfirm={newWifiApiTokenConfirm}
-                  apiTokenConfigMessage={apiTokenConfigMessage}
-                  apiTokenConfigMessageType={apiTokenConfigMessageType}
-                  wifiApiTokenConfigMessage={wifiApiTokenConfigMessage}
-                  wifiApiTokenConfigMessageType={wifiApiTokenConfigMessageType}
-                  booleanLabel={booleanLabel}
-                  onApiTokenChange={(field, value) => this.setState({ [field]: value })}
-                  onApiTokenSubmit={this.handleApiTokenSubmit}
-                  onWifiApiTokenChange={(field, value) => this.setState({ [field]: value })}
-                  onWifiApiTokenSubmit={this.handleWiFiApiTokenSubmit}
-                />
-              )}
-
-              {activeTab === 'system' && (
-                <SystemTab
-                  systemLocked={systemLocked}
-                  currentSystemStartupValidationStrict={currentSystemStartupValidationStrict}
-                  currentSystemExposeDetailedErrors={currentSystemExposeDetailedErrors}
-                  currentSystemHstsMaxAge={currentSystemHstsMaxAge}
-                  currentSystemRateLimitMaxBuckets={currentSystemRateLimitMaxBuckets}
-                  currentSystemDisplayTrackingMode={currentSystemDisplayTrackingMode}
-                  currentSystemDisplayTrackingRetentionHours={currentSystemDisplayTrackingRetentionHours}
-                  currentSystemDisplayTrackingCleanupMinutes={currentSystemDisplayTrackingCleanupMinutes}
-                  systemLastUpdated={systemLastUpdated}
-                  systemStartupValidationStrict={systemStartupValidationStrict}
-                  systemExposeDetailedErrors={systemExposeDetailedErrors}
-                  systemHstsMaxAge={systemHstsMaxAge}
-                  systemRateLimitMaxBuckets={systemRateLimitMaxBuckets}
-                  systemMessage={systemMessage}
-                  systemMessageType={systemMessageType}
-                  demoMode={demoMode}
-                  currentDemoMode={currentDemoMode}
-                  t={t}
-                  booleanLabel={booleanLabel}
-                  onStartupValidationChange={(value) => this.setState({ systemStartupValidationStrict: value })}
-                  onExposeErrorsChange={(value) => this.setState({ systemExposeDetailedErrors: value })}
-                  onHstsMaxAgeChange={(value) => this.setState({ systemHstsMaxAge: value })}
-                  onRateLimitMaxBucketsChange={(value) => this.setState({ systemRateLimitMaxBuckets: value })}
-                  onSubmit={this.handleSystemSubmit}
-                />
-              )}
-
-              {activeTab === 'translationApi' && (
-                <TranslationApiTab
-                  translationApiLocked={translationApiLocked}
-                  currentTranslationApiEnabled={currentTranslationApiEnabled}
-                  currentTranslationApiUrl={currentTranslationApiUrl}
-                  currentTranslationApiHasApiKey={currentTranslationApiHasApiKey}
-                  currentTranslationApiTimeoutMs={currentTranslationApiTimeoutMs}
-                  translationApiLastUpdated={translationApiLastUpdated}
-                  translationApiEnabled={translationApiEnabled}
-                  translationApiUrl={translationApiUrl}
-                  translationApiApiKey={translationApiApiKey}
-                  translationApiTimeoutMs={translationApiTimeoutMs}
-                  translationApiMessage={translationApiMessage}
-                  translationApiMessageType={translationApiMessageType}
-                  t={t}
-                  booleanLabel={booleanLabel}
-                  onEnabledChange={(value) => this.setState({ translationApiEnabled: value })}
-                  onUrlChange={(value) => this.setState({ translationApiUrl: value })}
-                  onApiKeyChange={(value) => this.setState({ translationApiApiKey: value })}
-                  onTimeoutChange={(value) => this.setState({ translationApiTimeoutMs: value })}
-                  onSubmit={this.handleTranslationApiSubmit}
-                />
-              )}
-
-              {activeTab === 'oauth' && (
-                <OAuthTab
-                  oauthLocked={oauthLocked}
-                  systemLocked={systemLocked}
-                  t={t}
-                  currentOauthClientId={currentOauthClientId}
-                  currentOauthAuthority={currentOauthAuthority}
-                  currentOauthHasClientSecret={currentOauthHasClientSecret}
-                  oauthLastUpdated={oauthLastUpdated}
-                  oauthClientId={oauthClientId}
-                  oauthAuthority={oauthAuthority}
-                  oauthClientSecret={oauthClientSecret}
-                  oauthMessage={oauthMessage}
-                  oauthMessageType={oauthMessageType}
-                  currentSystemGraphWebhookEnabled={currentSystemGraphWebhookEnabled}
-                  currentSystemGraphWebhookClientState={currentSystemGraphWebhookClientState}
-                  currentSystemGraphWebhookAllowedIps={currentSystemGraphWebhookAllowedIps}
-                  currentSystemGraphFetchTimeoutMs={currentSystemGraphFetchTimeoutMs}
-                  currentSystemGraphFetchRetryAttempts={currentSystemGraphFetchRetryAttempts}
-                  currentSystemGraphFetchRetryBaseMs={currentSystemGraphFetchRetryBaseMs}
-                  systemLastUpdated={systemLastUpdated}
-                  systemGraphWebhookEnabled={systemGraphWebhookEnabled}
-                  systemGraphWebhookClientState={systemGraphWebhookClientState}
-                  systemGraphWebhookAllowedIps={systemGraphWebhookAllowedIps}
-                  systemGraphFetchTimeoutMs={systemGraphFetchTimeoutMs}
-                  systemGraphFetchRetryAttempts={systemGraphFetchRetryAttempts}
-                  systemGraphFetchRetryBaseMs={systemGraphFetchRetryBaseMs}
-                  graphRuntimeMessage={graphRuntimeMessage}
-                  graphRuntimeMessageType={graphRuntimeMessageType}
-                  booleanLabel={booleanLabel}
-                  onOAuthChange={(field, value) => this.setState({ [field]: value, oauthFormDirty: true })}
-                  onOAuthSubmit={this.handleOAuthSubmit}
-                  onGraphRuntimeChange={(field, value) => this.setState({ [field]: value })}
-                  onGraphRuntimeSubmit={this.handleGraphRuntimeSubmit}
-                  certificateInfo={this.state.certificateInfo}
-                  certificateLoading={this.state.certificateLoading}
-                  certificateMessage={this.state.certificateMessage}
-                  certificateMessageType={this.state.certificateMessageType}
-                  onGenerateCertificate={this.handleGenerateCertificate}
-                  onDownloadCertificate={this.handleDownloadCertificate}
-                  onDeleteCertificate={this.handleDeleteCertificate}
-                />
-              )}
-
-              {activeTab === 'maintenance' && (
-                <MaintenanceTab
-                  maintenanceLocked={maintenanceLocked}
-                  currentMaintenanceEnabled={currentMaintenanceEnabled}
-                  currentMaintenanceMessage={currentMaintenanceMessage}
-                  maintenanceLastUpdated={maintenanceLastUpdated}
-                  maintenanceEnabled={maintenanceEnabled}
-                  maintenanceMessage={maintenanceMessage}
-                  maintenanceMessageBanner={maintenanceMessageBanner}
-                  maintenanceMessageType={maintenanceMessageType}
-                  t={t}
-                  booleanLabel={booleanLabel}
-                  onEnabledChange={(value) => this.setState({ maintenanceEnabled: value })}
-                  onMessageChange={(value) => this.setState({ maintenanceMessage: value })}
-                  onSubmit={this.handleMaintenanceSubmit}
-                />
-              )}
-
-              {activeTab === 'search' && (
-                <SearchTab
-                  searchLocked={searchLocked}
-                  t={t}
-                  currentSearchUseGraphAPI={currentSearchUseGraphAPI}
-                  currentSearchMaxDays={currentSearchMaxDays}
-                  currentSearchMaxRoomLists={currentSearchMaxRoomLists}
-                  currentSearchMaxRooms={currentSearchMaxRooms}
-                  currentSearchMaxItems={currentSearchMaxItems}
-                  currentSearchPollIntervalMs={currentSearchPollIntervalMs}
-                  searchLastUpdated={searchLastUpdated}
-                  searchUseGraphAPI={searchUseGraphAPI}
-                  searchMaxDays={searchMaxDays}
-                  searchMaxRoomLists={searchMaxRoomLists}
-                  searchMaxRooms={searchMaxRooms}
-                  searchMaxItems={searchMaxItems}
-                  searchPollIntervalMs={searchPollIntervalMs}
-                  searchMessage={searchMessage}
-                  searchMessageType={searchMessageType}
-                  booleanLabel={booleanLabel}
-                  onSearchChange={(field, value) => this.setState({ [field]: value })}
-                  onSearchSubmit={this.handleSearchSubmit}
-                />
-              )}
-
-              {activeTab === 'ratelimit' && (
-                <RateLimitTab
-                  rateLimitLocked={rateLimitLocked}
-                  t={t}
-                  currentRateLimitApiWindowMs={currentRateLimitApiWindowMs}
-                  currentRateLimitApiMax={currentRateLimitApiMax}
-                  currentRateLimitWriteWindowMs={currentRateLimitWriteWindowMs}
-                  currentRateLimitWriteMax={currentRateLimitWriteMax}
-                  currentRateLimitAuthWindowMs={currentRateLimitAuthWindowMs}
-                  currentRateLimitAuthMax={currentRateLimitAuthMax}
-                  rateLimitLastUpdated={rateLimitLastUpdated}
-                  rateLimitApiWindowMs={rateLimitApiWindowMs}
-                  rateLimitApiMax={rateLimitApiMax}
-                  rateLimitWriteWindowMs={rateLimitWriteWindowMs}
-                  rateLimitWriteMax={rateLimitWriteMax}
-                  rateLimitAuthWindowMs={rateLimitAuthWindowMs}
-                  rateLimitAuthMax={rateLimitAuthMax}
-                  rateLimitMessage={rateLimitMessage}
-                  rateLimitMessageType={rateLimitMessageType}
-                  onRateLimitChange={(field, value) => this.setState({ [field]: value })}
-                  onRateLimitSubmit={this.handleRateLimitSubmit}
-                />
-              )}
-
-              {activeTab === 'backup' && (
-                <BackupTab
-                  backupPayloadText={backupPayloadText}
-                  backupMessage={backupMessage}
-                  backupMessageType={backupMessageType}
-                  t={t}
-                  onPayloadChange={(value) => this.setState({ backupPayloadText: value })}
-                  onExport={this.handleExportBackup}
-                  onImport={this.handleImportBackup}
-                />
-              )}
-
-              {activeTab === 'connectedDisplays' && (
-                <DevicesTab
-                  connectedDisplays={connectedDisplays}
-                  connectedDisplaysLoading={connectedDisplaysLoading}
-                  connectedDisplaysMessage={connectedDisplaysMessage}
-                  connectedDisplaysMessageType={connectedDisplaysMessageType}
-                  systemDisplayTrackingMode={systemDisplayTrackingMode}
-                  currentSystemDisplayTrackingMode={currentSystemDisplayTrackingMode}
-                  systemDisplayTrackingRetentionHours={systemDisplayTrackingRetentionHours}
-                  currentSystemDisplayTrackingRetentionHours={currentSystemDisplayTrackingRetentionHours}
-                  systemDisplayTrackingCleanupMinutes={systemDisplayTrackingCleanupMinutes}
-                  currentSystemDisplayTrackingCleanupMinutes={currentSystemDisplayTrackingCleanupMinutes}
-                  systemMessage={systemMessage}
-                  systemMessageType={systemMessageType}
-                  t={t}
-                  onLoadDisplays={this.handleLoadConnectedDisplays}
-                  onOpenPowerManagement={this.handleOpenPowerManagementModal}
-                  onOpenTouchkioModal={this.handleOpenTouchkioModal}
-                  onMqttRefresh={this.handleMqttRefreshCommand}
-                  onMqttRefreshAll={this.handleMqttRefreshAll}
-                  onMqttRebootAll={this.handleMqttRebootAll}
-                  onDeleteDisplay={this.handleDeleteDisplay}
-                  onTrackingModeChange={(value) => this.setState({ systemDisplayTrackingMode: value })}
-                  onRetentionHoursChange={(value) => this.setState({ systemDisplayTrackingRetentionHours: value })}
-                  onCleanupMinutesChange={(value) => this.setState({ systemDisplayTrackingCleanupMinutes: value })}
-                  systemDisplayIpWhitelistEnabled={systemDisplayIpWhitelistEnabled}
-                  currentSystemDisplayIpWhitelistEnabled={currentSystemDisplayIpWhitelistEnabled}
-                  systemDisplayIpWhitelist={systemDisplayIpWhitelist}
-                  currentSystemDisplayIpWhitelist={currentSystemDisplayIpWhitelist}
-                  onIpWhitelistEnabledChange={(value) => this.setState({ systemDisplayIpWhitelistEnabled: value })}
-                  onIpWhitelistChange={(value) => this.setState({ systemDisplayIpWhitelist: value })}
-                  systemTrustReverseProxy={systemTrustReverseProxy}
-                  currentSystemTrustReverseProxy={currentSystemTrustReverseProxy}
-                  onTrustReverseProxyChange={(value) => this.setState({ systemTrustReverseProxy: value })}
-                  onSaveSettings={this.handleSystemSubmit}
-                />
-              )}
-
-              {activeTab === 'mqtt' && (
-                <MqttTab
-                  mqttEnabled={this.state.mqttEnabled}
-                  mqttBrokerUrl={this.state.mqttBrokerUrl}
-                  mqttAuthentication={this.state.mqttAuthentication}
-                  mqttUsername={this.state.mqttUsername}
-                  mqttPassword={this.state.mqttPassword}
-                  mqttDiscovery={this.state.mqttDiscovery}
-                  mqttConfigSaving={this.state.mqttConfigSaving}
-                  mqttConfigMessage={this.state.mqttConfigMessage}
-                  mqttConfigMessageType={this.state.mqttConfigMessageType}
-                  mqttStatus={this.state.mqttStatus}
-                  t={t}
-                  onEnabledChange={(value) => this.setState({ mqttEnabled: value })}
-                  onBrokerUrlChange={(value) => this.setState({ mqttBrokerUrl: value })}
-                  onAuthenticationChange={(value) => this.setState({ mqttAuthentication: value })}
-                  onUsernameChange={(value) => this.setState({ mqttUsername: value })}
-                  onPasswordChange={(value) => this.setState({ mqttPassword: value })}
-                  onDiscoveryChange={(value) => this.setState({ mqttDiscovery: value })}
-                  onSubmit={this.handleMqttConfigSubmit}
-                />
-              )}
-
-              {activeTab === 'audit' && (
-                <AuditTab
-                  auditLogs={auditLogs}
-                  auditMessage={auditMessage}
-                  auditMessageType={auditMessageType}
-                  t={t}
-                  onLoadLogs={this.handleLoadAuditLogs}
-                />
-              )}
-            </div>
-          </div>
+          <TranslationsTab
+            isActive={activeTab === 'translations'}
+            t={t}
+            availableTranslationLanguages={availableTranslationLanguages}
+            activeTranslationLanguage={activeTranslationLanguage}
+            currentTranslationApiHasApiKey={currentTranslationApiHasApiKey}
+            newTranslationLanguageCode={newTranslationLanguageCode}
+            translationLanguageDraftError={translationLanguageDraftError}
+            i18nMessage={i18nMessage}
+            i18nMessageType={i18nMessageType}
+            currentMaintenanceTranslations={currentMaintenanceTranslations}
+            currentAdminTranslations={currentAdminTranslations}
+            i18nLastUpdated={i18nLastUpdated}
+            collapsedTranslationGroups={collapsedTranslationGroups}
+            selectedMaintenanceTranslation={selectedMaintenanceTranslation}
+            selectedAdminTranslation={selectedAdminTranslation}
+            showAdvancedTranslationsEditor={showAdvancedTranslationsEditor}
+            maintenanceTranslationsText={maintenanceTranslationsText}
+            adminTranslationsText={adminTranslationsText}
+            quickAdminTranslationGroups={QUICK_ADMIN_TRANSLATION_GROUPS}
+            getLanguageDisplayName={getLanguageDisplayName}
+            onTranslationLanguageChange={this.handleTranslationLanguageChange}
+            onNewTranslationLanguageChange={this.handleNewTranslationLanguageChange}
+            onAddTranslationLanguage={this.handleAddTranslationLanguage}
+            onRemoveTranslationLanguage={this.handleRemoveTranslationLanguage}
+            onToggleTranslationGroup={this.toggleTranslationGroup}
+            onMaintenanceTranslationFieldChange={this.handleMaintenanceTranslationFieldChange}
+            onAdminTranslationFieldChange={this.handleAdminTranslationFieldChange}
+            onShowAdvancedEditorChange={(checked) => this.setState({ showAdvancedTranslationsEditor: checked })}
+            onMaintenanceTranslationsTextChange={(value) => this.setState({ maintenanceTranslationsText: value })}
+            onAdminTranslationsTextChange={(value) => this.setState({ adminTranslationsText: value })}
+            onSubmit={this.handleI18nSubmit}
+          />
 
           {/* Colors Configuration Tab */}
-          <div className={`admin-tab-content ${activeTab === 'colors' ? 'active' : ''}`}>
-            <div className="admin-section">
-              <h2>{t.colorsSectionTitle}</h2>
-              
-              <div className="admin-current-config">
-                <h3>{t.currentConfigTitle}</h3>
-                <div className="config-grid">
-                  <div className="config-item">
-                    <span className="config-label">{t.bookingButtonColorLabel}</span>
-                    <span className="config-value color-value-display">
-                      <span className="color-swatch-inline" style={{ backgroundColor: currentBookingButtonColor }}></span>
-                      {currentBookingButtonColor}
-                    </span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.statusAvailableColorLabel}</span>
-                    <span className="config-value color-value-display">
-                      <span className="color-swatch-inline" style={{ backgroundColor: currentStatusAvailableColor }}></span>
-                      {currentStatusAvailableColor}
-                    </span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.statusBusyColorLabel}</span>
-                    <span className="config-value color-value-display">
-                      <span className="color-swatch-inline" style={{ backgroundColor: currentStatusBusyColor }}></span>
-                      {currentStatusBusyColor}
-                    </span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.statusUpcomingColorLabel}</span>
-                    <span className="config-value color-value-display">
-                      <span className="color-swatch-inline" style={{ backgroundColor: currentStatusUpcomingColor }}></span>
-                      {currentStatusUpcomingColor}
-                    </span>
-                  </div>
-                  <div className="config-item">
-                    <span className="config-label">{t.statusNotFoundColorLabel}</span>
-                    <span className="config-value color-value-display">
-                      <span className="color-swatch-inline" style={{ backgroundColor: currentStatusNotFoundColor }}></span>
-                      {currentStatusNotFoundColor}
-                    </span>
-                  </div>
-                </div>
-              </div>
+          <ColorsTab
+            isActive={activeTab === 'colors'}
+            t={t}
+            currentBookingButtonColor={currentBookingButtonColor}
+            currentStatusAvailableColor={currentStatusAvailableColor}
+            currentStatusBusyColor={currentStatusBusyColor}
+            currentStatusUpcomingColor={currentStatusUpcomingColor}
+            currentStatusNotFoundColor={currentStatusNotFoundColor}
+            bookingButtonColor={bookingButtonColor}
+            statusAvailableColor={statusAvailableColor}
+            statusBusyColor={statusBusyColor}
+            statusUpcomingColor={statusUpcomingColor}
+            statusNotFoundColor={statusNotFoundColor}
+            colorMessage={colorMessage}
+            colorMessageType={colorMessageType}
+            hexToHSL={this.hexToHSL}
+            hslToHex={this.hslToHex}
+            onColorChange={(key, value) => this.setState({ [key]: value })}
+            onResetColor={(key, defaultValue) => this.setState({ [key]: defaultValue })}
+            onSubmit={this.handleColorsSubmit}
+          />
 
-              <form onSubmit={this.handleColorsSubmit}>
-                <div className="admin-form-group">
-                  <label>{t.bookingButtonColorLabel}</label>
-                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', marginTop: '8px' }}>
-                    <input
-                      type="color"
-                      value={bookingButtonColor}
-                      onChange={(e) => this.setState({ bookingButtonColor: e.target.value })}
-                      style={{ width: '60px', height: '40px', cursor: 'pointer', border: '2px solid #ddd', borderRadius: '4px', flexShrink: 0 }}
-                    />
-                    <input
-                      type="text"
-                      value={bookingButtonColor}
-                      onChange={(e) => this.setState({ bookingButtonColor: e.target.value })}
-                      placeholder="#334155"
-                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => this.setState({ bookingButtonColor: '#334155' })}
-                      className="admin-secondary-button"
-                    >
-                      {t.resetToDefaultButton}
-                    </button>
-                  </div>
-                  <small>{t.bookingButtonColorHelp}</small>
-                </div>
+          {/* System Configuration Tab */}
+          <SystemTab
+            isActive={activeTab === 'system'}
+            systemLocked={systemLocked}
+            currentSystemStartupValidationStrict={currentSystemStartupValidationStrict}
+            currentSystemExposeDetailedErrors={currentSystemExposeDetailedErrors}
+            currentSystemHstsMaxAge={currentSystemHstsMaxAge}
+            currentSystemRateLimitMaxBuckets={currentSystemRateLimitMaxBuckets}
+            currentSystemDisplayTrackingMode={currentSystemDisplayTrackingMode}
+            currentSystemDisplayTrackingRetentionHours={currentSystemDisplayTrackingRetentionHours}
+            currentSystemDisplayTrackingCleanupMinutes={currentSystemDisplayTrackingCleanupMinutes}
+            systemLastUpdated={systemLastUpdated}
+            systemStartupValidationStrict={systemStartupValidationStrict}
+            systemExposeDetailedErrors={systemExposeDetailedErrors}
+            systemHstsMaxAge={systemHstsMaxAge}
+            systemRateLimitMaxBuckets={systemRateLimitMaxBuckets}
+            demoMode={demoMode}
+            currentDemoMode={currentDemoMode}
+            systemMessage={systemMessage}
+            systemMessageType={systemMessageType}
+            t={t}
+            booleanLabel={booleanLabel}
+            onStartupValidationChange={(checked) => this.setState({ systemStartupValidationStrict: checked })}
+            onExposeErrorsChange={(checked) => this.setState({ systemExposeDetailedErrors: checked })}
+            onHstsMaxAgeChange={(value) => this.setState({ systemHstsMaxAge: value })}
+            onRateLimitMaxBucketsChange={(value) => this.setState({ systemRateLimitMaxBuckets: value })}
+            onSubmit={this.handleSystemSubmit}
+          />
 
-                <div className="admin-form-group">
-                  <label>{t.statusAvailableColorLabel} - {t.colorPickerGreenVariations}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', marginBottom: '12px' }}>
-                    {['#dcfce7', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d'].map(color => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => this.setState({ statusAvailableColor: color })}
-                        style={{
-                          width: '45px',
-                          height: '45px',
-                          backgroundColor: color,
-                          border: statusAvailableColor === color ? '3px solid #000' : '2px solid #999',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          padding: '0'
-                        }}
-                        title={color}
-                      >
-                        {statusAvailableColor === color ? '✓' : ''}
-                      </button>
-                    ))}
-                  </div>
+          {/* Translation API Tab */}
+          <TranslationApiTab
+            isActive={activeTab === 'translationApi'}
+            translationApiLocked={translationApiLocked}
+            currentTranslationApiEnabled={currentTranslationApiEnabled}
+            currentTranslationApiUrl={currentTranslationApiUrl}
+            currentTranslationApiHasApiKey={currentTranslationApiHasApiKey}
+            currentTranslationApiTimeoutMs={currentTranslationApiTimeoutMs}
+            translationApiLastUpdated={translationApiLastUpdated}
+            translationApiEnabled={translationApiEnabled}
+            translationApiUrl={translationApiUrl}
+            translationApiApiKey={translationApiApiKey}
+            translationApiTimeoutMs={translationApiTimeoutMs}
+            translationApiMessage={translationApiMessage}
+            translationApiMessageType={translationApiMessageType}
+            t={t}
+            booleanLabel={booleanLabel}
+            onEnabledChange={(checked) => this.setState({ translationApiEnabled: checked })}
+            onUrlChange={(value) => this.setState({ translationApiUrl: value })}
+            onApiKeyChange={(value) => this.setState({ translationApiApiKey: value })}
+            onTimeoutChange={(value) => this.setState({ translationApiTimeoutMs: value })}
+            onSubmit={this.handleTranslationApiSubmit}
+          />
 
-                  {(() => {
-                    const hsl = this.hexToHSL(statusAvailableColor);
-                    return (
-                      <div>
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerHue}: {hsl.h}°
-                            </label>
-                            <input
-                              type="range"
-                              min="80"
-                              max="150"
-                              value={hsl.h}
-                              onChange={(e) => {
-                                const newHsl = { h: parseInt(e.target.value), s: hsl.s, l: hsl.l };
-                                this.setState({ statusAvailableColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                          <div style={{ width: '60px', height: '50px', backgroundColor: statusAvailableColor, border: '2px solid #ddd', borderRadius: '4px' }}></div>
-                        </div>
-                        
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerSaturation}: {hsl.s}%
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={hsl.s}
-                              onChange={(e) => {
-                                const newHsl = { h: hsl.h, s: parseInt(e.target.value), l: hsl.l };
-                                this.setState({ statusAvailableColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                        </div>
+          {/* OAuth / Graph-API Tab */}
+          <OAuthTab
+            isActive={activeTab === 'oauth'}
+            oauthLocked={oauthLocked}
+            systemLocked={systemLocked}
+            t={t}
+            currentOauthClientId={currentOauthClientId}
+            currentOauthAuthority={currentOauthAuthority}
+            currentOauthHasClientSecret={currentOauthHasClientSecret}
+            oauthLastUpdated={oauthLastUpdated}
+            oauthClientId={oauthClientId}
+            oauthAuthority={oauthAuthority}
+            oauthClientSecret={oauthClientSecret}
+            oauthMessage={oauthMessage}
+            oauthMessageType={oauthMessageType}
+            currentSystemGraphWebhookEnabled={currentSystemGraphWebhookEnabled}
+            currentSystemGraphWebhookClientState={currentSystemGraphWebhookClientState}
+            currentSystemGraphWebhookAllowedIps={currentSystemGraphWebhookAllowedIps}
+            currentSystemGraphFetchTimeoutMs={currentSystemGraphFetchTimeoutMs}
+            currentSystemGraphFetchRetryAttempts={currentSystemGraphFetchRetryAttempts}
+            currentSystemGraphFetchRetryBaseMs={currentSystemGraphFetchRetryBaseMs}
+            systemLastUpdated={systemLastUpdated}
+            systemGraphWebhookEnabled={systemGraphWebhookEnabled}
+            systemGraphWebhookClientState={systemGraphWebhookClientState}
+            systemGraphWebhookAllowedIps={systemGraphWebhookAllowedIps}
+            systemGraphFetchTimeoutMs={systemGraphFetchTimeoutMs}
+            systemGraphFetchRetryAttempts={systemGraphFetchRetryAttempts}
+            systemGraphFetchRetryBaseMs={systemGraphFetchRetryBaseMs}
+            graphRuntimeMessage={graphRuntimeMessage}
+            graphRuntimeMessageType={graphRuntimeMessageType}
+            booleanLabel={booleanLabel}
+            onOAuthChange={(key, value) => this.setState({ [key]: value, oauthFormDirty: true })}
+            onOAuthSubmit={this.handleOAuthSubmit}
+            onGraphRuntimeChange={(key, value) => this.setState({ [key]: value })}
+            onGraphRuntimeSubmit={this.handleGraphRuntimeSubmit}
+            certificateInfo={this.state.certificateInfo}
+            certificateLoading={this.state.certificateLoading}
+            certificateMessage={this.state.certificateMessage}
+            certificateMessageType={this.state.certificateMessageType}
+            onGenerateCertificate={this.handleGenerateCertificate}
+            onDownloadCertificate={this.handleDownloadCertificate}
+            onDeleteCertificate={this.handleDeleteCertificate}
+          />
 
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerLightness}: {hsl.l}%
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={hsl.l}
-                              onChange={(e) => {
-                                const newHsl = { h: hsl.h, s: hsl.s, l: parseInt(e.target.value) };
-                                this.setState({ statusAvailableColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
+          {/* Maintenance Tab */}
+          <MaintenanceTab
+            isActive={activeTab === 'maintenance'}
+            maintenanceLocked={maintenanceLocked}
+            currentMaintenanceEnabled={currentMaintenanceEnabled}
+            currentMaintenanceMessage={this.state.currentMaintenanceMessage}
+            maintenanceLastUpdated={this.state.maintenanceLastUpdated}
+            maintenanceEnabled={this.state.maintenanceEnabled}
+            maintenanceMessage={this.state.maintenanceMessage}
+            maintenanceMessageBanner={maintenanceMessageBanner}
+            maintenanceMessageType={maintenanceMessageType}
+            t={t}
+            booleanLabel={booleanLabel}
+            onEnabledChange={(checked) => this.setState({ maintenanceEnabled: checked })}
+            onMessageChange={(value) => this.setState({ maintenanceMessage: value })}
+            onSubmit={this.handleMaintenanceSubmit}
+          />
 
-                  <button
-                    type="button"
-                    onClick={() => this.setState({ statusAvailableColor: '#22c55e' })}
-                    className="admin-secondary-button"
-                    style={{ marginTop: '8px' }}
-                  >
-                    {t.resetToDefaultButton}
-                  </button>
-                  <small>{t.statusAvailableColorHelp}</small>
-                </div>
+          {/* API Token Tab */}
+          <ApiTokenTab
+            isActive={activeTab === 'apiToken'}
+            apiTokenLocked={apiTokenLocked}
+            wifiApiTokenLocked={wifiApiTokenLocked}
+            t={t}
+            apiTokenSourceLabelMap={apiTokenSourceLabelMap}
+            currentApiTokenSource={currentApiTokenSource}
+            currentApiTokenIsDefault={currentApiTokenIsDefault}
+            apiTokenConfigLastUpdated={apiTokenConfigLastUpdated}
+            currentWifiApiTokenSource={currentWifiApiTokenSource}
+            currentWifiApiTokenConfigured={currentWifiApiTokenConfigured}
+            wifiApiTokenConfigLastUpdated={wifiApiTokenConfigLastUpdated}
+            newApiToken={newApiToken}
+            newApiTokenConfirm={newApiTokenConfirm}
+            newWifiApiToken={newWifiApiToken}
+            newWifiApiTokenConfirm={newWifiApiTokenConfirm}
+            apiTokenConfigMessage={apiTokenConfigMessage}
+            apiTokenConfigMessageType={apiTokenConfigMessageType}
+            wifiApiTokenConfigMessage={wifiApiTokenConfigMessage}
+            wifiApiTokenConfigMessageType={wifiApiTokenConfigMessageType}
+            booleanLabel={booleanLabel}
+            onApiTokenChange={(key, value) => this.setState({ [key]: value })}
+            onApiTokenSubmit={this.handleApiTokenSubmit}
+            onWifiApiTokenChange={(key, value) => this.setState({ [key]: value })}
+            onWifiApiTokenSubmit={this.handleWiFiApiTokenSubmit}
+          />
 
-                <div className="admin-form-group">
-                  <label>{t.statusBusyColorLabel} - {t.colorPickerRedVariations}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', marginBottom: '12px' }}>
-                    {['#fee2e2', '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d'].map(color => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => this.setState({ statusBusyColor: color })}
-                        style={{
-                          width: '45px',
-                          height: '45px',
-                          backgroundColor: color,
-                          border: statusBusyColor === color ? '3px solid #000' : '2px solid #999',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          padding: '0'
-                        }}
-                        title={color}
-                      >
-                        {statusBusyColor === color ? '✓' : ''}
-                      </button>
-                    ))}
-                  </div>
+          {/* Search Tab */}
+          <SearchTab
+            isActive={activeTab === 'search'}
+            searchLocked={searchLocked}
+            t={t}
+            currentSearchUseGraphAPI={currentSearchUseGraphAPI}
+            currentSearchMaxDays={currentSearchMaxDays}
+            currentSearchMaxRoomLists={currentSearchMaxRoomLists}
+            currentSearchMaxRooms={currentSearchMaxRooms}
+            currentSearchMaxItems={currentSearchMaxItems}
+            currentSearchPollIntervalMs={currentSearchPollIntervalMs}
+            searchLastUpdated={searchLastUpdated}
+            searchUseGraphAPI={searchUseGraphAPI}
+            searchMaxDays={searchMaxDays}
+            searchMaxRoomLists={searchMaxRoomLists}
+            searchMaxRooms={searchMaxRooms}
+            searchMaxItems={searchMaxItems}
+            searchPollIntervalMs={searchPollIntervalMs}
+            searchMessage={searchMessage}
+            searchMessageType={searchMessageType}
+            booleanLabel={booleanLabel}
+            onSearchChange={(key, value) => this.setState({ [key]: value })}
+            onSearchSubmit={this.handleSearchSubmit}
+          />
 
-                  {(() => {
-                    const hsl = this.hexToHSL(statusBusyColor);
-                    return (
-                      <div>
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerHue}: {hsl.h}°
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="20"
-                              value={hsl.h <= 20 ? hsl.h : 0}
-                              onChange={(e) => {
-                                const newHsl = { h: parseInt(e.target.value), s: hsl.s, l: hsl.l };
-                                this.setState({ statusBusyColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                          <div style={{ width: '60px', height: '50px', backgroundColor: statusBusyColor, border: '2px solid #ddd', borderRadius: '4px' }}></div>
-                        </div>
-                        
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerSaturation}: {hsl.s}%
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={hsl.s}
-                              onChange={(e) => {
-                                const newHsl = { h: hsl.h, s: parseInt(e.target.value), l: hsl.l };
-                                this.setState({ statusBusyColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                        </div>
+          {/* Rate Limit Tab */}
+          <RateLimitTab
+            isActive={activeTab === 'ratelimit'}
+            rateLimitLocked={rateLimitLocked}
+            t={t}
+            currentRateLimitApiWindowMs={currentRateLimitApiWindowMs}
+            currentRateLimitApiMax={currentRateLimitApiMax}
+            currentRateLimitWriteWindowMs={currentRateLimitWriteWindowMs}
+            currentRateLimitWriteMax={currentRateLimitWriteMax}
+            currentRateLimitAuthWindowMs={currentRateLimitAuthWindowMs}
+            currentRateLimitAuthMax={currentRateLimitAuthMax}
+            rateLimitLastUpdated={rateLimitLastUpdated}
+            rateLimitApiWindowMs={rateLimitApiWindowMs}
+            rateLimitApiMax={rateLimitApiMax}
+            rateLimitWriteWindowMs={rateLimitWriteWindowMs}
+            rateLimitWriteMax={rateLimitWriteMax}
+            rateLimitAuthWindowMs={rateLimitAuthWindowMs}
+            rateLimitAuthMax={rateLimitAuthMax}
+            rateLimitMessage={rateLimitMessage}
+            rateLimitMessageType={rateLimitMessageType}
+            onRateLimitChange={(key, value) => this.setState({ [key]: value })}
+            onRateLimitSubmit={this.handleRateLimitSubmit}
+          />
 
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerLightness}: {hsl.l}%
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={hsl.l}
-                              onChange={(e) => {
-                                const newHsl = { h: hsl.h, s: hsl.s, l: parseInt(e.target.value) };
-                                this.setState({ statusBusyColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
+          {/* Backup Tab */}
+          <BackupTab
+            isActive={activeTab === 'backup'}
+            backupPayloadText={backupPayloadText}
+            backupMessage={backupMessage}
+            backupMessageType={backupMessageType}
+            t={t}
+            onPayloadChange={(value) => this.setState({ backupPayloadText: value })}
+            onExport={this.handleExportBackup}
+            onImport={this.handleImportBackup}
+          />
 
-                  <button
-                    type="button"
-                    onClick={() => this.setState({ statusBusyColor: '#ef4444' })}
-                    className="admin-secondary-button"
-                    style={{ marginTop: '8px' }}
-                  >
-                    {t.resetToDefaultButton}
-                  </button>
-                  <small>{t.statusBusyColorHelp}</small>
-                </div>
+          {/* Audit Log Tab */}
+          <AuditTab
+            isActive={activeTab === 'audit'}
+            auditLogs={auditLogs}
+            auditMessage={auditMessage}
+            auditMessageType={auditMessageType}
+            t={t}
+            onLoadLogs={this.handleLoadAuditLogs}
+          />
 
-                <div className="admin-form-group">
-                  <label>{t.statusUpcomingColorLabel} - {t.colorPickerYellowVariations}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', marginBottom: '12px' }}>
-                    {['#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#a16207', '#854d0e'].map(color => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => this.setState({ statusUpcomingColor: color })}
-                        style={{
-                          width: '45px',
-                          height: '45px',
-                          backgroundColor: color,
-                          border: statusUpcomingColor === color ? '3px solid #000' : '2px solid #999',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          padding: '0'
-                        }}
-                        title={color}
-                      >
-                        {statusUpcomingColor === color ? '✓' : ''}
-                      </button>
-                    ))}
-                  </div>
+          {/* MQTT Tab */}
+          <MqttTab
+            isActive={activeTab === 'mqtt'}
+            mqttEnabled={this.state.mqttEnabled}
+            mqttBrokerUrl={this.state.mqttBrokerUrl}
+            mqttAuthentication={this.state.mqttAuthentication}
+            mqttUsername={this.state.mqttUsername}
+            mqttPassword={this.state.mqttPassword}
+            mqttDiscovery={this.state.mqttDiscovery}
+            mqttConfigSaving={this.state.mqttConfigSaving}
+            mqttConfigMessage={this.state.mqttConfigMessage}
+            mqttConfigMessageType={this.state.mqttConfigMessageType}
+            mqttStatus={this.state.mqttStatus}
+            t={t}
+            onEnabledChange={(checked) => this.setState({ mqttEnabled: checked })}
+            onBrokerUrlChange={(value) => this.setState({ mqttBrokerUrl: value })}
+            onAuthenticationChange={(checked) => this.setState({ mqttAuthentication: checked })}
+            onUsernameChange={(value) => this.setState({ mqttUsername: value })}
+            onPasswordChange={(value) => this.setState({ mqttPassword: value })}
+            onDiscoveryChange={(value) => this.setState({ mqttDiscovery: value })}
+            onSubmit={this.handleMqttConfigSubmit}
+          />
 
-                  {(() => {
-                    const hsl = this.hexToHSL(statusUpcomingColor);
-                    return (
-                      <div>
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerHue}: {hsl.h}°
-                            </label>
-                            <input
-                              type="range"
-                              min="20"
-                              max="60"
-                              value={hsl.h}
-                              onChange={(e) => {
-                                const newHsl = { h: parseInt(e.target.value), s: hsl.s, l: hsl.l };
-                                this.setState({ statusUpcomingColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                          <div style={{ width: '60px', height: '50px', backgroundColor: statusUpcomingColor, border: '2px solid #ddd', borderRadius: '4px' }}></div>
-                        </div>
-                        
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerSaturation}: {hsl.s}%
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={hsl.s}
-                              onChange={(e) => {
-                                const newHsl = { h: hsl.h, s: parseInt(e.target.value), l: hsl.l };
-                                this.setState({ statusUpcomingColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerLightness}: {hsl.l}%
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={hsl.l}
-                              onChange={(e) => {
-                                const newHsl = { h: hsl.h, s: hsl.s, l: parseInt(e.target.value) };
-                                this.setState({ statusUpcomingColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  <button
-                    type="button"
-                    onClick={() => this.setState({ statusUpcomingColor: '#f59e0b' })}
-                    className="admin-secondary-button"
-                    style={{ marginTop: '8px' }}
-                  >
-                    {t.resetToDefaultButton}
-                  </button>
-                  <small>{t.statusUpcomingColorHelp}</small>
-                </div>
-
-                <div className="admin-form-group">
-                  <label>{t.statusNotFoundColorLabel} - {t.colorPickerGrayVariations}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', marginBottom: '12px' }}>
-                    {['#f3f4f6', '#e5e7eb', '#d1d5db', '#9ca3af', '#6b7280', '#4b5563', '#374151', '#1f2937', '#111827'].map(color => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => this.setState({ statusNotFoundColor: color })}
-                        style={{
-                          width: '45px',
-                          height: '45px',
-                          backgroundColor: color,
-                          border: statusNotFoundColor === color ? '3px solid #000' : '2px solid #999',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          padding: '0'
-                        }}
-                        title={color}
-                      >
-                        {statusNotFoundColor === color ? '✓' : ''}
-                      </button>
-                    ))}
-                  </div>
-
-                  {(() => {
-                    const hsl = this.hexToHSL(statusNotFoundColor);
-                    return (
-                      <div>
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', alignItems: 'flex-start' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerHue}: {hsl.h}°
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="360"
-                              value={hsl.h}
-                              onChange={(e) => {
-                                const newHsl = { h: parseInt(e.target.value), s: hsl.s, l: hsl.l };
-                                this.setState({ statusNotFoundColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                          <div style={{ width: '60px', height: '50px', backgroundColor: statusNotFoundColor, border: '2px solid #ddd', borderRadius: '4px' }}></div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerSaturation}: {hsl.s}%
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={hsl.s}
-                              onChange={(e) => {
-                                const newHsl = { h: hsl.h, s: parseInt(e.target.value), l: hsl.l };
-                                this.setState({ statusNotFoundColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
-                              {t.colorPickerLightness}: {hsl.l}%
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={hsl.l}
-                              onChange={(e) => {
-                                const newHsl = { h: hsl.h, s: hsl.s, l: parseInt(e.target.value) };
-                                this.setState({ statusNotFoundColor: this.hslToHex(newHsl.h, newHsl.s, newHsl.l) });
-                              }}
-                              style={{ width: '100%', cursor: 'pointer' }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  <button
-                    type="button"
-                    onClick={() => this.setState({ statusNotFoundColor: '#6b7280' })}
-                    className="admin-secondary-button"
-                    style={{ marginTop: '8px' }}
-                  >
-                    {t.resetToDefaultButton}
-                  </button>
-                  <small>{t.statusNotFoundColorHelp}</small>
-                </div>
-
-                <button 
-                  type="submit" 
-                  className="admin-submit-button"
-                  disabled={
-                    bookingButtonColor === currentBookingButtonColor &&
-                    statusAvailableColor === currentStatusAvailableColor &&
-                    statusBusyColor === currentStatusBusyColor &&
-                    statusUpcomingColor === currentStatusUpcomingColor &&
-                    statusNotFoundColor === currentStatusNotFoundColor
-                  }
-                >
-                  {t.submitColorsButton}
-                </button>
-              </form>
-
-              {colorMessage && (
-                <div className={`admin-message admin-message-${colorMessageType}`}>
-                  {colorMessage}
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Connected Displays Tab */}
+          <DevicesTab
+            isActive={activeTab === 'connectedDisplays'}
+            connectedDisplays={connectedDisplays}
+            connectedDisplaysLoading={connectedDisplaysLoading}
+            connectedDisplaysMessage={connectedDisplaysMessage}
+            connectedDisplaysMessageType={connectedDisplaysMessageType}
+            systemDisplayTrackingMode={this.state.systemDisplayTrackingMode}
+            currentSystemDisplayTrackingMode={currentSystemDisplayTrackingMode}
+            systemDisplayTrackingRetentionHours={this.state.systemDisplayTrackingRetentionHours}
+            currentSystemDisplayTrackingRetentionHours={currentSystemDisplayTrackingRetentionHours}
+            systemDisplayTrackingCleanupMinutes={this.state.systemDisplayTrackingCleanupMinutes}
+            currentSystemDisplayTrackingCleanupMinutes={currentSystemDisplayTrackingCleanupMinutes}
+            systemDisplayIpWhitelistEnabled={this.state.systemDisplayIpWhitelistEnabled}
+            currentSystemDisplayIpWhitelistEnabled={currentSystemDisplayIpWhitelistEnabled}
+            systemDisplayIpWhitelist={this.state.systemDisplayIpWhitelist}
+            currentSystemDisplayIpWhitelist={currentSystemDisplayIpWhitelist}
+            systemTrustReverseProxy={this.state.systemTrustReverseProxy}
+            currentSystemTrustReverseProxy={currentSystemTrustReverseProxy}
+            systemMessage={systemMessage}
+            systemMessageType={systemMessageType}
+            t={t}
+            onLoadDisplays={this.handleLoadConnectedDisplays}
+            onOpenPowerManagement={(clientId) => this.handleOpenPowerManagementModal(clientId)}
+            onOpenTouchkioModal={this.handleOpenTouchkioModal}
+            onMqttRefresh={this.handleMqttRefreshCommand}
+            onMqttRefreshAll={this.handleMqttRefreshAll}
+            onMqttRebootAll={this.handleMqttRebootAll}
+            onDeleteDisplay={this.handleDeleteDisplay}
+            onTrackingModeChange={(value) => this.setState({ systemDisplayTrackingMode: value })}
+            onRetentionHoursChange={(value) => this.setState({ systemDisplayTrackingRetentionHours: value })}
+            onCleanupMinutesChange={(value) => this.setState({ systemDisplayTrackingCleanupMinutes: value })}
+            onIpWhitelistEnabledChange={(checked) => this.setState({ systemDisplayIpWhitelistEnabled: checked })}
+            onIpWhitelistChange={(value) => this.setState({ systemDisplayIpWhitelist: value })}
+            onTrustReverseProxyChange={(checked) => this.setState({ systemTrustReverseProxy: checked })}
+            onSaveSettings={this.handleSystemSubmit}
+          />
 
           {/* Power Management Modal */}
           <PowerManagementModal

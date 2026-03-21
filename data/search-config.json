@@ -1,9 +1,0 @@
-{
-  "useGraphAPI": true,
-  "maxDays": 10,
-  "maxRoomLists": 10,
-  "maxRooms": 20,
-  "maxItems": 6,
-  "pollIntervalMs": 15000,
-  "lastUpdated": "2026-03-08T10:31:39.063Z"
-}

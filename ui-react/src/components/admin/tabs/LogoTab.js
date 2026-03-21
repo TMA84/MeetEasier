@@ -5,6 +5,7 @@
 import React from 'react';
 
 const LogoTab = ({
+  isActive,
   logoLocked,
   t,
   currentLogoDarkUrl,
@@ -23,7 +24,7 @@ const LogoTab = ({
   onSubmit
 }) => {
   return (
-    <div className={`admin-tab-content ${true ? 'active' : ''}`}>
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
       {!logoLocked && (
         <div className="admin-section">
           <h2>{t.logoSectionTitle}</h2>

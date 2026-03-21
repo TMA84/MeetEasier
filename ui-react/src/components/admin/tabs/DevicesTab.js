@@ -5,6 +5,7 @@
 import React from 'react';
 
 const DevicesTab = ({
+  isActive,
   connectedDisplays,
   connectedDisplaysLoading,
   connectedDisplaysMessage,
@@ -42,6 +43,7 @@ const DevicesTab = ({
   const hasMqttDisplays = connectedDisplays && connectedDisplays.filter(d => d.mqtt).length > 0;
 
   return (
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
     <div className="admin-card" id="ops-connected-displays">
       <div className="admin-form-divider"></div>
       <h3>{t.connectedDisplaysSectionTitle || 'Connected Displays'}</h3>
@@ -125,6 +127,9 @@ const DevicesTab = ({
                     <td className="devices-name-cell">
                       <div>
                         <strong>{display.name}</strong>
+                        {display.mqtt && !display.mqtt.hasDesiredConfig && (
+                          <span className="devices-badge devices-badge--new" style={{ marginLeft: '0.5em', backgroundColor: '#8b5cf6', color: '#fff', fontSize: '0.7em', padding: '0.15em 0.5em', borderRadius: '4px', verticalAlign: 'middle' }}>NEW</span>
+                        )}
                         {(display.mqtt?.deviceId || display.mqtt?.hostname) && (
                           <div className="devices-sub-info">{display.mqtt?.deviceId || display.mqtt?.hostname}</div>
                         )}
@@ -269,6 +274,7 @@ const DevicesTab = ({
       {systemMessage && (
         <div className={`admin-message admin-message-${systemMessageType}`}>{systemMessage}</div>
       )}
+    </div>
     </div>
   );
 };

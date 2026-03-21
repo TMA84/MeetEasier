@@ -6,6 +6,7 @@ import React from 'react';
 
 const MqttTab = ({
   // Data
+  isActive,
   mqttEnabled,
   mqttBrokerUrl,
   mqttAuthentication,
@@ -30,6 +31,7 @@ const MqttTab = ({
   onSubmit
 }) => {
   return (
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
     <div className="admin-card" id="ops-mqtt">
       <h3>{t.mqttSectionTitle || 'MQTT Configuration'}</h3>
       
@@ -149,6 +151,7 @@ const MqttTab = ({
       </div>
 
       <div className="admin-form-divider"></div>
+    </div>
     </div>
   );
 };

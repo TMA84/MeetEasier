@@ -5,6 +5,7 @@
 import React from 'react';
 
 const SearchTab = ({
+  isActive,
   searchLocked,
   t,
   currentSearchUseGraphAPI,
@@ -27,6 +28,7 @@ const SearchTab = ({
   onSearchSubmit
 }) => {
   return (
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
     <div className="admin-card" id="ops-search">
       <div className="admin-form-divider"></div>
 
@@ -171,6 +173,7 @@ const SearchTab = ({
           <div className="admin-form-divider"></div>
         </>
       )}
+    </div>
     </div>
   );
 };

@@ -6,6 +6,7 @@ import React from 'react';
 
 const TranslationApiTab = ({
   // Data
+  isActive,
   translationApiLocked,
   currentTranslationApiEnabled,
   currentTranslationApiUrl,
@@ -31,6 +32,7 @@ const TranslationApiTab = ({
   onSubmit
 }) => {
   return (
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
     <div className="admin-card" id="ops-translation-api">
       {!translationApiLocked && (
         <>
@@ -139,6 +141,7 @@ const TranslationApiTab = ({
           </div>
         </>
       )}
+    </div>
     </div>
   );
 };

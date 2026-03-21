@@ -6,6 +6,7 @@ import React from 'react';
 
 const MaintenanceTab = ({
   // Data
+  isActive,
   maintenanceLocked,
   currentMaintenanceEnabled,
   currentMaintenanceMessage,
@@ -25,6 +26,7 @@ const MaintenanceTab = ({
   onSubmit
 }) => {
   return (
+    <div className={`admin-tab-content ${isActive ? 'active' : ''}`}>
     <div className="admin-card" id="ops-maintenance">
       {!maintenanceLocked && (
         <>
@@ -94,6 +96,7 @@ const MaintenanceTab = ({
           {maintenanceMessageBanner}
         </div>
       )}
+    </div>
     </div>
   );
 };
