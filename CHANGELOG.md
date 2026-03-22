@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.52] - 2026-03-22
+
 ### Added
 - Live screenshot display for Touchkio devices in Admin panel (requires Touchkio v1.4.1+) — screenshots are received via MQTT and shown in the device detail modal with auto-refresh
 - Binary MQTT message support for receiving raw image data from Touchkio screenshot topics
