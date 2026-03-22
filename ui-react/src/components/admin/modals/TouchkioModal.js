@@ -1,11 +1,12 @@
 /** @file TouchkioModal.js
  *  @description Modal dialog for managing Touchkio displays, providing controls for power, brightness, volume, zoom, kiosk mode, theme, page URL, and system operations like reboot and shutdown.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const TouchkioModal = ({
   show,
   display,
+  getRequestHeaders,
   message,
   messageType,
   brightness,
@@ -26,12 +27,73 @@ const TouchkioModal = ({
 }) => {
   const [editingUrl, setEditingUrl] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [screenshotUrl, setScreenshotUrl] = useState(null);
+  const [screenshotLoading, setScreenshotLoading] = useState(false);
+  const [screenshotError, setScreenshotError] = useState(null);
+  const [screenshotExpanded, setScreenshotExpanded] = useState(false);
+  const screenshotUrlRef = useRef(null);
+  const prevDeviceIdRef = useRef(null);
 
-  // Reset editing state when display changes
+  // Reset editing state only when switching to a different device
+  const currentDeviceId = display?.mqtt?.deviceId || display?.deviceId || null;
   useEffect(() => {
+    if (currentDeviceId === prevDeviceIdRef.current) return;
+    prevDeviceIdRef.current = currentDeviceId;
     setEditingUrl(false);
     setUrlInput('');
-  }, [display]);
+    if (screenshotUrlRef.current) URL.revokeObjectURL(screenshotUrlRef.current);
+    screenshotUrlRef.current = null;
+    setScreenshotUrl(null);
+    setScreenshotError(null);
+    setScreenshotExpanded(false);
+  }, [currentDeviceId]);
+
+  // Load screenshot when modal opens
+  const loadScreenshot = () => {
+    if (!display || !getRequestHeaders) return;
+    const deviceId = display.mqtt?.deviceId || display.deviceId;
+    if (!deviceId) return;
+
+    setScreenshotLoading(true);
+    setScreenshotError(null);
+
+    fetch(`/api/mqtt-screenshot/${deviceId}`, {
+      headers: getRequestHeaders(false)
+    })
+      .then(response => {
+        if (!response.ok) throw new Error('No screenshot available');
+        return response.blob();
+      })
+      .then(blob => {
+        // Convert to data URL (CSP allows data: for images but not blob:)
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (screenshotUrlRef.current && screenshotUrlRef.current.startsWith('blob:')) {
+            URL.revokeObjectURL(screenshotUrlRef.current);
+          }
+          screenshotUrlRef.current = reader.result;
+          setScreenshotUrl(reader.result);
+          setScreenshotLoading(false);
+        };
+        reader.readAsDataURL(blob);
+      })
+      .catch(() => {
+        setScreenshotUrl(null);
+        setScreenshotError('No screenshot available — requires Touchkio v1.4.1+');
+        setScreenshotLoading(false);
+      });
+  };
+
+  // Load screenshot on open and periodically refresh
+  useEffect(() => {
+    if (!show || !display) return;
+    loadScreenshot();
+    const interval = setInterval(loadScreenshot, 30000);
+    return () => {
+      clearInterval(interval);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show, display?.mqtt?.deviceId, getRequestHeaders]);
 
   // Auto-refresh display data every 5 seconds
   useEffect(() => {
@@ -169,6 +231,53 @@ const TouchkioModal = ({
               </div>
             </div>
           </div>
+
+          {/* Screenshot Preview */}
+          {hasMqttConnection && (
+            <div className="touchkio-section">
+              <div className="touchkio-section-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                📸 Live Screenshot
+                <button
+                  type="button"
+                  className="admin-secondary-button admin-btn-sm"
+                  onClick={loadScreenshot}
+                  disabled={screenshotLoading}
+                  style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem' }}
+                >
+                  {screenshotLoading ? '...' : '🔄'}
+                </button>
+              </div>
+              {screenshotUrl && (
+                <div
+                  className="touchkio-screenshot-container"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setScreenshotExpanded(!screenshotExpanded)}
+                >
+                  <img
+                    src={screenshotUrl}
+                    alt="Display screenshot"
+                    className="touchkio-screenshot-img"
+                    style={{
+                      width: '100%',
+                      maxHeight: screenshotExpanded ? 'none' : '200px',
+                      objectFit: screenshotExpanded ? 'contain' : 'cover',
+                      borderRadius: '6px',
+                      border: '1px solid var(--admin-border, #e2e8f0)'
+                    }}
+                  />
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem', textAlign: 'center' }}>
+                    {screenshotExpanded ? 'Click to collapse' : 'Click to expand'}
+                  </div>
+                </div>
+              )}
+              {screenshotLoading && !screenshotUrl && (
+                <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Loading screenshot...</div>
+              )}
+              {screenshotError && !screenshotUrl && !screenshotLoading && (
+                <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{screenshotError}</div>
+              )}
+            </div>
+          )}
 
           {/* Page URL Section */}
           <div className="touchkio-section">

@@ -59,6 +59,13 @@ const desiredConfig = new Map();
 const lastErrorState = new Map();
 
 /**
+ * Stores the latest screenshot image per device as a Buffer.
+ * Key: deviceId, Value: { data: Buffer, timestamp: string, contentType: string }
+ * @type {Map<string, Object>}
+ */
+const screenshotCache = new Map();
+
+/**
  * Loads the desired config from disk into the desiredConfig Map.
  */
 function loadDesiredConfig() {
@@ -287,6 +294,9 @@ function subscribeTouchkioStates() {
       
       if (!match) return;
       
+      // Skip screenshot topics (handled by binary subscriber)
+      if (topic.includes('/screenshot/')) return;
+      
       const deviceId = match[1];
       const payloadStr = payload.toString().trim();
       
@@ -461,6 +471,36 @@ function subscribeTouchkioStates() {
       
     } catch (error) {
       console.error('[Touchkio] Failed to parse Touchkio message:', error);
+    }
+  });
+
+  // Subscribe to screenshot topics (Touchkio sends base64-encoded PNG)
+  mqttClient.subscribe('touchkio/+/screenshot/state', (payload, client) => {
+    try {
+      const topic = client ? client.topic : 'unknown';
+      const match = topic.match(/touchkio\/(rpi_[^/]+)\/screenshot/);
+      if (!match) return;
+
+      const deviceId = match[1];
+      const base64Str = typeof payload === 'string' ? payload.trim() : payload.toString().trim();
+      if (!base64Str || base64Str.length < 100) return;
+
+      // Decode base64 to raw image buffer
+      const imageBuffer = Buffer.from(base64Str, 'base64');
+      // Detect content type from magic bytes
+      const isPng = imageBuffer[0] === 0x89 && imageBuffer[1] === 0x50;
+      const contentType = isPng ? 'image/png' : 'image/jpeg';
+
+      screenshotCache.set(deviceId, {
+        data: imageBuffer,
+        timestamp: new Date().toISOString(),
+        contentType
+      });
+
+      const hostname = deviceIdToHostname.get(deviceId) || deviceId;
+      console.log(`[Touchkio] Screenshot received from ${hostname} (${deviceId}): ${(imageBuffer.length / 1024).toFixed(1)} KB (${contentType})`);
+    } catch (error) {
+      console.error('[Touchkio] Failed to process screenshot:', error);
     }
   });
 }
@@ -936,6 +976,8 @@ function getDisplayStates() {
     hostname: state.hostname || deviceId,
     deviceId,
     hasDesiredConfig: desiredConfig.has(deviceId),
+    hasScreenshot: screenshotCache.has(deviceId),
+    screenshotTimestamp: screenshotCache.has(deviceId) ? screenshotCache.get(deviceId).timestamp : null,
     ...state
   }));
 }
@@ -946,6 +988,24 @@ function getDisplayStates() {
  */
 function getAllDisplays() {
   return getDisplayStates();
+}
+
+/**
+ * Returns the latest screenshot for a device.
+ * @param {string} deviceIdOrHostname - Device ID or hostname
+ * @returns {Object|null} { data: Buffer, timestamp: string, contentType: string } or null
+ */
+function getScreenshot(deviceIdOrHostname) {
+  // Try direct deviceId first
+  if (screenshotCache.has(deviceIdOrHostname)) {
+    return screenshotCache.get(deviceIdOrHostname);
+  }
+  // Try resolving hostname to deviceId
+  const deviceId = getDeviceIdFromHostname(deviceIdOrHostname);
+  if (deviceId && screenshotCache.has(deviceId)) {
+    return screenshotCache.get(deviceId);
+  }
+  return null;
 }
 
 /**
@@ -979,5 +1039,6 @@ module.exports = {
   sendShutdownCommand,
   getDisplayStates,
   getAllDisplays,
+  getScreenshot,
   triggerPowerCommand
 };

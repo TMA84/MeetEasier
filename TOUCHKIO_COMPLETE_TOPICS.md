@@ -133,6 +133,18 @@ homeassistant/update/{deviceId}/app/install                     → "update" or 
 homeassistant/update/{deviceId}/app/version/status              → version string
 ```
 
+### Screenshot Image (Image Entity, v1.4.1+) ✅ VERFÜGBAR!
+```
+# Config
+homeassistant/image/{deviceId}/screenshot_image/config
+
+# Status (Display → Server) — raw JPEG binary data
+touchkio/{deviceId}/screenshot/state                            → JPEG image bytes
+```
+
+Note: Screenshot is updated on page navigation and approximately every minute.
+MeetEasier receives the raw JPEG via MQTT binary subscription and serves it via `/api/mqtt-screenshot/{deviceId}`.
+
 ### Sensors (Read-Only)
 ```
 # Hostname

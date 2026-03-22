@@ -4868,6 +4868,7 @@ class Admin extends Component {
       <TouchkioModal
         show={this.state.showTouchkioModal}
         display={this.state.touchkioModalDisplay}
+        getRequestHeaders={this.getRequestHeaders}
         message={this.state.touchkioModalMessage}
         messageType={this.state.touchkioModalMessageType}
         brightness={this.state.touchkioModalBrightness}
