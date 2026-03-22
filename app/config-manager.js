@@ -39,6 +39,7 @@ const path = require('path');
 const crypto = require('crypto');
 const QRCode = require('qrcode');
 const config = require('../config/config');
+const certGenerator = require('./cert-generator');
 
 /**
  * Configuration management – Manages WiFi, logo, sidebar, booking, and other configurations.
@@ -1302,22 +1303,46 @@ function getSystemConfig() {
 	// - No OAuth configured → demo mode ON (regardless of stored value)
 	// - OAuth configured → demo mode OFF (regardless of stored value)
 	const oauthConfigured = (() => {
-		// Check environment variable-based OAuth configuration
 		const clientId = String(config?.msalConfig?.auth?.clientId || '').trim();
 		const authority = String(config?.msalConfig?.auth?.authority || '').trim();
 		const clientSecret = String(config?.msalConfig?.auth?.clientSecret || '').trim();
-		if (clientId && clientId !== 'OAUTH_CLIENT_ID_NOT_SET'
-			&& authority && authority !== 'OAUTH_AUTHORITY_NOT_SET'
-			&& clientSecret && clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET') {
-			return true;
+
+		const hasValidIdentity = clientId && clientId !== 'OAUTH_CLIENT_ID_NOT_SET'
+			&& authority && authority !== 'OAUTH_AUTHORITY_NOT_SET';
+
+		if (!hasValidIdentity) {
+			// Also check file-based OAuth configuration
+			const oauthConfig = getOAuthRuntimeConfig();
+			const fileClientId = String(oauthConfig.clientId || '').trim();
+			const fileAuthority = String(oauthConfig.authority || '').trim();
+			if (!fileClientId || fileClientId === 'OAUTH_CLIENT_ID_NOT_SET'
+				|| !fileAuthority || fileAuthority === 'OAUTH_AUTHORITY_NOT_SET') {
+				return false;
+			}
+			// File-based: check secret or certificate
+			const fileHasSecret = !!oauthConfig.clientSecret;
+			const fileHasCert = (() => {
+				try {
+					const encryptionKey = getEffectiveApiToken();
+					return encryptionKey && !!certGenerator.getMsalCertificateConfig(encryptionKey);
+				} catch (err) {
+					return false;
+				}
+			})();
+			return fileHasSecret || fileHasCert;
 		}
-		// Check file-based OAuth configuration
-		const oauthConfig = getOAuthRuntimeConfig();
-		const fileClientId = String(oauthConfig.clientId || '').trim();
-		const fileAuthority = String(oauthConfig.authority || '').trim();
-		return !!(fileClientId && fileClientId !== 'OAUTH_CLIENT_ID_NOT_SET'
-			&& fileAuthority && fileAuthority !== 'OAUTH_AUTHORITY_NOT_SET'
-			&& oauthConfig.hasClientSecret);
+
+		// In-memory: check secret or certificate
+		const hasSecret = clientSecret && clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET';
+		const hasCertificate = (() => {
+			try {
+				const encryptionKey = getEffectiveApiToken();
+				return encryptionKey && !!certGenerator.getMsalCertificateConfig(encryptionKey);
+			} catch (err) {
+				return false;
+			}
+		})();
+		return hasSecret || hasCertificate;
 	})();
 
 	return {

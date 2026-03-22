@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Live screenshot display for Touchkio devices in Admin panel (requires Touchkio v1.4.1+) — screenshots are received via MQTT and shown in the device detail modal with auto-refresh
+- Binary MQTT message support for receiving raw image data from Touchkio screenshot topics
+
+### Fixed
+- Demo mode and Graph credential validation now accept certificate-based authentication as alternative to client secret — previously only client secret was checked, causing demo mode to stay active when using certificate auth
+- `Calendars.ReadWrite` permission detection now decodes the JWT access token and checks the `roles` array — previously only verified that a token could be obtained, which always succeeded with `.default` scope regardless of actual permissions. Negative results are no longer cached permanently, allowing automatic retry on subsequent requests
+
+### Changed
+- `hasValidGraphCredentials()` now accepts certificate-based authentication as a valid credential method — previously only client secret was recognized, causing startup validation to fail when using certificate auth
+
 ## [1.7.51] - 2026-03-21
 
 ### Added

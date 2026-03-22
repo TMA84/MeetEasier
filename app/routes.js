@@ -1085,19 +1085,21 @@ function getCacheHealth() {
 
 /**
  * Checks whether the Calendars.ReadWrite permission is available in Azure AD.
- * The result is cached so the check is only performed once.
+ * Decodes the access token to verify the permission is actually granted.
+ * Negative results are not cached so the check retries on subsequent requests.
  * @returns {Promise<boolean>} true if write permission is available
  */
 async function checkCalendarWritePermission() {
-	if (hasCalendarWritePermission !== null) {
-		return hasCalendarWritePermission;
+	if (hasCalendarWritePermission === true) {
+		return true;
 	}
 
-	// Mark as checking to prevent concurrent duplicate checks
-	hasCalendarWritePermission = false;
+	if (!msalClient) {
+		console.log('✗ Calendars.ReadWrite check skipped - MSAL client not initialized');
+		return false;
+	}
 
 	try {
-		// Try to acquire token with Calendars.ReadWrite scope
 		const tokenRequest = {
 			scopes: ['https://graph.microsoft.com/.default']
 		};
@@ -1105,21 +1107,34 @@ async function checkCalendarWritePermission() {
 		const response = await msalClient.acquireTokenByClientCredential(tokenRequest);
 		
 		if (response && response.accessToken) {
-			// Token successfully obtained - permission available
+			// Decode JWT payload to check actual roles/permissions
+			const parts = response.accessToken.split('.');
+			if (parts.length === 3) {
+				const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+				const roles = payload.roles || [];
+				if (roles.includes('Calendars.ReadWrite')) {
+					hasCalendarWritePermission = true;
+					console.log('✓ Calendars.ReadWrite permission detected - Booking feature enabled');
+					return true;
+				}
+				// Token obtained but Calendars.ReadWrite not in roles — don't cache, might be a timing issue
+				console.log('✗ Calendars.ReadWrite not found in token roles:', roles.join(', '));
+				return false;
+			}
+			// Could not decode token — assume permission is available if token was obtained
 			hasCalendarWritePermission = true;
-			console.log('✓ Calendars.ReadWrite permission detected - Booking feature enabled');
-		} else {
-			hasCalendarWritePermission = false;
-			console.log('✗ Calendars.ReadWrite permission missing - Booking feature disabled');
+			console.log('✓ Token obtained (could not decode roles) - Booking feature enabled');
+			return true;
 		}
+		
+		console.log('✗ No access token received - Booking feature disabled');
+		return false;
 	} catch (error) {
-		// If no token can be obtained, assume no write permission
-		hasCalendarWritePermission = false;
-		console.log('✗ Unable to verify Calendars.ReadWrite permission - Booking feature disabled');
+		// Don't cache failures — retry on next request
+		console.log('✗ Unable to verify Calendars.ReadWrite permission - will retry');
 		console.log('  Error:', error.message);
+		return false;
 	}
-	
-	return hasCalendarWritePermission;
 }
 
 /**
@@ -3565,6 +3580,27 @@ module.exports = function(app) {
 		}
 	});
 
+	// GET /api/mqtt-screenshot/:deviceId — Returns the latest screenshot image for a Touchkio device
+	app.get('/api/mqtt-screenshot/:deviceId', checkApiToken, function(req, res) {
+		try {
+			const { deviceId } = req.params;
+			const mqttPowerBridge = require('./touchkio');
+			const screenshot = mqttPowerBridge.getScreenshot(deviceId);
+
+			if (!screenshot || !screenshot.data) {
+				return res.status(404).json({ error: 'No screenshot available for this device' });
+			}
+
+			res.set('Content-Type', screenshot.contentType || 'image/jpeg');
+			res.set('X-Screenshot-Timestamp', screenshot.timestamp);
+			res.set('Cache-Control', 'no-cache');
+			res.send(screenshot.data);
+		} catch (err) {
+			console.error('Error fetching screenshot:', err);
+			res.status(500).json({ error: 'Failed to fetch screenshot' });
+		}
+	});
+
 	// POST /api/wifi — Updates the WiFi configuration and regenerates QR code (WiFi token required)
 	app.post('/api/wifi', checkWiFiApiToken, async function(req, res) {
 		try {
@@ -3795,7 +3831,9 @@ module.exports = function(app) {
 					lastSeen: mqtt.lastSeen,
 					errors: mqtt.errors,
 					lastErrorUpdate: mqtt.lastErrorUpdate,
-					hasDesiredConfig: mqtt.hasDesiredConfig
+					hasDesiredConfig: mqtt.hasDesiredConfig,
+					hasScreenshot: mqtt.hasScreenshot,
+					screenshotTimestamp: mqtt.screenshotTimestamp
 				};
 				
 				if (existingDisplay) {

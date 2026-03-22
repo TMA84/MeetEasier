@@ -30,6 +30,8 @@ let subscribedTopics = new Set();
 let messageHandlers = new Map();
 /** @type {Array<Function>} Queue of callbacks to be invoked upon successful connection */
 let connectCallbacks = [];
+/** @type {Set<string>} Topics that should receive raw Buffer instead of string */
+let binaryTopics = new Set();
 
 /**
  * Initializes the MQTT client and establishes the connection to the broker.
@@ -150,7 +152,9 @@ function setupEventHandlers() {
         const handlers = messageHandlers.get(subscribedTopic) || [];
         handlers.forEach(handler => {
           try {
-            handler(message.toString(), { topic });
+            // Pass raw buffer for binary topics, string for everything else
+            const isBinary = binaryTopics.has(subscribedTopic);
+            handler(isBinary ? message : message.toString(), { topic });
           } catch (error) {
             console.error(`[MQTT] Handler error for topic ${subscribedTopic}:`, error);
           }
@@ -242,6 +246,18 @@ function subscribe(topic, callback) {
 }
 
 /**
+ * Subscribes to an MQTT topic for binary payloads (e.g. images).
+ * Same as subscribe() but the handler receives a raw Buffer instead of a string.
+ * @param {string} topic - The topic to subscribe to (with optional wildcards)
+ * @param {Function} callback - Handler function, called with (Buffer, {topic})
+ * @returns {string|null} The subscribed topic or null on error
+ */
+function subscribeBinary(topic, callback) {
+  binaryTopics.add(topic);
+  return subscribe(topic, callback);
+}
+
+/**
  * Unsubscribes from an MQTT topic and removes all associated handlers.
  * @param {string} topic - The topic to unsubscribe from
  */
@@ -306,6 +322,7 @@ function stop() {
   isConnected = false;
   subscribedTopics.clear();
   messageHandlers.clear();
+  binaryTopics.clear();
   mqttClient = null;
 }
 
@@ -326,6 +343,7 @@ module.exports = {
   onConnect,
   publish,
   subscribe,
+  subscribeBinary,
   unsubscribe,
   getStatus,
   getConnectedClients,

@@ -247,8 +247,8 @@ function isGraphModeEnabled() {
 
 /**
  * Checks whether valid Microsoft Graph API credentials are configured.
- * Validates client ID, authority URL, and client secret for presence
- * and correct formatting.
+ * Validates client ID, authority URL, and authentication method
+ * (client secret or certificate) for presence and correct formatting.
  * @returns {boolean} true if all credentials are validly configured
  */
 function hasValidGraphCredentials() {
@@ -262,7 +262,19 @@ function hasValidGraphCredentials() {
   if (!authority || authority === 'OAUTH_AUTHORITY_NOT_SET') {
     return false;
   }
-  if (!clientSecret || clientSecret === 'OAUTH_CLIENT_SECRET_NOT_SET') {
+
+  // Accept either client secret or certificate-based authentication
+  const hasSecret = clientSecret && clientSecret !== 'OAUTH_CLIENT_SECRET_NOT_SET';
+  const hasCertificate = (() => {
+    try {
+      const encryptionKey = configManager.getEffectiveApiToken();
+      return encryptionKey && !!certGenerator.getMsalCertificateConfig(encryptionKey);
+    } catch (err) {
+      return false;
+    }
+  })();
+
+  if (!hasSecret && !hasCertificate) {
     return false;
   }
 
