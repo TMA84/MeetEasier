@@ -111,7 +111,7 @@ jobs:
           fi
       
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0 - pinned for supply chain safety
         with:
           image-ref: 'ghcr.io/tma84/meeteasier:${{ steps.get_version.outputs.VERSION }}'
           format: 'sarif'
@@ -137,7 +137,7 @@ jobs:
           sarif_file: 'trivy-results.sarif'
       
       - name: Run Trivy vulnerability scanner (table output)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0 - pinned for supply chain safety
         with:
           image-ref: 'ghcr.io/tma84/meeteasier:${{ steps.get_version.outputs.VERSION }}'
           format: 'table'
