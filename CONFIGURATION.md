@@ -59,19 +59,6 @@ PORT=8080
 
 ---
 
-#### API Configuration
-
-```env
-# Use Microsoft Graph API instead of EWS
-# Default: true
-SEARCH_USE_GRAPHAPI=true
-```
-
-**Valid values:** `true`, `false`  
-**Note:** EWS is deprecated and will be removed in future versions
-
----
-
 #### Search Parameters
 
 ```env
@@ -568,6 +555,30 @@ WIFI:T:WPA;S:YourSSID;P:YourPassword;;
 - Fetch timeout, retry attempts, retry base delay
 
 **Locked when:** `OAUTH_CLIENT_ID`, `OAUTH_AUTHORITY`, or `OAUTH_CLIENT_SECRET` environment variables are set (OAuth section); system settings have a separate lock
+
+---
+
+#### 6. API Tokens
+
+Manage the admin API token and WiFi API token from a dedicated tab.
+
+**Admin API Token:**
+- Set a new admin API token (minimum 8 characters)
+- Confirm the new token before saving
+- Shows current token source and whether the default token is active
+- After saving, use the new token for future admin logins
+
+**WiFi API Token:**
+- Set a separate token for external WiFi API integrations
+- Confirm the new token before saving
+- Shows current WiFi token source and configuration status
+
+**Current Configuration Display:**
+- Token source (environment, config file, default)
+- Whether the default token is still active
+- Last updated timestamp for each token
+
+**Locked when:** `API_TOKEN` environment variable is set (admin token); WiFi API token has a separate lock
 
 ---
 

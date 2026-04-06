@@ -1,15 +1,15 @@
 // Manual mock for socket.io-client
 const mockSocket = {
-  on: jest.fn(),
-  off: jest.fn(),
-  emit: jest.fn(),
-  disconnect: jest.fn(),
-  connect: jest.fn(),
+  on: vi.fn(),
+  off: vi.fn(),
+  emit: vi.fn(),
+  disconnect: vi.fn(),
+  connect: vi.fn(),
   connected: true,
   id: 'mock-socket-id'
 };
 
-const mockIo = jest.fn(() => mockSocket);
+const mockIo = vi.fn(() => mockSocket);
 mockIo.mockSocket = mockSocket;
 
 // Export as default

@@ -1,11 +1,11 @@
 /** @file main.jsx
- *  @description Vite entry point that bootstraps the React app with lazy-loaded routes, a service worker, and a connection monitor for offline resilience.
- */
+*  @description Vite entry point that bootstraps the React app with lazy-loaded routes, a service worker, and a connection monitor for offline resilience.
+*/
 import React, { lazy, Suspense, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
-import { getConnectionMonitor } from './utils/connectionMonitor';
+import { getConnectionMonitor } from './utils/connection-monitor';
 import ConnectionStatus from './components/global/ConnectionStatus';
 
 // Eager loading for frequently used components

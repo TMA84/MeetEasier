@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Known Issues
+- `ui-react/src/config/display-translations.js` has a typo in the import path: `'./admin-translations.jss'` should be `'./admin-translations.js'` — will break module resolution at runtime
+
+### Removed
+- Removed all Exchange Web Services (EWS) support — deleted `app/ews/` directory, removed `ews-javascript-api` from `optionalDependencies`, removed EWS credentials config (`EWS_USERNAME`, `EWS_PASSWORD`, `EWS_URI`) from config and env templates. Microsoft Graph API is now the only supported backend.
+
+### Added
+- Shared `Clock` component (`ui-react/src/components/shared/Clock.js`) — reusable time/date display with per-second updates and browser locale detection, supports `sidebar` and `navbar` variants for single-room and flightboard layouts
+- Code Quality Audit system: shared type definitions (`scripts/audit/types.js`) with JSDoc typedefs for `Finding`, `CategoryResult`, `AuditConfig`, and `ScoreResult` — foundation for the modular audit scoring system
+- Extracted `display-service.js` for single-room Display component — pure async data-fetching functions (`fetchRoomData`, `fetchSidebarConfig`, `fetchBookingConfig`) with no React dependency, improving testability and separation of concerns
+
+### Changed
+- Coverage analyzer now excludes `public/` directories and `single-room/single-room/` duplicate paths from analysis — reduces noise from non-source files
+- Style analyzer file naming check now allows PascalCase for React component files in `ui-react/src/components/` and `ui-react/src/layouts/`, and for test/spec files — reduces false positives for standard React naming conventions
+- Style analyzer strips `.test`/`.spec` suffixes before evaluating naming convention — prevents test files from being flagged for their base component name
+
+### Fixed
+- Touchkio modal brightness, volume, and page zoom commands now prefer `deviceId` over `hostname` for MQTT command routing — fixes commands targeting the wrong device when multiple displays share the same hostname
+- Removed unused `getCsrfToken` import from `admin-api-extended.test.js` — cleans up test file imports
+
 ## [1.7.52] - 2026-03-22
 
 ### Added

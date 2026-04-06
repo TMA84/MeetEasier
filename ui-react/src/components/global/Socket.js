@@ -1,15 +1,15 @@
 /** @file Socket.js
- *  @description Legacy Socket.IO wrapper component that establishes a real-time connection to the server and forwards room data updates to its parent via a callback prop.
- */
-import React, { Component } from 'react';
+*  @description Legacy Socket.IO wrapper component that establishes a real-time connection to the server and forwards room data updates to its parent via a callback prop.
+*/
+import { Component } from 'react';
 import PropTypes from 'prop-types';
 import socketIOClient from 'socket.io-client';
 
 /**
- * Socket component - Manages Socket.IO connection for real-time updates
- * Listens for room data updates and passes them to parent component
- * Automatically connects on mount and disconnects on unmount
- */
+* Socket component - Manages Socket.IO connection for real-time updates
+* Listens for room data updates and passes them to parent component
+* Automatically connects on mount and disconnects on unmount
+*/
 class Socket extends Component {
   constructor(props) {
     super(props);

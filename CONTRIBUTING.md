@@ -107,7 +107,6 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 MeetEasier/
 ├── app/                    # Backend routes and logic
 │   ├── msgraph/           # Microsoft Graph API integration
-│   ├── ews/               # EWS integration (deprecated)
 │   ├── routes.js          # API routes
 │   └── socket-controller.js # WebSocket handling
 ├── config/                # Server configuration

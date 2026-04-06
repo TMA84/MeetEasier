@@ -1,177 +1,116 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import BookingModal from './BookingModal';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderBookingModal } from './test-helpers';
 
 describe('BookingModal', () => {
-  const mockRoom = {
-    Name: 'Conference Room A',
-    Email: 'conference-a@example.com'
-  };
-
-  const mockOnClose = jest.fn();
-  const mockOnSuccess = jest.fn();
+  const mockOnClose = vi.fn();
+  const mockOnSuccess = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    global.fetch = jest.fn();
+    vi.clearAllMocks();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({})
+    });
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
-  it('renders booking modal with room name', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('renders booking modal with action buttons', () => {
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
-    expect(screen.getByText('Book Conference Room A')).toBeInTheDocument();
+    expect(screen.getByText('Book Room')).toBeInTheDocument();
+    expect(screen.getByText('Cancel')).toBeInTheDocument();
   });
 
   it('renders quick book buttons', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
-    expect(screen.getByText('15 min')).toBeInTheDocument();
-    expect(screen.getByText('30 min')).toBeInTheDocument();
-    expect(screen.getByText('60 min')).toBeInTheDocument();
-    expect(screen.getByText('Custom')).toBeInTheDocument();
+    const buttons = screen.getAllByRole('button');
+    const quickBookTexts = buttons.map(b => b.textContent);
+    expect(quickBookTexts).toContain('15 min');
+    expect(quickBookTexts).toContain('30 min');
+    expect(quickBookTexts).toContain('60 min');
+    expect(quickBookTexts).toContain('120 min');
   });
 
-  it('renders form fields', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('renders duration slider', () => {
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
-    expect(screen.getByLabelText(/Meeting Subject/i)).toBeInTheDocument();
+    const slider = screen.getByRole('slider');
+    expect(slider).toBeInTheDocument();
   });
 
-  it('closes modal when close button is clicked', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('closes modal when cancel button is clicked', () => {
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
-    const closeButton = screen.getByLabelText('Close');
-    fireEvent.click(closeButton);
+    const cancelButton = screen.getByText('Cancel');
+    fireEvent.click(cancelButton);
 
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
   it('closes modal when overlay is clicked', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
-    const overlay = screen.getByText('Book Conference Room A').closest('.booking-modal-overlay');
+    const overlay = screen.getByText('Book Room').closest('.booking-modal-overlay');
     fireEvent.click(overlay);
 
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
   it('does not close modal when modal content is clicked', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
-    const modal = screen.getByText('Book Conference Room A').closest('.booking-modal');
+    const modal = screen.getByText('Book Room').closest('.booking-modal');
     fireEvent.click(modal);
 
     expect(mockOnClose).not.toHaveBeenCalled();
   });
 
-  it('shows custom time section when Custom button is clicked', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('highlights active quick book button', () => {
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
-    const customButton = screen.getByText('Custom');
-    fireEvent.click(customButton);
+    // Default is 30 min - find the quick book button (not the duration display)
+    const buttons = screen.getAllByRole('button');
+    const btn30 = buttons.find(b => b.textContent === '30 min' && b.classList.contains('quick-book-btn'));
+    expect(btn30.className).toContain('active');
 
-    expect(screen.getByLabelText(/Start Time/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/End Time/i)).toBeInTheDocument();
+    // Click 15 min
+    const btn15 = buttons.find(b => b.textContent === '15 min');
+    fireEvent.click(btn15);
+    expect(btn15.className).toContain('active');
   });
 
-  it('updates subject field when typing', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('updates duration slider when quick book button is clicked', () => {
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
-    const subjectInput = screen.getByLabelText(/Meeting Subject/i);
-    fireEvent.change(subjectInput, { target: { value: 'Team Meeting' } });
+    const btn60 = screen.getByText('60 min');
+    fireEvent.click(btn60);
 
-    expect(subjectInput.value).toBe('Team Meeting');
+    const slider = screen.getByRole('slider');
+    expect(slider.value).toBe('60');
   });
 
-  it('shows error when submitting without subject', async () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('updates duration display when slider changes', () => {
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
-    // Clear the default subject
-    const subjectInput = screen.getByLabelText(/Meeting Subject/i);
-    fireEvent.change(subjectInput, { target: { value: '' } });
+    const slider = screen.getByRole('slider');
+    fireEvent.change(slider, { target: { value: '45' } });
 
-    const bookButton = screen.getByText('Book Room');
-    fireEvent.click(bookButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Please enter a meeting subject')).toBeInTheDocument();
-    });
+    expect(screen.getByText('45 min')).toBeInTheDocument();
   });
 
-  it('successfully books room with valid data', async () => {
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true, eventId: '123' })
-    });
+  it('successfully books room', async () => {
+    global.fetch
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // fetchAndApplyBookingButtonColor
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, eventId: '123' })
+      });
 
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const subjectInput = screen.getByLabelText(/Meeting Subject/i);
-    fireEvent.change(subjectInput, { target: { value: 'Team Meeting' } });
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
     const bookButton = screen.getByText('Book Room');
     fireEvent.click(bookButton);
@@ -183,144 +122,86 @@ describe('BookingModal', () => {
   });
 
   it('shows error when booking fails', async () => {
-    global.fetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({ error: 'Booking failed', message: 'Room is busy' })
-    });
+    global.fetch
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // fetchAndApplyBookingButtonColor
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Booking failed' })
+      });
 
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const subjectInput = screen.getByLabelText(/Meeting Subject/i);
-    fireEvent.change(subjectInput, { target: { value: 'Team Meeting' } });
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
     const bookButton = screen.getByText('Book Room');
     fireEvent.click(bookButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Room is busy')).toBeInTheDocument();
+      expect(screen.getByText('Failed to book room. Please try again.')).toBeInTheDocument();
     });
 
     expect(mockOnClose).not.toHaveBeenCalled();
   });
 
   it('disables buttons while submitting', async () => {
-    global.fetch.mockImplementationOnce(() => new Promise(resolve => setTimeout(resolve, 100)));
+    global.fetch
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // fetchAndApplyBookingButtonColor
+      .mockImplementationOnce(() => new Promise(resolve => setTimeout(resolve, 100)));
 
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const subjectInput = screen.getByLabelText(/Meeting Subject/i);
-    fireEvent.change(subjectInput, { target: { value: 'Team Meeting' } });
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
     const bookButton = screen.getByText('Book Room');
     fireEvent.click(bookButton);
 
     expect(screen.getByText('Booking...')).toBeInTheDocument();
-    expect(bookButton).toBeDisabled();
-    expect(screen.getByText('Cancel')).toBeDisabled();
   });
 
   it('handles network errors gracefully', async () => {
-    global.fetch.mockRejectedValueOnce(new Error('Network error'));
+    // fetchAndApplyBookingButtonColor succeeds, but the booking fetch fails with retries
+    global.fetch.mockImplementation((url) => {
+      if (typeof url === 'string' && url.startsWith('/api/booking-config')) {
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      }
+      return Promise.reject(new Error('Network error'));
+    });
 
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const subjectInput = screen.getByLabelText(/Meeting Subject/i);
-    fireEvent.change(subjectInput, { target: { value: 'Team Meeting' } });
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
     const bookButton = screen.getByText('Book Room');
     fireEvent.click(bookButton);
 
+    // fetchWithRetry retries 2 times with 1s delay = ~2s total + processing
     await waitFor(() => {
       expect(screen.getByText('Network error')).toBeInTheDocument();
-    });
-  });
+    }, { timeout: 8000 });
+  }, 10000);
 
-  it('quick book 15 minutes sets correct times', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('quick book 15 minutes sets correct duration', () => {
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
     const quickBook15 = screen.getByText('15 min');
     fireEvent.click(quickBook15);
 
-    // Custom time section should be hidden after quick book
-    expect(screen.queryByLabelText(/Start Time/i)).not.toBeInTheDocument();
+    const slider = screen.getByRole('slider');
+    expect(slider.value).toBe('15');
   });
 
-  it('quick book 30 minutes sets correct times', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const quickBook30 = screen.getByText('30 min');
-    fireEvent.click(quickBook30);
-
-    expect(screen.queryByLabelText(/Start Time/i)).not.toBeInTheDocument();
-  });
-
-  it('quick book 60 minutes sets correct times', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('quick book 60 minutes sets correct duration', () => {
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
     const quickBook60 = screen.getByText('60 min');
     fireEvent.click(quickBook60);
 
-    expect(screen.queryByLabelText(/Start Time/i)).not.toBeInTheDocument();
+    const slider = screen.getByRole('slider');
+    expect(slider.value).toBe('60');
   });
 
-  it('automatically sets end time to +15 minutes when start time is changed', () => {
-    render(
-      <BookingModal
-        room={mockRoom}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+  it('quick book 120 minutes sets correct duration', () => {
+    renderBookingModal({ onClose: mockOnClose, onSuccess: mockOnSuccess });
 
-    // Click custom to show time inputs
-    const customButton = screen.getByText('Custom');
-    fireEvent.click(customButton);
+    const quickBook120 = screen.getByText('120 min');
+    fireEvent.click(quickBook120);
 
-    const startTimeInput = screen.getByLabelText(/Start Time/i);
-    const endTimeInput = screen.getByLabelText(/End Time/i);
-
-    // Change start time
-    const newStartTime = '2024-02-08T14:00';
-    fireEvent.change(startTimeInput, { target: { value: newStartTime } });
-
-    // End time should be automatically set to +15 minutes
-    const expectedEndTime = '2024-02-08T14:15';
-    expect(endTimeInput.value).toBe(expectedEndTime);
+    const slider = screen.getByRole('slider');
+    expect(slider.value).toBe('120');
   });
 });

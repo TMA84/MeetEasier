@@ -12,8 +12,6 @@ Because why pay money for something you can do yourself?
 
 MeetEasier is a web application that visualizes meeting room availability. It works using Microsoft Graph API in Microsoft 365.
 
-**Note: The Exchange Web Services (EWS) is deprecated and will be removed in the future.**
-
 ## Quick Start
 
 📚 **[Installation Guide](INSTALLATION.md)** - Complete step-by-step installation instructions
@@ -288,8 +286,7 @@ For production, prefer setting a secure token via environment/secrets manager.
 
 ## Root Folder Structure Explained
 
-- `app/` : Routes for MSGRAPH and EWS APIs
-- `app/ews/` : All EWS functionality (deprecated)
+- `app/` : Routes for Microsoft Graph API
 - `app/msgraph/` : All Microsoft Graph functionality with pagination support
 - `app/startup-validation.js` : Startup configuration validator (checks OAuth, API token, polling, webhooks)
 - `app/demo-data.js` : Demo data generator (rooms & meetings without Graph API)
@@ -447,7 +444,6 @@ Use a .env file (recommended method). See .env.template for all available variab
    ```
 
 **Note:** 
-- EWS (Exchange Web Services) variables are deprecated and no longer needed.
 - If `API_TOKEN` is not set, create the initial admin token on first `/admin` login.
 - For production, set `API_TOKEN` to a secure random value (64+ characters recommended) or rotate it via Admin panel (Operations → API Tokens).
 - Microsoft Graph API now supports pagination, so MAXROOMS and MAXITEMS can be set higher than the API's 30-item limit.
@@ -490,6 +486,7 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 - Protected by API token authentication
 - Set API_TOKEN in .env file
 - Token required in Authorization header or X-API-Token header
+- Dedicated API Tokens tab for managing admin and WiFi API tokens
 - CSRF protection for cookie-based admin sessions
 - Rate limiting on authentication, write operations, and booking endpoints
 - Timing-safe token comparison to prevent timing attacks
@@ -775,7 +772,6 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 
 ### Advanced
 
-- All EWS functionality is located in `app/ews` (deprecated).
 - Microsoft Graph functionality with pagination is in `app/msgraph/`.
 - To change the interval in which the web socket emits, edit the interval time in `app/socket-controller.js`. By default, it is set to 1 minute.
 - To update styles, make sure you install grunt first with `npm install -g grunt-cli`. Then run `grunt` in the root directory to watch for SCSS changes. Use the `.scss` files located in the `/scss` folder.
@@ -798,7 +794,6 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 
 ## Resources & Attributions
 
-- [ews-javascript-api](https://github.com/gautamsi/ews-javascript-api)
 - Mockup Images:
   - https://www.anthonyboyd.graphics/mockups/2017/realistic-ipad-pro-mockup-vol-3/
   - https://www.freepik.com/free-psd/business-meeting-with-tv-mockup_1163371.htm

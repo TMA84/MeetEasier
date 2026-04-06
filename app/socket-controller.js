@@ -1,26 +1,26 @@
 /**
- * @file socket-controller.js
- * @description Socket.IO Controller for real-time communication with display clients.
- *
- * This module manages WebSocket connections via Socket.IO and controls the
- * data exchange between the server and connected display clients (single-room displays,
- * flightboards, admin panel). It polls the Microsoft Graph API at configurable
- * intervals, processes room/calendar data, and sends updates in real time
- * to all connected clients.
- *
- * Main features:
- * - Management of Socket.IO connections and display client tracking
- * - Periodic polling of the Microsoft Graph API for room data
- * - Targeted room updates via Socket.IO rooms (room:alias)
- * - Automatic maintenance mode activation on Graph API errors
- * - No-show detection and automatic appointment release (check-in)
- * - Retry logic with exponential backoff for Graph API requests
- *
- * @requires @azure/msal-node - Microsoft Authentication Library for token acquisition
- * @requires ../config/config - Central application configuration
- * @requires ./config-manager - Configuration management with real-time updates
- * @requires ./checkin-manager - Check-in management for appointment confirmations
- */
+* @file socket-controller.js
+* @description Socket.IO Controller for real-time communication with display clients.
+*
+* This module manages WebSocket connections via Socket.IO and controls the
+* data exchange between the server and connected display clients (single-room displays,
+* flightboards, admin panel). It polls the Microsoft Graph API at configurable
+* intervals, processes room/calendar data, and sends updates in real time
+* to all connected clients.
+*
+* Main features:
+* - Management of Socket.IO connections and display client tracking
+* - Periodic polling of the Microsoft Graph API for room data
+* - Targeted room updates via Socket.IO rooms (room:alias)
+* - Automatic maintenance mode activation on Graph API errors
+* - No-show detection and automatic appointment release (check-in)
+* - Retry logic with exponential backoff for Graph API requests
+*
+* @requires @azure/msal-node - Microsoft Authentication Library for token acquisition
+* @requires ../config/config - Central application configuration
+* @requires ./config-manager - Configuration management with real-time updates
+* @requires ./checkin-manager - Check-in management for appointment confirmations
+*/
 
 const msal = require('@azure/msal-node');
 const config = require('../config/config');
@@ -32,11 +32,11 @@ const checkinManager = require('./checkin-manager');
 let msalClient = null;
 
 /**
- * Creates a new MSAL ConfidentialClientApplication instance.
- * Uses certificate-based auth if available, otherwise falls back to client secret.
- * Called at startup and after OAuth configuration changes.
- * @returns {msal.ConfidentialClientApplication} The new MSAL client instance
- */
+* Creates a new MSAL ConfidentialClientApplication instance.
+* Uses certificate-based auth if available, otherwise falls back to client secret.
+* Called at startup and after OAuth configuration changes.
+* @returns {msal.ConfidentialClientApplication} The new MSAL client instance
+*/
 function refreshMsalClient() {
   // Always read fresh OAuth config from persisted storage
   const runtimeOAuth = configManager.getOAuthRuntimeConfig();
@@ -62,10 +62,7 @@ function refreshMsalClient() {
     }
   }
   msalClient = new msal.ConfidentialClientApplication(config.msalConfig);
-  console.log('[SocketController] MSAL client initialized with client secret (clientId: %s, authority: %s, secretLength: %d)',
-    config.msalConfig.auth.clientId,
-    config.msalConfig.auth.authority,
-    config.msalConfig.auth.clientSecret ? config.msalConfig.auth.clientSecret.length : 0);
+  console.log('[SocketController] MSAL client initialized with client credentials');
   return msalClient;
 }
 
@@ -106,11 +103,11 @@ const GRAPH_FAILURE_MAINTENANCE_MESSAGE = process.env.GRAPH_FAILURE_MAINTENANCE_
   || 'Calendar backend currently unavailable. Display is temporarily in fallback mode.';
 
 /**
- * Reads the Graph fetch settings from the configuration.
- * Ensures that timeout, retry attempts, and base wait time
- * are within reasonable minimum limits.
- * @returns {{timeoutMs: number, retryAttempts: number, retryBaseMs: number}} Graph fetch settings
- */
+* Reads the Graph fetch settings from the configuration.
+* Ensures that timeout, retry attempts, and base wait time
+* are within reasonable minimum limits.
+* @returns {{timeoutMs: number, retryAttempts: number, retryBaseMs: number}} Graph fetch settings
+*/
 function getGraphFetchSettings() {
   return {
     timeoutMs: Math.max(Number.parseInt(config.systemDefaults?.graphFetchTimeoutMs, 10) || 10000, 1000),
@@ -120,11 +117,11 @@ function getGraphFetchSettings() {
 }
 
 /**
- * Sanitizes an error object for safe log output.
- * Removes sensitive information and extracts only relevant error details.
- * @param {Error|*} error - The error object to sanitize
- * @returns {Object} Sanitized error object with name, message, code, and status
- */
+* Sanitizes an error object for safe log output.
+* Removes sensitive information and extracts only relevant error details.
+* @param {Error|*} error - The error object to sanitize
+* @returns {Object} Sanitized error object with name, message, code, and status
+*/
 function sanitizeErrorForLog(error) {
   if (!error || typeof error !== 'object') {
     return {
@@ -141,11 +138,11 @@ function sanitizeErrorForLog(error) {
 }
 
 /**
- * Logs a sanitized error with optional additional information.
- * @param {string} label - Descriptive label for the error context
- * @param {Error|*} error - The error object to log
- * @param {*} [extra] - Optional additional information for the log entry
- */
+* Logs a sanitized error with optional additional information.
+* @param {string} label - Descriptive label for the error context
+* @param {Error|*} error - The error object to log
+* @param {*} [extra] - Optional additional information for the log entry
+*/
 function logSanitizedError(label, error, extra = undefined) {
   if (extra) {
     console.error(label, {
@@ -159,12 +156,12 @@ function logSanitizedError(label, error, extra = undefined) {
 }
 
 /**
- * Checks whether a Graph API error justifies a retry attempt.
- * Retryable errors are: network errors, timeouts, aborts, HTTP 429 (rate limit),
- * and server errors (5xx).
- * @param {Error|*} error - The error object to check
- * @returns {boolean} true if the error is retryable
- */
+* Checks whether a Graph API error justifies a retry attempt.
+* Retryable errors are: network errors, timeouts, aborts, HTTP 429 (rate limit),
+* and server errors (5xx).
+* @param {Error|*} error - The error object to check
+* @returns {boolean} true if the error is retryable
+*/
 function isRetryableGraphError(error) {
   if (!error) {
     return false;
@@ -180,23 +177,23 @@ function isRetryableGraphError(error) {
 }
 
 /**
- * Creates a delay (Promise-based) for retry wait times.
- * @param {number} ms - Wait time in milliseconds
- * @returns {Promise<void>} Promise that resolves after the wait time
- */
+* Creates a delay (Promise-based) for retry wait times.
+* @param {number} ms - Wait time in milliseconds
+* @returns {Promise<void>} Promise that resolves after the wait time
+*/
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * Performs an HTTP fetch against the Microsoft Graph API with retry logic.
- * Implements exponential backoff for retryable errors (429, 5xx, network).
- * Each attempt has a configurable timeout via AbortController.
- * @param {string} url - The Graph API URL
- * @param {Object} [options={}] - Fetch options (headers, method, body, etc.)
- * @returns {Promise<Response>} The HTTP response
- * @throws {Error} On non-retryable errors or after exhausting all attempts
- */
+* Performs an HTTP fetch against the Microsoft Graph API with retry logic.
+* Implements exponential backoff for retryable errors (429, 5xx, network).
+* Each attempt has a configurable timeout via AbortController.
+* @param {string} url - The Graph API URL
+* @param {Object} [options={}] - Fetch options (headers, method, body, etc.)
+* @returns {Promise<Response>} The HTTP response
+* @throws {Error} On non-retryable errors or after exhausting all attempts
+*/
 async function graphFetch(url, options = {}) {
   const settings = getGraphFetchSettings();
   let lastError = null;
@@ -237,20 +234,20 @@ async function graphFetch(url, options = {}) {
 }
 
 /**
- * Checks whether Graph API mode is enabled.
- * Currently always returns true (Graph is the only supported mode).
- * @returns {boolean} Always true
- */
+* Checks whether Graph API mode is enabled.
+* Currently always returns true (Graph is the only supported mode).
+* @returns {boolean} Always true
+*/
 function isGraphModeEnabled() {
   return true;
 }
 
 /**
- * Checks whether valid Microsoft Graph API credentials are configured.
- * Validates client ID, authority URL, and authentication method
- * (client secret or certificate) for presence and correct formatting.
- * @returns {boolean} true if all credentials are validly configured
- */
+* Checks whether valid Microsoft Graph API credentials are configured.
+* Validates client ID, authority URL, and authentication method
+* (client secret or certificate) for presence and correct formatting.
+* @returns {boolean} true if all credentials are validly configured
+*/
 function hasValidGraphCredentials() {
   const clientId = String(config?.msalConfig?.auth?.clientId || '').trim();
   const authority = String(config?.msalConfig?.auth?.authority || '').trim();
@@ -287,10 +284,10 @@ function hasValidGraphCredentials() {
 }
 
 /**
- * Activates automatic maintenance mode on Graph API outages.
- * Sets a predefined maintenance message that is displayed to users.
- * Does not override manually set maintenance messages.
- */
+* Activates automatic maintenance mode on Graph API outages.
+* Sets a predefined maintenance message that is displayed to users.
+* Does not override manually set maintenance messages.
+*/
 function ensureGraphFailureMaintenance() {
   if (!isGraphModeEnabled()) {
     return;
@@ -333,10 +330,10 @@ function ensureGraphFailureMaintenance() {
 }
 
 /**
- * Deactivates automatic maintenance mode after successful Graph synchronization.
- * Only executed if maintenance mode was activated by the controller itself
- * (autoMaintenanceOwned). Manually set maintenance messages remain untouched.
- */
+* Deactivates automatic maintenance mode after successful Graph synchronization.
+* Only executed if maintenance mode was activated by the controller itself
+* (autoMaintenanceOwned). Manually set maintenance messages remain untouched.
+*/
 function clearGraphFailureMaintenance() {
   if (consecutiveGraphFailures > 0) {
     console.log('[Maintenance] Graph API recovered after %d consecutive failure(s)', consecutiveGraphFailures);
@@ -370,12 +367,12 @@ function clearGraphFailureMaintenance() {
 }
 
 /**
- * Formats a Graph API error into a user-friendly error message.
- * Detects specific error types such as invalid OAuth secrets (AADSTS7000215)
- * and combines HTTP status, error code, and detail message.
- * @param {Error|*} error - The error object to format
- * @returns {string} Formatted, readable error message
- */
+* Formats a Graph API error into a user-friendly error message.
+* Detects specific error types such as invalid OAuth secrets (AADSTS7000215)
+* and combines HTTP status, error code, and detail message.
+* @param {Error|*} error - The error object to format
+* @returns {string} Formatted, readable error message
+*/
 function formatSyncError(error) {
   if (!error) {
     return 'Unknown error';
@@ -404,12 +401,12 @@ function formatSyncError(error) {
 }
 
 /**
- * Normalizes and validates a display client ID.
- * Allows alphanumeric characters, dots, underscores, colons,
- * hyphens, parentheses, and spaces (3-250 characters).
- * @param {*} value - The value to normalize
- * @returns {string} The normalized client ID or empty string for invalid input
- */
+* Normalizes and validates a display client ID.
+* Allows alphanumeric characters, dots, underscores, colons,
+* hyphens, parentheses, and spaces (3-250 characters).
+* @param {*} value - The value to normalize
+* @returns {string} The normalized client ID or empty string for invalid input
+*/
 function normalizeDisplayClientId(value) {
   const normalized = String(value || '').trim();
   if (!normalized) {
@@ -426,9 +423,9 @@ function normalizeDisplayClientId(value) {
 }
 
 /**
- * Sends the current list of connected display clients to all Socket.IO clients.
- * Called on every change to the client list (connection/disconnection).
- */
+* Sends the current list of connected display clients to all Socket.IO clients.
+* Called on every change to the client list (connection/disconnection).
+*/
 function emitConnectedClientsUpdated() {
   if (!socketIO) {
     return;
@@ -438,12 +435,12 @@ function emitConnectedClientsUpdated() {
 }
 
 /**
- * Normalizes an IP address for consistent display.
- * Converts IPv6-mapped IPv4 addresses (::ffff:x.x.x.x) to pure IPv4 addresses
- * and detects localhost (::1).
- * @param {string} rawIp - The raw IP address
- * @returns {string} The normalized IP address
- */
+* Normalizes an IP address for consistent display.
+* Converts IPv6-mapped IPv4 addresses (::ffff:x.x.x.x) to pure IPv4 addresses
+* and detects localhost (::1).
+* @param {string} rawIp - The raw IP address
+* @returns {string} The normalized IP address
+*/
 function normalizeIpAddress(rawIp) {
   if (!rawIp || rawIp === 'unknown') {
     return 'unknown';
@@ -472,11 +469,11 @@ function normalizeIpAddress(rawIp) {
 }
 
 /**
- * Reads the display tracking configuration from the system settings.
- * Determines the tracking mode (client-id or ip-room), the retention duration,
- * and the cleanup interval for disconnected displays.
- * @returns {{mode: string, retentionHours: number, cleanupMinutes: number}} Tracking configuration
- */
+* Reads the display tracking configuration from the system settings.
+* Determines the tracking mode (client-id or ip-room), the retention duration,
+* and the cleanup interval for disconnected displays.
+* @returns {{mode: string, retentionHours: number, cleanupMinutes: number}} Tracking configuration
+*/
 function getDisplayTrackingConfig() {
   const systemConfig = configManager.getSystemConfig();
   return {
@@ -487,12 +484,12 @@ function getDisplayTrackingConfig() {
 }
 
 /**
- * Generates a unique identifier for a display based on the tracking mode.
- * In 'ip-room' mode, IP + room/displayType are combined.
- * In 'client-id' mode, the displayClientId provided by the client is used.
- * @param {Object} socket - The Socket.IO socket object
- * @returns {string} The generated display identifier or empty string
- */
+* Generates a unique identifier for a display based on the tracking mode.
+* In 'ip-room' mode, IP + room/displayType are combined.
+* In 'client-id' mode, the displayClientId provided by the client is used.
+* @param {Object} socket - The Socket.IO socket object
+* @returns {string} The generated display identifier or empty string
+*/
 function generateDisplayIdentifier(socket) {
   const trackingConfig = getDisplayTrackingConfig();
   
@@ -506,7 +503,7 @@ function generateDisplayIdentifier(socket) {
     
     // Validate and sanitize roomAlias
     const rawRoomAlias = String(socket?.handshake?.query?.roomAlias || '').trim();
-    const roomAlias = /^[a-zA-Z0-9 _.\-]{0,100}$/.test(rawRoomAlias) ? rawRoomAlias : '';
+    const roomAlias = /^[a-zA-Z0-9 _.-]{0,100}$/.test(rawRoomAlias) ? rawRoomAlias : '';
     
     // Validate and sanitize displayType
     const rawDisplayType = String(socket?.handshake?.query?.displayType || '').trim().toLowerCase();
@@ -526,17 +523,11 @@ function generateDisplayIdentifier(socket) {
 }
 
 /**
- * Registers a connected display client in the tracking system.
- * Validates and sanitizes all input data (displayType, roomAlias, IP).
- * Updates existing entries on reconnects.
- * @param {Object} socket - The Socket.IO socket object of the connected client
- */
-function registerConnectedClient(socket) {
-  const identifier = generateDisplayIdentifier(socket);
-  if (!identifier) {
-    return;
-  }
-
+* Validates and sanitizes display connection query parameters.
+* @param {Object} socket - The Socket.IO socket object
+* @returns {{displayType: string, roomAlias: string}|null} Sanitized params or null if invalid
+*/
+function validateDisplayParams(socket) {
   // Validate and sanitize displayType
   const rawDisplayType = String(socket?.handshake?.query?.displayType || '').trim().toLowerCase();
   // Only allow alphanumeric, hyphens, and underscores (e.g., "single-room-rpi", "flightboard")
@@ -546,7 +537,7 @@ function registerConnectedClient(socket) {
   const rawRoomAlias = String(socket?.handshake?.query?.roomAlias || '').trim();
   // Allow alphanumeric, spaces, hyphens, underscores, dots (room names)
   // Max 100 characters to prevent abuse
-  const roomAlias = /^[a-zA-Z0-9 _.\-]{0,100}$/.test(rawRoomAlias) ? rawRoomAlias : '';
+  const roomAlias = /^[a-zA-Z0-9 _.-]{0,100}$/.test(rawRoomAlias) ? rawRoomAlias : '';
   
   // Don't register connections without displayType or displayClientId (e.g., admin panel)
   const trackingConfig = getDisplayTrackingConfig();
@@ -554,15 +545,36 @@ function registerConnectedClient(socket) {
     // In client-id mode, we need a valid displayClientId
     const rawClientId = socket?.handshake?.query?.displayClientId;
     if (!normalizeDisplayClientId(rawClientId)) {
-      return;
+      return null;
     }
   } else {
     // In ip-room mode, we need at least a displayType
     if (!rawDisplayType || displayType === 'unknown') {
-      return;
+      return null;
     }
   }
-  
+
+  return { displayType, roomAlias };
+}
+
+/**
+* Registers a connected display client in the tracking system.
+* Validates and sanitizes all input data (displayType, roomAlias, IP).
+* Updates existing entries on reconnects.
+* @param {Object} socket - The Socket.IO socket object of the connected client
+*/
+function registerConnectedClient(socket) {
+  const identifier = generateDisplayIdentifier(socket);
+  if (!identifier) {
+    return;
+  }
+
+  const params = validateDisplayParams(socket);
+  if (!params) {
+    return;
+  }
+
+  const { displayType, roomAlias } = params;
   const nowIso = new Date().toISOString();
   
   // Extract IP address from socket
@@ -597,11 +609,11 @@ function registerConnectedClient(socket) {
 }
 
 /**
- * Removes a disconnected display client from the tracking system.
- * Does not delete the client immediately, but schedules a delayed cleanup
- * based on the configured cleanupMinutes setting.
- * @param {Object} socket - The Socket.IO socket object of the disconnected client
- */
+* Removes a disconnected display client from the tracking system.
+* Does not delete the client immediately, but schedules a delayed cleanup
+* based on the configured cleanupMinutes setting.
+* @param {Object} socket - The Socket.IO socket object of the disconnected client
+*/
 function unregisterConnectedClient(socket) {
   const identifier = socket?.data?.displayIdentifier;
   if (!identifier || !connectedDisplayClients.has(identifier)) {
@@ -646,9 +658,9 @@ function unregisterConnectedClient(socket) {
 }
 
 /**
- * Cleans up outdated display entries based on the configured retention duration.
- * Removes clients whose last contact (lastSeenAt) exceeds the retentionHours.
- */
+* Cleans up outdated display entries based on the configured retention duration.
+* Removes clients whose last contact (lastSeenAt) exceeds the retentionHours.
+*/
 function cleanupOldDisplays() {
   const trackingConfig = getDisplayTrackingConfig();
   const now = new Date();
@@ -665,10 +677,10 @@ function cleanupOldDisplays() {
 }
 
 /**
- * Returns the list of all connected display clients.
- * Performs a cleanup of outdated entries before returning.
- * @returns {Array<Object>} Sorted list of display clients with connection details
- */
+* Returns the list of all connected display clients.
+* Performs a cleanup of outdated entries before returning.
+* @returns {Array<Object>} Sorted list of display clients with connection details
+*/
 function getConnectedDisplayClients() {
   // Clean up old displays before returning the list
   cleanupOldDisplays();
@@ -687,13 +699,13 @@ function getConnectedDisplayClients() {
 }
 
 /**
- * Sends a Socket.IO event to a specific display client.
- * Sends to all active sockets of the client (a client can have multiple sockets).
- * @param {string} clientId - The client ID of the target display
- * @param {string} eventName - Name of the event to send
- * @param {*} payload - The data to send
- * @returns {boolean} true if the event was sent successfully
- */
+* Sends a Socket.IO event to a specific display client.
+* Sends to all active sockets of the client (a client can have multiple sockets).
+* @param {string} clientId - The client ID of the target display
+* @param {string} eventName - Name of the event to send
+* @param {*} payload - The data to send
+* @returns {boolean} true if the event was sent successfully
+*/
 function emitToDisplayClient(clientId, eventName, payload) {
   const normalizedClientId = normalizeDisplayClientId(clientId);
   if (!normalizedClientId || !socketIO) {
@@ -713,11 +725,11 @@ function emitToDisplayClient(clientId, eventName, payload) {
 }
 
 /**
- * Manually removes a display client from the tracking system.
- * Only possible if the client has no active socket connections remaining.
- * @param {string} clientId - The client ID of the display to remove
- * @returns {boolean} true if the client was successfully removed
- */
+* Manually removes a display client from the tracking system.
+* Only possible if the client has no active socket connections remaining.
+* @param {string} clientId - The client ID of the display to remove
+* @returns {boolean} true if the client was successfully removed
+*/
 function removeDisplayClient(clientId) {
   const normalizedClientId = normalizeDisplayClientId(clientId);
   if (!normalizedClientId) {
@@ -741,11 +753,11 @@ function removeDisplayClient(clientId) {
 }
 
 /**
- * Distributes room updates efficiently to connected clients:
- * - Single-room clients in a room:alias Socket.IO room receive only their room
- * - All other clients (flightboard, admin) receive the full room array
- * @param {Array<Object>} rooms - Array of updated room data
- */
+* Distributes room updates efficiently to connected clients:
+* - Single-room clients in a room:alias Socket.IO room receive only their room
+* - All other clients (flightboard, admin) receive the full room array
+* @param {Array<Object>} rooms - Array of updated room data
+*/
 function broadcastRoomUpdates(rooms) {
   if (!socketIO || !Array.isArray(rooms)) return;
 
@@ -771,12 +783,12 @@ function broadcastRoomUpdates(rooms) {
 }
 
 /**
- * Fetches room data from the Microsoft Graph API and distributes it to all clients.
- * Manages the synchronization status, activates/deactivates maintenance mode
- * on errors, and triggers no-show detection.
- * In demo mode, demo data is used instead.
- * @returns {Promise<boolean>} true on successful synchronization
- */
+* Fetches room data from the Microsoft Graph API and distributes it to all clients.
+* Manages the synchronization status, activates/deactivates maintenance mode
+* on errors, and triggers no-show detection.
+* In demo mode, demo data is used instead.
+* @returns {Promise<boolean>} true on successful synchronization
+*/
 function fetchAndBroadcastRooms() {
   return new Promise((resolve) => {
     if (!socketIO) {
@@ -867,12 +879,12 @@ function fetchAndBroadcastRooms() {
 }
 
 /**
- * Deletes an appointment via the Microsoft Graph API.
- * Acquires a token via the client credentials flow and sends a DELETE request.
- * @param {string} roomEmail - Email address of the room
- * @param {string} appointmentId - ID of the appointment to delete
- * @throws {Error} On failed Graph API request
- */
+* Deletes an appointment via the Microsoft Graph API.
+* Acquires a token via the client credentials flow and sends a DELETE request.
+* @param {string} roomEmail - Email address of the room
+* @param {string} appointmentId - ID of the appointment to delete
+* @throws {Error} On failed Graph API request
+*/
 async function deleteGraphEvent(roomEmail, appointmentId) {
   const tokenRequest = {
     scopes: ['https://graph.microsoft.com/.default']
@@ -896,12 +908,12 @@ async function deleteGraphEvent(roomEmail, appointmentId) {
 }
 
 /**
- * Checks all rooms for no-show appointments and automatically releases them.
- * A no-show occurs when an appointment was not confirmed within the check-in window
- * and the autoReleaseNoShow option is enabled.
- * @param {Array<Object>} rooms - Array of room data with appointment information
- * @returns {Promise<number>} Number of released appointments
- */
+* Checks all rooms for no-show appointments and automatically releases them.
+* A no-show occurs when an appointment was not confirmed within the check-in window
+* and the autoReleaseNoShow option is enabled.
+* @param {Array<Object>} rooms - Array of room data with appointment information
+* @returns {Promise<number>} Number of released appointments
+*/
 async function releaseNoShowAppointments(rooms) {
   const bookingConfig = configManager.getBookingConfig();
   const checkInSettings = checkinManager.resolveCheckInSettings(bookingConfig?.checkIn);
@@ -956,11 +968,11 @@ async function releaseNoShowAppointments(rooms) {
 }
 
 /**
- * Returns the current synchronization status.
- * Contains timestamp, success/failure, error message, and stale detection.
- * A sync is considered stale if it is older than 180 seconds.
- * @returns {Object} Synchronization status with lastSyncTime, lastSyncSuccess, syncErrorMessage, etc.
- */
+* Returns the current synchronization status.
+* Contains timestamp, success/failure, error message, and stale detection.
+* A sync is considered stale if it is older than 180 seconds.
+* @returns {Object} Synchronization status with lastSyncTime, lastSyncSuccess, syncErrorMessage, etc.
+*/
 function getSyncStatus() {
   const now = new Date();
   const lastSync = lastSyncTime ? new Date(lastSyncTime) : null;
@@ -977,20 +989,20 @@ function getSyncStatus() {
 }
 
 /**
- * Returns the cached room data from the last successful Graph API sync.
- * @returns {{rooms: Array<Object>, cacheTime: number}|null} Cached rooms and timestamp, or null if no cache exists
- */
+* Returns the cached room data from the last successful Graph API sync.
+* @returns {{rooms: Array<Object>, cacheTime: number}|null} Cached rooms and timestamp, or null if no cache exists
+*/
 function getLastRoomsCache() {
   if (!lastRoomsCache || !lastRoomsCacheTime) return null;
   return { rooms: lastRoomsCache, cacheTime: lastRoomsCacheTime };
 }
 
 /**
- * Calculates the effective polling interval in milliseconds.
- * In webhook mode, the interval is increased to at least 300,000ms (5 minutes),
- * since webhooks are the primary update source and polling only serves as a fallback.
- * @returns {number} Polling interval in milliseconds
- */
+* Calculates the effective polling interval in milliseconds.
+* In webhook mode, the interval is increased to at least 300,000ms (5 minutes),
+* since webhooks are the primary update source and polling only serves as a fallback.
+* @returns {number} Polling interval in milliseconds
+*/
 function getEffectivePollIntervalMs() {
   const webhookModeEnabled = !!config.graphWebhook?.enabled;
   return webhookModeEnabled
@@ -999,10 +1011,10 @@ function getEffectivePollIntervalMs() {
 }
 
 /**
- * Starts the periodic polling loop for room data.
- * Performs an immediate first fetch and then sets up the interval.
- * Existing timers are cleaned up before restarting.
- */
+* Starts the periodic polling loop for room data.
+* Performs an immediate first fetch and then sets up the interval.
+* Existing timers are cleaned up before restarting.
+*/
 function startPollingLoop() {
   const pollInterval = getEffectivePollIntervalMs();
 
@@ -1022,10 +1034,10 @@ function startPollingLoop() {
 }
 
 /**
- * Updates the polling schedule (e.g., after a configuration change).
- * Only restarts the polling loop if the controller is already running.
- * @returns {boolean} true if the schedule was successfully updated
- */
+* Updates the polling schedule (e.g., after a configuration change).
+* Only restarts the polling loop if the controller is already running.
+* @returns {boolean} true if the schedule was successfully updated
+*/
 function refreshPollingSchedule() {
   if (!isRunning) {
     return false;
@@ -1036,10 +1048,10 @@ function refreshPollingSchedule() {
 }
 
 /**
- * Triggers an immediate refresh of room data.
- * Can be called from API routes (e.g., after a webhook notification).
- * @returns {Promise<boolean>} true on successful refresh
- */
+* Triggers an immediate refresh of room data.
+* Can be called from API routes (e.g., after a webhook notification).
+* @returns {Promise<boolean>} true on successful refresh
+*/
 async function triggerImmediateRefresh() {
   if (!socketIO) {
     return false;
@@ -1049,12 +1061,12 @@ async function triggerImmediateRefresh() {
 }
 
 /**
- * Socket Controller – Manages Socket.IO connections and room data updates.
- * Polls the calendar API at configurable intervals and distributes updates
- * to all connected clients. Uses the Microsoft Graph API for room data.
- *
- * @param {Object} io - Socket.IO server instance
- */
+* Socket Controller – Manages Socket.IO connections and room data updates.
+* Polls the calendar API at configurable intervals and distributes updates
+* to all connected clients. Uses the Microsoft Graph API for room data.
+*
+* @param {Object} io - Socket.IO server instance
+*/
 module.exports = function(io) {
   socketIO = io;
 
@@ -1067,9 +1079,9 @@ module.exports = function(io) {
   }, 24 * 60 * 60 * 1000);
 
   /**
-   * Handles new Socket.IO connections.
-   * Starts the API polling loop on the first connection.
-   */
+  * Handles new Socket.IO connections.
+  * Starts the API polling loop on the first connection.
+  */
   io.of('/').on('connection', function(socket) {
     const clientIp = socket.handshake.headers?.['x-forwarded-for']?.split(',')[0]?.trim()
       || socket.handshake.address || 'unknown';
@@ -1080,7 +1092,7 @@ module.exports = function(io) {
 
     // Have the client join the room-specific Socket.IO room for targeted updates
     const rawRoomAlias = String(socket.handshake.query?.roomAlias || '').trim();
-    const roomAlias = /^[a-zA-Z0-9 _.\-]{0,100}$/.test(rawRoomAlias) ? rawRoomAlias : '';
+    const roomAlias = /^[a-zA-Z0-9 _.-]{0,100}$/.test(rawRoomAlias) ? rawRoomAlias : '';
     if (roomAlias) {
       socket.join(`room:${roomAlias}`);
     }
@@ -1130,23 +1142,41 @@ module.exports = function(io) {
   });
 
   // Export sync status getters for API routes
+  /** @function getSyncStatus - Returns the current sync status */
   module.exports.getSyncStatus = getSyncStatus;
+  /** @function triggerImmediateRefresh - Triggers an immediate room data refresh */
   module.exports.triggerImmediateRefresh = triggerImmediateRefresh;
+  /** @function refreshPollingSchedule - Refreshes the polling schedule */
   module.exports.refreshPollingSchedule = refreshPollingSchedule;
+  /** @function refreshMsalClient - Refreshes the MSAL authentication client */
   module.exports.refreshMsalClient = refreshMsalClient;
+  /** @function getConnectedDisplayClients - Returns list of connected display clients */
   module.exports.getConnectedDisplayClients = getConnectedDisplayClients;
+  /** @function emitToDisplayClient - Emits an event to a specific display client */
   module.exports.emitToDisplayClient = emitToDisplayClient;
+  /** @function removeDisplayClient - Removes a display client from the registry */
   module.exports.removeDisplayClient = removeDisplayClient;
+  /** @function getRecentDisconnects - Returns recent disconnect events */
   module.exports.getRecentDisconnects = function() { return [...recentDisconnects]; };
+  /** @function getLastRoomsCache - Returns the last cached rooms data */
   module.exports.getLastRoomsCache = getLastRoomsCache;
 };
 
+/** @function getSyncStatus - Returns the current sync status */
 module.exports.getSyncStatus = getSyncStatus;
+/** @function triggerImmediateRefresh - Triggers an immediate room data refresh */
 module.exports.triggerImmediateRefresh = triggerImmediateRefresh;
+/** @function refreshPollingSchedule - Refreshes the polling schedule */
 module.exports.refreshPollingSchedule = refreshPollingSchedule;
+/** @function refreshMsalClient - Refreshes the MSAL authentication client */
 module.exports.refreshMsalClient = refreshMsalClient;
+/** @function getConnectedDisplayClients - Returns list of connected display clients */
 module.exports.getConnectedDisplayClients = getConnectedDisplayClients;
+/** @function emitToDisplayClient - Emits an event to a specific display client */
 module.exports.emitToDisplayClient = emitToDisplayClient;
+/** @function removeDisplayClient - Removes a display client from the registry */
 module.exports.removeDisplayClient = removeDisplayClient;
+/** @function getRecentDisconnects - Returns recent disconnect events */
 module.exports.getRecentDisconnects = function() { return []; };
+/** @function getLastRoomsCache - Returns the last cached rooms data */
 module.exports.getLastRoomsCache = getLastRoomsCache;

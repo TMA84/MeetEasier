@@ -1,0 +1,16 @@
+{
+  "env": { "node": true, "es2022": true },
+  "parserOptions": { "ecmaVersion": 2022 },
+  "extends": ["eslint:recommended"],
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "destructuredArrayIgnorePattern": "^_", "caughtErrors": "none" }],
+    "no-console": "off",
+    "eqeqeq": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.js", "**/*.spec.js", "**/__tests__/**/*.js"],
+      "env": { "jest": true }
+    }
+  ]
+}
