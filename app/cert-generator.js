@@ -1,10 +1,10 @@
 /**
- * @file cert-generator.js
- * @description Self-signed X.509 certificate generator for OAuth certificate-based
- *              authentication with Microsoft Entra ID (Azure AD). Generates RSA 2048-bit
- *              key pairs and self-signed certificates using node-forge. Certificates are
- *              stored encrypted on disk and used by MSAL for client credential flows.
- */
+* @file cert-generator.js
+* @description Self-signed X.509 certificate generator for OAuth certificate-based
+*              authentication with Microsoft Entra ID (Azure AD). Generates RSA 2048-bit
+*              key pairs and self-signed certificates using node-forge. Certificates are
+*              stored encrypted on disk and used by MSAL for client credential flows.
+*/
 
 const forge = require('node-forge');
 const crypto = require('crypto');
@@ -14,13 +14,13 @@ const path = require('path');
 const CERT_CONFIG_PATH = path.join(__dirname, '../data/oauth-certificate.json');
 
 /**
- * Generates a self-signed X.509 certificate for Azure AD app authentication.
- *
- * @param {Object} options - Certificate options
- * @param {string} [options.commonName='MeetEasier OAuth'] - Certificate CN
- * @param {number} [options.validityYears=3] - Certificate validity in years (1-10)
- * @returns {Object} Generated certificate data with privateKeyPem, publicCertPem, thumbprintSHA256, notBefore, notAfter
- */
+* Generates a self-signed X.509 certificate for Azure AD app authentication.
+*
+* @param {Object} options - Certificate options
+* @param {string} [options.commonName='MeetEasier OAuth'] - Certificate CN
+* @param {number} [options.validityYears=3] - Certificate validity in years (1-10)
+* @returns {Object} Generated certificate data with privateKeyPem, publicCertPem, thumbprintSHA256, notBefore, notAfter
+*/
 function generateCertificate(options = {}) {
   const commonName = options.commonName || 'MeetEasier OAuth';
   const validityYears = Math.max(1, Math.min(options.validityYears || 3, 10));
@@ -87,13 +87,13 @@ function generateCertificate(options = {}) {
 }
 
 /**
- * Encrypts the private key before storing it on disk.
- * Uses AES-256-GCM with a key derived from the API token.
- *
- * @param {string} privateKeyPem - PEM-encoded private key
- * @param {string} encryptionKey - Encryption key (API token hash)
- * @returns {Object} Encrypted payload with iv, tag, and ciphertext (all hex)
- */
+* Encrypts the private key before storing it on disk.
+* Uses AES-256-GCM with a key derived from the API token.
+*
+* @param {string} privateKeyPem - PEM-encoded private key
+* @param {string} encryptionKey - Encryption key (API token hash)
+* @returns {Object} Encrypted payload with iv, tag, and ciphertext (all hex)
+*/
 function encryptPrivateKey(privateKeyPem, encryptionKey) {
   const keyHash = crypto.createHash('sha256').update(encryptionKey).digest();
   const iv = crypto.randomBytes(16);
@@ -105,12 +105,12 @@ function encryptPrivateKey(privateKeyPem, encryptionKey) {
 }
 
 /**
- * Decrypts the private key from the stored encrypted payload.
- *
- * @param {Object} payload - Encrypted payload with iv, tag, ciphertext
- * @param {string} encryptionKey - Encryption key (API token hash)
- * @returns {string} Decrypted PEM-encoded private key
- */
+* Decrypts the private key from the stored encrypted payload.
+*
+* @param {Object} payload - Encrypted payload with iv, tag, ciphertext
+* @param {string} encryptionKey - Encryption key (API token hash)
+* @returns {string} Decrypted PEM-encoded private key
+*/
 function decryptPrivateKey(payload, encryptionKey) {
   const keyHash = crypto.createHash('sha256').update(encryptionKey).digest();
   const decipher = crypto.createDecipheriv('aes-256-gcm', keyHash, Buffer.from(payload.iv, 'hex'));
@@ -121,11 +121,11 @@ function decryptPrivateKey(payload, encryptionKey) {
 }
 
 /**
- * Saves the certificate data to disk. Private key is encrypted.
- *
- * @param {Object} certData - Certificate data from generateCertificate()
- * @param {string} encryptionKey - Key for encrypting the private key
- */
+* Saves the certificate data to disk. Private key is encrypted.
+*
+* @param {Object} certData - Certificate data from generateCertificate()
+* @param {string} encryptionKey - Key for encrypting the private key
+*/
 function saveCertificate(certData, encryptionKey) {
   const dir = path.dirname(CERT_CONFIG_PATH);
   if (!fs.existsSync(dir)) {
@@ -148,10 +148,10 @@ function saveCertificate(certData, encryptionKey) {
 }
 
 /**
- * Loads the stored certificate data from disk.
- *
- * @returns {Object|null} Stored certificate data or null if not found
- */
+* Loads the stored certificate data from disk.
+*
+* @returns {Object|null} Stored certificate data or null if not found
+*/
 function loadCertificate() {
   if (!fs.existsSync(CERT_CONFIG_PATH)) {
     return null;
@@ -165,12 +165,12 @@ function loadCertificate() {
 }
 
 /**
- * Gets the MSAL clientCertificate config object if a certificate is stored.
- * Returns null if no certificate is available or decryption fails.
- *
- * @param {string} encryptionKey - Key for decrypting the private key
- * @returns {Object|null} MSAL-compatible clientCertificate object or null
- */
+* Gets the MSAL clientCertificate config object if a certificate is stored.
+* Returns null if no certificate is available or decryption fails.
+*
+* @param {string} encryptionKey - Key for decrypting the private key
+* @returns {Object|null} MSAL-compatible clientCertificate object or null
+*/
 function getMsalCertificateConfig(encryptionKey) {
   const stored = loadCertificate();
   if (!stored || !stored.encryptedPrivateKey || !stored.thumbprintSHA256) {
@@ -198,10 +198,10 @@ function getMsalCertificateConfig(encryptionKey) {
 }
 
 /**
- * Deletes the stored certificate from disk.
- *
- * @returns {boolean} true if deleted, false if not found
- */
+* Deletes the stored certificate from disk.
+*
+* @returns {boolean} true if deleted, false if not found
+*/
 function deleteCertificate() {
   if (fs.existsSync(CERT_CONFIG_PATH)) {
     fs.unlinkSync(CERT_CONFIG_PATH);
@@ -211,10 +211,10 @@ function deleteCertificate() {
 }
 
 /**
- * Checks if a certificate is stored and returns its metadata (without private key).
- *
- * @returns {Object|null} Certificate metadata or null
- */
+* Checks if a certificate is stored and returns its metadata (without private key).
+*
+* @returns {Object|null} Certificate metadata or null
+*/
 function getCertificateInfo() {
   const stored = loadCertificate();
   if (!stored) return null;

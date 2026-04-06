@@ -46,7 +46,6 @@ This audit reviewed the MeetEasier codebase for:
 - ✅ `config/room-blacklist.js` - No secrets
 - ✅ `app/routes.js` - No secrets
 - ✅ `app/msgraph/*.js` - No secrets
-- ✅ `app/ews/*.js` - No secrets (deprecated)
 - ✅ `app/wifi-manager.js` - No secrets
 
 ### Frontend

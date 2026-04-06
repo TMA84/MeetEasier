@@ -1,0 +1,25 @@
+{
+  "env": { "browser": true, "es2022": true },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "ecmaFeatures": { "jsx": true },
+    "sourceType": "module"
+  },
+  "extends": ["eslint:recommended", "plugin:react/recommended"],
+  "plugins": ["react"],
+  "settings": { "react": { "version": "detect" } },
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "destructuredArrayIgnorePattern": "^_", "ignoreRestSiblings": true, "caughtErrors": "none" }],
+    "no-console": ["warn", { "allow": ["warn", "error", "log"] }],
+    "eqeqeq": "error",
+    "react/prop-types": "off",
+    "react/react-in-jsx-scope": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.js", "**/*.test.jsx", "**/*.spec.js", "**/__tests__/**/*.js", "**/__mocks__/**/*.js", "**/test-helpers.js", "**/test-helpers.jsx"],
+      "env": { "jest": true },
+      "globals": { "vi": "readonly" }
+    }
+  ]
+}

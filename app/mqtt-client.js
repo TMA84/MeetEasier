@@ -1,21 +1,21 @@
 /**
- * @file mqtt-client.js
- * @description MQTT client for communication with Touchkio displays.
- *
- * This module establishes a connection to an external MQTT broker (e.g. Mosquitto)
- * and provides an abstraction layer for publish/subscribe operations.
- * It is primarily used for controlling Touchkio displays.
- *
- * Main features:
- * - Connection setup and management with automatic reconnect
- * - Publish/subscribe API with wildcard support (+ and #)
- * - Message forwarding to registered handlers
- * - Optional authentication with the MQTT broker
- * - Automatic re-subscribe after connection loss
- *
- * @requires mqtt - MQTT.js client library
- * @requires ./config-manager - Central configuration management
- */
+* @file mqtt-client.js
+* @description MQTT client for communication with Touchkio displays.
+*
+* This module establishes a connection to an external MQTT broker (e.g. Mosquitto)
+* and provides an abstraction layer for publish/subscribe operations.
+* It is primarily used for controlling Touchkio displays.
+*
+* Main features:
+* - Connection setup and management with automatic reconnect
+* - Publish/subscribe API with wildcard support (+ and #)
+* - Message forwarding to registered handlers
+* - Optional authentication with the MQTT broker
+* - Automatic re-subscribe after connection loss
+*
+* @requires mqtt - MQTT.js client library
+* @requires ./config-manager - Central configuration management
+*/
 
 const mqtt = require('mqtt');
 const configManager = require('./config-manager');
@@ -34,10 +34,10 @@ let connectCallbacks = [];
 let binaryTopics = new Set();
 
 /**
- * Initializes the MQTT client and establishes the connection to the broker.
- * Reads the configuration from the config manager and sets up the connection
- * with optional authentication. Aborts if MQTT is disabled.
- */
+* Initializes the MQTT client and establishes the connection to the broker.
+* Reads the configuration from the config manager and sets up the connection
+* with optional authentication. Aborts if MQTT is disabled.
+*/
 function init() {
   const mqttConfig = configManager.getMqttConfig();
   
@@ -75,10 +75,10 @@ function init() {
 }
 
 /**
- * Registers a callback to be invoked upon successful connection.
- * Executes immediately if a connection already exists.
- * @param {Function} callback - The function to call
- */
+* Registers a callback to be invoked upon successful connection.
+* Executes immediately if a connection already exists.
+* @param {Function} callback - The function to call
+*/
 function onConnect(callback) {
   if (isConnected) {
     callback();
@@ -88,11 +88,11 @@ function onConnect(callback) {
 }
 
 /**
- * Sets up all MQTT event handlers (connect, disconnect, error, message, etc.).
- * Manages the connection status, executes connect callbacks, and forwards
- * incoming messages to the registered handlers.
- * Supports MQTT wildcards (+ for single level, # for multiple levels).
- */
+* Sets up all MQTT event handlers (connect, disconnect, error, message, etc.).
+* Manages the connection status, executes connect callbacks, and forwards
+* incoming messages to the registered handlers.
+* Supports MQTT wildcards (+ for single level, # for multiple levels).
+*/
 function setupEventHandlers() {
   // Connection established
   mqttClient.on('connect', () => {
@@ -171,15 +171,15 @@ function setupEventHandlers() {
 }
 
 /**
- * Publishes a message to an MQTT topic.
- * Automatically converts non-string payloads to JSON.
- * @param {string} topic - The target topic
- * @param {string|Object} payload - The message to send (string or object)
- * @param {Object} [options={}] - Optional MQTT publish options
- * @param {number} [options.qos=0] - Quality of Service (0, 1, or 2)
- * @param {boolean} [options.retain=false] - Store message as retained message
- * @returns {boolean} true if the message was sent successfully
- */
+* Publishes a message to an MQTT topic.
+* Automatically converts non-string payloads to JSON.
+* @param {string} topic - The target topic
+* @param {string|Object} payload - The message to send (string or object)
+* @param {Object} [options={}] - Optional MQTT publish options
+* @param {number} [options.qos=0] - Quality of Service (0, 1, or 2)
+* @param {boolean} [options.retain=false] - Store message as retained message
+* @returns {boolean} true if the message was sent successfully
+*/
 function publish(topic, payload, options = {}) {
   if (!isConnected || !mqttClient) {
     console.warn('[MQTT] Not connected to broker, cannot publish');
@@ -208,14 +208,14 @@ function publish(topic, payload, options = {}) {
 }
 
 /**
- * Subscribes to an MQTT topic and registers a message handler.
- * Supports MQTT wildcards (+ and #). Multiple handlers per topic are possible.
- * The topic is also queued when no connection exists yet and will be
- * automatically subscribed once the connection is established.
- * @param {string} topic - The topic to subscribe to (with optional wildcards)
- * @param {Function} callback - Handler function, called with (message, {topic})
- * @returns {string|null} The subscribed topic or null on error
- */
+* Subscribes to an MQTT topic and registers a message handler.
+* Supports MQTT wildcards (+ and #). Multiple handlers per topic are possible.
+* The topic is also queued when no connection exists yet and will be
+* automatically subscribed once the connection is established.
+* @param {string} topic - The topic to subscribe to (with optional wildcards)
+* @param {Function} callback - Handler function, called with (message, {topic})
+* @returns {string|null} The subscribed topic or null on error
+*/
 function subscribe(topic, callback) {
   if (!mqttClient) {
     console.warn('[MQTT] Client not initialized, cannot subscribe');
@@ -246,21 +246,21 @@ function subscribe(topic, callback) {
 }
 
 /**
- * Subscribes to an MQTT topic for binary payloads (e.g. images).
- * Same as subscribe() but the handler receives a raw Buffer instead of a string.
- * @param {string} topic - The topic to subscribe to (with optional wildcards)
- * @param {Function} callback - Handler function, called with (Buffer, {topic})
- * @returns {string|null} The subscribed topic or null on error
- */
+* Subscribes to an MQTT topic for binary payloads (e.g. images).
+* Same as subscribe() but the handler receives a raw Buffer instead of a string.
+* @param {string} topic - The topic to subscribe to (with optional wildcards)
+* @param {Function} callback - Handler function, called with (Buffer, {topic})
+* @returns {string|null} The subscribed topic or null on error
+*/
 function subscribeBinary(topic, callback) {
   binaryTopics.add(topic);
   return subscribe(topic, callback);
 }
 
 /**
- * Unsubscribes from an MQTT topic and removes all associated handlers.
- * @param {string} topic - The topic to unsubscribe from
- */
+* Unsubscribes from an MQTT topic and removes all associated handlers.
+* @param {string} topic - The topic to unsubscribe from
+*/
 function unsubscribe(topic) {
   if (!mqttClient) {
     return;
@@ -281,10 +281,10 @@ function unsubscribe(topic) {
 }
 
 /**
- * Returns the current status of the MQTT client.
- * Contains connection status, subscribed topics, and broker URL.
- * @returns {Object} Status object with enabled, connected, subscribedTopics, and brokerUrl
- */
+* Returns the current status of the MQTT client.
+* Contains connection status, subscribed topics, and broker URL.
+* @returns {Object} Status object with enabled, connected, subscribedTopics, and brokerUrl
+*/
 function getStatus() {
   const mqttConfig = configManager.getMqttConfig();
   return {
@@ -296,18 +296,18 @@ function getStatus() {
 }
 
 /**
- * Returns connected clients (not applicable in client mode).
- * This function exists for API compatibility and always returns an empty array.
- * @returns {Array} Always an empty array
- */
+* Returns connected clients (not applicable in client mode).
+* This function exists for API compatibility and always returns an empty array.
+* @returns {Array} Always an empty array
+*/
 function getConnectedClients() {
   return [];
 }
 
 /**
- * Stops the MQTT client and disconnects from the broker.
- * Cleans up all subscribed topics, handlers, and the client instance.
- */
+* Stops the MQTT client and disconnects from the broker.
+* Cleans up all subscribed topics, handlers, and the client instance.
+*/
 function stop() {
   if (!mqttClient) {
     return;
@@ -327,10 +327,10 @@ function stop() {
 }
 
 /**
- * Restarts the MQTT client.
- * Stops the current client and initializes a new connection after a short delay
- * (1 second).
- */
+* Restarts the MQTT client.
+* Stops the current client and initializes a new connection after a short delay
+* (1 second).
+*/
 function restart() {
   stop();
   setTimeout(() => {

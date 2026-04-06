@@ -48,24 +48,53 @@ function versionServiceWorker() {
   };
 }
 
+/**
+ * Vite plugin: resolves .js imports to .jsx files when the .js file doesn't exist.
+ * Also handles typo extensions (.jss, .jsjs) that should resolve to .js files.
+ * Needed because Rolldown (Vite 8) is stricter about file extensions than esbuild.
+ */
+function resolveExtensions() {
+  return {
+    name: 'resolve-extensions',
+    enforce: 'pre',
+    async resolveId(source, importer) {
+      if (!importer || !source.startsWith('.')) return null;
+
+      const importerDir = path.dirname(importer);
+
+      // Handle .jss -> .js typo
+      if (source.endsWith('.jss')) {
+        const corrected = source.slice(0, -4) + '.js';
+        const resolved = path.resolve(importerDir, corrected);
+        try { fs.accessSync(resolved); return resolved; } catch (_) {}
+      }
+
+      // Handle .jsjs -> .js typo
+      if (source.endsWith('.jsjs')) {
+        const corrected = source.slice(0, -5) + '.js';
+        const resolved = path.resolve(importerDir, corrected);
+        try { fs.accessSync(resolved); return resolved; } catch (_) {}
+      }
+
+      // Handle .js -> .jsx fallback
+      if (source.endsWith('.js')) {
+        const jsPath = path.resolve(importerDir, source);
+        try { fs.accessSync(jsPath); return null; } catch (_) {}
+        const jsxPath = jsPath.slice(0, -3) + '.jsx';
+        try { fs.accessSync(jsxPath); return jsxPath; } catch (_) {}
+      }
+
+      return null;
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), cacheBustStaticCss(), versionServiceWorker()],
+  plugins: [react({ include: /\.(js|jsx|ts|tsx)$/ }), resolveExtensions(), cacheBustStaticCss(), versionServiceWorker()],
   resolve: {
     alias: {
       '@scss': path.resolve(__dirname, '../scss'),
-    },
-  },
-  esbuild: {
-    loader: 'jsx',
-    include: /src\/.*\.jsx?$/,
-    exclude: [],
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      loader: {
-        '.js': 'jsx',
-      },
     },
   },
   server: {
@@ -97,33 +126,47 @@ export default defineConfig({
   build: {
     outDir: 'build',
     sourcemap: true,
-    rollupOptions: {
+    rolldownOptions: {
+      moduleTypes: {
+        '.js': 'jsx',
+      },
       output: {
-        manualChunks: {
-          // Separate vendor chunks for better caching
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'socket-vendor': ['socket.io-client'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/')) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/socket.io-client/')) {
+            return 'socket-vendor';
+          }
         },
       },
     },
     // Optimize chunk size
     chunkSizeWarningLimit: 600,
     // Enable minification
-    minify: 'esbuild',
+    minify: 'oxc',
     target: 'es2015',
   },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './src/setupTests.js',
+    setupFiles: './src/setup-tests.js',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
+      reportsDirectory: './coverage',
+      reportOnFailure: true,
+      include: [
+        'src/**/*.{js,jsx}',
+      ],
       exclude: [
         'node_modules/',
-        'src/setupTests.js',
+        'src/setup-tests.js',
         'src/main.jsx',
+        'src/index.jsx',
+        'src/__mocks__/**',
         'src/**/*Container.{js,jsx}',
+        'src/**/test-helpers.{js,jsx}',
       ],
     },
   },

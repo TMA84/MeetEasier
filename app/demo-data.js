@@ -1,15 +1,15 @@
 /**
- * @file Demo Data Generator for MeetEasier.
- *
- * Generates realistic room and appointment data when no Microsoft Graph API
- * is configured. Appointments are dynamically generated relative to the current
- * time, so the demo view always shows up-to-date data.
- *
- * Also supports simulated bookings, meeting extensions, and
- * early ending of meetings in demo mode.
- *
- * @module demo-data
- */
+* @file Demo Data Generator for MeetEasier.
+*
+* Generates realistic room and appointment data when no Microsoft Graph API
+* is configured. Appointments are dynamically generated relative to the current
+* time, so the demo view always shows up-to-date data.
+*
+* Also supports simulated bookings, meeting extensions, and
+* early ending of meetings in demo mode.
+*
+* @module demo-data
+*/
 
 /** @constant {Object[]} DEMO_ROOMS – Predefined demo rooms with name, room list, email, and seats */
 
@@ -46,35 +46,57 @@ let demoAppointments = new Map(); // roomEmail -> appointments[]
 let nextDemoId = 1000;
 
 /**
- * Generates a unique demo appointment ID.
- *
- * @returns {string} ID in the format "demo-event-{number}".
- */
+* Generates a unique demo appointment ID.
+*
+* @returns {string} ID in the format "demo-event-{number}".
+*/
 function generateDemoId() {
   return `demo-event-${nextDemoId++}`;
 }
 
 /**
- * Selects a random element from an array.
- *
- * @param {Array} arr – The source array.
- * @returns {*} A randomly selected element.
- */
+* Selects a random element from an array.
+*
+* @param {Array} arr – The source array.
+* @returns {*} A randomly selected element.
+*/
 function randomItem(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
 /**
- * Generates appointments for a room based on the current time.
- *
- * Creates a mix of past, ongoing, and upcoming meetings.
- * The pattern (busy, upcoming, free, busy-full) is determined by the
- * `seedIndex` to provide variety between rooms.
- *
- * @param {string} roomEmail – Email address of the room.
- * @param {number} seedIndex – Index to determine the occupancy pattern.
- * @returns {Object[]} Array of appointment objects with Id, Subject, Organizer, Start, End, Private.
- */
+* Builds a room object in Graph API-compatible format from a demo room definition.
+*
+* @param {Object} room – DEMO_ROOMS entry with Name, Roomlist, Email.
+* @param {Object[]} appointments – Appointments array for this room.
+* @returns {Object} Room object with Name, Roomlist, aliases, Email, Busy, and Appointments.
+*/
+function buildRoomObject(room, appointments) {
+  const now = Date.now();
+  const isBusy = appointments.length > 0 && appointments[0].Start < now && now < appointments[0].End;
+
+  return {
+    Name: room.Name,
+    Roomlist: room.Roomlist,
+    RoomlistAlias: room.Roomlist.toLowerCase().replace(/\s+/g, '-'),
+    RoomAlias: room.Name.toLowerCase(),
+    Email: room.Email,
+    Busy: isBusy,
+    Appointments: appointments
+  };
+}
+
+/**
+* Generates appointments for a room based on the current time.
+*
+* Creates a mix of past, ongoing, and upcoming meetings.
+* The pattern (busy, upcoming, free, busy-full) is determined by the
+* `seedIndex` to provide variety between rooms.
+*
+* @param {string} roomEmail – Email address of the room.
+* @param {number} seedIndex – Index to determine the occupancy pattern.
+* @returns {Object[]} Array of appointment objects with Id, Subject, Organizer, Start, End, Private.
+*/
 function generateAppointmentsForRoom(roomEmail, seedIndex) {
   const now = new Date();
   const appointments = [];
@@ -144,12 +166,12 @@ function generateAppointmentsForRoom(roomEmail, seedIndex) {
 }
 
 /**
- * Generates the complete demo room array in Graph API-compatible format.
- *
- * Generates new appointments on each call to provide dynamic data.
- *
- * @returns {Object[]} Array of room objects with Name, room list, alias, email, occupancy status, and appointments.
- */
+* Generates the complete demo room array in Graph API-compatible format.
+*
+* Generates new appointments on each call to provide dynamic data.
+*
+* @returns {Object[]} Array of room objects with Name, room list, alias, email, occupancy status, and appointments.
+*/
 function generateDemoRooms() {
   // Regenerate appointments on each call for dynamic data
   demoAppointments.clear();
@@ -158,29 +180,17 @@ function generateDemoRooms() {
     const appointments = generateAppointmentsForRoom(room.Email, index);
     demoAppointments.set(room.Email, appointments);
 
-    // Occupancy status: room is busy if the first appointment is currently running
-    const now = Date.now();
-    const isBusy = appointments.length > 0 && appointments[0].Start < now && now < appointments[0].End;
-
-    return {
-      Name: room.Name,
-      Roomlist: room.Roomlist,
-      RoomlistAlias: room.Roomlist.toLowerCase().replace(/\s+/g, '-'),
-      RoomAlias: room.Name.toLowerCase(),
-      Email: room.Email,
-      Busy: isBusy,
-      Appointments: appointments
-    };
+    return buildRoomObject(room, appointments);
   });
 }
 
 /**
- * Returns the demo room lists for filter navigation.
- *
- * Generates a deduplicated list of all room lists from the demo rooms.
- *
- * @returns {Object[]} Array of room list objects with displayName, alias, and emailAddress.
- */
+* Returns the demo room lists for filter navigation.
+*
+* Generates a deduplicated list of all room lists from the demo rooms.
+*
+* @returns {Object[]} Array of room list objects with displayName, alias, and emailAddress.
+*/
 function getDemoRoomlists() {
   const lists = new Map();
   DEMO_ROOMS.forEach((room) => {
@@ -196,17 +206,17 @@ function getDemoRoomlists() {
 }
 
 /**
- * Simulates booking a room in demo mode.
- *
- * Adds a new appointment to the demo data. Checks for time conflicts
- * with existing appointments beforehand.
- *
- * @param {string} roomEmail – Email address of the room.
- * @param {string} subject – Subject of the appointment.
- * @param {string|number} startTime – Start time (parsable by Date constructor).
- * @param {string|number} endTime – End time (parsable by Date constructor).
- * @returns {Object} Result with `error: false` on success or `error: true` with error message on conflict.
- */
+* Simulates booking a room in demo mode.
+*
+* Adds a new appointment to the demo data. Checks for time conflicts
+* with existing appointments beforehand.
+*
+* @param {string} roomEmail – Email address of the room.
+* @param {string} subject – Subject of the appointment.
+* @param {string|number} startTime – Start time (parsable by Date constructor).
+* @param {string|number} endTime – End time (parsable by Date constructor).
+* @returns {Object} Result with `error: false` on success or `error: true` with error message on conflict.
+*/
 function bookDemoRoom(roomEmail, subject, startTime, endTime) {
   const start = new Date(startTime).getTime();
   const end = new Date(endTime).getTime();
@@ -240,15 +250,15 @@ function bookDemoRoom(roomEmail, subject, startTime, endTime) {
 }
 
 /**
- * Simulates extending a meeting in demo mode.
- *
- * Checks whether the extension conflicts with subsequent appointments.
- *
- * @param {string} roomEmail – Email address of the room.
- * @param {string} appointmentId – ID of the appointment to extend.
- * @param {number} minutes – Number of minutes to extend by.
- * @returns {Object} Result with `error: false` and new end time on success, or error object.
- */
+* Simulates extending a meeting in demo mode.
+*
+* Checks whether the extension conflicts with subsequent appointments.
+*
+* @param {string} roomEmail – Email address of the room.
+* @param {string} appointmentId – ID of the appointment to extend.
+* @param {number} minutes – Number of minutes to extend by.
+* @returns {Object} Result with `error: false` and new end time on success, or error object.
+*/
 function extendDemoMeeting(roomEmail, appointmentId, minutes) {
   const existing = demoAppointments.get(roomEmail);
   if (!existing) {
@@ -277,14 +287,14 @@ function extendDemoMeeting(roomEmail, appointmentId, minutes) {
 }
 
 /**
- * Simulates ending a meeting early in demo mode.
- *
- * Sets the end time of the appointment to the current time.
- *
- * @param {string} roomEmail – Email address of the room.
- * @param {string} appointmentId – ID of the appointment to end.
- * @returns {Object} Result with `error: false` and end timestamp on success, or error object.
- */
+* Simulates ending a meeting early in demo mode.
+*
+* Sets the end time of the appointment to the current time.
+*
+* @param {string} roomEmail – Email address of the room.
+* @param {string} appointmentId – ID of the appointment to end.
+* @returns {Object} Result with `error: false` and end timestamp on success, or error object.
+*/
 function endDemoMeetingEarly(roomEmail, appointmentId) {
   const existing = demoAppointments.get(roomEmail);
   if (!existing) {
@@ -302,14 +312,14 @@ function endDemoMeetingEarly(roomEmail, appointmentId) {
 }
 
 /**
- * Returns the current snapshot of demo rooms with updated occupancy status.
- *
- * On the first call, fresh data is generated. On subsequent calls,
- * existing appointments are used and expired appointments (older than 1 hour)
- * are filtered out.
- *
- * @returns {Object[]} Array of room objects with current occupancy status.
- */
+* Returns the current snapshot of demo rooms with updated occupancy status.
+*
+* On the first call, fresh data is generated. On subsequent calls,
+* existing appointments are used and expired appointments (older than 1 hour)
+* are filtered out.
+*
+* @returns {Object[]} Array of room objects with current occupancy status.
+*/
 function getDemoRoomsSnapshot() {
   if (demoAppointments.size === 0) {
     // First call – generate fresh data
@@ -321,39 +331,28 @@ function getDemoRoomsSnapshot() {
     const appointments = (demoAppointments.get(room.Email) || [])
       .filter(a => a.End > now - 3600000); // Keep appointments from the last hour
 
-    // Determine occupancy status based on the first appointment
-    const isBusy = appointments.length > 0 && appointments[0].Start < now && now < appointments[0].End;
-
-    return {
-      Name: room.Name,
-      Roomlist: room.Roomlist,
-      RoomlistAlias: room.Roomlist.toLowerCase().replace(/\s+/g, '-'),
-      RoomAlias: room.Name.toLowerCase(),
-      Email: room.Email,
-      Busy: isBusy,
-      Appointments: appointments
-    };
+    return buildRoomObject(room, appointments);
   });
 }
 
 /**
- * Checks whether an email address belongs to the demo domain.
- *
- * @param {string} email – The email address to check.
- * @returns {boolean} `true` if the address ends with `@demo.meeteasier.local`.
- */
+* Checks whether an email address belongs to the demo domain.
+*
+* @param {string} email – The email address to check.
+* @returns {boolean} `true` if the address ends with `@demo.meeteasier.local`.
+*/
 function isDemoEmail(email) {
   return String(email || '').endsWith('@demo.meeteasier.local');
 }
 
 /**
- * Generates simulated connected display devices for demo mode.
- *
- * Returns data in the same format as `/api/displays`, including
- * Socket.IO and MQTT connection information.
- *
- * @returns {Object[]} Array of display objects with clientId, name, type, IP, and connection status.
- */
+* Generates simulated connected display devices for demo mode.
+*
+* Returns data in the same format as `/api/displays`, including
+* Socket.IO and MQTT connection information.
+*
+* @returns {Object[]} Array of display objects with clientId, name, type, IP, and connection status.
+*/
 function getDemoDisplays() {
   const now = new Date();
   const connectedAt = new Date(now.getTime() - 3600000).toISOString(); // Connected for 1 hour
