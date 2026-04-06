@@ -171,7 +171,7 @@ const Admin = () => {
         intervals.startSyncIntervals();
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line -- mount-only effect
   }, []);
 
   // ---- Tab change effects (replaces componentDidUpdate) ----

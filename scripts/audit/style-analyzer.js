@@ -273,6 +273,11 @@ function checkFileNaming(filePath, rootDir) {
       return { findings, conforming };
     }
 
+    // Allow camelCase for React hook files (useXxx convention)
+    if (isCamelCase && nameForCheck.startsWith('use') && isReactComponentFile(relativePath, ext)) {
+      return { findings, conforming };
+    }
+
     const convention = isPascalCase ? 'PascalCase' : isSnakeCase ? 'snake_case' : 'camelCase';
     findings.push({
       file: relativePath,

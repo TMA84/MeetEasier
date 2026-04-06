@@ -8,7 +8,7 @@ import {
   submitBookingConfig, submitMaintenanceConfig, submitSystemConfig,
   submitGraphRuntimeConfig, submitTranslationApiConfig, submitOAuthConfig,
   submitApiTokenConfig, submitSearchConfig, submitRateLimitConfig,
-  submitColorsConfig, submitI18nConfig, submitAutoTranslate,
+  submitColorsConfig,
   generateCertificate, deleteCertificate, downloadCertificate,
   submitPowerManagement, fetchPowerManagementConfig,
   submitBackupExport, submitBackupImport, fetchAuditLogs,
