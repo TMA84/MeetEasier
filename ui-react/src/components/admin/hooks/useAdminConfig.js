@@ -153,6 +153,12 @@ const INITIAL_CONFIG = {
   appVersion: null
 };
 
+/**
+ * Hook for loading and managing all admin configuration state.
+ * @param {Function} getRequestHeaders - Returns request headers for API calls
+ * @param {Function} handleUnauthorizedAccess - Handler for 401 responses
+ * @returns {{ config, updateConfig, setField, configRef, loadVersion, loadLogoConfig, loadSyncStatus, loadConfigLocks, loadConnectedClients, loadCurrentConfig, loadMqttConfig, loadMqttStatus }}
+ */
 export function useAdminConfig(getRequestHeaders, handleUnauthorizedAccess) {
   const [config, setConfig] = useState(INITIAL_CONFIG);
   const configRef = useRef(config);
