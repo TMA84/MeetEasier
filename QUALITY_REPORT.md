@@ -1,24 +1,25 @@
 # Code-Qualitätsbericht
 
-**Gesamt-Score: 98/100** – Bewertung: **Sehr gut**
+**Gesamt-Score: 97/100** – Bewertung: **Sehr gut**
 
-*Erstellt am: 2026-04-05T21:40:49.078Z*
+*Erstellt am: 2026-04-06T08:21:22.403Z*
 
 ## Kategorie-Scores
 
 | Kategorie | Score |
 |-----------|-------|
-| linting | 100/100 |
+| linting | 97/100 |
 | complexity | 100/100 |
 | coverage | 90.53/100 |
 | security | 100/100 |
-| dependencies | 100/100 |
-| style | 100/100 |
+| dependencies | 95/100 |
+| style | 97/100 |
 
 ## Alle Befunde
 
-### Hoch (22)
+### Hoch (27)
 
+- **[linting]** /Users/tobias.malcherek/Documents/GIT/meeteasier/ui-react/src/components/admin/Admin.jsx:174: react-hooks/exhaustive-deps: Definition for rule 'react-hooks/exhaustive-deps' was not found. *(Aufwand: Klein (<1h))*
 - **[complexity]** app/routes.js:2161: Funktion "<anon method-65>" hat zyklomatische Komplexität von 22 (Schwellenwert: 20) *(Aufwand: Groß (>4h))*
   - Vorschlag: Funktion "<anon method-65>" in kleinere Hilfsfunktionen aufteilen
 - **[complexity]** app/routes.js:2733: Funktion "<anon method-87>" hat zyklomatische Komplexität von 21 (Schwellenwert: 20) *(Aufwand: Groß (>4h))*
@@ -33,6 +34,14 @@
   - Vorschlag: Funktion "<anon method-138>" in kleinere Hilfsfunktionen aufteilen
 - **[complexity]** app/routes.js:4553: Funktion "<anon method-149>" hat zyklomatische Komplexität von 21 (Schwellenwert: 20) *(Aufwand: Groß (>4h))*
   - Vorschlag: Funktion "<anon method-149>" in kleinere Hilfsfunktionen aufteilen
+- **[complexity]** ui-react/src/components/admin/hooks/useAdminSubmissions.js:310: Funktion "<anon method-80>" hat zyklomatische Komplexität von 25 (Schwellenwert: 20) *(Aufwand: Groß (>4h))*
+  - Vorschlag: Funktion "<anon method-80>" in kleinere Hilfsfunktionen aufteilen
+- **[complexity]** ui-react/src/components/admin/hooks/useAdminConfig.js:294: Funktion "<anon method-39>" hat zyklomatische Komplexität von 21 (Schwellenwert: 20) *(Aufwand: Groß (>4h))*
+  - Vorschlag: Funktion "<anon method-39>" in kleinere Hilfsfunktionen aufteilen
+- **[complexity]** ui-react/src/components/admin/hooks/useAdminConfig.js:394: Funktion "<anon method-58>" hat zyklomatische Komplexität von 24 (Schwellenwert: 20) *(Aufwand: Groß (>4h))*
+  - Vorschlag: Funktion "<anon method-58>" in kleinere Hilfsfunktionen aufteilen
+- **[complexity]** ui-react/src/components/admin/Admin.jsx:82: Funktion "<anon method-2>" hat zyklomatische Komplexität von 64 (Schwellenwert: 20) *(Aufwand: Groß (>4h))*
+  - Vorschlag: Funktion "<anon method-2>" in kleinere Hilfsfunktionen aufteilen
 - **[complexity]** ui-react/src/components/admin/tabs/MqttTab.jsx:7: Funktion "<anon method-1>" hat zyklomatische Komplexität von 22 (Schwellenwert: 20) *(Aufwand: Groß (>4h))*
   - Vorschlag: Funktion "<anon method-1>" in kleinere Hilfsfunktionen aufteilen
 - **[complexity]** ui-react/src/components/admin/tabs/DevicesTab.jsx:7: Funktion "getDisplayStatus" hat zyklomatische Komplexität von 21 (Schwellenwert: 20) *(Aufwand: Groß (>4h))*
@@ -64,7 +73,7 @@
 - **[duplication]** ui-react/src/register-service-worker.test.js:297: Frontend-Duplikat (33 Zeilen): ui-react/src/register-service-worker.test.js:297 ↔ ui-react/src/register-service-worker.test.js:54 *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 
-### Mittel (104)
+### Mittel (105)
 
 - **[complexity]** app/touchkio.js: Datei hat 1072 Zeilen und überschreitet den Schwellenwert von 500 Zeilen *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Datei in kleinere Module aufteilen, um unter 500 Zeilen zu bleiben
@@ -88,7 +97,7 @@
   - Vorschlag: Datei in kleinere Module aufteilen, um unter 500 Zeilen zu bleiben
 - **[complexity]** ui-react/src/components/admin/Admin.test.jsx: Datei hat 1512 Zeilen und überschreitet den Schwellenwert von 500 Zeilen *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Datei in kleinere Module aufteilen, um unter 500 Zeilen zu bleiben
-- **[complexity]** ui-react/src/components/admin/Admin.jsx: Datei hat 1813 Zeilen und überschreitet den Schwellenwert von 500 Zeilen *(Aufwand: Mittel (1–4h))*
+- **[complexity]** ui-react/src/components/admin/Admin.jsx: Datei hat 623 Zeilen und überschreitet den Schwellenwert von 500 Zeilen *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Datei in kleinere Module aufteilen, um unter 500 Zeilen zu bleiben
 - **[complexity]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx: Datei hat 520 Zeilen und überschreitet den Schwellenwert von 500 Zeilen *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Datei in kleinere Module aufteilen, um unter 500 Zeilen zu bleiben
@@ -280,33 +289,58 @@
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[coverage]** ui-react/src/components/admin/Admin.jsx: Testabdeckung 38.1% liegt unter dem Schwellenwert von 50% *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Tests für Admin.jsx hinzufügen, um die Abdeckung zu erhöhen
+- **[dependencies]** ui-react/package.json: Frontend: vite ist veraltet (aktuell: 8.0.3, gewünscht: 8.0.4, neueste: 8.0.4) *(Aufwand: Klein (<1h))*
+  - Vorschlag: npm update vite oder npm install vite@8.0.4
 
-### Niedrig (1)
+### Niedrig (14)
 
-- **[style]** ui-react/src/components/admin/Admin.jsx:409: Einrückung von 5 Spaces entspricht nicht indent_size=2 *(Aufwand: Klein (<1h))*
-  - Vorschlag: Einrückung auf Vielfache von 2 Spaces anpassen
+- **[linting]** /Users/tobias.malcherek/Documents/GIT/meeteasier/ui-react/src/components/admin/hooks/useAdminSubmissions.js:11: no-unused-vars: 'submitI18nConfig' is defined but never used. Allowed unused vars must match /^_/u. *(Aufwand: Klein (<1h))*
+- **[linting]** /Users/tobias.malcherek/Documents/GIT/meeteasier/ui-react/src/components/admin/hooks/useAdminSubmissions.js:11: no-unused-vars: 'submitAutoTranslate' is defined but never used. Allowed unused vars must match /^_/u. *(Aufwand: Klein (<1h))*
+- **[style]** ui-react/src/components/admin/hooks/useAdminTranslations.js: Dateiname verwendet camelCase statt kebab-case *(Aufwand: Klein (<1h))*
+  - Vorschlag: Datei in kebab-case umbenennen: use-admin-translations.js
+- **[style]** ui-react/src/components/admin/hooks/useAdminSubmissions.js: Dateiname verwendet camelCase statt kebab-case *(Aufwand: Klein (<1h))*
+  - Vorschlag: Datei in kebab-case umbenennen: use-admin-submissions.js
+- **[style]** ui-react/src/components/admin/hooks/useAdminSocket.test.js: Dateiname verwendet camelCase statt kebab-case *(Aufwand: Klein (<1h))*
+  - Vorschlag: Datei in kebab-case umbenennen: use-admin-socket.js
+- **[style]** ui-react/src/components/admin/hooks/useAdminSocket.js: Dateiname verwendet camelCase statt kebab-case *(Aufwand: Klein (<1h))*
+  - Vorschlag: Datei in kebab-case umbenennen: use-admin-socket.js
+- **[style]** ui-react/src/components/admin/hooks/useAdminMqtt.js: Dateiname verwendet camelCase statt kebab-case *(Aufwand: Klein (<1h))*
+  - Vorschlag: Datei in kebab-case umbenennen: use-admin-mqtt.js
+- **[style]** ui-react/src/components/admin/hooks/useAdminIntervals.test.js: Dateiname verwendet camelCase statt kebab-case *(Aufwand: Klein (<1h))*
+  - Vorschlag: Datei in kebab-case umbenennen: use-admin-intervals.js
+- **[style]** ui-react/src/components/admin/hooks/useAdminIntervals.js: Dateiname verwendet camelCase statt kebab-case *(Aufwand: Klein (<1h))*
+  - Vorschlag: Datei in kebab-case umbenennen: use-admin-intervals.js
+- **[style]** ui-react/src/components/admin/hooks/useAdminConfig.test.js: Dateiname verwendet camelCase statt kebab-case *(Aufwand: Klein (<1h))*
+  - Vorschlag: Datei in kebab-case umbenennen: use-admin-config.js
+- **[style]** ui-react/src/components/admin/hooks/useAdminConfig.js: Dateiname verwendet camelCase statt kebab-case *(Aufwand: Klein (<1h))*
+  - Vorschlag: Datei in kebab-case umbenennen: use-admin-config.js
+- **[style]** ui-react/src/components/admin/hooks/useAdminConfig.js:156: Exportierte Funktion ohne JSDoc-Kommentar *(Aufwand: Klein (<1h))*
+  - Vorschlag: JSDoc-Kommentar mit @param und @returns hinzufügen
+- **[style]** ui-react/src/components/admin/hooks/useAdminAuth.test.js: Dateiname verwendet camelCase statt kebab-case *(Aufwand: Klein (<1h))*
+  - Vorschlag: Datei in kebab-case umbenennen: use-admin-auth.js
+- **[style]** ui-react/src/components/admin/hooks/useAdminAuth.js: Dateiname verwendet camelCase statt kebab-case *(Aufwand: Klein (<1h))*
+  - Vorschlag: Datei in kebab-case umbenennen: use-admin-auth.js
 
 ## Top-10 Quick Wins
 
-1. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:208: Frontend-Duplikat (17 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:208 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:186
+1. **[Hoch]** /Users/tobias.malcherek/Documents/GIT/meeteasier/ui-react/src/components/admin/Admin.jsx:174: react-hooks/exhaustive-deps: Definition for rule 'react-hooks/exhaustive-deps' was not found.
+2. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:208: Frontend-Duplikat (17 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:208 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:186
    - Duplizierten Code in ein gemeinsames Modul extrahieren
-2. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:291: Frontend-Duplikat (13 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:291 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:290
+3. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:291: Frontend-Duplikat (13 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:291 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:290
    - Duplizierten Code in ein gemeinsames Modul extrahieren
-3. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:291: Frontend-Duplikat (17 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:291 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:188
+4. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:291: Frontend-Duplikat (17 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:291 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:188
    - Duplizierten Code in ein gemeinsames Modul extrahieren
-4. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:392: Frontend-Duplikat (13 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:392 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:270
+5. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:392: Frontend-Duplikat (13 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:392 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:270
    - Duplizierten Code in ein gemeinsames Modul extrahieren
-5. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:405: Frontend-Duplikat (15 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:405 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:186
+6. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:405: Frontend-Duplikat (15 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:405 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:186
    - Duplizierten Code in ein gemeinsames Modul extrahieren
-6. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:426: Frontend-Duplikat (18 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:426 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:289
+7. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:426: Frontend-Duplikat (18 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:426 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:289
    - Duplizierten Code in ein gemeinsames Modul extrahieren
-7. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:430: Frontend-Duplikat (14 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:430 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:210
+8. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:430: Frontend-Duplikat (14 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:430 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:210
    - Duplizierten Code in ein gemeinsames Modul extrahieren
-8. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:128: Frontend-Duplikat (12 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:128 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:114
+9. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:128: Frontend-Duplikat (12 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:128 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:114
    - Duplizierten Code in ein gemeinsames Modul extrahieren
-9. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:204: Frontend-Duplikat (13 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:204 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:182
-   - Duplizierten Code in ein gemeinsames Modul extrahieren
-10. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:304: Frontend-Duplikat (12 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:304 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:286
+10. **[Mittel]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:204: Frontend-Duplikat (13 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:204 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:182
    - Duplizierten Code in ein gemeinsames Modul extrahieren
 
 ## Nächste Schritte
