@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extracted `display-service.js` for single-room Display component — pure async data-fetching functions (`fetchRoomData`, `fetchSidebarConfig`, `fetchBookingConfig`) with no React dependency, improving testability and separation of concerns
 
 ### Changed
+- Bumped `jsdom` dev dependency from 29.0.1 to 29.0.2
 - Extracted `useAdminAuth` hook (`ui-react/src/components/admin/hooks/useAdminAuth.js`) — encapsulates admin authentication state and handlers (login, logout, session verification, bootstrap status, CSRF headers) into a dedicated reusable hook, improving separation of concerns in the Admin component
 - Coverage analyzer now excludes `public/` directories and `single-room/single-room/` duplicate paths from analysis — reduces noise from non-source files
 - Style analyzer file naming check now allows PascalCase for React component files in `ui-react/src/components/` and `ui-react/src/layouts/`, and for test/spec files — reduces false positives for standard React naming conventions
