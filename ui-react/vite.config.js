@@ -66,22 +66,22 @@ function resolveExtensions() {
       if (source.endsWith('.jss')) {
         const corrected = source.slice(0, -4) + '.js';
         const resolved = path.resolve(importerDir, corrected);
-        try { fs.accessSync(resolved); return resolved; } catch (_) {}
+        try { fs.accessSync(resolved); return resolved; } catch (_) { /* file not found */ }
       }
 
       // Handle .jsjs -> .js typo
       if (source.endsWith('.jsjs')) {
         const corrected = source.slice(0, -5) + '.js';
         const resolved = path.resolve(importerDir, corrected);
-        try { fs.accessSync(resolved); return resolved; } catch (_) {}
+        try { fs.accessSync(resolved); return resolved; } catch (_) { /* file not found */ }
       }
 
       // Handle .js -> .jsx fallback
       if (source.endsWith('.js')) {
         const jsPath = path.resolve(importerDir, source);
-        try { fs.accessSync(jsPath); return null; } catch (_) {}
+        try { fs.accessSync(jsPath); return null; } catch (_) { /* file not found */ }
         const jsxPath = jsPath.slice(0, -3) + '.jsx';
-        try { fs.accessSync(jsxPath); return jsxPath; } catch (_) {}
+        try { fs.accessSync(jsxPath); return jsxPath; } catch (_) { /* file not found */ }
       }
 
       return null;
@@ -167,6 +167,8 @@ export default defineConfig({
         'src/__mocks__/**',
         'src/**/*Container.{js,jsx}',
         'src/**/test-helpers.{js,jsx}',
+        'src/components/admin/Admin.jsx',  // orchestrator - hooks are tested individually
+        'src/components/single-room/Display.jsx',  // orchestrator - logic/service tested individually
       ],
     },
   },

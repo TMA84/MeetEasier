@@ -1,8 +1,8 @@
 # Code-Qualitätsbericht
 
-**Gesamt-Score: 98/100** – Bewertung: **Sehr gut**
+**Gesamt-Score: 99/100** – Bewertung: **Sehr gut**
 
-*Erstellt am: 2026-04-06T16:32:25.645Z*
+*Erstellt am: 2026-04-07T11:32:24.860Z*
 
 ## Kategorie-Scores
 
@@ -10,14 +10,14 @@
 |-----------|-------|
 | linting | 100/100 |
 | complexity | 100/100 |
-| coverage | 90.53/100 |
+| coverage | 95.83/100 |
 | security | 100/100 |
 | dependencies | 100/100 |
 | style | 100/100 |
 
 ## Alle Befunde
 
-### Hoch (26)
+### Hoch (39)
 
 - **[complexity]** app/routes.js:2161: Funktion "<anon method-65>" hat zyklomatische Komplexität von 22 (Schwellenwert: 20) *(Aufwand: Groß (>4h))*
   - Vorschlag: Funktion "<anon method-65>" in kleinere Hilfsfunktionen aufteilen
@@ -53,9 +53,27 @@
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/admin/tabs/admin-tabs.test.jsx:456: Frontend-Duplikat (40 Zeilen): ui-react/src/components/admin/tabs/admin-tabs.test.jsx:456 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:290 *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/tabs/DevicesTab-coverage.test.jsx:91: Frontend-Duplikat (78 Zeilen): ui-react/src/components/admin/tabs/DevicesTab-coverage.test.jsx:91 ↔ ui-react/src/components/admin/tabs/DevicesTab-coverage.test.jsx:75 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/tabs/DevicesTab-coverage.test.jsx:28: Frontend-Duplikat (24 Zeilen): ui-react/src/components/admin/tabs/DevicesTab-coverage.test.jsx:28 ↔ ui-react/src/components/admin/tabs/devices-tab.test.jsx:22 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/admin/modals/TouchkioModal.test.jsx:14: Frontend-Duplikat (22 Zeilen): ui-react/src/components/admin/modals/TouchkioModal.test.jsx:14 ↔ ui-react/src/components/admin/modals/modals-boost.test.jsx:113 *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/modals/TouchkioModal-coverage.test.jsx:34: Frontend-Duplikat (22 Zeilen): ui-react/src/components/admin/modals/TouchkioModal-coverage.test.jsx:34 ↔ ui-react/src/components/admin/modals/modals-boost.test.jsx:113 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/admin/modals/PowerManagementModal.test.jsx:6: Frontend-Duplikat (23 Zeilen): ui-react/src/components/admin/modals/PowerManagementModal.test.jsx:6 ↔ ui-react/src/components/admin/modals/modals-boost.test.jsx:9 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:1: Frontend-Duplikat (32 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:1 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions.test.js:2 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:1: Frontend-Duplikat (34 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:1 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions.test.js:1 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-coverage.test.js:1: Frontend-Duplikat (22 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-coverage.test.js:1 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:2 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:1: Frontend-Duplikat (27 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:1 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:1 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:35: Frontend-Duplikat (28 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:35 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:38 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:12: Frontend-Duplikat (29 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:12 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:11 *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/single-room/Sidebar-boost.test.jsx:131: Frontend-Duplikat (68 Zeilen): ui-react/src/components/single-room/Sidebar-boost.test.jsx:131 ↔ ui-react/src/components/single-room/Sidebar-boost.test.jsx:107 *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
@@ -63,16 +81,24 @@
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/flightboard/Navbar.test.jsx:37: Frontend-Duplikat (45 Zeilen): ui-react/src/components/flightboard/Navbar.test.jsx:37 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:291 *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Navbar-coverage.test.jsx:25: Frontend-Duplikat (156 Zeilen): ui-react/src/components/flightboard/Navbar-coverage.test.jsx:25 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:291 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/booking/ExtendMeetingModal.test.jsx:57: Frontend-Duplikat (49 Zeilen): ui-react/src/components/booking/ExtendMeetingModal.test.jsx:57 ↔ ui-react/src/components/booking/ExtendMeetingModal.test.jsx:49 *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:121: Frontend-Duplikat (85 Zeilen): ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:121 ↔ ui-react/src/components/booking/ExtendMeetingModal.test.jsx:49 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:1: Frontend-Duplikat (38 Zeilen): ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:1 ↔ ui-react/src/components/booking/ExtendMeetingModal.test.jsx:1 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/booking/BookingModal.jsx:164: Frontend-Duplikat (34 Zeilen): ui-react/src/components/booking/BookingModal.jsx:164 ↔ ui-react/src/components/booking/ExtendMeetingModal.jsx:173 *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/booking/BookingModal-coverage.test.jsx:39: Frontend-Duplikat (72 Zeilen): ui-react/src/components/booking/BookingModal-coverage.test.jsx:39 ↔ ui-react/src/components/booking/ExtendMeetingModal.test.jsx:49 *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/register-service-worker.test.js:139: Frontend-Duplikat (26 Zeilen): ui-react/src/register-service-worker.test.js:139 ↔ ui-react/src/register-service-worker.test.js:100 *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/register-service-worker.test.js:297: Frontend-Duplikat (33 Zeilen): ui-react/src/register-service-worker.test.js:297 ↔ ui-react/src/register-service-worker.test.js:54 *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 
-### Mittel (104)
+### Mittel (219)
 
 - **[complexity]** app/touchkio.js: Datei hat 1072 Zeilen und überschreitet den Schwellenwert von 500 Zeilen *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Datei in kleinere Module aufteilen, um unter 500 Zeilen zu bleiben
@@ -91,6 +117,8 @@
 - **[complexity]** app/config-manager.js: Datei hat 3023 Zeilen und überschreitet den Schwellenwert von 500 Zeilen *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Datei in kleinere Module aufteilen, um unter 500 Zeilen zu bleiben
 - **[complexity]** ui-react/src/config/admin-translations.js: Datei hat 889 Zeilen und überschreitet den Schwellenwert von 500 Zeilen *(Aufwand: Mittel (1–4h))*
+  - Vorschlag: Datei in kleinere Module aufteilen, um unter 500 Zeilen zu bleiben
+- **[complexity]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js: Datei hat 627 Zeilen und überschreitet den Schwellenwert von 500 Zeilen *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Datei in kleinere Module aufteilen, um unter 500 Zeilen zu bleiben
 - **[complexity]** ui-react/src/components/single-room/Display.test.jsx: Datei hat 642 Zeilen und überschreitet den Schwellenwert von 500 Zeilen *(Aufwand: Mittel (1–4h))*
   - Vorschlag: Datei in kleinere Module aufteilen, um unter 500 Zeilen zu bleiben
@@ -124,9 +152,17 @@
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/admin/tabs/admin-tabs-oauth-booking.test.jsx:290: Frontend-Duplikat (18 Zeilen): ui-react/src/components/admin/tabs/admin-tabs-oauth-booking.test.jsx:290 ↔ ui-react/src/components/admin/tabs/admin-tabs.test.jsx:466 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/tabs/TranslationsTab-coverage.test.jsx:53: Frontend-Duplikat (12 Zeilen): ui-react/src/components/admin/tabs/TranslationsTab-coverage.test.jsx:53 ↔ ui-react/src/components/admin/tabs/admin-tabs-coverage.test.jsx:195 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/admin/tabs/LogoTab.jsx:30: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/tabs/LogoTab.jsx:30 ↔ ui-react/src/components/admin/tabs/WiFiTab.jsx:25 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/tabs/LogoTab-coverage.test.jsx:28: Frontend-Duplikat (16 Zeilen): ui-react/src/components/admin/tabs/LogoTab-coverage.test.jsx:28 ↔ ui-react/src/components/admin/tabs/admin-tabs-more.test.jsx:322 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/admin/tabs/DisplayTab.jsx:58: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/tabs/DisplayTab.jsx:58 ↔ ui-react/src/components/admin/tabs/WiFiTab.jsx:25 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/tabs/DevicesTab-coverage.test.jsx:51: Frontend-Duplikat (18 Zeilen): ui-react/src/components/admin/tabs/DevicesTab-coverage.test.jsx:51 ↔ ui-react/src/components/admin/tabs/devices-tab.test.jsx:45 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/tabs/ColorsTab-coverage.test.jsx:25: Frontend-Duplikat (14 Zeilen): ui-react/src/components/admin/tabs/ColorsTab-coverage.test.jsx:25 ↔ ui-react/src/components/admin/tabs/admin-tabs-boost.test.jsx:22 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/admin/services/mqtt-commands.js:159: Frontend-Duplikat (18 Zeilen): ui-react/src/components/admin/services/mqtt-commands.js:159 ↔ ui-react/src/components/admin/services/mqtt-commands.js:142 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
@@ -145,6 +181,150 @@
 - **[duplication]** ui-react/src/components/admin/services/admin-submissions-extended.test.js:169: Frontend-Duplikat (8 Zeilen): ui-react/src/components/admin/services/admin-submissions-extended.test.js:169 ↔ ui-react/src/components/admin/services/admin-submissions-extended.test.js:27 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/admin/modals/modals-boost.test.jsx:229: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/modals/modals-boost.test.jsx:229 ↔ ui-react/src/components/admin/modals/modals-boost.test.jsx:206 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminTranslations.test.js:243: Frontend-Duplikat (9 Zeilen): ui-react/src/components/admin/hooks/useAdminTranslations.test.js:243 ↔ ui-react/src/components/admin/hooks/useAdminTranslations.test.js:233 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions.test.js:58: Frontend-Duplikat (10 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions.test.js:58 ↔ ui-react/src/components/admin/hooks/useAdminTranslations.test.js:33 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions.test.js:177: Frontend-Duplikat (8 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions.test.js:177 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions.test.js:168 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:62: Frontend-Duplikat (14 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:62 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions.test.js:67 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:88: Frontend-Duplikat (13 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:88 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions.test.js:83 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:124: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:124 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:117 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:139: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:139 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:132 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:166: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:166 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:157 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:207: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:207 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:200 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:57: Frontend-Duplikat (10 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:57 ↔ ui-react/src/components/admin/hooks/useAdminTranslations.test.js:33 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:77: Frontend-Duplikat (19 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:77 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:84 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:125: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:125 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:117 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:133: Frontend-Duplikat (8 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:133 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:106 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:163: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:163 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:142 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:185: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:185 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:147 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:193: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:193 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:275 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:207: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:207 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:275 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:229: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:229 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:293 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:251: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:251 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:184 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:273: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:273 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:192 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:382: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:382 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:374 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:409: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:409 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:176 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:456: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:456 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:448 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:471: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:471 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:464 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:532: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:532 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:257 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:567: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:567 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:215 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:584: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:584 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:207 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:593: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:593 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:139 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:603: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:603 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:166 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:610: Frontend-Duplikat (10 Zeilen): ui-react/src/components/admin/hooks/useAdminSubmissions-boost.test.js:610 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:154 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSocket-coverage.test.js:1: Frontend-Duplikat (11 Zeilen): ui-react/src/components/admin/hooks/useAdminSocket-coverage.test.js:1 ↔ ui-react/src/components/admin/hooks/useAdminSocket.test.js:2 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSocket-coverage.test.js:11: Frontend-Duplikat (9 Zeilen): ui-react/src/components/admin/hooks/useAdminSocket-coverage.test.js:11 ↔ ui-react/src/components/admin/hooks/useAdminSocket.test.js:12 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSocket-boost.test.js:1: Frontend-Duplikat (12 Zeilen): ui-react/src/components/admin/hooks/useAdminSocket-boost.test.js:1 ↔ ui-react/src/components/admin/hooks/useAdminSocket.test.js:1 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSocket-boost.test.js:12: Frontend-Duplikat (9 Zeilen): ui-react/src/components/admin/hooks/useAdminSocket-boost.test.js:12 ↔ ui-react/src/components/admin/hooks/useAdminSocket.test.js:12 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminSocket-boost.test.js:34: Frontend-Duplikat (18 Zeilen): ui-react/src/components/admin/hooks/useAdminSocket-boost.test.js:34 ↔ ui-react/src/components/admin/hooks/useAdminSocket-coverage.test.js:47 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt.test.js:381: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt.test.js:381 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:373 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-coverage.test.js:34: Frontend-Duplikat (9 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-coverage.test.js:34 ↔ ui-react/src/components/admin/hooks/useAdminSubmissions-coverage.test.js:52 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-coverage.test.js:42: Frontend-Duplikat (14 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-coverage.test.js:42 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:53 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:64: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:64 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:87 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:80: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:80 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:145 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:213: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:213 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:320 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:222: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:222 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:329 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:230: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:230 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:311 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:237: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:237 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:336 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:244: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:244 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:343 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:251: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:251 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:350 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:258: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:258 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:357 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:265: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminMqtt-boost.test.js:265 ↔ ui-react/src/components/admin/hooks/useAdminMqtt.test.js:364 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminIntervals-coverage.test.js:4: Frontend-Duplikat (16 Zeilen): ui-react/src/components/admin/hooks/useAdminIntervals-coverage.test.js:4 ↔ ui-react/src/components/admin/hooks/useAdminIntervals.test.js:5 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:14: Frontend-Duplikat (17 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:14 ↔ ui-react/src/components/admin/hooks/useAdminConfig.test.js:15 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:68: Frontend-Duplikat (9 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:68 ↔ ui-react/src/components/admin/hooks/useAdminConfig.test.js:150 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:103: Frontend-Duplikat (9 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:103 ↔ ui-react/src/components/admin/hooks/useAdminConfig.test.js:167 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:129: Frontend-Duplikat (8 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:129 ↔ ui-react/src/components/admin/hooks/useAdminConfig.test.js:115 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:357: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:357 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:340 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:365: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:365 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:340 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:373: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:373 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:340 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:381: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:381 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:340 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:389: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:389 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:340 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:397: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:397 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:340 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:405: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:405 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:340 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:413: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:413 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:340 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:421: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:421 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:349 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:429: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:429 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:421 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:3: Frontend-Duplikat (9 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:3 ↔ ui-react/src/components/admin/hooks/useAdminConfig.test.js:3 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:40: Frontend-Duplikat (8 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:40 ↔ ui-react/src/components/admin/hooks/useAdminConfig-coverage.test.js:37 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:81: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:81 ↔ ui-react/src/components/admin/hooks/useAdminConfig.test.js:152 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:114: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:114 ↔ ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:105 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:124: Frontend-Duplikat (7 Zeilen): ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:124 ↔ ui-react/src/components/admin/hooks/useAdminConfig-boost.test.js:105 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminAuth-boost.test.js:1: Frontend-Duplikat (16 Zeilen): ui-react/src/components/admin/hooks/useAdminAuth-boost.test.js:1 ↔ ui-react/src/components/admin/hooks/useAdminAuth.test.js:1 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminAuth-boost.test.js:18: Frontend-Duplikat (8 Zeilen): ui-react/src/components/admin/hooks/useAdminAuth-boost.test.js:18 ↔ ui-react/src/components/admin/hooks/useAdminAuth.test.js:19 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminAuth-boost.test.js:75: Frontend-Duplikat (9 Zeilen): ui-react/src/components/admin/hooks/useAdminAuth-boost.test.js:75 ↔ ui-react/src/components/admin/hooks/useAdminAuth.test.js:66 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/admin/hooks/useAdminAuth-boost.test.js:110: Frontend-Duplikat (8 Zeilen): ui-react/src/components/admin/hooks/useAdminAuth-boost.test.js:110 ↔ ui-react/src/components/admin/hooks/useAdminAuth-boost.test.js:26 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/wifi/WiFiInfo.test.jsx:170: Frontend-Duplikat (8 Zeilen): ui-react/src/components/wifi/WiFiInfo.test.jsx:170 ↔ ui-react/src/components/wifi/WiFiInfo.test.jsx:157 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
@@ -236,7 +416,23 @@
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/global/ConnectionStatus.test.jsx:126: Frontend-Duplikat (10 Zeilen): ui-react/src/components/global/ConnectionStatus.test.jsx:126 ↔ ui-react/src/components/global/ConnectionStatus.test.jsx:50 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/global/ConnectionStatus-coverage.test.jsx:109: Frontend-Duplikat (7 Zeilen): ui-react/src/components/global/ConnectionStatus-coverage.test.jsx:109 ↔ ui-react/src/components/global/ConnectionStatus-coverage.test.jsx:39 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/flightboard/Navbar.test.jsx:101: Frontend-Duplikat (9 Zeilen): ui-react/src/components/flightboard/Navbar.test.jsx:101 ↔ ui-react/src/components/single-room/Sidebar.test.jsx:180 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Navbar-coverage.test.jsx:8: Frontend-Duplikat (7 Zeilen): ui-react/src/components/flightboard/Navbar-coverage.test.jsx:8 ↔ ui-react/src/components/flightboard/Navbar.test.jsx:19 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Navbar-coverage.test.jsx:74: Frontend-Duplikat (7 Zeilen): ui-react/src/components/flightboard/Navbar-coverage.test.jsx:74 ↔ ui-react/src/components/flightboard/Navbar-coverage.test.jsx:32 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Navbar-coverage.test.jsx:94: Frontend-Duplikat (8 Zeilen): ui-react/src/components/flightboard/Navbar-coverage.test.jsx:94 ↔ ui-react/src/components/flightboard/Navbar-coverage.test.jsx:35 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Navbar-coverage.test.jsx:97: Frontend-Duplikat (8 Zeilen): ui-react/src/components/flightboard/Navbar-coverage.test.jsx:97 ↔ ui-react/src/components/flightboard/Navbar-coverage.test.jsx:80 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Navbar-coverage.test.jsx:112: Frontend-Duplikat (10 Zeilen): ui-react/src/components/flightboard/Navbar-coverage.test.jsx:112 ↔ ui-react/src/components/flightboard/Navbar-coverage.test.jsx:35 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Navbar-coverage.test.jsx:133: Frontend-Duplikat (12 Zeilen): ui-react/src/components/flightboard/Navbar-coverage.test.jsx:133 ↔ ui-react/src/components/flightboard/Navbar-coverage.test.jsx:115 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Navbar-coverage.test.jsx:176: Frontend-Duplikat (8 Zeilen): ui-react/src/components/flightboard/Navbar-coverage.test.jsx:176 ↔ ui-react/src/components/flightboard/Navbar-coverage.test.jsx:80 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/flightboard/FlightboardRow.test.jsx:107: Frontend-Duplikat (11 Zeilen): ui-react/src/components/flightboard/FlightboardRow.test.jsx:107 ↔ ui-react/src/components/single-room/RoomStatusBlock.test.jsx:232 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
@@ -246,9 +442,39 @@
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/flightboard/Flightboard.jsx:112: Frontend-Duplikat (8 Zeilen): ui-react/src/components/flightboard/Flightboard.jsx:112 ↔ ui-react/src/components/single-room/Display.jsx:148 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Flightboard-socket.test.jsx:49: Frontend-Duplikat (12 Zeilen): ui-react/src/components/flightboard/Flightboard-socket.test.jsx:49 ↔ ui-react/src/components/flightboard/Navbar-coverage.test.jsx:35 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:15: Frontend-Duplikat (15 Zeilen): ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:15 ↔ ui-react/src/components/flightboard/Flightboard-socket.test.jsx:17 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:29: Frontend-Duplikat (13 Zeilen): ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:29 ↔ ui-react/src/components/flightboard/Flightboard-socket.test.jsx:31 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:73: Frontend-Duplikat (7 Zeilen): ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:73 ↔ ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:59 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:87: Frontend-Duplikat (7 Zeilen): ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:87 ↔ ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:59 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:115: Frontend-Duplikat (10 Zeilen): ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:115 ↔ ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:98 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:135: Frontend-Duplikat (8 Zeilen): ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:135 ↔ ui-react/src/components/flightboard/Navbar-coverage.test.jsx:77 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:145: Frontend-Duplikat (7 Zeilen): ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:145 ↔ ui-react/src/components/flightboard/Navbar-coverage.test.jsx:123 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:152: Frontend-Duplikat (8 Zeilen): ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:152 ↔ ui-react/src/components/flightboard/Navbar-coverage.test.jsx:130 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:166: Frontend-Duplikat (7 Zeilen): ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:166 ↔ ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:132 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:172: Frontend-Duplikat (7 Zeilen): ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:172 ↔ ui-react/src/components/flightboard/Flightboard-coverage.test.jsx:138 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/flightboard/Clock.test.js:5: Frontend-Duplikat (9 Zeilen): ui-react/src/components/flightboard/Clock.test.js:5 ↔ ui-react/src/components/single-room/Clock.test.js:5 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/booking/ExtendMeetingModal.jsx:129: Frontend-Duplikat (11 Zeilen): ui-react/src/components/booking/ExtendMeetingModal.jsx:129 ↔ ui-react/src/components/booking/ExtendMeetingModal.jsx:80 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:102: Frontend-Duplikat (9 Zeilen): ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:102 ↔ ui-react/src/components/booking/ExtendMeetingModal.test.jsx:104 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:111: Frontend-Duplikat (9 Zeilen): ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:111 ↔ ui-react/src/components/booking/ExtendMeetingModal.test.jsx:104 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:120: Frontend-Duplikat (9 Zeilen): ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:120 ↔ ui-react/src/components/booking/ExtendMeetingModal.test.jsx:168 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:187: Frontend-Duplikat (7 Zeilen): ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:187 ↔ ui-react/src/components/booking/ExtendMeetingModal.test.jsx:112 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/booking/BookingModal.jsx:153: Frontend-Duplikat (17 Zeilen): ui-react/src/components/booking/BookingModal.jsx:153 ↔ ui-react/src/components/booking/ExtendMeetingModal.jsx:162 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
@@ -258,9 +484,39 @@
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/booking/BookingModal.jsx:200: Frontend-Duplikat (19 Zeilen): ui-react/src/components/booking/BookingModal.jsx:200 ↔ ui-react/src/components/booking/ExtendMeetingModal.jsx:208 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/booking/BookingModal-coverage.test.jsx:62: Frontend-Duplikat (8 Zeilen): ui-react/src/components/booking/BookingModal-coverage.test.jsx:62 ↔ ui-react/src/components/booking/ExtendMeetingModal.test.jsx:140 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/booking/BookingModal-coverage.test.jsx:76: Frontend-Duplikat (8 Zeilen): ui-react/src/components/booking/BookingModal-coverage.test.jsx:76 ↔ ui-react/src/components/booking/ExtendMeetingModal-coverage.test.jsx:47 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/booking/BookingModal-coverage.test.jsx:148: Frontend-Duplikat (7 Zeilen): ui-react/src/components/booking/BookingModal-coverage.test.jsx:148 ↔ ui-react/src/components/booking/BookingModal-coverage.test.jsx:137 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/components/booking/BookingModal-coverage.test.jsx:157: Frontend-Duplikat (7 Zeilen): ui-react/src/components/booking/BookingModal-coverage.test.jsx:157 ↔ ui-react/src/components/booking/BookingModal-coverage.test.jsx:118 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/components/admin/AdminContext.test.jsx:72: Frontend-Duplikat (13 Zeilen): ui-react/src/components/admin/AdminContext.test.jsx:72 ↔ ui-react/src/components/admin/AdminContext.test.jsx:57 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/utils/power-management-coverage.test.js:8: Frontend-Duplikat (10 Zeilen): ui-react/src/utils/power-management-coverage.test.js:8 ↔ ui-react/src/utils/power-management.test.js:8 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/utils/device-detection-coverage.test.js:4: Frontend-Duplikat (15 Zeilen): ui-react/src/utils/device-detection-coverage.test.js:4 ↔ ui-react/src/utils/device-detection.test.js:4 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/utils/device-detection-coverage.test.js:41: Frontend-Duplikat (7 Zeilen): ui-react/src/utils/device-detection-coverage.test.js:41 ↔ ui-react/src/utils/device-detection-coverage.test.js:32 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/utils/device-detection-coverage.test.js:50: Frontend-Duplikat (7 Zeilen): ui-react/src/utils/device-detection-coverage.test.js:50 ↔ ui-react/src/utils/device-detection-coverage.test.js:32 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/utils/device-detection-coverage.test.js:59: Frontend-Duplikat (7 Zeilen): ui-react/src/utils/device-detection-coverage.test.js:59 ↔ ui-react/src/utils/device-detection-coverage.test.js:32 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/utils/connection-monitor-coverage.test.js:4: Frontend-Duplikat (9 Zeilen): ui-react/src/utils/connection-monitor-coverage.test.js:4 ↔ ui-react/src/utils/connection-monitor.test.js:4 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/utils/connection-monitor-coverage.test.js:12: Frontend-Duplikat (11 Zeilen): ui-react/src/utils/connection-monitor-coverage.test.js:12 ↔ ui-react/src/utils/connection-monitor.test.js:11 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/utils/connection-monitor-coverage.test.js:60: Frontend-Duplikat (11 Zeilen): ui-react/src/utils/connection-monitor-coverage.test.js:60 ↔ ui-react/src/utils/connection-monitor-coverage.test.js:46 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/layouts/SingleRoomLayout-coverage.test.jsx:6: Frontend-Duplikat (9 Zeilen): ui-react/src/layouts/SingleRoomLayout-coverage.test.jsx:6 ↔ ui-react/src/layouts/SingleRoomLayout.test.jsx:8 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/layouts/FlightboardLayout.test.jsx:21: Frontend-Duplikat (9 Zeilen): ui-react/src/layouts/FlightboardLayout.test.jsx:21 ↔ ui-react/src/components/flightboard/Navbar.test.jsx:21 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/layouts/FlightboardLayout-coverage.test.jsx:19: Frontend-Duplikat (7 Zeilen): ui-react/src/layouts/FlightboardLayout-coverage.test.jsx:19 ↔ ui-react/src/layouts/FlightboardLayout.test.jsx:19 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/layouts/FlightboardLayout-coverage.test.jsx:21: Frontend-Duplikat (9 Zeilen): ui-react/src/layouts/FlightboardLayout-coverage.test.jsx:21 ↔ ui-react/src/components/flightboard/Navbar-coverage.test.jsx:10 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/config/admin-translations.js:827: Frontend-Duplikat (11 Zeilen): ui-react/src/config/admin-translations.js:827 ↔ ui-react/src/config/maintenance-messages.js:59 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
@@ -284,10 +540,10 @@
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/register-service-worker.test.js:353: Frontend-Duplikat (10 Zeilen): ui-react/src/register-service-worker.test.js:353 ↔ ui-react/src/register-service-worker.test.js:337 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
+- **[duplication]** ui-react/src/register-service-worker-coverage.test.js:19: Frontend-Duplikat (10 Zeilen): ui-react/src/register-service-worker-coverage.test.js:19 ↔ ui-react/src/register-service-worker.test.js:265 *(Aufwand: Klein (<1h))*
+  - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
 - **[duplication]** ui-react/src/index.jsx:18: Frontend-Duplikat (10 Zeilen): ui-react/src/index.jsx:18 ↔ ui-react/src/main.jsx:78 *(Aufwand: Klein (<1h))*
   - Vorschlag: Duplizierten Code in ein gemeinsames Modul extrahieren
-- **[coverage]** ui-react/src/components/admin/Admin.jsx: Testabdeckung 38.1% liegt unter dem Schwellenwert von 50% *(Aufwand: Mittel (1–4h))*
-  - Vorschlag: Tests für Admin.jsx hinzufügen, um die Abdeckung zu erhöhen
 
 ## Top-10 Quick Wins
 
