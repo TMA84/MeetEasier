@@ -94,4 +94,87 @@ describe('useAdminConfig', () => {
     expect(INITIAL_CONFIG.ssid).toBe('');
     expect(INITIAL_CONFIG.syncStatusLoading).toBe(true);
   });
+
+  it('updateConfig with function updater', () => {
+    const { result } = renderHook(() => useAdminConfig(getRequestHeaders, handleUnauthorizedAccess));
+    act(() => { result.current.updateConfig(prev => ({ ...prev, ssid: 'FuncNet' })); });
+    expect(result.current.config.ssid).toBe('FuncNet');
+  });
+
+  it('loadLogoConfig updates logo URLs', async () => {
+    const { loadLogoConfig } = await import('../services/admin-config-loader.js');
+    loadLogoConfig.mockResolvedValue({ ok: true, data: { logoDarkUrl: '/new-dark.png', logoLightUrl: '/new-light.png' } });
+    const { result } = renderHook(() => useAdminConfig(getRequestHeaders, handleUnauthorizedAccess));
+    await act(async () => { result.current.loadLogoConfig(); });
+    expect(result.current.config.currentLogoDarkUrl).toBe('/new-dark.png');
+    expect(result.current.config.currentLogoLightUrl).toBe('/new-light.png');
+  });
+
+  it('loadLogoConfig handles error gracefully', async () => {
+    const { loadLogoConfig } = await import('../services/admin-config-loader.js');
+    loadLogoConfig.mockRejectedValue(new Error('fail'));
+    const { result } = renderHook(() => useAdminConfig(getRequestHeaders, handleUnauthorizedAccess));
+    await act(async () => { result.current.loadLogoConfig(); });
+    // Should not throw
+    expect(result.current.config).toBeDefined();
+  });
+
+  it('loadSyncStatus handles error gracefully', async () => {
+    const { loadSyncStatus } = await import('../services/admin-config-loader.js');
+    loadSyncStatus.mockRejectedValue(new Error('fail'));
+    const { result } = renderHook(() => useAdminConfig(getRequestHeaders, handleUnauthorizedAccess));
+    await act(async () => { result.current.loadSyncStatus(); });
+    expect(result.current.config.syncStatus).toBeNull();
+    expect(result.current.config.syncStatusLoading).toBe(false);
+  });
+
+  it('loadCurrentConfig calls all sub-loaders', async () => {
+    const loaders = await import('../services/admin-config-loader.js');
+    const { result } = renderHook(() => useAdminConfig(getRequestHeaders, handleUnauthorizedAccess));
+    await act(async () => { result.current.loadCurrentConfig(); });
+    expect(loaders.loadWiFiConfig).toHaveBeenCalled();
+    expect(loaders.loadSidebarConfig).toHaveBeenCalled();
+    expect(loaders.loadBookingConfig).toHaveBeenCalled();
+    expect(loaders.loadI18nConfig).toHaveBeenCalled();
+    expect(loaders.loadConnectedClients).toHaveBeenCalled();
+  });
+
+  it('loadConnectedClients updates clients list', async () => {
+    const { loadConnectedClients } = await import('../services/admin-config-loader.js');
+    loadConnectedClients.mockResolvedValue({ ok: true, data: { clients: [{ clientId: 'c1' }] } });
+    const { result } = renderHook(() => useAdminConfig(getRequestHeaders, handleUnauthorizedAccess));
+    await act(async () => { result.current.loadConnectedClients(); });
+    expect(result.current.config.connectedClients).toEqual([{ clientId: 'c1' }]);
+  });
+
+  it('loadConnectedClients handles error', async () => {
+    const { loadConnectedClients } = await import('../services/admin-config-loader.js');
+    loadConnectedClients.mockRejectedValue(new Error('fail'));
+    const { result } = renderHook(() => useAdminConfig(getRequestHeaders, handleUnauthorizedAccess));
+    await act(async () => { result.current.loadConnectedClients(); });
+    expect(result.current.config.connectedClientsLoading).toBe(false);
+  });
+
+  it('loadMqttConfig updates mqtt state', async () => {
+    const { fetchMqttConfig } = await import('../services/mqtt-commands.js');
+    fetchMqttConfig.mockResolvedValue({ enabled: true, brokerUrl: 'mqtt://test:1883' });
+    const { result } = renderHook(() => useAdminConfig(getRequestHeaders, handleUnauthorizedAccess));
+    await act(async () => { result.current.loadMqttConfig(); });
+    expect(result.current.config.mqttEnabled).toBe(true);
+    expect(result.current.config.mqttBrokerUrl).toBe('mqtt://test:1883');
+  });
+
+  it('loadMqttStatus updates mqtt status', async () => {
+    const { fetchMqttStatus } = await import('../services/mqtt-commands.js');
+    fetchMqttStatus.mockResolvedValue({ connected: true });
+    const { result } = renderHook(() => useAdminConfig(getRequestHeaders, handleUnauthorizedAccess));
+    await act(async () => { result.current.loadMqttStatus(); });
+    expect(result.current.config.mqttStatus).toEqual({ connected: true });
+  });
+
+  it('configRef tracks latest config', () => {
+    const { result } = renderHook(() => useAdminConfig(getRequestHeaders, handleUnauthorizedAccess));
+    act(() => { result.current.setField('ssid', 'RefTest'); });
+    expect(result.current.configRef.current.ssid).toBe('RefTest');
+  });
 });

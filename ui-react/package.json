@@ -22,7 +22,7 @@
     "eslint": "^8.57.1",
     "eslint-plugin-react": "^7.37.5",
     "jest-extended": "^7.0.0",
-    "jsdom": "^29.0.1",
+    "jsdom": "^29.0.2",
     "sass": "^1.97.3",
     "sinon": "^21.0.3",
     "start-server-and-test": "^3.0.0",
