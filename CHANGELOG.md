@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Touchkio modal brightness, volume, and page zoom commands now prefer `deviceId` over `hostname` for MQTT command routing — fixes commands targeting the wrong device when multiple displays share the same hostname
 - Removed unused `getCsrfToken` import from `admin-api-extended.test.js` — cleans up test file imports
+- Demo data booking test now schedules meetings far in the future to avoid conflicts with existing demo appointments — fixes flaky test failures when demo room already has a meeting at the current time
 
 ## [1.7.52] - 2026-03-22
 
