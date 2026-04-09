@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20, 22]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: cd ui-react && npm ci
+
+      - name: Lint backend
+        run: npx eslint app/ config/ server.js
+
+      - name: Lint frontend
+        run: cd ui-react && npx eslint src/ --ext .js,.jsx
+
+      - name: Run backend tests
+        run: node --test app/__tests__/demo-data.test.js
+
+      - name: Run frontend tests
+        run: cd ui-react && npx vitest run
+
+      - name: Build frontend
+        run: cd ui-react && npx vite build
