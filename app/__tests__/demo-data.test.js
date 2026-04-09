@@ -94,7 +94,8 @@ describe('bookDemoRoom', () => {
   it('should book a room and return result without error', () => {
     const rooms = generateDemoRooms();
     const email = rooms[0].Email;
-    const start = new Date();
+    // Book far in the future to avoid conflicts with existing demo appointments
+    const start = new Date(Date.now() + 7 * 24 * 60 * 60000);
     const end = new Date(start.getTime() + 30 * 60000);
     const result = bookDemoRoom(email, 'Test Meeting', start.toISOString(), end.toISOString());
     assert.strictEqual(result.error, false);
