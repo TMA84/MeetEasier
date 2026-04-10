@@ -472,6 +472,7 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 **Sidebar Configuration:**
 - Choose between WiFi information or upcoming meetings display
 - Toggle meeting title visibility
+- Automatic daily page reload to prevent memory issues on kiosk displays
 - Real-time updates to room displays
 
 **Booking Configuration:**

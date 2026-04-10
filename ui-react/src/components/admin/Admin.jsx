@@ -347,11 +347,14 @@ const Admin = () => {
           <DisplayTab isActive={activeTab === 'display'} informationLocked={config.informationLocked} t={t}
             currentShowWiFi={config.currentShowWiFi} currentShowUpcomingMeetings={config.currentShowUpcomingMeetings} currentShowMeetingTitles={config.currentShowMeetingTitles}
             currentUpcomingMeetingsCount={config.currentUpcomingMeetingsCount} currentMinimalHeaderStyle={config.currentMinimalHeaderStyle}
-            currentSingleRoomDarkMode={config.currentSingleRoomDarkMode} currentFlightboardDarkMode={config.currentFlightboardDarkMode} informationLastUpdated={config.informationLastUpdated}
+            currentSingleRoomDarkMode={config.currentSingleRoomDarkMode} currentFlightboardDarkMode={config.currentFlightboardDarkMode}
+            currentAutoReloadEnabled={config.currentAutoReloadEnabled} currentAutoReloadTime={config.currentAutoReloadTime}
+            informationLastUpdated={config.informationLastUpdated}
             sidebarTargetClientId={config.sidebarTargetClientId} connectedClients={config.connectedClients} connectedClientsLoading={config.connectedClientsLoading}
             showWiFi={config.showWiFi} showUpcomingMeetings={config.showUpcomingMeetings} showMeetingTitles={config.showMeetingTitles}
             upcomingMeetingsCount={config.upcomingMeetingsCount} minimalHeaderStyle={config.minimalHeaderStyle}
             singleRoomDarkMode={config.singleRoomDarkMode} flightboardDarkMode={config.flightboardDarkMode}
+            autoReloadEnabled={config.autoReloadEnabled} autoReloadTime={config.autoReloadTime}
             informationMessage={config.informationMessage} informationMessageType={config.informationMessageType} booleanLabel={booleanLabel}
             onTargetClientChange={(e) => {
               const nextTargetClientId = e.target.value;

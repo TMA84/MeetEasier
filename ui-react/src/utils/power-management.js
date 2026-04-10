@@ -139,10 +139,9 @@ class PowerManagement {
       cursor: pointer;
     `;
 
-    // Add click handler to wake up
-    this.overlayElement.addEventListener('click', () => {
-      this.turnDisplayOn();
-    });
+    // Store bound click handler so we can remove it later
+    this._overlayClickHandler = () => this.turnDisplayOn();
+    this.overlayElement.addEventListener('click', this._overlayClickHandler);
 
     document.body.appendChild(this.overlayElement);
   }
@@ -154,8 +153,10 @@ class PowerManagement {
     this.isDisplayOff = false;
 
     if (this.overlayElement) {
+      this.overlayElement.removeEventListener('click', this._overlayClickHandler);
       this.overlayElement.remove();
       this.overlayElement = null;
+      this._overlayClickHandler = null;
     }
   }
 
@@ -178,16 +179,22 @@ class PowerManagement {
   destroy() {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
+      this.checkInterval = null;
     }
 
     if (this.overlayElement) {
+      this.overlayElement.removeEventListener('click', this._overlayClickHandler);
       this.overlayElement.remove();
+      this.overlayElement = null;
+      this._overlayClickHandler = null;
     }
 
     if (this.wakeLock) {
       this.wakeLock.release();
+      this.wakeLock = null;
     }
     
+    this.isDisplayOff = false;
     this.initialized = false;
   }
 }

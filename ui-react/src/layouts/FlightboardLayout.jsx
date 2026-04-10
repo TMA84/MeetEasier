@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import Flightboard from '../components/flightboard/Flightboard.jsx';
 import Navbar from '../components/flightboard/Navbar.jsx';
 import { getFlightboardDisplayTranslations } from '../config/display-translations.js';
+import { applyAutoReload, stopAutoReload } from '../utils/auto-reload.js';
 
 function FlightboardLayout() {
   const config = getFlightboardDisplayTranslations();
@@ -31,10 +32,15 @@ function FlightboardLayout() {
       .then(response => response.json())
       .then(data => {
         setFlightboardDarkMode(data.flightboardDarkMode !== undefined ? data.flightboardDarkMode : true);
+        applyAutoReload({
+          autoReloadEnabled: !!data.autoReloadEnabled,
+          autoReloadTime: data.autoReloadTime || '03:00'
+        });
       })
       .catch(err => {
         console.error('Error fetching sidebar config:', err);
       });
+    return () => stopAutoReload();
   }, []);
 
   // Update filter when URL changes

@@ -29,9 +29,10 @@ const DisplayTab = ({
   currentShowUpcomingMeetings,
   currentShowMeetingTitles,
   currentUpcomingMeetingsCount,
-  currentMinimalHeaderStyle,
   currentSingleRoomDarkMode,
   currentFlightboardDarkMode,
+  currentAutoReloadEnabled,
+  currentAutoReloadTime,
   informationLastUpdated,
   sidebarTargetClientId,
   connectedClients,
@@ -40,9 +41,10 @@ const DisplayTab = ({
   showUpcomingMeetings,
   showMeetingTitles,
   upcomingMeetingsCount,
-  minimalHeaderStyle,
   singleRoomDarkMode,
   flightboardDarkMode,
+  autoReloadEnabled,
+  autoReloadTime,
   informationMessage,
   informationMessageType,
   booleanLabel,
@@ -77,16 +79,16 @@ const DisplayTab = ({
                 <span className="config-value">{currentUpcomingMeetingsCount}</span>
               </div>
               <div className="config-item">
-                <span className="config-label">{t.minimalHeaderStyleLabel}</span>
-                <span className="config-value">{currentMinimalHeaderStyle === 'filled' ? t.minimalHeaderStyleFilled : t.minimalHeaderStyleTransparent}</span>
-              </div>
-              <div className="config-item">
                 <span className="config-label">{l('singleRoomDarkModeLabel')}</span>
                 <span className="config-value">{booleanLabel(currentSingleRoomDarkMode)}</span>
               </div>
               <div className="config-item">
                 <span className="config-label">{l('flightboardDarkModeLabel')}</span>
                 <span className="config-value">{booleanLabel(currentFlightboardDarkMode)}</span>
+              </div>
+              <div className="config-item">
+                <span className="config-label">{l('autoReloadEnabledLabel')}</span>
+                <span className="config-value">{currentAutoReloadEnabled ? `${booleanLabel(true)} (${currentAutoReloadTime})` : booleanLabel(false)}</span>
               </div>
               <div className="config-item">
                 <span className="config-label">{t.lastUpdatedLabel}</span>
@@ -196,49 +198,6 @@ const DisplayTab = ({
               <small>{l('singleRoomDarkModeHelp')}</small>
             </div>
 
-            {singleRoomDarkMode && (
-              <div className="admin-form-group">
-                <label>
-                  {t.minimalHeaderStyleLabel}
-                </label>
-                <small className="display-header-style-help">
-                  {t.minimalHeaderStyleHelp}
-                </small>
-                <label className="inline-label">
-                  <span className="label-text">{t.minimalHeaderStyleFilled}</span>
-                  <input
-                    type="radio"
-                    name="minimalHeaderStyle"
-                    value="filled"
-                    checked={minimalHeaderStyle === 'filled'}
-                    disabled={!!sidebarTargetClientId}
-                    onChange={(e) => onFieldChange('minimalHeaderStyle', e.target.value)}
-                  />
-                </label>
-                <label className="inline-label admin-inline-label-mt">
-                  <span className="label-text">{t.minimalHeaderStyleTransparent}</span>
-                  <input
-                    type="radio"
-                    name="minimalHeaderStyle"
-                    value="transparent"
-                    checked={minimalHeaderStyle === 'transparent'}
-                    disabled={!!sidebarTargetClientId}
-                    onChange={(e) => onFieldChange('minimalHeaderStyle', e.target.value)}
-                  />
-                </label>
-              </div>
-            )}
-
-            {!singleRoomDarkMode && (
-              <div className="admin-form-group">
-                <small className="display-dark-mode-hint">
-                  {t.minimalHeaderStyleDarkModeRequired}
-                </small>
-              </div>
-            )}
-
-            <hr className="admin-form-divider" />
-
             <div className="admin-form-group">
               <label className="inline-label">
                 <span className="label-text">{l('flightboardDarkModeLabel')}</span>
@@ -250,6 +209,38 @@ const DisplayTab = ({
               </label>
               <small>{l('flightboardDarkModeHelp')}</small>
             </div>
+
+            <hr className="admin-form-divider" />
+
+            <div className="admin-form-group">
+              <label className="inline-label">
+                <span className="label-text">{l('autoReloadEnabledLabel')}</span>
+                <input
+                  type="checkbox"
+                  checked={autoReloadEnabled}
+                  disabled={!!sidebarTargetClientId}
+                  onChange={(e) => onFieldChange('autoReloadEnabled', e.target.checked)}
+                />
+              </label>
+              <small>{l('autoReloadEnabledHelp')}</small>
+            </div>
+
+            {autoReloadEnabled && (
+              <div className="admin-form-group">
+                <label htmlFor="autoReloadTime">
+                  {l('autoReloadTimeLabel')}
+                </label>
+                <input
+                  id="autoReloadTime"
+                  type="time"
+                  value={autoReloadTime}
+                  disabled={!!sidebarTargetClientId}
+                  onChange={(e) => onFieldChange('autoReloadTime', e.target.value)}
+                  className="display-time-input"
+                />
+                <small className="admin-help-text">{l('autoReloadTimeHelp')}</small>
+              </div>
+            )}
             
             <button 
               type="submit" 
@@ -259,9 +250,10 @@ const DisplayTab = ({
                 showUpcomingMeetings === currentShowUpcomingMeetings &&
                 showMeetingTitles === currentShowMeetingTitles &&
                 parseInt(upcomingMeetingsCount, 10) === currentUpcomingMeetingsCount &&
-                minimalHeaderStyle === currentMinimalHeaderStyle &&
                 singleRoomDarkMode === currentSingleRoomDarkMode &&
-                flightboardDarkMode === currentFlightboardDarkMode
+                flightboardDarkMode === currentFlightboardDarkMode &&
+                autoReloadEnabled === currentAutoReloadEnabled &&
+                autoReloadTime === currentAutoReloadTime
               }
             >
               {t.submitSidebarButton}

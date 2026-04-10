@@ -1,3 +1,4 @@
+@charset "UTF-8";
 body,
 h1,
 h2,
@@ -1053,7 +1054,7 @@ p {
 .modern-room-sidebar .sidebar-booking .sidebar-book-btn {
   width: 100%;
   background: linear-gradient(135deg, var(--booking-button-color, #334155) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 80%, black) 100%);
-  color: #ffffff;
+  color: var(--booking-button-text, #ffffff);
   border: none;
   padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
   font-size: clamp(0.85rem, 1.2vw, 1.25rem);
@@ -1088,7 +1089,7 @@ p {
 .modern-room-sidebar .sidebar-extend .sidebar-extend-btn {
   width: 100%;
   background: linear-gradient(135deg, var(--booking-button-color, #334155) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 70%, black) 100%);
-  color: #ffffff;
+  color: var(--booking-button-text, #ffffff);
   border: none;
   padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
   font-size: clamp(0.85rem, 1.2vw, 1.25rem);
@@ -1184,168 +1185,6 @@ p {
   .modern-room-sidebar .sidebar-wifi .wifi-password {
     font-size: clamp(0.9rem, 1.4vw, 1.2rem);
   }
-}
-
-.single-room-layout--dark .modern-room-status::before {
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  opacity: 0.5;
-  animation: none;
-  transition: opacity 0.35s ease;
-}
-.single-room-layout--dark .modern-room-status--available {
-  background: radial-gradient(1200px 600px at 12% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 60%), radial-gradient(900px 500px at 88% 82%, rgba(255, 255, 255, 0.05) 0%, transparent 60%), #121623;
-  box-shadow: inset 0 0 140px rgba(34, 197, 94, 0.24);
-}
-.single-room-layout--dark .modern-room-status--available::before {
-  background: radial-gradient(circle at 18% 24%, rgba(34, 197, 94, 0.42) 0%, transparent 62%);
-}
-.single-room-layout--dark .modern-room-status--busy {
-  background: radial-gradient(1200px 600px at 12% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 60%), radial-gradient(900px 500px at 88% 82%, rgba(255, 255, 255, 0.05) 0%, transparent 60%), #121623;
-  box-shadow: inset 0 0 140px rgba(239, 68, 68, 0.24);
-}
-.single-room-layout--dark .modern-room-status--busy::before {
-  background: radial-gradient(circle at 18% 24%, rgba(239, 68, 68, 0.42) 0%, transparent 62%);
-}
-.single-room-layout--dark .modern-room-status--upcoming {
-  background: radial-gradient(1200px 600px at 12% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 60%), radial-gradient(900px 500px at 88% 82%, rgba(255, 255, 255, 0.05) 0%, transparent 60%), #121623;
-  box-shadow: inset 0 0 140px rgba(245, 158, 11, 0.24);
-}
-.single-room-layout--dark .modern-room-status--upcoming::before {
-  background: radial-gradient(circle at 18% 24%, rgba(245, 158, 11, 0.42) 0%, transparent 62%);
-}
-.single-room-layout--dark .modern-room-status--not-found {
-  background: radial-gradient(1200px 600px at 12% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 60%), radial-gradient(900px 500px at 88% 82%, rgba(255, 255, 255, 0.05) 0%, transparent 60%), #121623;
-  box-shadow: none;
-}
-.single-room-layout--dark .modern-room-status--not-found::before {
-  background: transparent;
-  opacity: 0;
-}
-.single-room-layout--dark .modern-room-status .status-content {
-  backdrop-filter: blur(2px);
-  background: linear-gradient(155deg, rgba(16, 20, 34, 0.9) 0%, rgba(20, 25, 39, 0.82) 100%);
-}
-.single-room-layout--dark .modern-room-status .status-header {
-  margin-bottom: clamp(1rem, 3vh, 1.5rem);
-  text-align: center;
-  border-radius: 1.25rem;
-  backdrop-filter: blur(8px);
-  padding: clamp(1.15rem, 2.4vw, 2.25rem);
-  border: 1px solid transparent;
-}
-.single-room-layout--dark .modern-room-status--available .status-header--filled {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.7) 0%, rgba(34, 197, 94, 0.52) 100%);
-  border-color: rgba(34, 197, 94, 0.62);
-  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.42), 0 10px 30px rgba(34, 197, 94, 0.44), inset 0 0 0 1px rgba(34, 197, 94, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-}
-.single-room-layout--dark .modern-room-status--busy .status-header--filled {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.7) 0%, rgba(239, 68, 68, 0.52) 100%);
-  border-color: rgba(239, 68, 68, 0.62);
-  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.42), 0 10px 30px rgba(239, 68, 68, 0.44), inset 0 0 0 1px rgba(239, 68, 68, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-}
-.single-room-layout--dark .modern-room-status--upcoming .status-header--filled {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.7) 0%, rgba(245, 158, 11, 0.52) 100%);
-  border-color: rgba(245, 158, 11, 0.62);
-  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.42), 0 10px 30px rgba(245, 158, 11, 0.44), inset 0 0 0 1px rgba(245, 158, 11, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-}
-.single-room-layout--dark .modern-room-status--not-found .status-header--filled {
-  background: rgba(107, 114, 128, 0.14);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: none;
-}
-.single-room-layout--dark .modern-room-status .status-header--transparent {
-  background: transparent;
-  border: none;
-  border-color: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-.single-room-layout--dark .modern-room-status .room-name {
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1;
-  margin-bottom: clamp(1rem, 3vh, 1.5rem);
-  letter-spacing: -0.02em;
-}
-.single-room-layout--dark .modern-room-status .room-status {
-  margin: 0;
-  letter-spacing: -0.02em;
-}
-.modern-room-status--not-found .single-room-layout--dark .modern-room-status .room-status {
-  color: var(--status-not-found-color, #6b7280);
-}
-.modern-room-status--not-found .single-room-layout--dark .modern-room-status .room-status::before {
-  background: var(--status-not-found-color, #6b7280);
-}
-.single-room-layout--dark .modern-room-status--available .status-header--transparent .room-status {
-  color: var(--status-available-color, #22c55e);
-}
-.single-room-layout--dark .modern-room-status--available .status-header--transparent .room-status::before {
-  background: var(--status-available-color, #22c55e);
-}
-.single-room-layout--dark .modern-room-status--busy .status-header--transparent .room-status {
-  color: var(--status-busy-color, #ef4444);
-}
-.single-room-layout--dark .modern-room-status--busy .status-header--transparent .room-status::before {
-  background: var(--status-busy-color, #ef4444);
-}
-.single-room-layout--dark .modern-room-status--upcoming .status-header--transparent .room-status {
-  color: var(--status-upcoming-color, #f59e0b);
-}
-.single-room-layout--dark .modern-room-status--upcoming .status-header--transparent .room-status::before {
-  background: var(--status-upcoming-color, #f59e0b);
-}
-.single-room-layout--dark .modern-room-status--not-found .status-header--transparent .room-status {
-  color: var(--status-not-found-color, #6b7280);
-}
-.single-room-layout--dark .modern-room-status--not-found .status-header--transparent .room-status::before {
-  background: var(--status-not-found-color, #6b7280);
-}
-.single-room-layout--dark .modern-room-status .meeting-card {
-  background: rgba(14, 19, 32, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1rem;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-.single-room-layout--dark .modern-room-sidebar {
-  background: linear-gradient(180deg, rgba(15, 19, 32, 0.96) 0%, rgba(10, 14, 25, 0.96) 100%);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.92);
-}
-.single-room-layout--dark .modern-room-sidebar .sidebar-clock .clock-time {
-  font-size: clamp(2.25rem, 4.5vw, 3.5rem);
-  font-weight: 700;
-  color: #ffffff;
-  line-height: 1;
-  margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
-}
-.single-room-layout--dark .modern-room-sidebar .sidebar-clock .clock-date {
-  font-size: clamp(0.875rem, 1.5vw, 1.25rem);
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: 500;
-}
-.single-room-layout--dark .modern-room-sidebar .upcoming-item {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-.single-room-layout--dark .modern-room-sidebar .upcoming-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateX(2px);
-}
-.single-room-layout--dark .modern-room-sidebar .sidebar-book-btn {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 12px 22px color-mix(in srgb, var(--booking-button-color, #334155) 24%, transparent);
-}
-.single-room-layout--dark .modern-room-sidebar .upcoming-organizer,
-.single-room-layout--dark .modern-room-sidebar .upcoming-time,
-.single-room-layout--dark .modern-room-sidebar .upcoming-subject,
-.single-room-layout--dark .modern-room-sidebar .upcoming-empty,
-.single-room-layout--dark .modern-room-sidebar .wifi-title,
-.single-room-layout--dark .modern-room-sidebar .wifi-ssid,
-.single-room-layout--dark .modern-room-sidebar .wifi-password {
-  color: rgba(255, 255, 255, 0.9);
 }
 
 :root {
@@ -1772,8 +1611,8 @@ p {
 }
 .minimal-sidebar-booking .minimal-sidebar-book-btn {
   width: 100%;
-  background: linear-gradient(135deg, var(--booking-button-color, #334155) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 80%, black) 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--booking-button-color, #7d8da1) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 80%, black) 100%);
+  color: var(--booking-button-text, white);
   border: none;
   padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
   font-size: clamp(0.85rem, 1.2vw, 1.25rem);
@@ -1782,7 +1621,7 @@ p {
   border-radius: 0.75rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -1794,8 +1633,8 @@ p {
 }
 .minimal-sidebar-booking .minimal-sidebar-book-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #334155) 50%, transparent);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #334155) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 60%, black) 100%);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #7d8da1) 50%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #7d8da1) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 60%, black) 100%);
 }
 .minimal-sidebar-booking .minimal-sidebar-book-btn:active:not(:disabled) {
   transform: translateY(0);
@@ -1808,8 +1647,8 @@ p {
 }
 .minimal-sidebar-extend .minimal-sidebar-extend-btn {
   width: 100%;
-  background: linear-gradient(135deg, var(--booking-button-color, #334155) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 70%, black) 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--booking-button-color, #7d8da1) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 70%, black) 100%);
+  color: var(--booking-button-text, white);
   border: none;
   padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
   font-size: clamp(0.85rem, 1.2vw, 1.25rem);
@@ -1817,14 +1656,14 @@ p {
   border-radius: 0.75rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 .minimal-sidebar-extend .minimal-sidebar-extend-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #334155) 50%, transparent);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #334155) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 60%, black) 100%);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #7d8da1) 50%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #7d8da1) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 60%, black) 100%);
 }
 .minimal-sidebar-extend .minimal-sidebar-extend-btn:active {
   transform: translateY(0);
@@ -2060,7 +1899,7 @@ p {
 
 .minimal-sidebar-booking .minimal-sidebar-book-btn {
   border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 12px 22px color-mix(in srgb, var(--booking-button-color, #334155) 24%, transparent);
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--booking-button-color, #7d8da1) 24%, transparent);
 }
 
 @keyframes pulse {
@@ -2105,6 +1944,152 @@ p {
     box-shadow: 0 0 40px rgba(245, 158, 11, 0.7), 0 0 60px rgba(245, 158, 11, 0.5), 0 0 100px rgba(245, 158, 11, 0.3), inset 0 0 60px rgba(245, 158, 11, 0.3);
   }
 }
+.single-room-layout--dark .modern-room-status::before {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 1;
+  animation: none;
+  transition: opacity 0.35s ease;
+  z-index: 0;
+}
+.single-room-layout--dark .modern-room-status--available {
+  background: #121623;
+}
+.single-room-layout--dark .modern-room-status--available::before {
+  background: radial-gradient(ellipse 150% 120% at 25% 35%, rgba(34, 197, 94, 0.8) 0%, rgba(34, 197, 94, 0.25) 45%, rgba(34, 197, 94, 0.05) 70%, transparent 90%);
+}
+.single-room-layout--dark .modern-room-status--busy {
+  background: #121623;
+}
+.single-room-layout--dark .modern-room-status--busy::before {
+  background: radial-gradient(ellipse 150% 120% at 25% 35%, rgba(239, 68, 68, 0.8) 0%, rgba(239, 68, 68, 0.25) 45%, rgba(239, 68, 68, 0.05) 70%, transparent 90%);
+}
+.single-room-layout--dark .modern-room-status--upcoming {
+  background: #121623;
+}
+.single-room-layout--dark .modern-room-status--upcoming::before {
+  background: radial-gradient(ellipse 150% 120% at 25% 35%, rgba(245, 158, 11, 0.8) 0%, rgba(245, 158, 11, 0.25) 45%, rgba(245, 158, 11, 0.05) 70%, transparent 90%);
+}
+.single-room-layout--dark .modern-room-status--not-found {
+  background: #121623;
+}
+.single-room-layout--dark .modern-room-status--not-found::before {
+  background: transparent;
+  opacity: 0;
+}
+.single-room-layout--dark .modern-room-status .status-content {
+  backdrop-filter: none;
+  background: transparent;
+  position: relative;
+  z-index: 1;
+}
+.single-room-layout--dark .modern-room-status .status-header {
+  margin-bottom: clamp(1rem, 3vh, 1.5rem);
+  text-align: center;
+  border-radius: 1.25rem;
+  backdrop-filter: none;
+  padding: clamp(1.15rem, 2.4vw, 2.25rem);
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+.single-room-layout--dark .modern-room-status--available .status-header--filled, .single-room-layout--dark .modern-room-status--busy .status-header--filled, .single-room-layout--dark .modern-room-status--upcoming .status-header--filled, .single-room-layout--dark .modern-room-status--not-found .status-header--filled {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.single-room-layout--dark .modern-room-status .status-header--transparent {
+  background: transparent;
+  border: none;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.single-room-layout--dark .modern-room-status .room-name {
+  color: #ffffff;
+  line-height: 1;
+  margin-bottom: clamp(1rem, 3vh, 1.5rem);
+  letter-spacing: -0.02em;
+  text-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 60px rgba(0, 0, 0, 0.15);
+}
+.single-room-layout--dark .modern-room-status .room-status {
+  margin: 0;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 60px rgba(0, 0, 0, 0.15);
+}
+.single-room-layout--dark .modern-room-status .room-status::before {
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.15), 0 0 12px rgba(255, 255, 255, 0.6);
+}
+.modern-room-status--not-found .single-room-layout--dark .modern-room-status .room-status {
+  color: var(--status-not-found-color, #6b7280);
+}
+.modern-room-status--not-found .single-room-layout--dark .modern-room-status .room-status::before {
+  background: var(--status-not-found-color, #6b7280);
+  box-shadow: none;
+}
+.single-room-layout--dark .modern-room-status--available .status-header--filled .room-status, .single-room-layout--dark .modern-room-status--busy .status-header--filled .room-status, .single-room-layout--dark .modern-room-status--upcoming .status-header--filled .room-status, .single-room-layout--dark .modern-room-status--available .status-header--transparent .room-status, .single-room-layout--dark .modern-room-status--busy .status-header--transparent .room-status, .single-room-layout--dark .modern-room-status--upcoming .status-header--transparent .room-status {
+  color: #ffffff;
+}
+.single-room-layout--dark .modern-room-status--available .status-header--filled .room-status::before, .single-room-layout--dark .modern-room-status--busy .status-header--filled .room-status::before, .single-room-layout--dark .modern-room-status--upcoming .status-header--filled .room-status::before, .single-room-layout--dark .modern-room-status--available .status-header--transparent .room-status::before, .single-room-layout--dark .modern-room-status--busy .status-header--transparent .room-status::before, .single-room-layout--dark .modern-room-status--upcoming .status-header--transparent .room-status::before {
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.15), 0 0 12px rgba(255, 255, 255, 0.6);
+}
+.single-room-layout--dark .modern-room-status--not-found .status-header--transparent .room-status, .single-room-layout--dark .modern-room-status--not-found .status-header--filled .room-status {
+  color: var(--status-not-found-color, #6b7280);
+}
+.single-room-layout--dark .modern-room-status--not-found .status-header--transparent .room-status::before, .single-room-layout--dark .modern-room-status--not-found .status-header--filled .room-status::before {
+  background: var(--status-not-found-color, #6b7280);
+  box-shadow: none;
+}
+.single-room-layout--dark .modern-room-status .meeting-card {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.single-room-layout--dark .modern-room-sidebar {
+  background: linear-gradient(180deg, rgba(15, 19, 32, 0.96) 0%, rgba(10, 14, 25, 0.96) 100%);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+}
+.single-room-layout--dark .modern-room-sidebar .sidebar-clock .clock-time {
+  font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+  margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
+}
+.single-room-layout--dark .modern-room-sidebar .sidebar-clock .clock-date {
+  font-size: clamp(0.875rem, 1.5vw, 1.25rem);
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 700;
+}
+.single-room-layout--dark .modern-room-sidebar .upcoming-item {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.single-room-layout--dark .modern-room-sidebar .upcoming-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(2px);
+}
+.single-room-layout--dark .modern-room-sidebar .sidebar-book-btn {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--booking-button-color, #7d8da1) 24%, transparent);
+}
+.single-room-layout--dark .modern-room-sidebar .upcoming-organizer,
+.single-room-layout--dark .modern-room-sidebar .upcoming-time,
+.single-room-layout--dark .modern-room-sidebar .upcoming-subject,
+.single-room-layout--dark .modern-room-sidebar .upcoming-empty,
+.single-room-layout--dark .modern-room-sidebar .wifi-title,
+.single-room-layout--dark .modern-room-sidebar .wifi-ssid,
+.single-room-layout--dark .modern-room-sidebar .wifi-password {
+  color: rgba(255, 255, 255, 0.9);
+}
+
 body.flightboard-light {
   background: #ffffff !important;
   color: #1f2937 !important;
@@ -2614,7 +2599,7 @@ body.flightboard-light .credentials-error {
   margin: clamp(1rem, 3vw, 1.5rem);
 }
 
-/* Booking Modal Styles */
+/* Booking Modal – Light / Base Styles */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -2647,9 +2632,6 @@ body.flightboard-light .credentials-error {
   animation: fadeIn 0.2s ease-in;
   padding: 16px;
 }
-.booking-modal-overlay.minimal-display {
-  background-color: rgba(0, 0, 0, 0.85);
-}
 
 .booking-modal {
   background: white;
@@ -2661,10 +2643,6 @@ body.flightboard-light .credentials-error {
   overflow-y: auto;
   animation: slideUp 0.3s ease-out;
 }
-.minimal-display .booking-modal {
-  background: #1e1e1e;
-  color: #e0e0e0;
-}
 
 .booking-modal-header {
   display: flex;
@@ -2672,9 +2650,6 @@ body.flightboard-light .credentials-error {
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid #e0e0e0;
-}
-.minimal-display .booking-modal-header {
-  border-bottom-color: #333;
 }
 .booking-modal-header h2 {
   margin: 0;
@@ -2704,13 +2679,6 @@ body.flightboard-light .credentials-error {
   background-color: #f5f5f5;
   color: #333;
 }
-.minimal-display .booking-modal-close {
-  color: #888;
-}
-.minimal-display .booking-modal-close:hover {
-  background-color: #2a2a2a;
-  color: #e0e0e0;
-}
 
 .booking-modal-body {
   padding: 24px;
@@ -2719,9 +2687,6 @@ body.flightboard-light .credentials-error {
   font-size: 1.125rem;
   margin-bottom: 1.5rem;
   color: #333;
-}
-.minimal-display .booking-modal-body .error-message {
-  color: white;
 }
 
 .booking-error {
@@ -2732,11 +2697,6 @@ body.flightboard-light .credentials-error {
   border-radius: 4px;
   margin-bottom: 20px;
   font-size: 14px;
-}
-.minimal-display .booking-error {
-  background-color: #3a1a1a;
-  border-color: #5a2a2a;
-  color: #ff6b6b;
 }
 
 .quick-book-section {
@@ -2761,16 +2721,10 @@ body.flightboard-light .credentials-error {
   color: #333;
   font-size: 15px;
 }
-.minimal-display .custom-duration-section label {
-  color: #e0e0e0;
-}
 .custom-duration-section label .duration-value {
   font-size: 18px;
   color: #334155;
   font-weight: 700;
-}
-.minimal-display .custom-duration-section label .duration-value {
-  color: #94a3b8;
 }
 .custom-duration-section .duration-slider {
   width: 100%;
@@ -2823,25 +2777,16 @@ body.flightboard-light .credentials-error {
   border-radius: 4px;
   background: #e5e7eb;
 }
-.minimal-display .custom-duration-section .duration-slider::-webkit-slider-runnable-track {
-  background: #374151;
-}
 .custom-duration-section .duration-slider::-moz-range-track {
   width: 100%;
   height: 8px;
   border-radius: 4px;
   background: #e5e7eb;
 }
-.minimal-display .custom-duration-section .duration-slider::-moz-range-track {
-  background: #374151;
-}
 .custom-duration-section .slider-labels {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #888;
-}
-.minimal-display .custom-duration-section .slider-labels {
   color: #888;
 }
 
@@ -2857,20 +2802,10 @@ body.flightboard-light .credentials-error {
   transition: all 0.2s;
   white-space: nowrap;
 }
-.minimal-display .quick-book-btn {
-  background-color: #1e1e1e;
-  border-color: var(--booking-button-color, #334155);
-  color: #cbd5e1;
-}
 .quick-book-btn:hover {
   background-color: var(--booking-button-color, #334155);
-  color: white;
+  color: var(--booking-button-text, white);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
-}
-.minimal-display .quick-book-btn:hover {
-  background-color: var(--booking-button-color, #334155);
-  color: white;
   box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
 }
 .quick-book-btn:active {
@@ -2879,12 +2814,7 @@ body.flightboard-light .credentials-error {
 .quick-book-btn.active {
   background-color: var(--booking-button-color, #334155);
   border-color: var(--booking-button-color, #334155);
-  color: white;
-}
-.minimal-display .quick-book-btn.active {
-  background-color: var(--booking-button-color, #334155);
-  border-color: #64748b;
-  color: white;
+  color: var(--booking-button-text, white);
 }
 
 .custom-time-section {
@@ -2892,9 +2822,6 @@ body.flightboard-light .credentials-error {
   padding: 16px;
   border-radius: 6px;
   margin-bottom: 20px;
-}
-.minimal-display .custom-time-section {
-  background-color: #2a2a2a;
 }
 
 .form-group {
@@ -2906,9 +2833,6 @@ body.flightboard-light .credentials-error {
   margin-bottom: 8px;
   color: #555;
   font-size: 14px;
-}
-.minimal-display .form-group label {
-  color: #b0b0b0;
 }
 .form-group input[type=text],
 .form-group input[type=datetime-local],
@@ -2923,15 +2847,6 @@ body.flightboard-light .credentials-error {
   transition: border-color 0.2s;
   box-sizing: border-box;
 }
-.minimal-display .form-group input[type=text],
-.minimal-display .form-group input[type=datetime-local],
-.minimal-display .form-group textarea,
-.minimal-display .form-group select.touch-select {
-  background-color: #2a2a2a;
-  border-color: #444;
-  color: #e0e0e0;
-  color-scheme: dark;
-}
 .form-group input[type=text]:focus,
 .form-group input[type=datetime-local]:focus,
 .form-group textarea:focus,
@@ -2939,13 +2854,6 @@ body.flightboard-light .credentials-error {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-}
-.minimal-display .form-group input[type=text]:focus,
-.minimal-display .form-group input[type=datetime-local]:focus,
-.minimal-display .form-group textarea:focus,
-.minimal-display .form-group select.touch-select:focus {
-  border-color: #4a9eff;
-  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
 }
 .form-group select.touch-select {
   font-size: 16px;
@@ -2956,9 +2864,6 @@ body.flightboard-light .credentials-error {
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 36px;
-}
-.minimal-display .form-group select.touch-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23e0e0e0' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
 }
 .form-group textarea {
   resize: vertical;
@@ -2983,29 +2888,15 @@ body.flightboard-light .credentials-error {
   transition: all 0.2s;
   white-space: nowrap;
 }
-.minimal-display .duration-btn {
-  background-color: #1a1a1a;
-  border-color: #444;
-  color: #b0b0b0;
-}
 .duration-btn:hover {
   border-color: #007bff;
   color: #007bff;
   transform: translateY(-2px);
 }
-.minimal-display .duration-btn:hover {
-  border-color: #4a9eff;
-  color: #4a9eff;
-}
 .duration-btn.active {
   background-color: #007bff;
   border-color: #007bff;
   color: white;
-}
-.minimal-display .duration-btn.active {
-  background-color: #4a9eff;
-  border-color: #4a9eff;
-  color: #1a1a1a;
 }
 .duration-btn:active {
   transform: translateY(0);
@@ -3021,11 +2912,6 @@ body.flightboard-light .credentials-error {
   color: #333;
   text-align: center;
 }
-.minimal-display .end-time-display {
-  background-color: #2a2a2a;
-  border-color: #444;
-  color: #4a9eff;
-}
 
 .booking-modal-actions {
   display: flex;
@@ -3033,9 +2919,6 @@ body.flightboard-light .credentials-error {
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid #e0e0e0;
-}
-.minimal-display .booking-modal-actions {
-  border-top-color: #333;
 }
 
 .btn-cancel,
@@ -3061,20 +2944,13 @@ body.flightboard-light .credentials-error {
   background-color: #f3f4f6;
   color: #6b7280;
 }
-.minimal-display .btn-cancel {
-  background-color: #374151;
-  color: #9ca3af;
-}
 .btn-cancel:hover:not(:disabled) {
   background-color: #e5e7eb;
-}
-.minimal-display .btn-cancel:hover:not(:disabled) {
-  background-color: #4b5563;
 }
 
 .btn-book {
   background-color: var(--booking-button-color, #334155);
-  color: white;
+  color: var(--booking-button-text, white);
 }
 .btn-book:hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--booking-button-color, #334155) 80%, black);
@@ -3144,15 +3020,12 @@ body.flightboard-light .credentials-error {
     flex-direction: column;
     gap: 10px;
   }
-  .btn-cancel,
-  .btn-end-meeting,
-  .btn-book {
+  .btn-cancel, .btn-end-meeting, .btn-book {
     width: 100%;
     padding: 14px 24px;
   }
-  .form-group input[type=text],
-  .form-group input[type=datetime-local] {
-    font-size: 16px; /* Prevents zoom on iOS */
+  .form-group input[type=text], .form-group input[type=datetime-local] {
+    font-size: 16px;
   }
 }
 @media (max-width: 360px) {
@@ -3169,7 +3042,6 @@ body.flightboard-light .credentials-error {
     padding: 12px 16px;
   }
 }
-/* Landscape mobile */
 @media (max-height: 600px) and (orientation: landscape) {
   .booking-modal {
     max-height: calc(100vh - 16px);
@@ -3188,6 +3060,149 @@ body.flightboard-light .credentials-error {
     padding-top: 12px;
   }
 }
+/* Booking Modal – Dark Mode Overrides (.minimal-display) */
+.booking-modal-overlay.minimal-display {
+  background-color: rgba(0, 0, 0, 0.85);
+}
+
+.minimal-display .booking-modal,
+.booking-modal.minimal-display {
+  background: #1e1e1e;
+  color: #e0e0e0;
+}
+
+.minimal-display .booking-modal-header,
+.booking-modal.minimal-display .booking-modal-header {
+  border-bottom-color: #333;
+}
+
+.minimal-display .booking-modal-close,
+.booking-modal.minimal-display .booking-modal-close {
+  color: #888;
+}
+.minimal-display .booking-modal-close:hover,
+.booking-modal.minimal-display .booking-modal-close:hover {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.minimal-display .booking-modal-body .error-message {
+  color: white;
+}
+
+.minimal-display .booking-error,
+.booking-modal.minimal-display .booking-error {
+  background-color: #3a1a1a;
+  border-color: #5a2a2a;
+  color: #ff6b6b;
+}
+
+.minimal-display .custom-duration-section label {
+  color: #e0e0e0;
+}
+.minimal-display .custom-duration-section label .duration-value {
+  color: #7d8da1;
+}
+.minimal-display .custom-duration-section .duration-slider::-webkit-slider-runnable-track {
+  background: #374151;
+}
+.minimal-display .custom-duration-section .duration-slider::-moz-range-track {
+  background: #374151;
+}
+.minimal-display .custom-duration-section .duration-slider::-webkit-slider-thumb {
+  background: var(--booking-button-color, #7d8da1);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
+}
+.minimal-display .custom-duration-section .duration-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--booking-button-color, #7d8da1) 60%, transparent);
+}
+.minimal-display .custom-duration-section .duration-slider::-moz-range-thumb {
+  background: var(--booking-button-color, #7d8da1);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
+}
+.minimal-display .custom-duration-section .duration-slider::-moz-range-thumb:hover {
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--booking-button-color, #7d8da1) 60%, transparent);
+}
+.minimal-display .custom-duration-section .slider-labels {
+  color: #888;
+}
+
+.minimal-display .quick-book-btn {
+  background-color: #1e1e1e;
+  border-color: var(--booking-button-color, #7d8da1);
+  color: #cbd5e1;
+}
+.minimal-display .quick-book-btn:hover {
+  background-color: var(--booking-button-color, #7d8da1);
+  color: var(--booking-button-text, white);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
+}
+.minimal-display .quick-book-btn.active {
+  background-color: var(--booking-button-color, #7d8da1);
+  border-color: #7d8da1;
+  color: var(--booking-button-text, white);
+}
+
+.minimal-display .custom-time-section {
+  background-color: #2a2a2a;
+}
+
+.minimal-display .form-group label {
+  color: #b0b0b0;
+}
+.minimal-display .form-group input[type=text],
+.minimal-display .form-group input[type=datetime-local],
+.minimal-display .form-group textarea,
+.minimal-display .form-group select.touch-select {
+  background-color: #2a2a2a;
+  border-color: #444;
+  color: #e0e0e0;
+  color-scheme: dark;
+}
+.minimal-display .form-group input[type=text]:focus,
+.minimal-display .form-group input[type=datetime-local]:focus,
+.minimal-display .form-group textarea:focus,
+.minimal-display .form-group select.touch-select:focus {
+  border-color: #4a9eff;
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+}
+.minimal-display .form-group select.touch-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23e0e0e0' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
+.minimal-display .duration-btn {
+  background-color: #1a1a1a;
+  border-color: #444;
+  color: #b0b0b0;
+}
+.minimal-display .duration-btn:hover {
+  border-color: #4a9eff;
+  color: #4a9eff;
+}
+.minimal-display .duration-btn.active {
+  background-color: #4a9eff;
+  border-color: #4a9eff;
+  color: #1a1a1a;
+}
+
+.minimal-display .end-time-display {
+  background-color: #2a2a2a;
+  border-color: #444;
+  color: #4a9eff;
+}
+
+.minimal-display .booking-modal-actions {
+  border-top-color: #333;
+}
+
+.minimal-display .btn-cancel {
+  background-color: #374151;
+  color: #9ca3af;
+}
+.minimal-display .btn-cancel:hover:not(:disabled) {
+  background-color: #4b5563;
+}
+
 .wifi-page {
   font-family: "Titillium Web", sans-serif;
   background: #1a1d29;
@@ -3821,6 +3836,7 @@ body.flightboard-light .credentials-error {
 .admin-form-group input[type=text],
 .admin-form-group input[type=password],
 .admin-form-group input[type=number],
+.admin-form-group input[type=time],
 .admin-form-group select,
 .admin-form-group textarea {
   width: 100%;
@@ -3836,6 +3852,7 @@ body.flightboard-light .credentials-error {
 .admin-form-group input[type=text]:focus,
 .admin-form-group input[type=password]:focus,
 .admin-form-group input[type=number]:focus,
+.admin-form-group input[type=time]:focus,
 .admin-form-group select:focus,
 .admin-form-group textarea:focus {
   outline: none;
@@ -3846,6 +3863,7 @@ body.flightboard-light .credentials-error {
 .admin-form-group input[type=text]::placeholder,
 .admin-form-group input[type=password]::placeholder,
 .admin-form-group input[type=number]::placeholder,
+.admin-form-group input[type=time]::placeholder,
 .admin-form-group select::placeholder,
 .admin-form-group textarea::placeholder {
   color: rgba(255, 255, 255, 0.4);
@@ -5293,3 +5311,5 @@ body.flightboard-light .credentials-error {
     font-size: 10px;
   }
 }
+
+/*# sourceMappingURL=styles.css.map */

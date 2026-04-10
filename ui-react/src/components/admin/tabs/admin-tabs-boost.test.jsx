@@ -168,7 +168,6 @@ const displayBase = {
 describe('DisplayTab extended', () => {
   it('renders current config values', () => {
     render(<DisplayTab {...displayBase} />);
-    expect(screen.getByText('Filled')).toBeInTheDocument();
     expect(screen.getByText('2024-01-01')).toBeInTheDocument();
   });
 
@@ -219,25 +218,14 @@ describe('DisplayTab extended', () => {
     expect(handler).toHaveBeenCalledWith('flightboardDarkMode', true);
   });
 
-  it('shows header style radios when dark mode is on', () => {
+  it('no longer shows header style radios (style selection removed)', () => {
     render(<DisplayTab {...displayBase} singleRoomDarkMode={true} />);
-    expect(screen.getAllByText('Filled').length).toBeGreaterThanOrEqual(2); // config + radio label
-    expect(screen.getAllByText('Transparent').length).toBeGreaterThanOrEqual(1);
-    const radios = screen.getAllByRole('radio');
-    expect(radios.length).toBe(2);
+    expect(screen.queryAllByRole('radio').length).toBe(0);
   });
 
-  it('calls onFieldChange when header style radio changes', () => {
-    const handler = vi.fn();
-    render(<DisplayTab {...displayBase} singleRoomDarkMode={true} onFieldChange={handler} />);
-    const radios = screen.getAllByRole('radio');
-    fireEvent.click(radios[1]); // transparent
-    expect(handler).toHaveBeenCalledWith('minimalHeaderStyle', 'transparent');
-  });
-
-  it('shows dark mode required hint when dark mode is off', () => {
+  it('no longer shows dark mode required hint (style selection removed)', () => {
     render(<DisplayTab {...displayBase} singleRoomDarkMode={false} />);
-    expect(screen.getByText('Dark mode required')).toBeInTheDocument();
+    expect(screen.queryByText('Dark mode required')).not.toBeInTheDocument();
   });
 
   it('hides header style radios when dark mode is off', () => {

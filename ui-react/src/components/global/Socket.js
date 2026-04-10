@@ -20,19 +20,24 @@ class Socket extends Component {
     // Establish Socket.IO connection
     this.socket = socketIOClient();
 
-    // Listen for room updates from server
-    this.socket.on('updatedRooms', (rooms) => {
+    // Store handler reference for clean removal
+    this._roomsHandler = (rooms) => {
       this.props.response({
         response: true,
         rooms: rooms
       });
-    });
+    };
+
+    // Listen for room updates from server
+    this.socket.on('updatedRooms', this._roomsHandler);
   }
 
   componentWillUnmount() {
-    // Clean up socket connection
+    // Clean up event listeners and socket connection
     if (this.socket) {
+      this.socket.off('updatedRooms', this._roomsHandler);
       this.socket.close();
+      this.socket = null;
     }
   }
 

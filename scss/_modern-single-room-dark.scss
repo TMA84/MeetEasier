@@ -481,8 +481,8 @@
   
   .minimal-sidebar-book-btn {
     width: 100%;
-    background: linear-gradient(135deg, var(--booking-button-color, #334155) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 80%, black) 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--booking-button-color, #7d8da1) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 80%, black) 100%);
+    color: var(--booking-button-text, white);
     border: none;
     padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
     font-size: clamp(0.85rem, 1.2vw, 1.25rem);
@@ -491,7 +491,7 @@
     border-radius: $radius-lg;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 
@@ -504,8 +504,8 @@
     
     &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #334155) 50%, transparent);
-      background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #334155) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 60%, black) 100%);
+      box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #7d8da1) 50%, transparent);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #7d8da1) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 60%, black) 100%);
     }
     
     &:active:not(:disabled) {
@@ -522,8 +522,8 @@
   
   .minimal-sidebar-extend-btn {
     width: 100%;
-    background: linear-gradient(135deg, var(--booking-button-color, #334155) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 70%, black) 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--booking-button-color, #7d8da1) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 70%, black) 100%);
+    color: var(--booking-button-text, white);
     border: none;
     padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
     font-size: clamp(0.85rem, 1.2vw, 1.25rem);
@@ -531,14 +531,14 @@
     border-radius: $radius-lg;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #334155) 40%, transparent);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #334155) 50%, transparent);
-      background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #334155) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #334155) 60%, black) 100%);
+      box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #7d8da1) 50%, transparent);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #7d8da1) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 60%, black) 100%);
     }
     
     &:active {
@@ -828,7 +828,7 @@
 .minimal-sidebar-booking {
   .minimal-sidebar-book-btn {
     border: 1px solid rgba(255, 255, 255, 0.18);
-    box-shadow: 0 12px 22px color-mix(in srgb, var(--booking-button-color, #334155) 24%, transparent);
+    box-shadow: 0 12px 22px color-mix(in srgb, var(--booking-button-color, #7d8da1) 24%, transparent);
   }
 }
 
@@ -900,5 +900,200 @@
       0 0 60px rgba(245, 158, 11, 0.5),
       0 0 100px rgba(245, 158, 11, 0.3),
       inset 0 0 60px rgba(245, 158, 11, 0.3);
+  }
+}
+
+// ==========================================================================
+// Modern single-room dark mode overrides
+// Matches the ESP32 touch display dark mode design
+// ==========================================================================
+
+.single-room-layout--dark {
+  .modern-room-status {
+    &::before {
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      opacity: 1;
+      animation: none;
+      transition: opacity 0.35s ease;
+      z-index: 0;
+    }
+
+    &--available {
+      background: #121623;
+
+      &::before {
+        background: radial-gradient(ellipse 150% 120% at 25% 35%, rgba(34, 197, 94, 0.8) 0%, rgba(34, 197, 94, 0.25) 45%, rgba(34, 197, 94, 0.05) 70%, transparent 90%);
+      }
+    }
+
+    &--busy {
+      background: #121623;
+
+      &::before {
+        background: radial-gradient(ellipse 150% 120% at 25% 35%, rgba(239, 68, 68, 0.8) 0%, rgba(239, 68, 68, 0.25) 45%, rgba(239, 68, 68, 0.05) 70%, transparent 90%);
+      }
+    }
+
+    &--upcoming {
+      background: #121623;
+
+      &::before {
+        background: radial-gradient(ellipse 150% 120% at 25% 35%, rgba(245, 158, 11, 0.8) 0%, rgba(245, 158, 11, 0.25) 45%, rgba(245, 158, 11, 0.05) 70%, transparent 90%);
+      }
+    }
+
+    &--not-found {
+      background: #121623;
+
+      &::before {
+        background: transparent;
+        opacity: 0;
+      }
+    }
+
+    .status-content {
+      backdrop-filter: none;
+      background: transparent;
+      position: relative;
+      z-index: 1;
+    }
+
+    .status-header {
+      margin-bottom: clamp($space-4, 3vh, $space-6);
+      text-align: center;
+      border-radius: 1.25rem;
+      backdrop-filter: none;
+      padding: clamp(1.15rem, 2.4vw, 2.25rem);
+      border: none;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    &--available .status-header--filled,
+    &--busy .status-header--filled,
+    &--upcoming .status-header--filled,
+    &--not-found .status-header--filled {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    .status-header--transparent {
+      background: transparent;
+      border: none;
+      border-color: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+
+    .room-name {
+      color: #ffffff;
+      line-height: 1;
+      margin-bottom: clamp($space-4, 3vh, $space-6);
+      letter-spacing: -0.02em;
+      text-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 60px rgba(0, 0, 0, 0.15);
+    }
+
+    .room-status {
+      margin: 0;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      text-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 60px rgba(0, 0, 0, 0.15);
+
+      &::before {
+        background: #ffffff;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.15), 0 0 12px rgba(255, 255, 255, 0.6);
+      }
+
+      .modern-room-status--not-found & {
+        color: var(--status-not-found-color, #6b7280);
+
+        &::before {
+          background: var(--status-not-found-color, #6b7280);
+          box-shadow: none;
+        }
+      }
+    }
+
+    &--available .status-header--filled .room-status,
+    &--busy .status-header--filled .room-status,
+    &--upcoming .status-header--filled .room-status,
+    &--available .status-header--transparent .room-status,
+    &--busy .status-header--transparent .room-status,
+    &--upcoming .status-header--transparent .room-status {
+      color: #ffffff;
+
+      &::before {
+        background: #ffffff;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.15), 0 0 12px rgba(255, 255, 255, 0.6);
+      }
+    }
+
+    &--not-found .status-header--transparent .room-status,
+    &--not-found .status-header--filled .room-status {
+      color: var(--status-not-found-color, #6b7280);
+
+      &::before {
+        background: var(--status-not-found-color, #6b7280);
+        box-shadow: none;
+      }
+    }
+
+    .meeting-card {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+  }
+
+  .modern-room-sidebar {
+    background: linear-gradient(180deg, rgba(15, 19, 32, 0.96) 0%, rgba(10, 14, 25, 0.96) 100%);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.92);
+
+    .sidebar-clock {
+      .clock-time {
+        font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+        font-weight: 700;
+        color: #ffffff;
+        line-height: 1;
+        margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
+      }
+
+      .clock-date {
+        font-size: clamp(0.875rem, 1.5vw, 1.25rem);
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 700;
+      }
+    }
+
+    .upcoming-item {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateX(2px);
+      }
+    }
+
+    .sidebar-book-btn {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 12px 22px color-mix(in srgb, var(--booking-button-color, #7d8da1) 24%, transparent);
+    }
+
+    .upcoming-organizer,
+    .upcoming-time,
+    .upcoming-subject,
+    .upcoming-empty,
+    .wifi-title,
+    .wifi-ssid,
+    .wifi-password {
+      color: rgba(255, 255, 255, 0.9);
+    }
   }
 }

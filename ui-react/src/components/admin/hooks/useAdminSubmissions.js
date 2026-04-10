@@ -63,10 +63,10 @@ export function useAdminSubmissions(getRequestHeaders, handleUnauthorizedAccess,
   const handleSidebarSubmit = useCallback((e) => {
     e.preventDefault();
     const t = getTranslations();
-    const { showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount, singleRoomDarkMode, flightboardDarkMode, sidebarTargetClientId } = configRef.current;
+    const { showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount, singleRoomDarkMode, flightboardDarkMode, autoReloadEnabled, autoReloadTime, sidebarTargetClientId } = configRef.current;
     const count = Number.isFinite(Number(upcomingMeetingsCount)) ? Math.min(Math.max(parseInt(upcomingMeetingsCount, 10), 1), 10) : 3;
     const targetId = String(sidebarTargetClientId || '').trim();
-    const payload = targetId ? { targetClientId: targetId, singleRoomDarkMode } : { showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount: count, singleRoomDarkMode, flightboardDarkMode };
+    const payload = targetId ? { targetClientId: targetId, singleRoomDarkMode } : { showWiFi, showUpcomingMeetings, showMeetingTitles, minimalHeaderStyle, upcomingMeetingsCount: count, singleRoomDarkMode, flightboardDarkMode, autoReloadEnabled, autoReloadTime };
     submitSidebarConfig(getRequestHeaders, payload)
       .then(r => {
         if (r.status === 401) { handleUnauthorizedAccess(); return; }

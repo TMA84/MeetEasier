@@ -4193,6 +4193,8 @@ module.exports = function(app) {
         upcomingMeetingsCount,
         singleRoomDarkMode,
         flightboardDarkMode,
+        autoReloadEnabled,
+        autoReloadTime,
         targetClientId,
         clearClientOverride
       } = req.body || {};
@@ -4220,6 +4222,8 @@ module.exports = function(app) {
         {
           singleRoomDarkMode,
           flightboardDarkMode,
+          autoReloadEnabled,
+          autoReloadTime,
           targetClientId: normalizedTargetClientId || undefined,
           clearClientOverride: !!clearClientOverride
         }

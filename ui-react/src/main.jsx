@@ -8,6 +8,17 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { getConnectionMonitor } from './utils/connection-monitor';
 import ConnectionStatus from './components/global/ConnectionStatus';
 
+// Suppress console.log and console.warn in production builds to reduce
+// memory pressure on long-running display clients (kiosk mode).
+// console.error is preserved so real errors remain visible.
+if (import.meta.env.PROD) {
+  const noop = () => {};
+  console.log = noop;
+  console.warn = noop;
+  console.debug = noop;
+  console.info = noop;
+}
+
 // Eager loading for frequently used components
 import FlightboardLayout from './layouts/FlightboardLayout';
 import SingleRoomLayout from './layouts/SingleRoomLayout';

@@ -709,7 +709,7 @@ describe('Admin Component', () => {
   });
 });
 
-describe('Dark Mode and minimalHeaderStyle State Persistence', () => {
+describe('Dark Mode State Persistence', () => {
   beforeEach(() => {
     Object.defineProperty(navigator, 'language', {
       writable: true,
@@ -721,7 +721,7 @@ describe('Dark Mode and minimalHeaderStyle State Persistence', () => {
     vi.restoreAllMocks();
   });
 
-  it('loads minimalHeaderStyle value correctly from server', async () => {
+  it('hides minimalHeaderStyle options (style selection removed)', async () => {
     global.fetch = vi.fn();
     setupAdminFetchMocks(global.fetch, {
       sidebar: {
@@ -730,157 +730,6 @@ describe('Dark Mode and minimalHeaderStyle State Persistence', () => {
         showMeetingTitles: false,
         minimalHeaderStyle: 'filled',
         singleRoomDarkMode: true
-      }
-    });
-
-    render(<Admin />);
-
-    await waitFor(() => {
-      expect(screen.queryByText('Login')).not.toBeInTheDocument();
-    }, { timeout: 3000 });
-
-    await waitFor(() => {
-      const filledRadio = screen.getByDisplayValue('filled');
-      expect(filledRadio).toBeInTheDocument();
-      expect(filledRadio).toBeChecked();
-    }, { timeout: 3000 });
-  });
-
-  it('sends minimalHeaderStyle value correctly to server', async () => {
-    global.fetch = vi.fn();
-    setupAdminFetchMocks(global.fetch, {
-      sidebar: {
-        showWiFi: true,
-        showUpcomingMeetings: false,
-        showMeetingTitles: false,
-        minimalHeaderStyle: 'filled',
-        singleRoomDarkMode: true
-      }
-    });
-
-    render(<Admin />);
-
-    await waitFor(() => {
-      const transparentRadio = screen.getByLabelText(/Transparent/);
-      fireEvent.click(transparentRadio);
-    });
-
-    const submitButton = screen.getByText('Informationen aktualisieren');
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      const lastCall = global.fetch.mock.calls.find(call => 
-        call[0] === '/api/sidebar' && call[1]?.method === 'POST'
-      );
-      expect(lastCall).toBeDefined();
-      const body = JSON.parse(lastCall[1].body);
-      expect(body.minimalHeaderStyle).toBe('transparent');
-    });
-  });
-
-  it('preserves minimalHeaderStyle when dark mode is disabled and form is submitted', async () => {
-    global.fetch = vi.fn();
-    setupAdminFetchMocks(global.fetch, {
-      sidebar: {
-        showWiFi: true,
-        showUpcomingMeetings: false,
-        showMeetingTitles: false,
-        minimalHeaderStyle: 'transparent',
-        singleRoomDarkMode: true
-      }
-    });
-
-    render(<Admin />);
-
-    await waitFor(() => {
-      const transparentRadio = screen.getByLabelText(/Transparent/);
-      expect(transparentRadio.checked).toBe(true);
-    });
-
-    const darkModeCheckbox = screen.getByLabelText(/Single-Room Dark Mode/i);
-    fireEvent.click(darkModeCheckbox);
-
-    const submitButton = screen.getByText('Informationen aktualisieren');
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      const lastCall = global.fetch.mock.calls.find(call => 
-        call[0] === '/api/sidebar' && call[1]?.method === 'POST'
-      );
-      expect(lastCall).toBeDefined();
-      const body = JSON.parse(lastCall[1].body);
-      expect(body.minimalHeaderStyle).toBe('transparent');
-      expect(body.singleRoomDarkMode).toBe(false);
-    });
-  });
-
-  it('displays informational message when dark mode is disabled', async () => {
-    global.fetch = vi.fn();
-    setupAdminFetchMocks(global.fetch, {
-      sidebar: {
-        showWiFi: true,
-        showUpcomingMeetings: false,
-        showMeetingTitles: false,
-        minimalHeaderStyle: 'filled',
-        singleRoomDarkMode: false
-      }
-    });
-
-    render(<Admin />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Diese Optionen sind nur im Dark-Mode verfügbar/i)).toBeInTheDocument();
-    });
-  });
-
-  it('hides informational message when dark mode is enabled', async () => {
-    global.fetch = vi.fn();
-    setupAdminFetchMocks(global.fetch, {
-      sidebar: {
-        showWiFi: true,
-        showUpcomingMeetings: false,
-        showMeetingTitles: false,
-        minimalHeaderStyle: 'filled',
-        singleRoomDarkMode: true
-      }
-    });
-
-    render(<Admin />);
-
-    await waitFor(() => {
-      expect(screen.queryByText(/Diese Optionen sind nur im Dark-Mode verfügbar/i)).not.toBeInTheDocument();
-    });
-  });
-
-  it('shows minimalHeaderStyle options when dark mode is enabled', async () => {
-    global.fetch = vi.fn();
-    setupAdminFetchMocks(global.fetch, {
-      sidebar: {
-        showWiFi: true,
-        showUpcomingMeetings: false,
-        showMeetingTitles: false,
-        minimalHeaderStyle: 'filled',
-        singleRoomDarkMode: true
-      }
-    });
-
-    render(<Admin />);
-
-    await waitFor(() => {
-      expect(screen.getByLabelText(/Gefüllt/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Transparent/)).toBeInTheDocument();
-    });
-  });
-
-  it('hides minimalHeaderStyle options when dark mode is disabled', async () => {
-    global.fetch = vi.fn();
-    setupAdminFetchMocks(global.fetch, {
-      sidebar: {
-        showWiFi: true,
-        showUpcomingMeetings: false,
-        showMeetingTitles: false,
-        minimalHeaderStyle: 'filled',
-        singleRoomDarkMode: false
       }
     });
 
@@ -889,6 +738,7 @@ describe('Dark Mode and minimalHeaderStyle State Persistence', () => {
     await waitFor(() => {
       expect(screen.queryByLabelText(/Gefüllt/)).not.toBeInTheDocument();
       expect(screen.queryByLabelText(/Transparent/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Diese Optionen sind nur im Dark-Mode verfügbar/i)).not.toBeInTheDocument();
     });
   });
 });

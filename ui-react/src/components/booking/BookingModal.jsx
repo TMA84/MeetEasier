@@ -29,7 +29,7 @@ class BookingModal extends Component {
 
   componentDidMount() {
     // Fetch and apply booking button color when modal opens
-    fetchAndApplyBookingButtonColor(this.props.room);
+    fetchAndApplyBookingButtonColor(this.props.room, this.props.theme === 'dark');
   }
 
   // Get default meeting subject based on browser language

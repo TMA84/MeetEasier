@@ -264,8 +264,14 @@ class Sidebar extends Component {
             </div>
           )}
 
-          {/* Action Button - Check-in, Extend, or Book */}
-          {room && this.props.checkInRequired && !this.props.checkInCompleted && !!this.props.onCheckIn ? (
+          {/* Action Button - Check-in, Extend, or Book (hidden when room not found) */}
+          {room && room.NotFound ? (
+            <div className="sidebar-booking sidebar-booking--hidden">
+              <button className="sidebar-book-btn" disabled style={{ visibility: 'hidden' }}>
+                Placeholder
+              </button>
+            </div>
+          ) : room && this.props.checkInRequired && !this.props.checkInCompleted && !!this.props.onCheckIn ? (
             <div className="sidebar-booking">
               <button
                 className="sidebar-book-btn"

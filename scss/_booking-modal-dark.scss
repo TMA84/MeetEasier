@@ -1,0 +1,153 @@
+/* Booking Modal – Dark Mode Overrides (.minimal-display) */
+
+.booking-modal-overlay.minimal-display {
+  background-color: rgba(0, 0, 0, 0.85);
+}
+
+.minimal-display .booking-modal,
+.booking-modal.minimal-display {
+  background: #1e1e1e;
+  color: #e0e0e0;
+}
+
+.minimal-display .booking-modal-header,
+.booking-modal.minimal-display .booking-modal-header {
+  border-bottom-color: #333;
+}
+
+.minimal-display .booking-modal-close,
+.booking-modal.minimal-display .booking-modal-close {
+  color: #888;
+
+  &:hover {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+  }
+}
+
+.minimal-display .booking-modal-body .error-message {
+  color: white;
+}
+
+.minimal-display .booking-error,
+.booking-modal.minimal-display .booking-error {
+  background-color: #3a1a1a;
+  border-color: #5a2a2a;
+  color: #ff6b6b;
+}
+
+.minimal-display .custom-duration-section {
+  label {
+    color: #e0e0e0;
+
+    .duration-value {
+      color: #7d8da1;
+    }
+  }
+
+  .duration-slider {
+    &::-webkit-slider-runnable-track { background: #374151; }
+    &::-moz-range-track { background: #374151; }
+
+    &::-webkit-slider-thumb {
+      background: var(--booking-button-color, #7d8da1);
+      box-shadow: 0 2px 6px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
+
+      &:hover {
+        box-shadow: 0 3px 10px color-mix(in srgb, var(--booking-button-color, #7d8da1) 60%, transparent);
+      }
+    }
+
+    &::-moz-range-thumb {
+      background: var(--booking-button-color, #7d8da1);
+      box-shadow: 0 2px 6px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
+
+      &:hover {
+        box-shadow: 0 3px 10px color-mix(in srgb, var(--booking-button-color, #7d8da1) 60%, transparent);
+      }
+    }
+  }
+
+  .slider-labels { color: #888; }
+}
+
+.minimal-display .quick-book-btn {
+  background-color: #1e1e1e;
+  border-color: var(--booking-button-color, #7d8da1);
+  color: #cbd5e1;
+
+  &:hover {
+    background-color: var(--booking-button-color, #7d8da1);
+    color: var(--booking-button-text, white);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
+  }
+
+  &.active {
+    background-color: var(--booking-button-color, #7d8da1);
+    border-color: #7d8da1;
+    color: var(--booking-button-text, white);
+  }
+}
+
+.minimal-display .custom-time-section {
+  background-color: #2a2a2a;
+}
+
+.minimal-display .form-group {
+  label { color: #b0b0b0; }
+
+  input[type="text"],
+  input[type="datetime-local"],
+  textarea,
+  select.touch-select {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #e0e0e0;
+    color-scheme: dark;
+
+    &:focus {
+      border-color: #4a9eff;
+      box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+    }
+  }
+
+  select.touch-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23e0e0e0' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  }
+}
+
+.minimal-display .duration-btn {
+  background-color: #1a1a1a;
+  border-color: #444;
+  color: #b0b0b0;
+
+  &:hover {
+    border-color: #4a9eff;
+    color: #4a9eff;
+  }
+
+  &.active {
+    background-color: #4a9eff;
+    border-color: #4a9eff;
+    color: #1a1a1a;
+  }
+}
+
+.minimal-display .end-time-display {
+  background-color: #2a2a2a;
+  border-color: #444;
+  color: #4a9eff;
+}
+
+.minimal-display .booking-modal-actions {
+  border-top-color: #333;
+}
+
+.minimal-display .btn-cancel {
+  background-color: #374151;
+  color: #9ca3af;
+
+  &:hover:not(:disabled) {
+    background-color: #4b5563;
+  }
+}

@@ -120,7 +120,9 @@ export function normalizeSidebarConfig(data) {
   return {
     showMeetingTitles: data.showMeetingTitles !== undefined ? data.showMeetingTitles : false,
     singleRoomDarkMode: data.singleRoomDarkMode !== undefined ? data.singleRoomDarkMode : false,
-    minimalHeaderStyle: data.minimalHeaderStyle === 'transparent' ? 'transparent' : 'filled'
+    minimalHeaderStyle: data.minimalHeaderStyle === 'transparent' ? 'transparent' : 'filled',
+    autoReloadEnabled: data.autoReloadEnabled !== undefined ? !!data.autoReloadEnabled : false,
+    autoReloadTime: /^\d{2}:\d{2}$/.test(data.autoReloadTime) ? data.autoReloadTime : '03:00'
   };
 }
 
@@ -153,12 +155,50 @@ export function normalizeColorsConfig(data) {
   };
 }
 
+/** @type {string} Default booking button color for light mode */
+const DEFAULT_BUTTON_COLOR = '#334155';
+/** @type {string} Lighter default for dark mode backgrounds */
+const DEFAULT_BUTTON_COLOR_DARK = '#7d8da1';
+
+/**
+ * Resolves the effective booking button color, applying the dark mode
+ * default when the configured color is the light-mode default.
+ * @param {string} color - The configured button color
+ * @param {boolean} [isDarkMode=false] - Whether dark mode is active
+ * @returns {string} The effective button color
+ */
+export function resolveBookingButtonColor(color, isDarkMode = false) {
+  const effective = color || DEFAULT_BUTTON_COLOR;
+  return (isDarkMode && effective === DEFAULT_BUTTON_COLOR) ? DEFAULT_BUTTON_COLOR_DARK : effective;
+}
+
+/**
+ * Returns a contrasting text color (dark or white) for a given hex background.
+ * Uses relative luminance (WCAG formula) to decide.
+ * @param {string} hex - Hex color string (e.g. "#94a3b8")
+ * @returns {string} "#ffffff" or "#1e293b"
+ */
+export function contrastTextColor(hex) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16) / 255;
+  const g = parseInt(c.substring(2, 4), 16) / 255;
+  const b = parseInt(c.substring(4, 6), 16) / 255;
+  const toLinear = (v) => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  const luminance = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+  return luminance > 0.4 ? '#1e293b' : '#ffffff';
+}
+
 /**
  * Apply colors config as CSS custom properties.
+ * In dark mode, the default booking button color is replaced with a lighter
+ * variant so the button remains visible against dark backgrounds.
  * @param {Object} colors - Normalized colors config
+ * @param {boolean} [isDarkMode=false] - Whether dark mode is active
  */
-export function applyColorsToCSS(colors) {
-  document.documentElement.style.setProperty('--booking-button-color', colors.bookingButtonColor);
+export function applyColorsToCSS(colors, isDarkMode = false) {
+  const btnColor = resolveBookingButtonColor(colors.bookingButtonColor, isDarkMode);
+  document.documentElement.style.setProperty('--booking-button-color', btnColor);
+  document.documentElement.style.setProperty('--booking-button-text', contrastTextColor(btnColor));
   document.documentElement.style.setProperty('--status-available-color', colors.statusAvailableColor);
   document.documentElement.style.setProperty('--status-busy-color', colors.statusBusyColor);
   document.documentElement.style.setProperty('--status-upcoming-color', colors.statusUpcomingColor);
