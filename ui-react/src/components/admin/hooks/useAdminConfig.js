@@ -31,9 +31,11 @@ const INITIAL_CONFIG = {
   currentShowWiFi: true, currentShowUpcomingMeetings: false, currentShowMeetingTitles: false,
   currentUpcomingMeetingsCount: 3, currentMinimalHeaderStyle: 'filled',
   currentSingleRoomDarkMode: false, currentFlightboardDarkMode: true, informationLastUpdated: '',
+  currentAutoReloadEnabled: false, currentAutoReloadTime: '03:00',
   showWiFi: true, showUpcomingMeetings: false, showMeetingTitles: false,
   upcomingMeetingsCount: 3, minimalHeaderStyle: 'filled',
   singleRoomDarkMode: false, flightboardDarkMode: true,
+  autoReloadEnabled: false, autoReloadTime: '03:00',
   sidebarTargetClientId: '', connectedClients: [], connectedClientsLoading: false,
   informationMessage: null, informationMessageType: null,
   // Config locks
@@ -278,6 +280,8 @@ export function useAdminConfig(getRequestHeaders, handleUnauthorizedAccess) {
           currentMinimalHeaderStyle: d.minimalHeaderStyle || 'filled',
           currentSingleRoomDarkMode: globalSingleRoomDarkMode,
           currentFlightboardDarkMode: globalFlightboardDarkMode,
+          currentAutoReloadEnabled: !!d.autoReloadEnabled,
+          currentAutoReloadTime: d.autoReloadTime || '03:00',
           informationLastUpdated: fmtDate(d.lastUpdated),
           showWiFi: d.showWiFi !== undefined ? d.showWiFi : true,
           showUpcomingMeetings: d.showUpcomingMeetings !== undefined ? d.showUpcomingMeetings : false,
@@ -285,7 +289,9 @@ export function useAdminConfig(getRequestHeaders, handleUnauthorizedAccess) {
           upcomingMeetingsCount: pInt(d.upcomingMeetingsCount, 1, 3),
           minimalHeaderStyle: d.minimalHeaderStyle || 'filled',
           singleRoomDarkMode: prev.sidebarTargetClientId ? prev.singleRoomDarkMode : globalSingleRoomDarkMode,
-          flightboardDarkMode: globalFlightboardDarkMode
+          flightboardDarkMode: globalFlightboardDarkMode,
+          autoReloadEnabled: !!d.autoReloadEnabled,
+          autoReloadTime: d.autoReloadTime || '03:00'
         };
         const targetClientId = String(prev.sidebarTargetClientId || '').trim();
         if (targetClientId) {

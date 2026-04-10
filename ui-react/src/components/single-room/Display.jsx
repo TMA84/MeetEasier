@@ -23,8 +23,9 @@ import { getDisplayClientId } from '../../utils/display-client-id.js';
 import { initPowerManagement } from '../../utils/power-management.js';
 import { getDeviceTypeString } from '../../utils/device-detection.js';
 import { fetchMaintenanceStatus as fetchMaintenanceStatusUtil, setupHeartbeat, createMaintenanceHandler } from '../shared/display-utils.js';
+import { applyAutoReload, stopAutoReload } from '../../utils/auto-reload.js';
 
-import { getInitialState, processRoomDetails, normalizeSidebarConfig, normalizeBookingConfig, normalizeColorsConfig, applyColorsToCSS, normalizeCheckInStatus, getEmptyCheckInStatus, isExtendMeetingAllowed, isExtendBlockedByOverbooking } from './display-logic.js';
+import { getInitialState, processRoomDetails, normalizeSidebarConfig, normalizeBookingConfig, normalizeColorsConfig, applyColorsToCSS, resolveBookingButtonColor, contrastTextColor, normalizeCheckInStatus, getEmptyCheckInStatus, isExtendMeetingAllowed, isExtendBlockedByOverbooking } from './display-logic.js';
 import { fetchRoomData, fetchSidebarConfig as fetchSidebarConfigAPI, fetchBookingConfig as fetchBookingConfigAPI, fetchColorsConfig as fetchColorsConfigAPI, fetchCheckInStatus as fetchCheckInStatusAPI, performCheckIn, performExtendMeeting } from './display-service.js';
 
 /**
@@ -105,7 +106,7 @@ class Display extends Component {
     });
     this.fetchSidebarConfig();
     this.fetchBookingConfig();
-    this.fetchColorsConfig();
+    // Colors are fetched after sidebar config to ensure dark mode state is known
     this.setupSocket();
     this.heartbeatInterval = setupHeartbeat(this.socket);
   }
@@ -113,6 +114,7 @@ class Display extends Component {
   componentWillUnmount() {
     if (this.socket) this.socket.disconnect();
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    stopAutoReload();
   }
 
   setupSocket = () => {
@@ -142,7 +144,13 @@ class Display extends Component {
 
     this.socket.on('sidebarConfigUpdated', (config) => {
       console.log('Sidebar config updated via Socket.IO:', config);
-      this.setState({ sidebarConfig: normalizeSidebarConfig(config) });
+      const normalized = normalizeSidebarConfig(config);
+      this.setState({ sidebarConfig: normalized }, () => {
+        applyAutoReload(normalized);
+        // Re-apply colors with updated dark mode state
+        const isDark = !!normalized.singleRoomDarkMode || (typeof window !== 'undefined' && window.location.pathname.includes('/room-minimal/'));
+        applyColorsToCSS(this.state.colorsConfig, isDark);
+      });
     });
 
     this.socket.on('maintenanceConfigUpdated', createMaintenanceHandler(this));
@@ -176,14 +184,18 @@ class Display extends Component {
       console.log('Booking config updated via Socket.IO:', config);
       const normalized = normalizeBookingConfig(config);
       this.setState({ bookingConfig: normalized });
-      document.documentElement.style.setProperty('--booking-button-color', normalized.buttonColor);
+      const isDark = !!this.state.sidebarConfig.singleRoomDarkMode || (typeof window !== 'undefined' && window.location.pathname.includes('/room-minimal/'));
+      const btnColor = resolveBookingButtonColor(normalized.buttonColor, isDark);
+      document.documentElement.style.setProperty('--booking-button-color', btnColor);
+      document.documentElement.style.setProperty('--booking-button-text', contrastTextColor(btnColor));
     });
 
     this.socket.on('colorsConfigUpdated', (config) => {
       console.log('Colors config updated via Socket.IO:', config);
       const normalized = normalizeColorsConfig(config);
       this.setState({ colorsConfig: normalized });
-      applyColorsToCSS(normalized);
+      const isDark = !!this.state.sidebarConfig.singleRoomDarkMode || (typeof window !== 'undefined' && window.location.pathname.includes('/room-minimal/'));
+      applyColorsToCSS(normalized, isDark);
     });
 
     this.socket.on('updatedRoom', (room) => {
@@ -204,7 +216,14 @@ class Display extends Component {
 
   fetchSidebarConfig = () => {
     fetchSidebarConfigAPI(this.displayClientId)
-      .then(data => { this.setState({ sidebarConfig: normalizeSidebarConfig(data) }); })
+      .then(data => {
+        const config = normalizeSidebarConfig(data);
+        this.setState({ sidebarConfig: config }, () => {
+          applyAutoReload(config);
+          // Fetch colors after sidebar config so dark mode state is available
+          this.fetchColorsConfig();
+        });
+      })
       .catch(err => { console.error('Error fetching sidebar config:', err); });
   }
 
@@ -217,7 +236,10 @@ class Display extends Component {
       .then(data => {
         const normalized = normalizeBookingConfig(data);
         this.setState({ bookingConfig: normalized });
-        document.documentElement.style.setProperty('--booking-button-color', normalized.buttonColor);
+        const isDark = !!this.state.sidebarConfig.singleRoomDarkMode || (typeof window !== 'undefined' && window.location.pathname.includes('/room-minimal/'));
+        const btnColor = resolveBookingButtonColor(normalized.buttonColor, isDark);
+        document.documentElement.style.setProperty('--booking-button-color', btnColor);
+        document.documentElement.style.setProperty('--booking-button-text', contrastTextColor(btnColor));
       })
       .catch(err => { console.error('Error fetching booking config:', err); });
   }
@@ -227,7 +249,8 @@ class Display extends Component {
       .then(data => {
         const normalized = normalizeColorsConfig(data);
         this.setState({ colorsConfig: normalized });
-        applyColorsToCSS(normalized);
+        const isDark = !!this.state.sidebarConfig.singleRoomDarkMode || (typeof window !== 'undefined' && window.location.pathname.includes('/room-minimal/'));
+        applyColorsToCSS(normalized, isDark);
       })
       .catch(err => { console.error('Error fetching colors config:', err); });
   }
@@ -341,8 +364,6 @@ class Display extends Component {
     const extendBlockedByOverbooking = canExtendMeeting && this.isExtendBlockedByOverbooking();
     const displayTranslations = getSingleRoomDisplayTranslations();
     
-    console.log('Render - showErrorModal:', showErrorModal, 'errorMessage:', errorMessage);
-    
     const bookButtonText = displayTranslations.bookButtonText;
     const extendButtonText = displayTranslations.extendButtonText;
     const checkInTexts = getCheckInTranslations();
@@ -407,6 +428,7 @@ class Display extends Component {
         {showBookingModal && bookingConfig.enableBooking && (
           <BookingModal
             room={room}
+            theme={isDarkModeActive ? 'dark' : 'light'}
             onClose={() => this.setState({ showBookingModal: false })}
             onSuccess={() => { this.getRoomsData(); }}
           />
@@ -415,6 +437,7 @@ class Display extends Component {
         {showExtendModal && canExtendMeeting && (
           <ExtendMeetingModal
             room={room}
+            theme={isDarkModeActive ? 'dark' : 'light'}
             onClose={() => this.setState({ showExtendModal: false })}
             onSuccess={() => { this.getRoomsData(); }}
           />
@@ -422,11 +445,11 @@ class Display extends Component {
         
         {showErrorModal && (
           <div 
-            className="booking-modal-overlay" 
+            className={`booking-modal-overlay ${isDarkModeActive ? 'minimal-display' : ''}`}
             onClick={() => this.setState({ showErrorModal: false })}
           >
             <div 
-              className="booking-modal" 
+              className={`booking-modal ${isDarkModeActive ? 'minimal-display' : ''}`}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="booking-modal-header">

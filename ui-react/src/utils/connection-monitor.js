@@ -14,21 +14,26 @@ class ConnectionMonitor {
     this.checkTimer = null;
     this.listeners = [];
     this.lastOnlineTime = Date.now();
+
+    // Bind event handlers once so we can remove them later (prevents memory leaks)
+    this._boundHandleOnline = () => this.handleOnline();
+    this._boundHandleOffline = () => this.handleOffline();
+    this._boundHandleVisibility = () => {
+      if (!document.hidden && !this.isOnline) {
+        this.checkConnection();
+      }
+    };
     
     this.init();
   }
 
   init() {
     // Listen to browser online/offline events
-    window.addEventListener('online', () => this.handleOnline());
-    window.addEventListener('offline', () => this.handleOffline());
+    window.addEventListener('online', this._boundHandleOnline);
+    window.addEventListener('offline', this._boundHandleOffline);
 
     // Listen to visibility change (tab becomes active)
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && !this.isOnline) {
-        this.checkConnection();
-      }
-    });
+    document.addEventListener('visibilitychange', this._boundHandleVisibility);
 
     // Start periodic connection checks
     this.startChecking();
@@ -144,8 +149,9 @@ class ConnectionMonitor {
   destroy() {
     this.stopChecking();
     this.listeners = [];
-    window.removeEventListener('online', this.handleOnline);
-    window.removeEventListener('offline', this.handleOffline);
+    window.removeEventListener('online', this._boundHandleOnline);
+    window.removeEventListener('offline', this._boundHandleOffline);
+    document.removeEventListener('visibilitychange', this._boundHandleVisibility);
   }
 }
 

@@ -239,6 +239,7 @@ SIDEBAR_SHOW_TITLES=false
 **Display logic:**
 - `SIDEBAR_SHOW_WIFI` and `SIDEBAR_SHOW_UPCOMING` are mutually exclusive (radio buttons)
 - `SIDEBAR_SHOW_TITLES` is independent (checkbox)
+- Automatic page reload can be enabled via admin panel to refresh displays daily at a configured time (default 03:00), helping prevent memory issues during continuous kiosk operation
 
 **Privacy considerations:**
 - Set `SIDEBAR_SHOW_TITLES=false` to hide meeting subjects
@@ -714,6 +715,8 @@ data/
   "showWiFi": true,
   "showUpcomingMeetings": false,
   "showMeetingTitles": false,
+  "autoReloadEnabled": false,
+  "autoReloadTime": "03:00",
   "lastUpdated": "2026-02-08T14:30:00.000Z"
 }
 ```
@@ -832,7 +835,7 @@ socket.on('wifiConfigUpdated', (config) => {
 - Returns: Uploaded file URL and updated configuration
 
 **POST /api/sidebar**
-- Body: `{ "showWiFi": boolean, "showUpcomingMeetings": boolean, "showMeetingTitles": boolean }`
+- Body: `{ "showWiFi": boolean, "showUpcomingMeetings": boolean, "showMeetingTitles": boolean, "autoReloadEnabled"?: boolean, "autoReloadTime"?: "string" }`
 - Returns: Updated configuration
 
 **POST /api/booking-config**
@@ -1502,7 +1505,9 @@ curl -X POST http://localhost:8080/api/wifi \
   "showWiFi": true,
   "showUpcomingMeetings": true,
   "showMeetingTitles": false,
-  "minimalHeaderStyle": false
+  "minimalHeaderStyle": false,
+  "autoReloadEnabled": false,
+  "autoReloadTime": "03:00"
 }
 ```
 
@@ -1523,7 +1528,9 @@ curl http://localhost:8080/api/sidebar
   "showWiFi": true,
   "showUpcomingMeetings": true,
   "showMeetingTitles": false,
-  "minimalHeaderStyle": false
+  "minimalHeaderStyle": false,
+  "autoReloadEnabled": true,
+  "autoReloadTime": "03:00"
 }
 ```
 
@@ -1535,7 +1542,9 @@ curl http://localhost:8080/api/sidebar
     "showWiFi": true,
     "showUpcomingMeetings": true,
     "showMeetingTitles": false,
-    "minimalHeaderStyle": false
+    "minimalHeaderStyle": false,
+    "autoReloadEnabled": true,
+    "autoReloadTime": "03:00"
   },
   "message": "Sidebar configuration updated"
 }

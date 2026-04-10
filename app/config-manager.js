@@ -1967,6 +1967,8 @@ function saveSidebarConfig(sidebarConfig) {
     minimalHeaderStyle: mergeConfigValue(sidebarConfig.minimalHeaderStyle, existingConfig.minimalHeaderStyle, 'filled'),
     singleRoomDarkMode: !!mergeConfigValue(sidebarConfig.singleRoomDarkMode, existingConfig.singleRoomDarkMode, false),
     flightboardDarkMode: !!mergeConfigValue(sidebarConfig.flightboardDarkMode, existingConfig.flightboardDarkMode, true),
+    autoReloadEnabled: !!mergeConfigValue(sidebarConfig.autoReloadEnabled, existingConfig.autoReloadEnabled, false),
+    autoReloadTime: mergeConfigValue(sidebarConfig.autoReloadTime, existingConfig.autoReloadTime, '03:00'),
     clientOverrides: sidebarConfig.clientOverrides !== undefined
       ? normalizeSidebarClientOverrides(sidebarConfig.clientOverrides)
       : normalizeSidebarClientOverrides(existingConfig.clientOverrides),
@@ -2293,7 +2295,9 @@ async function updateSidebarConfig(showWiFi, showUpcomingMeetings, showMeetingTi
     minimalHeaderStyle, 
     upcomingMeetingsCount, 
     singleRoomDarkMode: options.singleRoomDarkMode,
-    flightboardDarkMode: options.flightboardDarkMode
+    flightboardDarkMode: options.flightboardDarkMode,
+    autoReloadEnabled: options.autoReloadEnabled,
+    autoReloadTime: options.autoReloadTime
   });
   
   // Emit Socket.IO event to notify all connected clients

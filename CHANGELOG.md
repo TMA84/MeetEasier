@@ -7,16 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Known Issues
-- `ui-react/src/config/display-translations.js` has a typo in the import path: `'./admin-translations.jss'` should be `'./admin-translations.js'` — will break module resolution at runtime
+## [1.8.1] - 2026-04-10
 
-### Removed
-- Removed all Exchange Web Services (EWS) support — deleted `app/ews/` directory, removed `ews-javascript-api` from `optionalDependencies`, removed EWS credentials config (`EWS_USERNAME`, `EWS_PASSWORD`, `EWS_URI`) from config and env templates. Microsoft Graph API is now the only supported backend.
+### Fixed
+- Memory leak: `ConnectionMonitor` event listeners (`online`, `offline`, `visibilitychange`) now use bound references and are properly removed in `destroy()`
+- Memory leak: `PowerManagement` overlay click handler is now stored as a named reference and removed via `removeEventListener` on display-on and `destroy()`
+- Memory leak: `Socket.js` component now removes the `updatedRooms` handler with `socket.off()` before closing the connection on unmount
+- Memory leak: Removed `console.log` from `Display.jsx` render method that produced thousands of log entries per day, consuming browser memory
+- Booking modal and extend modal now receive `theme` prop in dark mode — activates the existing `.minimal-display` dark styles that were previously never triggered
+- Error modal in single-room display now applies dark mode classes when dark mode is active
+- Auto-reload time input in admin panel now has correct styling (`input[type="time"]` added to admin SCSS rules)
+- Auto-reload config props (`autoReloadEnabled`, `autoReloadTime`) are now correctly passed from `Admin.jsx` to `DisplayTab`
+- Booking button color in dark mode: fixed race condition where `fetchColorsConfig` ran before sidebar config was loaded, always applying the light default; colors are now fetched after sidebar config
+- Booking button color consistency: all 4 code paths that set `--booking-button-color` (colors config, booking config, socket updates, modal mount) now use `resolveBookingButtonColor()` with dark mode awareness
+- Booking button text color: added automatic contrast detection via `contrastTextColor()` — sets `--booking-button-text` to dark or white based on button luminance, preventing unreadable white-on-light combinations
+- Hidden booking/extend/check-in buttons when room is not found (`room.NotFound`)
 
 ### Added
-- Shared `Clock` component (`ui-react/src/components/shared/Clock.js`) — reusable time/date display with per-second updates and browser locale detection, supports `sidebar` and `navbar` variants for single-room and flightboard layouts
+- Automatic page reload for long-running displays: configurable via admin panel with enable toggle and time picker, prevents memory accumulation in 24/7 kiosk browsers
+- `auto-reload.js` utility: schedules daily `window.location.reload()` at configured time, with start/stop/apply API
+- `resolveBookingButtonColor()` and `contrastTextColor()` in `display-logic.js`: centralized dark mode button color resolution and WCAG-based text contrast calculation
+- Console output suppression in production builds: `console.log`, `console.warn`, `console.debug`, `console.info` replaced with no-ops via `import.meta.env.PROD` check in `main.jsx`
+- Memory leak test suite (`memory-leak.test.js`): verifies event listener cleanup for `ConnectionMonitor`, `PowerManagement`, and `Socket.js`
+- Auto-reload test suite (`auto-reload.test.js`): verifies scheduling, cancellation, day-rollover, and config application
+- Admin translations (DE/EN) for auto-reload settings
+
+### Changed
+- Split `_booking-modal.scss` into `_booking-modal-light.scss` (base) and `_booking-modal-dark.scss` (dark overrides) for consistency with single-room SCSS structure
+- Dark mode default booking button color changed to `#7d8da1` (Slate-450) for better visibility on dark backgrounds
+- Dark mode booking modal uses `#7d8da1` fallback for all `--booking-button-color` references
+- Sidebar and modal buttons use `var(--booking-button-text, white)` for automatic text contrast
+- Removed dark mode style selection (Filled/Transparent radio buttons) from admin panel — only one dark mode style remains
+
+### Removed
+- `_booking-modal.scss` (replaced by light/dark split)
 - Code Quality Audit system: shared type definitions (`scripts/audit/types.js`) with JSDoc typedefs for `Finding`, `CategoryResult`, `AuditConfig`, and `ScoreResult` — foundation for the modular audit scoring system
 - Extracted `display-service.js` for single-room Display component — pure async data-fetching functions (`fetchRoomData`, `fetchSidebarConfig`, `fetchBookingConfig`) with no React dependency, improving testability and separation of concerns
+- Memory leak prevention test suite (`ui-react/src/utils/memory-leak.test.js`) — verifies proper cleanup of event listeners, timers, and DOM elements in `ConnectionMonitor`, `PowerManagement`, and `Socket` components to prevent leaks in long-running display clients
+- Auto-reload test suite (`ui-react/src/utils/auto-reload.test.js`) — covers scheduled reload timing, next-day scheduling when target time has passed, cancellation via `stopAutoReload`, schedule replacement, invalid time format rejection, and `applyAutoReload` enable/disable behavior
+
+### Changed
+- Socket.js memory leak test now uses `beforeEach`/`afterEach` with `vi.doMock`/`vi.doUnmock` for `socket.io-client` instead of per-test `vi.resetModules` and inline mock setup — improves isolation and avoids module-level side-effect issues
 
 ### Changed
 - Bumped `jsdom` dev dependency from 29.0.1 to 29.0.2
@@ -29,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Touchkio modal brightness, volume, and page zoom commands now prefer `deviceId` over `hostname` for MQTT command routing — fixes commands targeting the wrong device when multiple displays share the same hostname
 - Removed unused `getCsrfToken` import from `admin-api-extended.test.js` — cleans up test file imports
 - Demo data booking test now schedules meetings far in the future to avoid conflicts with existing demo appointments — fixes flaky test failures when demo room already has a meeting at the current time
+- `ConnectionMonitor` now stores bound event handler references and uses them for `addEventListener` — fixes memory leak where anonymous arrow functions prevented proper `removeEventListener` cleanup
 
 ## [1.7.52] - 2026-03-22
 

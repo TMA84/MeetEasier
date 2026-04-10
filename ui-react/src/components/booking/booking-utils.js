@@ -5,13 +5,16 @@
 *              and duration option generation.
 */
 
+import { resolveBookingButtonColor, contrastTextColor } from '../single-room/display-logic.js';
+
 /**
 * Fetch and apply booking button color CSS custom property.
 * Used by both BookingModal and ExtendMeetingModal on mount.
 *
 * @param {Object} room - Room object with Email and RoomlistAlias
+* @param {boolean} [isDarkMode=false] - Whether dark mode is active
 */
-export function fetchAndApplyBookingButtonColor(room) {
+export function fetchAndApplyBookingButtonColor(room, isDarkMode = false) {
   const roomEmail = room?.Email;
   const roomGroup = room?.RoomlistAlias;
   const endpoint = roomEmail
@@ -21,8 +24,9 @@ export function fetchAndApplyBookingButtonColor(room) {
   fetch(endpoint)
     .then(response => response.json())
     .then(data => {
-      const buttonColor = data.buttonColor || '#334155';
-      document.documentElement.style.setProperty('--booking-button-color', buttonColor);
+      const btnColor = resolveBookingButtonColor(data.buttonColor, isDarkMode);
+      document.documentElement.style.setProperty('--booking-button-color', btnColor);
+      document.documentElement.style.setProperty('--booking-button-text', contrastTextColor(btnColor));
     })
     .catch(err => {
       console.error('Error fetching booking config:', err);
