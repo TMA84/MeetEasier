@@ -119,7 +119,13 @@ class Display extends Component {
 
   setupSocket = () => {
     this.socket = io({
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],  // fallback to polling if websocket drops
+      upgrade: true,                          // upgrade polling to websocket when possible
+      reconnection: true,
+      reconnectionAttempts: Infinity,         // never stop trying on kiosk displays
+      reconnectionDelay: 1000,               // start with 1s
+      reconnectionDelayMax: 30000,           // cap at 30s
+      timeout: 45000,                        // connection timeout
       query: {
         displayClientId: this.displayClientId,
         displayType: getDeviceTypeString('single-room'),

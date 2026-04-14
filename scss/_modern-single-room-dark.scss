@@ -1,837 +1,11 @@
+// ==========================================================================
+// Modern Single-Room – Dark Mode Overrides
+// Applied via .single-room-layout--dark on the layout wrapper
+// ==========================================================================
+
 @use 'modern-variables' as *;
 
-// Define CSS custom properties with fallbacks for different status states
-:root {
-  --available-color: #22c55e;
-  --busy-color: #ef4444;
-  --upcoming-color: #f59e0b;
-  --not-found-color: #6b7280;
-}
-
-.room-minimal {
-  font-family: 'Titillium Web', sans-serif;
-  background: #1a1d29;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  position: relative;
-  overflow: hidden;
-  transition: background 0.8s ease-in-out;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    right: -50%;
-    bottom: -50%;
-    opacity: 0.3;
-    animation: rotate 20s linear infinite;
-    z-index: 0;
-    transition: opacity 0.8s ease-in-out;
-  }
-
-  &.room-minimal--available::before {
-    background: radial-gradient(circle, var(--available-color, rgba(34, 197, 94, 0.4)) 0%, transparent 70%);
-  }
-
-  &.room-minimal--busy::before {
-    background: radial-gradient(circle, var(--busy-color, rgba(239, 68, 68, 0.4)) 0%, transparent 70%);
-  }
-
-  &.room-minimal--upcoming::before {
-    background: radial-gradient(circle, var(--upcoming-color, rgba(245, 158, 11, 0.4)) 0%, transparent 70%);
-  }
-
-  &.room-minimal--not-found::before {
-    background: transparent;
-    opacity: 0;
-  }
-}
-
-.minimal-glow-container {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-wrap: nowrap;
-  z-index: 1;
-  
-  .room-minimal--available & {
-    box-shadow: inset 0 0 100px rgba(34, 197, 94, 0.3);
-  }
-
-  .room-minimal--busy & {
-    box-shadow: inset 0 0 100px rgba(239, 68, 68, 0.3);
-  }
-
-  .room-minimal--upcoming & {
-    box-shadow: inset 0 0 100px rgba(245, 158, 11, 0.3);
-  }
-
-  .room-minimal--not-found & {
-    box-shadow: none;
-  }
-}
-
-.minimal-main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: clamp(2rem, 4vw, 4rem);
-  background: linear-gradient(135deg, rgba(26, 29, 41, 0.95) 0%, rgba(26, 29, 41, 0.85) 100%);
-}
-
-.minimal-room-header {
-  flex-shrink: 0;
-  padding: clamp(1rem, 2vw, 2rem);
-  border-radius: 1rem;
-  border: 1px solid;
-  transition: all 0.3s ease;
-  margin-bottom: clamp(1rem, 2vh, 2rem);
-  text-align: center;
-  
-  // Filled style (default)
-  &.minimal-room-header--filled {
-    .room-minimal--available & {
-      background: rgba(34, 197, 94, 0.6);
-      border-color: rgba(34, 197, 94, 0.1);
-      box-shadow: 
-        0 0 40px rgba(34, 197, 94, 0.5),
-        0 0 80px rgba(34, 197, 94, 0.3),
-        0 0 120px rgba(34, 197, 94, 0.2),
-        inset 0 0 10px rgba(34, 197, 94, 0.2);
-    }
-
-    .room-minimal--busy & {
-      background: rgba(239, 68, 68, 0.6);
-      border-color: rgba(239, 68, 68, 0.1);
-      box-shadow: 
-        0 0 40px rgba(239, 68, 68, 0.5),
-        0 0 80px rgba(239, 68, 68, 0.3),
-        0 0 120px rgba(239, 68, 68, 0.2),
-        inset 0 0 10px rgba(239, 68, 68, 0.2);
-    }
-
-    .room-minimal--upcoming & {
-      background: rgba(245, 158, 11, 0.6);
-      border-color: rgba(245, 158, 11, 0.1);
-      box-shadow: 
-        0 0 40px rgba(245, 158, 11, 0.5),
-        0 0 80px rgba(245, 158, 11, 0.3),
-        0 0 120px rgba(245, 158, 11, 0.2),
-        inset 0 0 10px rgba(245, 158, 11, 0.2);
-    }
-
-    .room-minimal--not-found & {
-      background: transparent;
-      border-color: rgba(107, 114, 128, 0.35);
-      box-shadow: none;
-    }
-  }
-  
-  // Transparent style
-  &.minimal-room-header--transparent {
-    .room-minimal--available & {
-      background: transparent;
-      border: none;
-      border-color: transparent;
-      box-shadow: none;
-      backdrop-filter: none;
-    }
-
-    .room-minimal--busy & {
-      background: transparent;
-      border: none;
-      border-color: transparent;
-      box-shadow: none;
-      backdrop-filter: none;
-    }
-
-    .room-minimal--upcoming & {
-      background: transparent;
-      border: none;
-      border-color: transparent;
-      box-shadow: none;
-      backdrop-filter: none;
-    }
-
-    .room-minimal--not-found & {
-      background: transparent;
-      border: none;
-      border-color: transparent;
-      box-shadow: none;
-      backdrop-filter: none;
-    }
-  }
-}
-
-.minimal-room-name {
-  font-size: clamp(2rem, 6vw, 4rem);
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: clamp(0.5rem, 1vh, 1rem);
-  line-height: 1.1;
-}
-
-.minimal-room-status {
-  font-size: clamp(1.5rem, 4vw, 3rem);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  transition: color 0.3s ease;
-  
-  // Filled style - always white text
-  .minimal-room-header--filled & {
-    color: #ffffff;
-  }
-  
-  // Transparent style - colored text matching room state
-  .minimal-room-header--transparent & {
-    .room-minimal--available & {
-      color: #22c55e;
-    }
-
-    .room-minimal--busy & {
-      color: #ef4444;
-    }
-
-    .room-minimal--upcoming & {
-      color: #f59e0b;
-    }
-
-    .room-minimal--not-found & {
-      color: #6b7280;
-    }
-  }
-}
-
-.minimal-meetings-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  flex: 1;
-}
-
-.minimal-meeting-card {
-  flex-shrink: 0;
-  background: rgba(45, 49, 66, 0.6);
-  border-radius: 1rem;
-  padding: clamp(0.75rem, 1.5vw, 1.25rem);
-  margin-bottom: clamp(0.5rem, 1vh, 1rem);
-  text-align: left;
-  
-  @media (max-width: 900px) {
-    padding: clamp(0.5rem, 1vw, 0.9rem);
-    margin-bottom: clamp(0.3rem, 0.6vh, 0.75rem);
-  }
-
-  &.minimal-meeting-card--next {
-    opacity: 0.8;
-    margin-bottom: 0;
-  }
-}
-
-.minimal-meeting-label {
-  font-size: clamp(0.75rem, 1.25vw, 0.875rem);
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: clamp(0.25rem, 0.5vh, 0.5rem);
-}
-
-.minimal-meeting-subject {
-  font-size: clamp(1rem, 1.75vw, 1.25rem);
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: clamp(0.25rem, 0.5vh, 0.5rem);
-  line-height: 1.2;
-}
-
-.minimal-meeting-organizer {
-  font-size: clamp(0.875rem, 1.5vw, 1rem);
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: clamp(0.25rem, 0.5vh, 0.5rem);
-  
-  &.minimal-meeting-organizer--primary {
-    font-size: clamp(1rem, 1.75vw, 1.25rem);
-    font-weight: 700;
-    color: #ffffff;
-  }
-}
-
-.minimal-meeting-time {
-  font-size: clamp(0.875rem, 1.5vw, 1.125rem);
-  font-weight: 600;
-  color: #ffffff;
-  font-variant-numeric: tabular-nums;
-  margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
-}
-
-.minimal-extend-buttons {
-  display: flex;
-  gap: clamp(0.5rem, 1vw, 0.75rem);
-  margin-top: clamp(0.5rem, 1vh, 0.75rem);
-}
-
-.minimal-extend-button {
-  flex: 1;
-  padding: clamp(0.5rem, 1vw, 0.75rem) clamp(0.75rem, 1.5vw, 1rem);
-  background: rgba(255, 255, 255, 0.15);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 0.5rem;
-  color: #ffffff;
-  font-size: clamp(0.75rem, 1.25vw, 0.875rem);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  
-  &:hover {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  }
-  
-  &:active {
-    transform: translateY(0);
-  }
-  
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
-  }
-}
-
-.minimal-sidebar {
-  width: clamp(240px, 25vw, 400px);
-  min-width: 240px;
-  flex-shrink: 0;
-  background: rgba(45, 49, 66, 0.95);
-  display: flex;
-  flex-direction: column;
-  padding: clamp(2.5rem, 5vh, 4rem) clamp(0.75rem, 1.5vw, 2rem);
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  min-height: 100vh;
-  
-  @media (max-width: 900px) {
-    width: clamp(200px, 22vw, 300px);
-    min-width: 200px;
-    padding: clamp(1.5rem, 3vh, 2.5rem) clamp(0.5rem, 1vw, 1.5rem);
-  }
-}
-
-.minimal-sidebar-header {
-  margin-bottom: 0;
-  padding-bottom: clamp(0.25rem, 0.5vh, 0.5rem);
-}
-
-.minimal-logo {
-  margin-bottom: clamp(0.75rem, 1.5vh, 1.5rem);
-  text-align: center;
-  
-  img {
-    max-height: clamp(80px, 10vh, 120px);
-    max-width: clamp(160px, 20vw, 240px);
-    width: auto;
-    height: auto;
-  }
-  
-  @media (max-width: 900px) {
-    margin-bottom: clamp(0.5rem, 1vh, 1rem);
-    
-    img {
-      max-height: clamp(60px, 8vh, 100px);
-      max-width: clamp(120px, 18vw, 200px);
-    }
-  }
-}
-
-.minimal-clock {
-  text-align: center;
-}
-
-.minimal-time {
-  font-size: clamp(2.25rem, 4.5vw, 3.5rem);
-  font-weight: 700;
-  color: #ffffff;
-  line-height: 1;
-  margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
-  font-variant-numeric: tabular-nums;
-  
-  @media (max-width: 900px) {
-    font-size: clamp(1.75rem, 3.5vw, 2.75rem);
-  }
-}
-
-.minimal-date {
-  font-size: clamp(0.875rem, 1.5vw, 1.25rem);
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: 500;
-  
-  @media (max-width: 900px) {
-    font-size: clamp(0.75rem, 1.25vw, 1rem);
-  }
-}
-
-.minimal-upcoming {
-  flex: 1;
-  margin-bottom: clamp(0.75rem, 1.5vh, 1.5rem);
-  overflow-y: auto;
-  
-  .minimal-upcoming-title {
-    font-size: clamp(0.85rem, 1.25vw, 1.25rem);
-    font-weight: 600;
-    color: #ffffff;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: clamp(0.25rem, 0.5vh, 0.75rem);
-  }
-  
-  .minimal-upcoming-list {
-    .minimal-upcoming-item {
-      padding: clamp(0.5rem, 1vw, 1rem);
-      margin-bottom: clamp(0.25rem, 0.5vh, 0.75rem);
-      background: rgba(26, 29, 41, 0.5);
-      border-radius: 0.5rem;
-      transition: all 0.3s ease;
-
-      @media (max-width: 900px) {
-        padding: clamp(0.35rem, 0.7vw, 0.65rem);
-      }
-
-      @media (max-width: 600px) {
-        padding: clamp(0.25rem, 0.5vw, 0.5rem);
-      }
-      
-      &:hover {
-        background: rgba(26, 29, 41, 0.7);
-        transform: translateX(4px);
-      }
-      
-      .minimal-upcoming-subject {
-        font-size: clamp(0.75rem, 1.1vw, 0.95rem);
-        font-weight: 600;
-        color: #ffffff;
-        margin-bottom: clamp(0.15rem, 0.3vh, 0.25rem);
-      }
-      
-      .minimal-upcoming-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: clamp(0.25rem, 0.5vw, 0.75rem);
-      }
-      
-      .minimal-upcoming-organizer {
-        font-size: clamp(0.65rem, 0.9vw, 0.8rem);
-        font-weight: 400;
-        color: rgba(255, 255, 255, 0.7);
-        flex: 1;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      
-      .minimal-upcoming-time {
-        font-size: clamp(0.65rem, 0.9vw, 0.8rem);
-        font-weight: 400;
-        color: rgba(255, 255, 255, 0.7);
-        white-space: nowrap;
-      }
-    }
-    
-    .minimal-upcoming-empty {
-      padding: clamp(0.75rem, 1.5vw, 1.5rem);
-      text-align: center;
-      color: rgba(255, 255, 255, 0.5);
-      font-size: clamp(0.7rem, 1vw, 0.95rem);
-      font-style: italic;
-    }
-  }
-  
-  @media (max-width: 900px) {
-    margin-bottom: clamp(0.5rem, 1vh, 1rem);
-    
-    .minimal-upcoming-title {
-      font-size: clamp(0.75rem, 1vw, 1rem);
-    }
-  }
-}
-
-.minimal-sidebar-spacer {
-  flex: 1;
-}
-
-// Bottom section wrapper - keeps WiFi and button together
-.minimal-sidebar-bottom {
-  flex-shrink: 0;
-}
-
-// Booking button section in sidebar
-.minimal-sidebar-booking {
-  flex-shrink: 0;
-  margin-top: clamp(1rem, 2vh, 1.5rem);
-  
-  .minimal-sidebar-book-btn {
-    width: 100%;
-    background: linear-gradient(135deg, var(--booking-button-color, #7d8da1) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 80%, black) 100%);
-    color: var(--booking-button-text, white);
-    border: none;
-    padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
-    font-size: clamp(0.85rem, 1.2vw, 1.25rem);
-    font-weight: $font-weight-bold;
-    white-space: nowrap;
-    border-radius: $radius-lg;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-
-    &:disabled {
-      background: linear-gradient(135deg, $neutral-500 0%, $neutral-600 100%);
-      box-shadow: none;
-      opacity: 0.7;
-      cursor: not-allowed;
-    }
-    
-    &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #7d8da1) 50%, transparent);
-      background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #7d8da1) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 60%, black) 100%);
-    }
-    
-    &:active:not(:disabled) {
-      transform: translateY(0);
-    }
-  }
-}
-
-// Extend meeting button section in sidebar
-.minimal-sidebar-extend {
-  flex-shrink: 0;
-  margin-top: clamp(1rem, 2vh, 1.5rem);
-  margin-bottom: clamp(0.5rem, 1vh, 1rem);
-  
-  .minimal-sidebar-extend-btn {
-    width: 100%;
-    background: linear-gradient(135deg, var(--booking-button-color, #7d8da1) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 70%, black) 100%);
-    color: var(--booking-button-text, white);
-    border: none;
-    padding: clamp(0.65rem, 1.2vh, 1.25rem) clamp(1rem, 2vw, 2rem);
-    font-size: clamp(0.85rem, 1.2vw, 1.25rem);
-    font-weight: $font-weight-bold;
-    border-radius: $radius-lg;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--booking-button-color, #7d8da1) 40%, transparent);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px color-mix(in srgb, var(--booking-button-color, #7d8da1) 50%, transparent);
-      background: linear-gradient(135deg, color-mix(in srgb, var(--booking-button-color, #7d8da1) 80%, black) 0%, color-mix(in srgb, var(--booking-button-color, #7d8da1) 60%, black) 100%);
-    }
-    
-    &:active {
-      transform: translateY(0);
-    }
-  }
-}
-
-.minimal-wifi {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: 1rem;
-  padding: clamp(1rem, 2vw, 2rem);
-  flex-shrink: 0;
-  
-  @media (max-width: 900px) {
-    padding: clamp(0.75rem, 1.5vw, 1.5rem);
-    border-radius: 0.75rem;
-  }
-}
-
-.minimal-wifi-title {
-  font-size: clamp(1.1rem, 1.75vw, 1.5rem);
-  font-weight: 600;
-  color: #ffffff;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: clamp(0.5rem, 1vh, 1rem);
-  
-  @media (max-width: 900px) {
-    font-size: clamp(0.95rem, 1.4vw, 1.25rem);
-    margin-bottom: clamp(0.3rem, 0.6vh, 0.75rem);
-  }
-}
-
-.minimal-qr {
-  margin-bottom: clamp(0.5rem, 1vh, 1rem);
-  
-  img {
-    width: clamp(110px, 15vw, 160px);
-    height: clamp(110px, 15vw, 160px);
-    border-radius: 0.5rem;
-    
-    &.minimal-qr-inverted {
-      filter: invert(1);
-      background: transparent;
-    }
-  }
-  
-  @media (max-width: 900px) {
-    margin-bottom: clamp(0.35rem, 0.7vh, 0.75rem);
-    
-    img {
-      width: clamp(90px, 12vw, 120px);
-      height: clamp(90px, 12vw, 120px);
-    }
-  }
-}
-
-.minimal-wifi-info {
-  text-align: center;
-  width: 100%;
-}
-
-.minimal-wifi-ssid {
-  font-size: clamp(1.15rem, 1.8vw, 1.75rem);
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: clamp(0.35rem, 0.75vh, 0.75rem);
-  word-break: break-all;
-  
-  @media (max-width: 900px) {
-    font-size: clamp(1rem, 1.5vw, 1.35rem);
-  }
-}
-
-.minimal-wifi-password {
-  font-size: clamp(1.05rem, 1.65vw, 1.5rem);
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
-  font-family: 'Courier New', monospace;
-  word-break: break-all;
-  
-  @media (max-width: 900px) {
-    font-size: clamp(0.9rem, 1.4vw, 1.2rem);
-  }
-}
-
-// Refined room-minimal proposal: calmer, cleaner, less visual noise
-.room-minimal {
-  background:
-    radial-gradient(1200px 600px at 12% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 60%),
-    radial-gradient(900px 500px at 88% 82%, rgba(255, 255, 255, 0.05) 0%, transparent 60%),
-    #121623;
-
-  &::before {
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    opacity: 0.5;
-    animation: none;
-    transition: opacity 0.35s ease;
-  }
-}
-
-.minimal-glow-container {
-  backdrop-filter: blur(2px);
-
-  .room-minimal--available & {
-    box-shadow: inset 0 0 140px rgba(34, 197, 94, 0.24);
-  }
-
-  .room-minimal--busy & {
-    box-shadow: inset 0 0 140px rgba(239, 68, 68, 0.24);
-  }
-
-  .room-minimal--upcoming & {
-    box-shadow: inset 0 0 140px rgba(245, 158, 11, 0.24);
-  }
-}
-
-.minimal-main-content {
-  background: linear-gradient(155deg, rgba(16, 20, 34, 0.9) 0%, rgba(20, 25, 39, 0.82) 100%);
-}
-
-.minimal-room-header {
-  margin-bottom: clamp($space-4, 3vh, $space-6);
-  text-align: center;
-  border-radius: 1.25rem;
-  backdrop-filter: blur(8px);
-  padding: clamp(1.15rem, 2.4vw, 2.25rem);
-
-  &.minimal-room-header--filled {
-    .room-minimal--available &,
-    .room-minimal--busy &,
-    .room-minimal--upcoming & {
-      box-shadow: 0 20px 46px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    }
-
-    .room-minimal--available & {
-      background: linear-gradient(135deg, rgba(34, 197, 94, 0.7) 0%, rgba(34, 197, 94, 0.52) 100%);
-      border-color: rgba(34, 197, 94, 0.62);
-      box-shadow:
-        0 20px 46px rgba(0, 0, 0, 0.42),
-        0 10px 30px rgba(34, 197, 94, 0.44),
-        inset 0 0 0 1px rgba(34, 197, 94, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    }
-
-    .room-minimal--busy & {
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.7) 0%, rgba(239, 68, 68, 0.52) 100%);
-      border-color: rgba(239, 68, 68, 0.62);
-      box-shadow:
-        0 20px 46px rgba(0, 0, 0, 0.42),
-        0 10px 30px rgba(239, 68, 68, 0.44),
-        inset 0 0 0 1px rgba(239, 68, 68, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    }
-
-    .room-minimal--upcoming & {
-      background: linear-gradient(135deg, rgba(245, 158, 11, 0.7) 0%, rgba(245, 158, 11, 0.52) 100%);
-      border-color: rgba(245, 158, 11, 0.62);
-      box-shadow:
-        0 20px 46px rgba(0, 0, 0, 0.42),
-        0 10px 30px rgba(245, 158, 11, 0.44),
-        inset 0 0 0 1px rgba(245, 158, 11, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    }
-
-    .room-minimal--not-found & {
-      background: rgba(107, 114, 128, 0.14);
-      border-color: rgba(255, 255, 255, 0.12);
-    }
-  }
-
-  &.minimal-room-header--transparent {
-    background: transparent;
-    border-color: transparent;
-    box-shadow: none;
-  }
-}
-
-.minimal-room-name {
-  font-size: clamp(2rem, 6vw, 4rem);
-  font-weight: $font-weight-light;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1;
-  margin-bottom: clamp($space-4, 3vh, $space-6);
-  letter-spacing: -0.02em;
-}
-
-.minimal-room-status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp($space-2, 2vw, $space-4);
-  font-size: clamp(3rem, 12vw, 10rem);
-  font-weight: $font-weight-bold;
-  color: $text-on-color;
-  line-height: 1;
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
-
-  &::before {
-    content: '';
-    width: clamp(1rem, 2.5vw, 2rem);
-    height: clamp(1rem, 2.5vw, 2rem);
-    border-radius: $radius-full;
-    background: $text-on-color;
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    flex-shrink: 0;
-  }
-
-  .room-minimal--not-found & {
-    color: var(--status-not-found-color, #6b7280);
-
-    &::before {
-      background: var(--status-not-found-color, #6b7280);
-    }
-  }
-
-  .minimal-room-header--transparent & {
-    .room-minimal--available & {
-      &::before {
-        background: var(--status-available-color, #22c55e);
-      }
-    }
-
-    .room-minimal--busy & {
-      &::before {
-        background: var(--status-busy-color, #ef4444);
-      }
-    }
-
-    .room-minimal--upcoming & {
-      &::before {
-        background: var(--status-upcoming-color, #f59e0b);
-      }
-    }
-
-    .room-minimal--not-found & {
-      &::before {
-        background: var(--status-not-found-color, #6b7280);
-      }
-    }
-  }
-}
-
-.minimal-meeting-card {
-  background: rgba(14, 19, 32, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1rem;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.minimal-sidebar {
-  background: linear-gradient(180deg, rgba(15, 19, 32, 0.96) 0%, rgba(10, 14, 25, 0.96) 100%);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.minimal-upcoming {
-  .minimal-upcoming-list {
-    .minimal-upcoming-item {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.08);
-        transform: translateX(2px);
-      }
-    }
-  }
-}
-
-.minimal-wifi {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-
-.minimal-sidebar-booking {
-  .minimal-sidebar-book-btn {
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    box-shadow: 0 12px 22px color-mix(in srgb, var(--booking-button-color, #7d8da1) 24%, transparent);
-  }
-}
-
+// Pulse animation for status indicator dot
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);
@@ -843,70 +17,9 @@
   }
 }
 
-@keyframes rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes glowAvailable {
-  0%, 100% {
-    box-shadow: 
-      0 0 20px rgba(34, 197, 94, 0.5),
-      0 0 40px rgba(34, 197, 94, 0.3),
-      0 0 80px rgba(34, 197, 94, 0.2),
-      inset 0 0 40px rgba(34, 197, 94, 0.2);
-  }
-  50% {
-    box-shadow: 
-      0 0 40px rgba(34, 197, 94, 0.7),
-      0 0 60px rgba(34, 197, 94, 0.5),
-      0 0 100px rgba(34, 197, 94, 0.3),
-      inset 0 0 60px rgba(34, 197, 94, 0.3);
-  }
-}
-
-@keyframes glowBusy {
-  0%, 100% {
-    box-shadow: 
-      0 0 20px rgba(239, 68, 68, 0.5),
-      0 0 40px rgba(239, 68, 68, 0.3),
-      0 0 80px rgba(239, 68, 68, 0.2),
-      inset 0 0 40px rgba(239, 68, 68, 0.2);
-  }
-  50% {
-    box-shadow: 
-      0 0 40px rgba(239, 68, 68, 0.7),
-      0 0 60px rgba(239, 68, 68, 0.5),
-      0 0 100px rgba(239, 68, 68, 0.3),
-      inset 0 0 60px rgba(239, 68, 68, 0.3);
-  }
-}
-
-@keyframes glowUpcoming {
-  0%, 100% {
-    box-shadow: 
-      0 0 20px rgba(245, 158, 11, 0.5),
-      0 0 40px rgba(245, 158, 11, 0.3),
-      0 0 80px rgba(245, 158, 11, 0.2),
-      inset 0 0 40px rgba(245, 158, 11, 0.2);
-  }
-  50% {
-    box-shadow: 
-      0 0 40px rgba(245, 158, 11, 0.7),
-      0 0 60px rgba(245, 158, 11, 0.5),
-      0 0 100px rgba(245, 158, 11, 0.3),
-      inset 0 0 60px rgba(245, 158, 11, 0.3);
-  }
-}
-
-// ==========================================================================
-// Modern single-room dark mode overrides
-// Matches the ESP32 touch display dark mode design
-// ==========================================================================
+// --------------------------------------------------------------------------
+// Main status area
+// --------------------------------------------------------------------------
 
 .single-room-layout--dark {
   .modern-room-status {
@@ -921,45 +34,53 @@
       z-index: 0;
     }
 
+    // Status background gradients — radial glow from top-left
     &--available {
       background: #121623;
-
       &::before {
-        background: radial-gradient(ellipse 150% 120% at 25% 35%, rgba(34, 197, 94, 0.8) 0%, rgba(34, 197, 94, 0.25) 45%, rgba(34, 197, 94, 0.05) 70%, transparent 90%);
+        background: radial-gradient(ellipse 150% 120% at 25% 35%,
+          rgba(34, 197, 94, 0.8) 0%, rgba(34, 197, 94, 0.25) 45%,
+          rgba(34, 197, 94, 0.05) 70%, transparent 90%);
       }
     }
 
     &--busy {
       background: #121623;
-
       &::before {
-        background: radial-gradient(ellipse 150% 120% at 25% 35%, rgba(239, 68, 68, 0.8) 0%, rgba(239, 68, 68, 0.25) 45%, rgba(239, 68, 68, 0.05) 70%, transparent 90%);
+        background: radial-gradient(ellipse 150% 120% at 25% 35%,
+          rgba(239, 68, 68, 0.8) 0%, rgba(239, 68, 68, 0.25) 45%,
+          rgba(239, 68, 68, 0.05) 70%, transparent 90%);
       }
     }
 
     &--upcoming {
       background: #121623;
-
       &::before {
-        background: radial-gradient(ellipse 150% 120% at 25% 35%, rgba(245, 158, 11, 0.8) 0%, rgba(245, 158, 11, 0.25) 45%, rgba(245, 158, 11, 0.05) 70%, transparent 90%);
+        background: radial-gradient(ellipse 150% 120% at 25% 35%,
+          rgba(245, 158, 11, 0.8) 0%, rgba(245, 158, 11, 0.25) 45%,
+          rgba(245, 158, 11, 0.05) 70%, transparent 90%);
       }
     }
 
     &--not-found {
       background: #121623;
-
       &::before {
         background: transparent;
         opacity: 0;
       }
     }
 
+    // Content layer above the gradient
     .status-content {
       backdrop-filter: none;
       background: transparent;
       position: relative;
       z-index: 1;
     }
+
+    // --------------------------------------------------------------------------
+    // Status header — transparent style only (filled removed in v1.8.1)
+    // --------------------------------------------------------------------------
 
     .status-header {
       margin-bottom: clamp($space-4, 3vh, $space-6);
@@ -989,23 +110,37 @@
       backdrop-filter: none;
     }
 
+    // --------------------------------------------------------------------------
+    // Room name & status text
+    // --------------------------------------------------------------------------
+
     .room-name {
       color: #ffffff;
       line-height: 1;
       margin-bottom: clamp($space-4, 3vh, $space-6);
       letter-spacing: -0.02em;
-      text-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 60px rgba(0, 0, 0, 0.15);
+      text-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.55),
+        0 4px 10px rgba(0, 0, 0, 0.3),
+        0 0 60px rgba(0, 0, 0, 0.15);
     }
 
     .room-status {
       margin: 0;
       letter-spacing: -0.02em;
       color: #ffffff;
-      text-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 60px rgba(0, 0, 0, 0.15);
+      text-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.55),
+        0 4px 10px rgba(0, 0, 0, 0.3),
+        0 0 60px rgba(0, 0, 0, 0.15);
 
       &::before {
         background: #ffffff;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.15), 0 0 12px rgba(255, 255, 255, 0.6);
+        box-shadow:
+          0 8px 24px rgba(0, 0, 0, 0.5),
+          0 2px 6px rgba(0, 0, 0, 0.3),
+          0 0 40px rgba(0, 0, 0, 0.15),
+          0 0 12px rgba(255, 255, 255, 0.6);
       }
 
       .modern-room-status--not-found & {
@@ -1018,6 +153,7 @@
       }
     }
 
+    // All status variants — white text with glowing dot
     &--available .status-header--filled .room-status,
     &--busy .status-header--filled .room-status,
     &--upcoming .status-header--filled .room-status,
@@ -1028,10 +164,15 @@
 
       &::before {
         background: #ffffff;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.15), 0 0 12px rgba(255, 255, 255, 0.6);
+        box-shadow:
+          0 8px 24px rgba(0, 0, 0, 0.5),
+          0 2px 6px rgba(0, 0, 0, 0.3),
+          0 0 40px rgba(0, 0, 0, 0.15),
+          0 0 12px rgba(255, 255, 255, 0.6);
       }
     }
 
+    // Not-found — muted color
     &--not-found .status-header--transparent .room-status,
     &--not-found .status-header--filled .room-status {
       color: var(--status-not-found-color, #6b7280);
@@ -1042,13 +183,23 @@
       }
     }
 
+    // --------------------------------------------------------------------------
+    // Meeting cards
+    // --------------------------------------------------------------------------
+
     .meeting-card {
       background: rgba(0, 0, 0, 0.3);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 1rem;
-      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      box-shadow:
+        0 14px 30px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
   }
+
+  // --------------------------------------------------------------------------
+  // Sidebar
+  // --------------------------------------------------------------------------
 
   .modern-room-sidebar {
     background: linear-gradient(180deg, rgba(15, 19, 32, 0.96) 0%, rgba(10, 14, 25, 0.96) 100%);
