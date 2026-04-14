@@ -177,7 +177,7 @@ const FlightboardRow = ({ room, filter = '' }) => {
   return (
     <div 
       className={`meeting-room__row row-padder ${roomlist}`} 
-      style={{ display: isVisible ? 'block' : 'none' }}
+      style={{ display: isVisible ? 'flex' : 'none' }}
     >
       <div className="row">
         <div className="medium-12 columns">
