@@ -750,7 +750,19 @@ data/
 
 #### Socket.IO Events
 
-MeetEasier uses Socket.IO for real-time updates:
+MeetEasier uses Socket.IO for real-time updates.
+
+**Connection Timeouts:**
+
+The server uses generous timeout values to accommodate Raspberry Pi displays and other low-power kiosk devices that may experience memory pressure or delayed heartbeats during long-running operation:
+
+| Setting | Value | Description |
+|---|---|---|
+| `pingTimeout` | 60 000 ms | Time before considering a client disconnected after a missed pong |
+| `pingInterval` | 25 000 ms | Interval between server-to-client ping frames |
+| `connectTimeout` | 45 000 ms | Maximum time allowed for the initial connection handshake |
+
+These values are hardcoded in `server.js` and do not require configuration.
 
 **Server → Client Events:**
 - `rooms` - Room data updates (every 60 seconds)

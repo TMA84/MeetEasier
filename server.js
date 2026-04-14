@@ -323,7 +323,13 @@ const port = process.env.PORT || 8080;
 
 const theserver = app.listen(port, function() {
   // Initialize Socket.IO for real-time communication
-  const io = require('socket.io')(theserver);
+  // Generous timeouts for Raspberry Pi displays that may experience
+  // memory pressure and delayed heartbeats during long-running operation.
+  const io = require('socket.io')(theserver, {
+    pingTimeout: 60000,      // 60s before considering a client disconnected
+    pingInterval: 25000,     // 25s between pings
+    connectTimeout: 45000,   // 45s for initial connection
+  });
 
   // Socket.IO middleware — allow all connections.
   // IP whitelist is only enforced on sensitive HTTP endpoints (/api/rooms, bookings, etc.).

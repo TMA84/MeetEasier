@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.2] - 2026-04-14
+
+### Fixed
+- Socket.IO connection stability: server `pingTimeout` increased to 60s (from default 20s) to prevent premature disconnects on memory-constrained Raspberry Pi displays
+- Socket.IO client now falls back to HTTP polling if WebSocket transport drops, instead of losing the connection entirely
+- Socket.IO reconnection set to infinite attempts with exponential backoff (1s–30s) for kiosk displays that must never give up
+- Dark mode SCSS cleaned up: removed ~850 lines of unused legacy `.room-minimal` styles
+
+### Changed
+- Dark mode status color gradients reverted to original subtle values
+
+### Changed
+- Socket.IO server initialization now uses generous timeouts (`pingTimeout: 60s`, `pingInterval: 25s`, `connectTimeout: 45s`) — prevents premature disconnects on Raspberry Pi displays experiencing memory pressure or delayed heartbeats during long-running operation
+- Dark mode SCSS (`_modern-single-room-dark.scss`) rewritten to only contain `.single-room-layout--dark` scoped overrides — removed all legacy `.room-minimal` component styles, redundant animations (`rotate`, `glowAvailable`, `glowBusy`, `glowUpcoming`), and duplicate sidebar/header/meeting-card dark overrides that are now handled by the modern single-room layout
+- Dark mode status glow gradients (available, busy, upcoming) softened — reduced inner opacity, widened mid-stop spread, and lowered outer-edge opacity for a subtler radial glow effect
+
+### Removed
+- Legacy `.room-minimal` dark theme styles (background, glow container, main content, room header filled/transparent variants, room name, room status, meeting cards, sidebar, clock, upcoming list, WiFi section, extend/booking buttons) — superseded by modern single-room layout
+- `rotate`, `glowAvailable`, `glowBusy`, `glowUpcoming` keyframe animations — no longer used
+- `:root` CSS custom properties for status colors (`--available-color`, `--busy-color`, `--upcoming-color`, `--not-found-color`) — status colors now defined inline within the modern layout
+- Dark mode overrides for `.status-header`, `.room-name`, `.room-status`, `.meeting-card`, `.modern-room-sidebar`, and sidebar child elements (`.sidebar-clock`, `.upcoming-item`, `.sidebar-book-btn`, `.upcoming-organizer`, etc.) — styling now inherited from the modern component defaults
+
 ## [1.8.1] - 2026-04-10
 
 ### Fixed
