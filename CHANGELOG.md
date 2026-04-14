@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.3] - 2026-04-14
+
+### Changed
+- Flightboard layout: rooms fill viewport height without scrolling via flexbox, `#page-wrap` uses `height: 100vh; overflow: hidden`
+- Flightboard rows use fixed spacing regardless of room count — rows don't stretch when few rooms are present
+- Flightboard rows: min-height 50px, max-height 120px
+- Flightboard typography: smaller clamp minimums for font sizes, paddings, gaps, and column widths to scale gracefully with many rooms
+- Foundation legacy `.row { max-width: 99% }` overridden to `100%` inside `.tracker-wrap`
+- All flightboard layout changes applied consistently to both dark and light themes
+- Dark mode flightboard meeting room rows now use `flex: 0 1 auto` instead of `flex: 1` — rows size to their content rather than stretching equally, preventing oversized rows when few meetings are displayed
+
+### Fixed
+- Dark mode flightboard container: height and width now propagate through Foundation grid wrappers (`.row > .columns`) via explicit `height: 100%` and `width: 100%` — fixes meeting room rows not stretching to fill available space when wrapped in Foundation grid markup
+- Dark mode flightboard `.row` wrapper now includes `max-width: 100%` — prevents Foundation grid default max-width from constraining the row narrower than its parent container
+
+### Changed
+- Dark mode flightboard meeting room cards: reduced border-left width, padding clamp values, and min-height (60px → 50px) for a tighter, more compact card layout
+- Dark mode flightboard meeting room status indicators: reduced spacing, font size, padding, and dot size clamp values for a more compact layout on smaller displays
+- Light mode flightboard meeting room status indicators: reduced margin, width, gap, font size, padding, and status dot size clamp values for a more compact layout on smaller displays
+
+- Dark mode flightboard `.tracker-wrap` now uses `width: 100%` with `box-sizing: border-box` instead of `max-width: 100%` and `margin: 0 auto` — ensures the container fills its parent without centering margins and prevents padding from expanding beyond the available width
+- Dark mode flightboard meeting room rows now constrained with `min-height: 60px` and `max-height: 120px` — prevents rows from collapsing too small or stretching too tall when flexbox distributes available space
+- Dark mode flightboard `#page-wrap` now uses fixed `height: 100vh` with `overflow: hidden` instead of `min-height: 100vh` — locks viewport to prevent scrolling and ensures content stays within the visible area
+- Dark mode flightboard `#page-wrap` uses flexbox column layout (`display: flex; flex-direction: column`) — enables child elements to distribute vertically within the fixed viewport
+- Dark mode flightboard container now uses flexbox column layout with `min-height: calc(100vh - 80px)` — fills remaining viewport height below the navbar and distributes meeting room rows evenly
+- Light mode flightboard container now uses `flex: 1` with `overflow: hidden` instead of `min-height: calc(100vh - 80px)` — fills remaining space via flexbox and clips overflow instead of setting a minimum height, preventing scrollbars on viewport-locked displays
+- Light mode meeting room rows now use `flex: 1` with `min-height: 0` — rows stretch equally to fill available space instead of relying on fixed `min-height`
+- Light mode meeting room cards use `height: 100%` instead of `min-height: clamp(80px, 10vh, 100px)` — cards fill their row completely for a consistent full-height flightboard layout
+- Light mode flightboard `.meeting-time` font size reduced from `clamp(0.75rem, 1.1vw, 1.125rem)` to `clamp(0.65rem, 0.9vw, 1.125rem)` — tighter minimum and preferred values for better fit on compact displays
+
 ## [1.8.2] - 2026-04-14
 
 ### Fixed

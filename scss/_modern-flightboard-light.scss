@@ -10,8 +10,11 @@ body.flightboard-light {
   color: #1f2937 !important;
 
   #page-wrap {
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     background: #ffffff !important;
+    display: flex;
+    flex-direction: column;
   }
 
   // Navbar ------------------------------------------------------------------
@@ -98,23 +101,47 @@ body.flightboard-light {
   // Flightboard Rows --------------------------------------------------------
   .tracker-wrap {
     padding: clamp($space-4, 3vw, $space-6) clamp($space-3, 2vw, $space-4);
-    max-width: 100%;
-    margin: 0 auto;
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+
+    .row {
+      max-width: 100%;
+    }
   }
 
   .meeting-room__row {
+    flex: 0 1 auto;
+    min-height: 0;
     margin-bottom: clamp(0.25rem, 0.3vh, 0.5rem);
     animation: fadeIn $transition-base ease-out;
+    width: 100%;
+
+    > .row {
+      height: 100%;
+      width: 100%;
+      max-width: 100%;
+
+      > .columns {
+        height: 100%;
+        width: 100%;
+      }
+    }
   }
 
   .meeting-room {
     background: #e5e7eb !important;
     border-radius: $radius-lg;
-    border-left: clamp(4px, 0.5vw, 6px) solid $success-500;
-    padding: clamp($space-3, 2vw, $space-4) clamp($space-4, 3vw, $space-6);
+    border-left: clamp(3px, 0.4vw, 6px) solid $success-500;
+    padding: clamp($space-2, 1.5vw, $space-4) clamp($space-3, 2vw, $space-6);
     transition: all 0.6s ease-in-out, transform $transition-base, box-shadow $transition-base;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    min-height: clamp(80px, 10vh, 100px);
+    height: 100%;
+    min-height: 50px;
+    max-height: 120px;
     display: flex;
     align-items: center;
     overflow: hidden;
@@ -146,7 +173,7 @@ body.flightboard-light {
     .row {
       display: flex;
       align-items: center;
-      gap: clamp($space-3, 3vw, $space-8);
+      gap: clamp($space-2, 2vw, $space-6);
       width: 100%;
       flex: 1;
       
@@ -172,24 +199,24 @@ body.flightboard-light {
     // Status indicator
     .meeting-room__status {
       flex-shrink: 0;
-      margin-right: clamp($space-3, 3vw, $space-8);
-      width: clamp(80px, 10vw, 120px);
+      margin-right: clamp($space-2, 2vw, $space-6);
+      width: clamp(70px, 8vw, 120px);
       
       > div {
         display: inline-flex;
         align-items: center;
-        gap: clamp($space-1, 1vw, $space-2);
-        font-size: clamp(1rem, 1.5vw, 1.5rem);
+        gap: clamp($space-1, 0.5vw, $space-2);
+        font-size: clamp(0.7rem, 1.2vw, 1.5rem);
         font-weight: $font-weight-bold;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        padding: clamp($space-1, 1vw, $space-2) clamp($space-2, 1.5vw, $space-3);
+        padding: clamp(0.15rem, 0.5vw, $space-2) clamp($space-1, 1vw, $space-3);
         border-radius: $radius-md;
         
         &::before {
           content: '';
-          width: clamp(8px, 1vw, 12px);
-          height: clamp(8px, 1vw, 12px);
+          width: clamp(6px, 0.8vw, 12px);
+          height: clamp(6px, 0.8vw, 12px);
           border-radius: $radius-full;
           animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
@@ -234,7 +261,7 @@ body.flightboard-light {
     
     // Room name
     .meeting-room__name {
-      font-size: clamp(1.25rem, 2vw, 2rem);
+      font-size: clamp(0.9rem, 1.6vw, 2rem);
       font-weight: $font-weight-semibold;
       color: #1f2937;
       text-transform: capitalize;
@@ -248,35 +275,35 @@ body.flightboard-light {
     
     // Seats capacity
     .seats-capacity {
-      font-size: clamp(1rem, 1.5vw, 1.75rem);
+      font-size: clamp(0.85rem, 1.2vw, 1.75rem);
       font-weight: $font-weight-bold;
       color: #1f2937;
       text-align: center;
-      width: clamp(40px, 5vw, 60px);
+      width: clamp(35px, 4vw, 60px);
     }
     
     .seats {
-      font-size: clamp(0.75rem, 1vw, 1rem);
+      font-size: clamp(0.6rem, 0.8vw, 1rem);
       font-weight: $font-weight-normal;
       color: #6b7280;
       text-align: center;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      width: clamp(40px, 5vw, 60px);
+      width: clamp(35px, 4vw, 60px);
     }
     
     // Meeting information
     .meeting-organizer {
-      font-size: clamp(1rem, 1.4vw, 1.5rem);
+      font-size: clamp(0.8rem, 1.2vw, 1.5rem);
       font-weight: $font-weight-medium;
       color: #1f2937;
-      margin-bottom: clamp(0rem, 0.5vh, $space-1);
+      margin-bottom: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       
       .meeting-upcoming {
-        font-size: clamp(0.75rem, 1.1vw, 1rem);
+        font-size: clamp(0.65rem, 0.9vw, 1rem);
         font-weight: $font-weight-semibold;
         color: $warning-700;
         text-transform: uppercase;
@@ -285,7 +312,7 @@ body.flightboard-light {
     }
     
     .meeting-time {
-      font-size: clamp(0.75rem, 1.1vw, 1.125rem);
+      font-size: clamp(0.65rem, 0.9vw, 1.125rem);
       font-weight: $font-weight-normal;
       color: #6b7280;
     }

@@ -123,19 +123,19 @@ describe('FlightboardRow Component', () => {
     it('is visible when filter matches roomlist', () => {
       const { container } = render(<FlightboardRow room={mockRoom} filter="roomlist-building-1" />);
       const row = container.querySelector('.meeting-room__row');
-      expect(row).toHaveStyle({ display: 'block' });
+      expect(row).toHaveStyle({ display: 'flex' });
     });
 
     it('is visible when filter is "all"', () => {
       const { container } = render(<FlightboardRow room={mockRoom} filter="roomlist-all" />);
       const row = container.querySelector('.meeting-room__row');
-      expect(row).toHaveStyle({ display: 'block' });
+      expect(row).toHaveStyle({ display: 'flex' });
     });
 
     it('is visible when filter is empty', () => {
       const { container } = render(<FlightboardRow room={mockRoom} filter="" />);
       const row = container.querySelector('.meeting-room__row');
-      expect(row).toHaveStyle({ display: 'block' });
+      expect(row).toHaveStyle({ display: 'flex' });
     });
 
     it('is hidden when filter does not match roomlist', () => {

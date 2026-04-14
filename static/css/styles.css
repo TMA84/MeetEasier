@@ -1348,8 +1348,11 @@ body.flightboard-light {
   color: #1f2937 !important;
 }
 body.flightboard-light #page-wrap {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #ffffff !important;
+  display: flex;
+  flex-direction: column;
 }
 body.flightboard-light #title-bar-wrap {
   position: sticky;
@@ -1419,21 +1422,42 @@ body.flightboard-light #title-bar-wrap .title-bar .fb__nav-menu-right li #clock 
 }
 body.flightboard-light .tracker-wrap {
   padding: clamp(1rem, 3vw, 1.5rem) clamp(0.75rem, 2vw, 1rem);
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+body.flightboard-light .tracker-wrap .row {
   max-width: 100%;
-  margin: 0 auto;
 }
 body.flightboard-light .meeting-room__row {
+  flex: 0 1 auto;
+  min-height: 0;
   margin-bottom: clamp(0.25rem, 0.3vh, 0.5rem);
   animation: fadeIn 200ms cubic-bezier(0.4, 0, 0.2, 1) ease-out;
+  width: 100%;
+}
+body.flightboard-light .meeting-room__row > .row {
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+}
+body.flightboard-light .meeting-room__row > .row > .columns {
+  height: 100%;
+  width: 100%;
 }
 body.flightboard-light .meeting-room {
   background: #e5e7eb !important;
   border-radius: 0.75rem;
-  border-left: clamp(4px, 0.5vw, 6px) solid #22c55e;
-  padding: clamp(0.75rem, 2vw, 1rem) clamp(1rem, 3vw, 1.5rem);
+  border-left: clamp(3px, 0.4vw, 6px) solid #22c55e;
+  padding: clamp(0.5rem, 1.5vw, 1rem) clamp(0.75rem, 2vw, 1.5rem);
   transition: all 0.6s ease-in-out, transform 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  min-height: clamp(80px, 10vh, 100px);
+  height: 100%;
+  min-height: 50px;
+  max-height: 120px;
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -1458,7 +1482,7 @@ body.flightboard-light .meeting-room.meeting-room-error {
 body.flightboard-light .meeting-room .row {
   display: flex;
   align-items: center;
-  gap: clamp(0.75rem, 3vw, 2rem);
+  gap: clamp(0.5rem, 2vw, 1.5rem);
   width: 100%;
   flex: 1;
 }
@@ -1478,24 +1502,24 @@ body.flightboard-light .meeting-room .row > .columns.medium-4 {
 }
 body.flightboard-light .meeting-room .meeting-room__status {
   flex-shrink: 0;
-  margin-right: clamp(0.75rem, 3vw, 2rem);
-  width: clamp(80px, 10vw, 120px);
+  margin-right: clamp(0.5rem, 2vw, 1.5rem);
+  width: clamp(70px, 8vw, 120px);
 }
 body.flightboard-light .meeting-room .meeting-room__status > div {
   display: inline-flex;
   align-items: center;
-  gap: clamp(0.25rem, 1vw, 0.5rem);
-  font-size: clamp(1rem, 1.5vw, 1.5rem);
+  gap: clamp(0.25rem, 0.5vw, 0.5rem);
+  font-size: clamp(0.7rem, 1.2vw, 1.5rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 1.5vw, 0.75rem);
+  padding: clamp(0.15rem, 0.5vw, 0.5rem) clamp(0.25rem, 1vw, 0.75rem);
   border-radius: 0.5rem;
 }
 body.flightboard-light .meeting-room .meeting-room__status > div::before {
   content: "";
-  width: clamp(8px, 1vw, 12px);
-  height: clamp(8px, 1vw, 12px);
+  width: clamp(6px, 0.8vw, 12px);
+  height: clamp(6px, 0.8vw, 12px);
   border-radius: 9999px;
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -1528,7 +1552,7 @@ body.flightboard-light .meeting-room .meeting-room__status .meeting-error::befor
   background: #f59e0b;
 }
 body.flightboard-light .meeting-room .meeting-room__name {
-  font-size: clamp(1.25rem, 2vw, 2rem);
+  font-size: clamp(0.9rem, 1.6vw, 2rem);
   font-weight: 600;
   color: #1f2937;
   text-transform: capitalize;
@@ -1540,39 +1564,39 @@ body.flightboard-light .meeting-room .meeting-room__name {
   -webkit-box-orient: vertical;
 }
 body.flightboard-light .meeting-room .seats-capacity {
-  font-size: clamp(1rem, 1.5vw, 1.75rem);
+  font-size: clamp(0.85rem, 1.2vw, 1.75rem);
   font-weight: 700;
   color: #1f2937;
   text-align: center;
-  width: clamp(40px, 5vw, 60px);
+  width: clamp(35px, 4vw, 60px);
 }
 body.flightboard-light .meeting-room .seats {
-  font-size: clamp(0.75rem, 1vw, 1rem);
+  font-size: clamp(0.6rem, 0.8vw, 1rem);
   font-weight: 400;
   color: #6b7280;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  width: clamp(40px, 5vw, 60px);
+  width: clamp(35px, 4vw, 60px);
 }
 body.flightboard-light .meeting-room .meeting-organizer {
-  font-size: clamp(1rem, 1.4vw, 1.5rem);
+  font-size: clamp(0.8rem, 1.2vw, 1.5rem);
   font-weight: 500;
   color: #1f2937;
-  margin-bottom: clamp(0rem, 0.5vh, 0.25rem);
+  margin-bottom: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 body.flightboard-light .meeting-room .meeting-organizer .meeting-upcoming {
-  font-size: clamp(0.75rem, 1.1vw, 1rem);
+  font-size: clamp(0.65rem, 0.9vw, 1rem);
   font-weight: 600;
   color: #b45309;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 body.flightboard-light .meeting-room .meeting-time {
-  font-size: clamp(0.75rem, 1.1vw, 1.125rem);
+  font-size: clamp(0.65rem, 0.9vw, 1.125rem);
   font-weight: 400;
   color: #6b7280;
 }
@@ -1598,8 +1622,11 @@ body.flightboard-light .credentials-error {
 }
 
 #page-wrap {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #111827;
+  display: flex;
+  flex-direction: column;
 }
 
 #title-bar-wrap {
@@ -1671,23 +1698,44 @@ body.flightboard-light .credentials-error {
 
 .tracker-wrap {
   padding: clamp(1rem, 3vw, 1.5rem) clamp(0.75rem, 2vw, 1rem);
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.tracker-wrap .row {
   max-width: 100%;
-  margin: 0 auto;
 }
 
 .meeting-room__row {
+  flex: 0 1 auto;
+  min-height: 0;
   margin-bottom: clamp(0.25rem, 0.3vh, 0.5rem);
   animation: fadeIn 200ms cubic-bezier(0.4, 0, 0.2, 1) ease-out;
+  width: 100%;
+}
+.meeting-room__row > .row {
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+}
+.meeting-room__row > .row > .columns {
+  height: 100%;
+  width: 100%;
 }
 
 .meeting-room {
   background: #1f2937;
   border-radius: 0.75rem;
-  border-left: clamp(4px, 0.5vw, 6px) solid #22c55e;
-  padding: clamp(0.75rem, 2vw, 1rem) clamp(1rem, 3vw, 1.5rem);
+  border-left: clamp(3px, 0.4vw, 6px) solid #22c55e;
+  padding: clamp(0.5rem, 1.5vw, 1rem) clamp(0.75rem, 2vw, 1.5rem);
   transition: all 0.6s ease-in-out, transform 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  min-height: clamp(80px, 10vh, 100px);
+  height: 100%;
+  min-height: 50px;
+  max-height: 120px;
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -1712,7 +1760,7 @@ body.flightboard-light .credentials-error {
 .meeting-room .row {
   display: flex;
   align-items: center;
-  gap: clamp(0.75rem, 3vw, 2rem);
+  gap: clamp(0.5rem, 2vw, 1.5rem);
   width: 100%;
   flex: 1;
 }
@@ -1732,24 +1780,24 @@ body.flightboard-light .credentials-error {
 }
 .meeting-room .meeting-room__status {
   flex-shrink: 0;
-  margin-right: clamp(0.75rem, 3vw, 2rem);
-  width: clamp(80px, 10vw, 120px);
+  margin-right: clamp(0.5rem, 2vw, 1.5rem);
+  width: clamp(70px, 8vw, 120px);
 }
 .meeting-room .meeting-room__status > div {
   display: inline-flex;
   align-items: center;
-  gap: clamp(0.25rem, 1vw, 0.5rem);
-  font-size: clamp(1rem, 1.5vw, 1.5rem);
+  gap: clamp(0.25rem, 0.5vw, 0.5rem);
+  font-size: clamp(0.7rem, 1.2vw, 1.5rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 1.5vw, 0.75rem);
+  padding: clamp(0.15rem, 0.5vw, 0.5rem) clamp(0.25rem, 1vw, 0.75rem);
   border-radius: 0.5rem;
 }
 .meeting-room .meeting-room__status > div::before {
   content: "";
-  width: clamp(8px, 1vw, 12px);
-  height: clamp(8px, 1vw, 12px);
+  width: clamp(6px, 0.8vw, 12px);
+  height: clamp(6px, 0.8vw, 12px);
   border-radius: 9999px;
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -1782,7 +1830,7 @@ body.flightboard-light .credentials-error {
   background: #f59e0b;
 }
 .meeting-room .meeting-room__name {
-  font-size: clamp(1.25rem, 2vw, 2rem);
+  font-size: clamp(0.9rem, 1.6vw, 2rem);
   font-weight: 600;
   color: #ffffff;
   text-transform: capitalize;
@@ -1794,39 +1842,39 @@ body.flightboard-light .credentials-error {
   -webkit-box-orient: vertical;
 }
 .meeting-room .seats-capacity {
-  font-size: clamp(1rem, 1.5vw, 1.75rem);
+  font-size: clamp(0.85rem, 1.2vw, 1.75rem);
   font-weight: 700;
   color: #ffffff;
   text-align: center;
-  width: clamp(40px, 5vw, 60px);
+  width: clamp(35px, 4vw, 60px);
 }
 .meeting-room .seats {
-  font-size: clamp(0.75rem, 1vw, 1rem);
+  font-size: clamp(0.6rem, 0.8vw, 1rem);
   font-weight: 400;
   color: rgba(255, 255, 255, 0.7);
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  width: clamp(40px, 5vw, 60px);
+  width: clamp(35px, 4vw, 60px);
 }
 .meeting-room .meeting-organizer {
-  font-size: clamp(1rem, 1.4vw, 1.5rem);
+  font-size: clamp(0.8rem, 1.2vw, 1.5rem);
   font-weight: 500;
   color: #ffffff;
-  margin-bottom: clamp(0rem, 0.5vh, 0.25rem);
+  margin-bottom: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .meeting-room .meeting-organizer .meeting-upcoming {
-  font-size: clamp(0.75rem, 1.1vw, 1rem);
+  font-size: clamp(0.65rem, 0.9vw, 1rem);
   font-weight: 600;
   color: #d97706;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 .meeting-room .meeting-time {
-  font-size: clamp(0.75rem, 1.1vw, 1.125rem);
+  font-size: clamp(0.65rem, 0.9vw, 1.125rem);
   font-weight: 400;
   color: rgba(255, 255, 255, 0.7);
 }
