@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+## [1.8.6] - 2026-04-20
+
+### Fixed
+- Socket.IO disconnect recovery: displays auto-refresh data on reconnect and force-reload after 2 minutes offline
+- Reduced verbose Touchkio app version logging to changes only
+- Bumped package version from 1.8.5 to 1.8.6
 - Touchkio app version MQTT handler now only logs when installed or latest version actually changes — suppresses duplicate log messages on repeated MQTT state updates
 
 ## [1.8.5] - 2026-04-20
