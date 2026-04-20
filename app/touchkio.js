@@ -947,10 +947,6 @@ function sendUpdateCommand(hostname) {
     return { success: false, error: `No update entity discovered for "${hostname}". Device may not support MQTT updates or Touchkio < 1.3.0.` };
   }
 
-  if (info.installedVersion && info.latestVersion && info.installedVersion === info.latestVersion) {
-    return { success: false, error: `Already on latest version (${info.installedVersion})` };
-  }
-
   const success = mqttClient.publish(info.commandTopic, 'install', { qos: 1, retain: false });
 
   if (success) {

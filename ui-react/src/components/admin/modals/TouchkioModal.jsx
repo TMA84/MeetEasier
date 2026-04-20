@@ -187,8 +187,8 @@ const KioskSection = ({ displayData, mqttIdentifier, onKioskCommand }) => (
 
 const SystemControls = ({ hostname, mqttIdentifier, displayData, updateInfo, onRebootCommand, onShutdownCommand, onUpdateCommand }) => {
   const hasUpdate = updateInfo && updateInfo.latestVersion && updateInfo.installedVersion && updateInfo.latestVersion !== updateInfo.installedVersion;
-  // Show version from update entity or from HA discovery sw_version
   const currentVersion = updateInfo?.installedVersion || displayData?.swVersion || null;
+  const canUpdate = updateInfo && updateInfo.commandTopic;
   return (
     <div className="touchkio-danger-section">
       <h4 className="touchkio-danger-title">System Controls</h4>
@@ -196,11 +196,23 @@ const SystemControls = ({ hostname, mqttIdentifier, displayData, updateInfo, onR
         <div className="touchkio-update-info">
           <span>Touchkio: v{currentVersion}</span>
           {hasUpdate && <span className="touchkio-update-available"> → v{updateInfo.latestVersion} available</span>}
+          {!hasUpdate && updateInfo?.latestVersion && <span className="touchkio-update-current"> (up to date)</span>}
           {updateInfo?.inProgress && <span className="touchkio-update-progress"> (updating...{updateInfo.updatePercentage != null ? ` ${updateInfo.updatePercentage}%` : ''})</span>}
         </div>
       )}
-      {hasUpdate && onUpdateCommand && (
-        <button type="button" className="admin-secondary-button touchkio-update-button" onClick={() => { if (window.confirm(`Update Touchkio on ${hostname} to v${updateInfo.latestVersion}?`)) onUpdateCommand(mqttIdentifier); }}>Update Touchkio</button>
+      {canUpdate && onUpdateCommand && (
+        <button
+          type="button"
+          className={`admin-secondary-button touchkio-update-button ${!hasUpdate ? 'touchkio-update-button--current' : ''}`}
+          onClick={() => {
+            const msg = hasUpdate
+              ? `Update Touchkio on ${hostname} to v${updateInfo.latestVersion}?`
+              : `Reinstall Touchkio v${currentVersion} on ${hostname}?`;
+            if (window.confirm(msg)) onUpdateCommand(mqttIdentifier);
+          }}
+        >
+          {hasUpdate ? `Update to v${updateInfo.latestVersion}` : 'Reinstall Touchkio'}
+        </button>
       )}
       <button type="button" className="admin-secondary-button touchkio-reboot-button" onClick={() => { if (window.confirm(`Reboot ${hostname}?`)) onRebootCommand(mqttIdentifier); }}>Reboot Device</button>
       <button type="button" className="admin-secondary-button touchkio-shutdown-button" onClick={() => { if (window.confirm(`Shutdown ${hostname}? This will turn off the device!`)) onShutdownCommand(mqttIdentifier); }}>Shutdown Device</button>

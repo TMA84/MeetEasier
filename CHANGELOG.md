@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Touchkio software version extraction from Home Assistant MQTT discovery config messages — `sw_version` is now parsed and stored in display state for each device
 - `swVersion` and `pageZoom` fields included in Touchkio display status API response — exposes software version and current page zoom level to admin clients
+- `.touchkio-update-current` style for displaying the current installed version in the Touchkio update UI — muted white text (`rgba(255, 255, 255, 0.4)`) to visually distinguish it from the available update version
 
 ## [1.8.4] - 2026-04-20
 

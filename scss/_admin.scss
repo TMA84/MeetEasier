@@ -1538,6 +1538,10 @@
   font-weight: 600;
 }
 
+.touchkio-update-current {
+  color: rgba(255, 255, 255, 0.4);
+}
+
 .touchkio-update-progress {
   color: #f59e0b;
 }
@@ -1551,6 +1555,12 @@
   font-weight: 600;
   font-size: 0.875rem;
   padding: 0.625rem;
+
+  &--current {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.5);
+  }
 }
 
 // Error Section
