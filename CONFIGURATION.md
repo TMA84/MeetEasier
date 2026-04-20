@@ -1031,6 +1031,12 @@ socket.on('wifiConfigUpdated', (config) => {
 **POST /api/mqtt-shutdown/:hostname**
 - Sends shutdown command to a specific display
 
+**GET /api/mqtt-screenshot/:deviceId**
+- Returns: Latest screenshot image (PNG or JPEG) captured from the display
+- Content-Type varies: `image/png` or `image/jpeg` depending on device output
+- Returns 404 if no screenshot is available for the device
+- Screenshots are received via MQTT and cached in memory
+
 **POST /api/mqtt-refresh-all**
 - Sends refresh command to all connected displays
 

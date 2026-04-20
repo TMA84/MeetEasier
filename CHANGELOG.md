@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Refactored `touchkio.js` MQTT message handling — extracted individual handler functions (`handleHostname`, `handlePower`, `handleBrightness`, `handleStringState`, `handleIntState`, `handleKeyboard`, `handlePageUrl`, `handleErrors`) from monolithic `subscribeTouchkioStates()` callback
+- Introduced `TOPIC_HANDLERS` lookup table and `routeTouchkioMessage()` dispatcher for declarative topic-to-handler routing — replaces nested if/else chain in the `touchkio/#` subscriber
+- Extracted `checkUnsupportedHardware()` and `logErrorStateChange()` from inline error parsing logic for better separation of concerns
+- Added `topicMatches()` helper for consistent topic pattern matching against both `/state` and `/status` suffixes
+
 ### Added
 - Touchkio software version extraction from Home Assistant MQTT discovery config messages — `sw_version` is now parsed and stored in display state for each device
 - `swVersion` and `pageZoom` fields included in Touchkio display status API response — exposes software version and current page zoom level to admin clients

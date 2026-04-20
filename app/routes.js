@@ -3564,10 +3564,19 @@ module.exports = function(app) {
   });
 
   // GET /api/mqtt-update-info — Returns Touchkio update info for all devices
-  app.get('/api/mqtt-update-info', checkApiToken, function(req, res) {
+  app.get('/api/mqtt-update-info', checkApiToken, async function(req, res) {
     try {
       const mqttPowerBridge = require('./touchkio');
       const info = mqttPowerBridge.getUpdateInfo();
+      // Enrich with latest version from GitHub
+      const latestVersion = await mqttPowerBridge.fetchLatestTouchkioVersion();
+      if (latestVersion) {
+        for (const deviceId of Object.keys(info)) {
+          if (!info[deviceId].latestVersion) {
+            info[deviceId].latestVersion = latestVersion;
+          }
+        }
+      }
       res.json({ success: true, updates: info });
     } catch (err) {
       console.error('Error fetching update info:', err);

@@ -581,6 +581,7 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 - `POST /api/mqtt-reboot-all` - Reboot all displays (requires token)
 - `POST /api/mqtt-update/:hostname` - Trigger OTA app update on a display (requires token)
 - `GET /api/mqtt-update-info` - Get update info for all MQTT devices (requires token)
+- `GET /api/mqtt-screenshot/:deviceId` - Get latest display screenshot as image (requires token)
 
 **Power Management:**
 - `GET /api/power-management` - Get global power config (requires token)
@@ -665,7 +666,8 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 - OTA app update via MQTT (requires Touchkio ≥ 1.3.0)
 - Per-device update tracking (installed/latest version, progress)
 - Bulk operations (refresh all, reboot all)
-- Display health monitoring (CPU, memory, temperature, uptime)
+- Remote screenshot capture (live display screenshots via MQTT, served at `/api/mqtt-screenshot/:deviceId`)
+- Display health monitoring (CPU, memory, temperature, uptime, network address)
 - Software version tracking (swVersion from Home Assistant MQTT discovery)
 - Auto-discovery of MQTT-connected devices
 - Merged display view combining Socket.IO and MQTT connections

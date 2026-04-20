@@ -72,6 +72,50 @@ const screenshotCache = new Map();
 */
 const updateInfo = new Map();
 
+/** @type {string|null} Latest Touchkio version from GitHub */
+let latestTouchkioVersion = null;
+/** @type {number} Timestamp of last GitHub version check */
+let lastVersionCheckTime = 0;
+/** @type {number} Minimum interval between GitHub checks (1 hour) */
+const VERSION_CHECK_INTERVAL = 60 * 60 * 1000;
+
+/**
+* Fetches the latest Touchkio release version from GitHub.
+* Caches the result for VERSION_CHECK_INTERVAL.
+* @returns {Promise<string|null>} Latest version string or null
+*/
+async function fetchLatestTouchkioVersion() {
+  if (latestTouchkioVersion && (Date.now() - lastVersionCheckTime) < VERSION_CHECK_INTERVAL) {
+    return latestTouchkioVersion;
+  }
+  try {
+    const https = require('https');
+    const data = await new Promise((resolve, reject) => {
+      const req = https.get('https://api.github.com/repos/leukipp/touchkio/releases/latest', {
+        headers: { 'User-Agent': 'MeetEasier', 'Accept': 'application/vnd.github.v3+json' },
+        timeout: 5000
+      }, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => {
+          if (res.statusCode === 200) resolve(body);
+          else reject(new Error(`GitHub API returned ${res.statusCode}`));
+        });
+      });
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+    });
+    const release = JSON.parse(data);
+    latestTouchkioVersion = (release.tag_name || '').replace(/^v/, '');
+    lastVersionCheckTime = Date.now();
+    console.log(`[Touchkio] Latest version from GitHub: ${latestTouchkioVersion}`);
+    return latestTouchkioVersion;
+  } catch (err) {
+    console.warn(`[Touchkio] Failed to fetch latest version from GitHub: ${err.message}`);
+    return latestTouchkioVersion; // return cached value if available
+  }
+}
+
 /**
 * Loads the desired config from disk into the desiredConfig Map.
 */
@@ -961,16 +1005,30 @@ function sendUpdateCommand(hostname) {
 
 /**
 * Returns the update info for all devices or a specific device.
+* Enriches each entry with the installedVersion from displayStates.swVersion if missing.
 * @param {string} [deviceId] - Optional device ID to filter
 * @returns {Object} Update info map or single entry
 */
 function getUpdateInfo(deviceId) {
   if (deviceId) {
-    return updateInfo.get(deviceId) || null;
+    const info = updateInfo.get(deviceId);
+    if (info) return { ...info };
+    // Fallback: build minimal info from displayState swVersion
+    const state = displayStates.get(deviceId);
+    if (state && state.swVersion) {
+      return { installedVersion: state.swVersion };
+    }
+    return null;
   }
   const result = {};
   for (const [id, info] of updateInfo) {
     result[id] = { ...info };
+  }
+  // Add devices that have swVersion but no update entity
+  for (const [id, state] of displayStates) {
+    if (!result[id] && state.swVersion) {
+      result[id] = { installedVersion: state.swVersion };
+    }
   }
   return result;
 }
@@ -1173,6 +1231,7 @@ module.exports = {
   sendShutdownCommand,
   sendUpdateCommand,
   getUpdateInfo,
+  fetchLatestTouchkioVersion,
   getDisplayStates,
   getAllDisplays,
   getScreenshot,
