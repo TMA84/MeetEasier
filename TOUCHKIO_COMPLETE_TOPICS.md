@@ -126,12 +126,23 @@ homeassistant/button/{deviceId}/shutdown/config
 homeassistant/button/{deviceId}/shutdown/execute                → "PRESS"
 ```
 
-### Update (Update Entity)
+### Update (Update Entity) ✅ VERFÜGBAR!
 ```
+# Config (auto-discovery)
 homeassistant/update/{deviceId}/app/config
-homeassistant/update/{deviceId}/app/install                     → "update" or "update early"
-homeassistant/update/{deviceId}/app/version/status              → version string
+
+# Status (Display → Server)
+homeassistant/update/{deviceId}/app/version/status              → version string (installed version)
+
+# Commands (Server → Display)
+homeassistant/update/{deviceId}/app/install                     → "install" (triggers OTA update)
 ```
+
+**MeetEasier Integration:**
+- `sendUpdateCommand(hostname)` publishes `install` to the device's discovered command topic (QoS 1)
+- `getUpdateInfo(deviceId)` returns per-device update metadata (installed/latest version, command topic, progress)
+- Version comparison prevents sending update commands when already on the latest version
+- Requires Touchkio ≥ 1.3.0 for MQTT update entity support
 
 ### Screenshot Image (Image Entity, v1.4.1+) ✅ VERFÜGBAR!
 ```
@@ -233,7 +244,7 @@ homeassistant/text/{deviceId}/page_url/set
 - **switch:** Keyboard visibility (on/off toggle)
 - **button:** Refresh, Reboot, Shutdown (press action)
 - **sensor:** Read-only status information
-- **update:** App update management
+- **update:** App update management (OTA install via MQTT, version tracking)
 
 ## Nächste Schritte
 

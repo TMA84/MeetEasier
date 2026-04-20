@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.4] - 2026-04-20
+
+### Added
+- Touchkio OTA updates via MQTT: parses HA MQTT Discovery update entities, tracks installed/latest version per device, and sends `install` command via the discovered `command_topic`
+- API routes: `POST /api/mqtt-update/:hostname` triggers update, `GET /api/mqtt-update-info` returns version info for all devices
+- Admin Touchkio modal: shows current version, available update with green highlight, and "Update Touchkio" button with confirmation dialog
+- Update progress tracking (in_progress, update_percentage) from MQTT state messages
+
+### Changed
+- Touchkio device modal now auto-fetches update info on open — version display is immediately available without requiring a manual refresh
+
 ## [1.8.3] - 2026-04-14
 
 ### Changed

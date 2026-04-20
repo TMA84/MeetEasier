@@ -604,6 +604,8 @@ const Admin = () => {
             onPowerCommand={mqtt.handleMqttPowerCommandModal} onRefreshCommand={mqtt.handleMqttRefreshCommandModal}
             onKioskCommand={mqtt.handleMqttKioskCommandModal} onThemeCommand={mqtt.handleMqttThemeCommandModal}
             onRebootCommand={mqtt.handleMqttRebootCommandModal} onShutdownCommand={mqtt.handleMqttShutdownCommandModal}
+            onUpdateCommand={mqtt.handleMqttUpdateCommandModal}
+            updateInfo={config.mqttUpdateInfo?.[config.touchkioModalDisplay?.mqtt?.deviceId]}
             onPageUrlChange={mqtt.handleMqttPageUrlCommandModal}
             onRefreshDisplay={async () => {
               await submissions.handleLoadConnectedDisplays();

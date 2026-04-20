@@ -15,6 +15,8 @@ vi.mock('../services/mqtt-commands.js', () => ({
   sendMqttRefreshAll: vi.fn(),
   sendMqttRebootAll: vi.fn(),
   sendMqttPageUrlCommand: vi.fn(),
+  sendMqttUpdateCommand: vi.fn(),
+  fetchMqttUpdateInfo: vi.fn().mockResolvedValue({ ok: true, updates: {} }),
   fetchMqttDisplays: vi.fn(),
   submitMqttConfig: vi.fn()
 }));

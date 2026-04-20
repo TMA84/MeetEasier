@@ -134,6 +134,35 @@ export async function sendMqttShutdownCommand(getHeaders, hostname) {
 }
 
 /**
+ * Send Touchkio app update command to a specific display.
+ * @param {Function} getHeaders - Returns request headers
+ * @param {string} hostname - Display hostname/deviceId
+ * @returns {Promise<Response>} Fetch response
+ */
+export async function sendMqttUpdateCommand(getHeaders, hostname) {
+  return fetch(`/api/mqtt-update/${hostname}`, {
+    method: 'POST',
+    headers: getHeaders()
+  });
+}
+
+/**
+ * Fetch Touchkio update info for all devices.
+ * @param {Function} getHeaders - Returns request headers (no content-type)
+ * @returns {Promise<{ok: boolean, updates?: Object}>} Result
+ */
+export async function fetchMqttUpdateInfo(getHeaders) {
+  const response = await fetch('/api/mqtt-update-info', {
+    headers: getHeaders()
+  });
+  if (response.ok) {
+    const data = await response.json();
+    return { ok: true, updates: data.updates || {} };
+  }
+  return { ok: false };
+}
+
+/**
  * Send refresh command to all MQTT displays.
  * @param {Function} getHeaders - Returns request headers
  * @returns {Promise<{ok: boolean, data?: Object}>} Result

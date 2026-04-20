@@ -66,6 +66,13 @@ const lastErrorState = new Map();
 const screenshotCache = new Map();
 
 /**
+* Stores Touchkio update information per device (from HA MQTT Discovery).
+* Key: deviceId, Value: { commandTopic, stateTopic, installedVersion, latestVersion, title, inProgress }
+* @type {Map<string, Object>}
+*/
+const updateInfo = new Map();
+
+/**
 * Loads the desired config from disk into the desiredConfig Map.
 */
 function loadDesiredConfig() {
@@ -447,12 +454,12 @@ function routeTouchkioMessage(topic, deviceId, displayState, payload, payloadStr
 * Updates the displayStates map with each incoming message.
 */
 function subscribeTouchkioStates() {
-  // Subscribe to all Home Assistant config topics (only for discovery, not for states)
+  // Subscribe to all Home Assistant config topics (for discovery and update entities)
   mqttClient.subscribe('homeassistant/#', (payload, client) => {
     try {
       const topic = client ? client.topic : 'unknown';
       
-      // Only process config topics for device discovery
+      // Process config topics for device discovery
       if (topic.includes('/config')) {
         const deviceId = extractDeviceId(topic);
         if (deviceId) {
@@ -460,7 +467,38 @@ function subscribeTouchkioStates() {
             if (!displayStates.has(deviceId)) {
             displayStates.set(deviceId, { deviceId });
           }
-          console.log(`[Touchkio] Discovered device via Home Assistant: ${deviceId}`);
+
+          // Parse update entity discovery (homeassistant/update/{deviceId}/touchkio/config)
+          if (topic.includes('/update/') && topic.includes('/touchkio/')) {
+            try {
+              const config = JSON.parse(payload.toString());
+              const info = updateInfo.get(deviceId) || {};
+              if (config.command_topic) info.commandTopic = config.command_topic;
+              if (config.state_topic) info.stateTopic = config.state_topic;
+              if (config.latest_version_topic) info.latestVersionTopic = config.latest_version_topic;
+              if (config.title) info.title = config.title;
+              updateInfo.set(deviceId, info);
+              console.log(`[Touchkio] Update entity discovered for ${deviceId}: command=${info.commandTopic || 'n/a'}`);
+
+              // Subscribe to the update state topic for version tracking
+              if (info.stateTopic) {
+                mqttClient.subscribe(info.stateTopic, (statePayload) => {
+                  try {
+                    const state = JSON.parse(statePayload.toString());
+                    const existing = updateInfo.get(deviceId) || {};
+                    if (state.installed_version) existing.installedVersion = state.installed_version;
+                    if (state.latest_version) existing.latestVersion = state.latest_version;
+                    if (state.in_progress !== undefined) existing.inProgress = !!state.in_progress;
+                    if (state.update_percentage !== undefined) existing.updatePercentage = state.update_percentage;
+                    if (state.release_summary) existing.releaseSummary = state.release_summary;
+                    updateInfo.set(deviceId, existing);
+                  } catch (_e) { /* ignore parse errors on state */ }
+                });
+              }
+            } catch (_e) { /* ignore parse errors on config */ }
+          } else {
+            console.log(`[Touchkio] Discovered device via Home Assistant: ${deviceId}`);
+          }
         }
       }
       
@@ -869,6 +907,56 @@ function sendShutdownCommand(hostname) {
 }
 
 /**
+* Sends a Touchkio app update command to a display via MQTT.
+* Uses the command_topic discovered from the HA MQTT Update entity.
+* @param {string} hostname - Display hostname or device ID
+* @returns {{ success: boolean, error?: string }}
+*/
+function sendUpdateCommand(hostname) {
+  const deviceId = getDeviceIdFromHostname(hostname);
+  
+  if (!deviceId) {
+    return { success: false, error: `Device "${hostname}" not found` };
+  }
+
+  const info = updateInfo.get(deviceId);
+  if (!info || !info.commandTopic) {
+    return { success: false, error: `No update entity discovered for "${hostname}". Device may not support MQTT updates or Touchkio < 1.3.0.` };
+  }
+
+  if (info.installedVersion && info.latestVersion && info.installedVersion === info.latestVersion) {
+    return { success: false, error: `Already on latest version (${info.installedVersion})` };
+  }
+
+  const success = mqttClient.publish(info.commandTopic, 'install', { qos: 1, retain: false });
+
+  if (success) {
+    console.log(`[Touchkio] Sent update command to ${hostname} (${deviceId}) via ${info.commandTopic}`);
+    // Mark as in progress locally
+    info.inProgress = true;
+    updateInfo.set(deviceId, info);
+  }
+
+  return success ? { success: true } : { success: false, error: 'MQTT not connected' };
+}
+
+/**
+* Returns the update info for all devices or a specific device.
+* @param {string} [deviceId] - Optional device ID to filter
+* @returns {Object} Update info map or single entry
+*/
+function getUpdateInfo(deviceId) {
+  if (deviceId) {
+    return updateInfo.get(deviceId) || null;
+  }
+  const result = {};
+  for (const [id, info] of updateInfo) {
+    result[id] = { ...info };
+  }
+  return result;
+}
+
+/**
 * Checks whether a time falls within a time range.
 * Supports both daytime ranges (e.g. 12:00-14:00) and
 * overnight ranges crossing midnight (e.g. 20:00-07:00).
@@ -1064,6 +1152,8 @@ module.exports = {
   sendRefreshCommand,
   sendRebootCommand,
   sendShutdownCommand,
+  sendUpdateCommand,
+  getUpdateInfo,
   getDisplayStates,
   getAllDisplays,
   getScreenshot,

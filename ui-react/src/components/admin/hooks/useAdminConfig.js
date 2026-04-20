@@ -148,6 +148,7 @@ const INITIAL_CONFIG = {
   mqttUsername: '', mqttPassword: '', mqttDiscovery: '',
   mqttStatus: null, mqttConfigSaving: false, mqttConfigMessage: null, mqttConfigMessageType: null,
   mqttDisplays: [], mqttDisplaysLoading: false,
+  mqttUpdateInfo: {},
   showTouchkioModal: false, touchkioModalDisplay: null,
   touchkioModalMessage: null, touchkioModalMessageType: null,
   touchkioModalBrightness: undefined, touchkioModalVolume: undefined, touchkioModalZoom: undefined,

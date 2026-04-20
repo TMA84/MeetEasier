@@ -185,13 +185,26 @@ const KioskSection = ({ displayData, mqttIdentifier, onKioskCommand }) => (
   </div>
 );
 
-const SystemControls = ({ hostname, mqttIdentifier, onRebootCommand, onShutdownCommand }) => (
-  <div className="touchkio-danger-section">
-    <h4 className="touchkio-danger-title">System Controls</h4>
-    <button type="button" className="admin-secondary-button touchkio-reboot-button" onClick={() => { if (window.confirm(`Reboot ${hostname}?`)) onRebootCommand(mqttIdentifier); }}>Reboot Device</button>
-    <button type="button" className="admin-secondary-button touchkio-shutdown-button" onClick={() => { if (window.confirm(`Shutdown ${hostname}? This will turn off the device!`)) onShutdownCommand(mqttIdentifier); }}>Shutdown Device</button>
-  </div>
-);
+const SystemControls = ({ hostname, mqttIdentifier, updateInfo, onRebootCommand, onShutdownCommand, onUpdateCommand }) => {
+  const hasUpdate = updateInfo && updateInfo.latestVersion && updateInfo.installedVersion && updateInfo.latestVersion !== updateInfo.installedVersion;
+  return (
+    <div className="touchkio-danger-section">
+      <h4 className="touchkio-danger-title">System Controls</h4>
+      {updateInfo && updateInfo.installedVersion && (
+        <div className="touchkio-update-info">
+          <span>Touchkio: {updateInfo.installedVersion}</span>
+          {hasUpdate && <span className="touchkio-update-available"> → {updateInfo.latestVersion} available</span>}
+          {updateInfo.inProgress && <span className="touchkio-update-progress"> (updating...{updateInfo.updatePercentage != null ? ` ${updateInfo.updatePercentage}%` : ''})</span>}
+        </div>
+      )}
+      {hasUpdate && onUpdateCommand && (
+        <button type="button" className="admin-secondary-button touchkio-update-button" onClick={() => { if (window.confirm(`Update Touchkio on ${hostname} to ${updateInfo.latestVersion}?`)) onUpdateCommand(mqttIdentifier); }}>Update Touchkio</button>
+      )}
+      <button type="button" className="admin-secondary-button touchkio-reboot-button" onClick={() => { if (window.confirm(`Reboot ${hostname}?`)) onRebootCommand(mqttIdentifier); }}>Reboot Device</button>
+      <button type="button" className="admin-secondary-button touchkio-shutdown-button" onClick={() => { if (window.confirm(`Shutdown ${hostname}? This will turn off the device!`)) onShutdownCommand(mqttIdentifier); }}>Shutdown Device</button>
+    </div>
+  );
+};
 
 const RecentErrors = ({ recentErrors }) => {
   if (recentErrors.length === 0) return null;
@@ -228,7 +241,7 @@ function getRecentErrors(displayData) {
   return errors;
 }
 
-const TouchkioModal = ({ show, display, getRequestHeaders, message, messageType, brightness, volume, zoom, onClose, onBrightnessChange, onVolumeChange, onZoomChange, onPowerCommand, onRefreshCommand, onKioskCommand, onThemeCommand, onRebootCommand, onShutdownCommand, onPageUrlChange, onRefreshDisplay }) => {
+const TouchkioModal = ({ show, display, getRequestHeaders, message, messageType, brightness, volume, zoom, updateInfo, onClose, onBrightnessChange, onVolumeChange, onZoomChange, onPowerCommand, onRefreshCommand, onKioskCommand, onThemeCommand, onRebootCommand, onShutdownCommand, onUpdateCommand, onPageUrlChange, onRefreshDisplay }) => {
   const [editingUrl, setEditingUrl] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [screenshotUrl, setScreenshotUrl] = useState(null);
@@ -321,7 +334,7 @@ const TouchkioModal = ({ show, display, getRequestHeaders, message, messageType,
             </div>
             <div>
               <KioskSection displayData={displayData} mqttIdentifier={mqttIdentifier} onKioskCommand={onKioskCommand} />
-              <SystemControls hostname={hostname} mqttIdentifier={mqttIdentifier} onRebootCommand={onRebootCommand} onShutdownCommand={onShutdownCommand} />
+              <SystemControls hostname={hostname} mqttIdentifier={mqttIdentifier} updateInfo={updateInfo} onRebootCommand={onRebootCommand} onShutdownCommand={onShutdownCommand} onUpdateCommand={onUpdateCommand} />
             </div>
           </div>
           <RecentErrors recentErrors={recentErrors} />

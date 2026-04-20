@@ -3544,6 +3544,37 @@ module.exports = function(app) {
     }
   });
 
+  // POST /api/mqtt-update/:hostname — Triggers a Touchkio app update on a display
+  app.post('/api/mqtt-update/:hostname', checkApiToken, function(req, res) {
+    try {
+      const { hostname } = req.params;
+      const mqttPowerBridge = require('./touchkio');
+      
+      const result = mqttPowerBridge.sendUpdateCommand(hostname);
+
+      if (result.success) {
+        res.json({ success: true, message: 'Update command sent' });
+      } else {
+        res.status(400).json({ error: result.error || 'Failed to send update command' });
+      }
+    } catch (err) {
+      console.error('Error sending update command:', err);
+      res.status(500).json({ error: 'Failed to send update command' });
+    }
+  });
+
+  // GET /api/mqtt-update-info — Returns Touchkio update info for all devices
+  app.get('/api/mqtt-update-info', checkApiToken, function(req, res) {
+    try {
+      const mqttPowerBridge = require('./touchkio');
+      const info = mqttPowerBridge.getUpdateInfo();
+      res.json({ success: true, updates: info });
+    } catch (err) {
+      console.error('Error fetching update info:', err);
+      res.status(500).json({ error: 'Failed to fetch update info' });
+    }
+  });
+
   // POST /api/mqtt-refresh-all — Sends a refresh command to ALL displays
   app.post('/api/mqtt-refresh-all', checkApiToken, function(req, res) {
     try {

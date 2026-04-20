@@ -8,6 +8,7 @@ import {
   sendMqttThemeCommand, sendMqttVolumeCommand, sendMqttPageZoomCommand,
   sendMqttRefreshCommand, sendMqttRebootCommand, sendMqttShutdownCommand,
   sendMqttRefreshAll, sendMqttRebootAll, sendMqttPageUrlCommand,
+  sendMqttUpdateCommand, fetchMqttUpdateInfo,
   fetchMqttDisplays, submitMqttConfig
 } from '../services/mqtt-commands.js';
 
@@ -114,7 +115,11 @@ export function useAdminMqtt(getRequestHeaders, handleUnauthorizedAccess, getTra
   }, [getRequestHeaders, handleUnauthorizedAccess, updateConfig]);
 
   // ---- Touchkio Modal ----
-  const handleOpenTouchkioModal = useCallback((display) => { updateConfig({ showTouchkioModal: true, touchkioModalDisplay: display, touchkioModalMessage: null, touchkioModalMessageType: null, touchkioModalBrightness: undefined, touchkioModalVolume: undefined, touchkioModalZoom: undefined }); }, [updateConfig]);
+  const handleOpenTouchkioModal = useCallback((display) => {
+    updateConfig({ showTouchkioModal: true, touchkioModalDisplay: display, touchkioModalMessage: null, touchkioModalMessageType: null, touchkioModalBrightness: undefined, touchkioModalVolume: undefined, touchkioModalZoom: undefined });
+    // Load update info for version display
+    fetchMqttUpdateInfo(() => getRequestHeaders(false)).then(r => { if (r.ok) updateConfig({ mqttUpdateInfo: r.updates }); }).catch(() => {});
+  }, [updateConfig, getRequestHeaders]);
   const handleCloseTouchkioModal = useCallback(() => { updateConfig({ showTouchkioModal: false, touchkioModalDisplay: null, touchkioModalMessage: null, touchkioModalMessageType: null, touchkioModalBrightness: undefined, touchkioModalVolume: undefined, touchkioModalZoom: undefined }); }, [updateConfig]);
 
   const handleMqttPowerCommandModal = useCallback(async (identifier, powerOn) => {
@@ -162,6 +167,30 @@ export function useAdminMqtt(getRequestHeaders, handleUnauthorizedAccess, getTra
   const handleMqttRebootCommandModal = useCallback(async (hostname) => { await handleMqttRebootCommand(hostname); updateConfig({ touchkioModalMessage: 'Reboot command sent', touchkioModalMessageType: 'warning' }); }, [handleMqttRebootCommand, updateConfig]);
   const handleMqttShutdownCommandModal = useCallback(async (hostname) => { await handleMqttShutdownCommand(hostname); updateConfig({ touchkioModalMessage: 'Shutdown command sent', touchkioModalMessageType: 'warning' }); }, [handleMqttShutdownCommand, updateConfig]);
 
+  const handleMqttUpdateCommandModal = useCallback(async (hostname) => {
+    try {
+      const response = await sendMqttUpdateCommand(() => getRequestHeaders(), hostname);
+      if (response.ok) {
+        updateConfig({ touchkioModalMessage: 'Update command sent — device will restart after update', touchkioModalMessageType: 'success' });
+      } else {
+        const data = await response.json().catch(() => ({}));
+        updateConfig({ touchkioModalMessage: data.error || 'Failed to send update command', touchkioModalMessageType: 'error' });
+      }
+    } catch (err) {
+      console.error('Failed to send update command:', err);
+      updateConfig({ touchkioModalMessage: 'Failed to send update command', touchkioModalMessageType: 'error' });
+    }
+  }, [getRequestHeaders, updateConfig]);
+
+  const handleLoadUpdateInfo = useCallback(async () => {
+    try {
+      const r = await fetchMqttUpdateInfo(() => getRequestHeaders(false));
+      if (r.ok) {
+        updateConfig({ mqttUpdateInfo: r.updates });
+      }
+    } catch (err) { console.error('Failed to load update info:', err); }
+  }, [getRequestHeaders, updateConfig]);
+
   return {
     mqttDisplaysIntervalRef,
     handleLoadMqttDisplays, handleMqttConfigSubmit,
@@ -174,6 +203,7 @@ export function useAdminMqtt(getRequestHeaders, handleUnauthorizedAccess, getTra
     handleMqttKioskCommandModal, handleMqttThemeCommandModal,
     handleMqttVolumeCommandModal, handleMqttPageZoomCommandModal,
     handleMqttPageUrlCommandModal, handleMqttRefreshCommandModal,
-    handleMqttRebootCommandModal, handleMqttShutdownCommandModal
+    handleMqttRebootCommandModal, handleMqttShutdownCommandModal,
+    handleMqttUpdateCommandModal, handleLoadUpdateInfo
   };
 }
