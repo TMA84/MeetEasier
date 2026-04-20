@@ -135,11 +135,11 @@ homeassistant/update/{deviceId}/app/config
 homeassistant/update/{deviceId}/app/version/status              → version string (installed version)
 
 # Commands (Server → Display)
-homeassistant/update/{deviceId}/app/install                     → "install" (triggers OTA update)
+touchkio/{deviceId}/app/install                                 → "update" (triggers OTA update)
 ```
 
 **MeetEasier Integration:**
-- `sendUpdateCommand(hostname)` publishes `install` to the device's discovered command topic (QoS 1)
+- `sendUpdateCommand(hostname)` publishes `update` to the device's discovered command topic, falling back to `touchkio/{deviceId}/app/install` (QoS 1)
 - `getUpdateInfo(deviceId)` returns per-device update metadata (installed/latest version, command topic, progress)
 - Version comparison prevents sending update commands when already on the latest version
 - Requires Touchkio ≥ 1.3.0 for MQTT update entity support

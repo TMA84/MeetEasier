@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Touchkio OTA update: fallback command topic changed from `homeassistant/update/{deviceId}/touchkio/install` to `touchkio/{deviceId}/app/install` — aligns with native Touchkio MQTT topic structure instead of Home Assistant convention
+- Touchkio OTA update: MQTT publish payload changed from `install` to `update` to match Touchkio firmware command protocol
 - Refactored `touchkio.js` MQTT message handling — extracted individual handler functions (`handleHostname`, `handlePower`, `handleBrightness`, `handleStringState`, `handleIntState`, `handleKeyboard`, `handlePageUrl`, `handleErrors`) from monolithic `subscribeTouchkioStates()` callback
 - Introduced `TOPIC_HANDLERS` lookup table and `routeTouchkioMessage()` dispatcher for declarative topic-to-handler routing — replaces nested if/else chain in the `touchkio/#` subscriber
 - Extracted `checkUnsupportedHardware()` and `logErrorStateChange()` from inline error parsing logic for better separation of concerns

@@ -454,6 +454,34 @@ function logErrorStateChange(deviceId, errorData) {
 }
 
 /**
+ * Handles app version state updates from touchkio/{deviceId}/app/version/state.
+ * Payload is JSON: { installed_version, latest_version, in_progress, update_percentage, ... }
+ */
+function handleAppVersion(deviceId, displayState, payloadStr) {
+  try {
+    const data = JSON.parse(payloadStr);
+    const info = updateInfo.get(deviceId) || {};
+    if (data.installed_version) {
+      info.installedVersion = data.installed_version;
+      displayState.swVersion = data.installed_version;
+    }
+    if (data.latest_version) info.latestVersion = data.latest_version;
+    if (data.in_progress !== undefined) info.inProgress = !!data.in_progress;
+    if (data.update_percentage !== undefined) info.updatePercentage = data.update_percentage;
+    if (data.release_summary) info.releaseSummary = data.release_summary;
+    if (data.release_url) info.releaseUrl = data.release_url;
+    if (data.title) info.title = data.title;
+    // Set fallback command topic if not discovered via HA
+    if (!info.commandTopic) info.commandTopic = `touchkio/${deviceId}/app/install`;
+    updateInfo.set(deviceId, info);
+    console.log(`[Touchkio] App version for ${deviceId}: installed=${info.installedVersion || '?'}, latest=${info.latestVersion || '?'}`);
+  } catch (_e) {
+    // Not JSON — might be a simple version string
+    displayState.swVersion = payloadStr;
+  }
+}
+
+/**
  * Topic handler lookup table for Touchkio MQTT messages.
  */
 const TOPIC_HANDLERS = [
@@ -471,6 +499,7 @@ const TOPIC_HANDLERS = [
   { pattern: 'processor_temperature', handler: (ctx) => { ctx.displayState.temperature = Math.round(parseFloat(ctx.payload) * 10) / 10; } },
   { pattern: 'up_time', handler: (ctx) => { ctx.displayState.uptime = parseFloat(ctx.payload); } },
   { pattern: 'network_address', handler: (ctx) => handleStringState(ctx.deviceId, ctx.displayState, 'networkAddress', ctx.payloadStr, 'Network address') },
+  { pattern: 'app/version', handler: (ctx) => handleAppVersion(ctx.deviceId, ctx.displayState, ctx.payloadStr) },
 ];
 
 /**
@@ -987,10 +1016,10 @@ function sendUpdateCommand(hostname) {
   }
 
   const info = updateInfo.get(deviceId) || {};
-  // Use discovered command topic, or fall back to standard HA update topic
-  const commandTopic = info.commandTopic || `homeassistant/update/${deviceId}/touchkio/install`;
+  // Use discovered command topic, or fall back to standard Touchkio update topic
+  const commandTopic = info.commandTopic || `touchkio/${deviceId}/app/install`;
 
-  const success = mqttClient.publish(commandTopic, 'install', { qos: 1, retain: false });
+  const success = mqttClient.publish(commandTopic, 'update', { qos: 1, retain: false });
 
   if (success) {
     console.log(`[Touchkio] Sent update command to ${hostname} (${deviceId}) via ${commandTopic}`);
