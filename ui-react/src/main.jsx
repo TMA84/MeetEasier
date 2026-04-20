@@ -11,6 +11,7 @@ import ConnectionStatus from './components/global/ConnectionStatus';
 // Suppress console.log and console.warn in production builds to reduce
 // memory pressure on long-running display clients (kiosk mode).
 // console.error is preserved so real errors remain visible.
+/* eslint-disable no-console */
 if (import.meta.env.PROD) {
   const noop = () => {};
   console.log = noop;
@@ -18,6 +19,7 @@ if (import.meta.env.PROD) {
   console.debug = noop;
   console.info = noop;
 }
+/* eslint-enable no-console */
 
 // Eager loading for frequently used components
 import FlightboardLayout from './layouts/FlightboardLayout';

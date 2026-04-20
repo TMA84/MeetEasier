@@ -38,6 +38,9 @@ function getDisplayStatus(display) {
 
 const DisplayRow = ({ display, onOpenPowerManagement, onOpenTouchkioModal, onMqttRefresh, onDeleteDisplay }) => {
   const { status, statusDotColor, hasSocketIO, hasMQTT } = getDisplayStatus(display);
+  const mqttUpdate = display.mqtt?.updateInfo;
+  const swVersion = mqttUpdate?.installedVersion || display.mqtt?.swVersion;
+  const hasUpdate = mqttUpdate && mqttUpdate.latestVersion && mqttUpdate.installedVersion && mqttUpdate.latestVersion !== mqttUpdate.installedVersion;
   return (
     <tr key={display.id}>
       <td className="status-cell" style={{ textAlign: 'center', padding: '0.5rem' }}>
@@ -49,7 +52,11 @@ const DisplayRow = ({ display, onOpenPowerManagement, onOpenTouchkioModal, onMqt
           {display.mqtt && !display.mqtt.hasDesiredConfig && (
             <span className="devices-badge devices-badge--new" style={{ marginLeft: '0.5em', backgroundColor: '#8b5cf6', color: '#fff', fontSize: '0.7em', padding: '0.15em 0.5em', borderRadius: '4px', verticalAlign: 'middle' }}>NEW</span>
           )}
+          {hasUpdate && (
+            <span className="devices-badge devices-badge--update" style={{ marginLeft: '0.5em', backgroundColor: '#22c55e', color: '#fff', fontSize: '0.7em', padding: '0.15em 0.5em', borderRadius: '4px', verticalAlign: 'middle' }}>UPDATE</span>
+          )}
           {(display.mqtt?.deviceId || display.mqtt?.hostname) && (<div className="devices-sub-info">{display.mqtt?.deviceId || display.mqtt?.hostname}</div>)}
+          {swVersion && <div className="devices-sub-info">Touchkio v{swVersion}{hasUpdate ? ` → v${mqttUpdate.latestVersion}` : ''}</div>}
           {display.ipAddress && <div className="devices-sub-info">{display.ipAddress}</div>}
         </div>
       </td>
@@ -147,6 +154,7 @@ const DevicesTab = ({
   onMqttRefresh,
   onMqttRefreshAll,
   onMqttRebootAll,
+  onMqttUpdateAll,
   onDeleteDisplay,
   onTrackingModeChange,
   onRetentionHoursChange,
@@ -176,6 +184,9 @@ const DevicesTab = ({
         </button>
         <button type="button" className="admin-secondary-button devices-reboot-all-button" onClick={onMqttRebootAll} disabled={connectedDisplaysLoading || !hasMqttDisplays}>
           Reboot All Touchkio
+        </button>
+        <button type="button" className="admin-secondary-button devices-update-all-button" onClick={onMqttUpdateAll} disabled={connectedDisplaysLoading || !hasMqttDisplays}>
+          Update All Touchkio
         </button>
       </div>
 

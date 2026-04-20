@@ -562,7 +562,7 @@ const Admin = () => {
             onLoadDisplays={submissions.handleLoadConnectedDisplays}
             onOpenPowerManagement={(clientId) => submissions.handleOpenPowerManagementModal(clientId)}
             onOpenTouchkioModal={mqtt.handleOpenTouchkioModal}
-            onMqttRefresh={mqtt.handleMqttRefreshCommand} onMqttRefreshAll={mqtt.handleMqttRefreshAll} onMqttRebootAll={mqtt.handleMqttRebootAll}
+            onMqttRefresh={mqtt.handleMqttRefreshCommand} onMqttRefreshAll={mqtt.handleMqttRefreshAll} onMqttRebootAll={mqtt.handleMqttRebootAll} onMqttUpdateAll={mqtt.handleMqttUpdateAll}
             onDeleteDisplay={submissions.handleDeleteDisplay}
             onTrackingModeChange={(value) => setField('systemDisplayTrackingMode', value)}
             onRetentionHoursChange={(value) => setField('systemDisplayTrackingRetentionHours', value)}

@@ -1043,6 +1043,10 @@ socket.on('wifiConfigUpdated', (config) => {
 **POST /api/mqtt-reboot-all**
 - Sends reboot command to all connected displays
 
+**POST /api/mqtt-update-all**
+- Sends OTA app update command to all connected displays
+- Returns: `{ "success": true, "message": "...", "successCount": number, "failCount": number, "skippedCount": number, "total": number }`
+
 **GET /api/power-management**
 - Returns: Global power management configuration
 

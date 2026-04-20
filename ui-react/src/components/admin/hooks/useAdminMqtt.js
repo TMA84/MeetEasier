@@ -7,7 +7,7 @@ import {
   sendMqttPowerCommand, sendMqttBrightnessCommand, sendMqttKioskCommand,
   sendMqttThemeCommand, sendMqttVolumeCommand, sendMqttPageZoomCommand,
   sendMqttRefreshCommand, sendMqttRebootCommand, sendMqttShutdownCommand,
-  sendMqttRefreshAll, sendMqttRebootAll, sendMqttPageUrlCommand,
+  sendMqttRefreshAll, sendMqttRebootAll, sendMqttUpdateAll, sendMqttPageUrlCommand,
   sendMqttUpdateCommand, fetchMqttUpdateInfo,
   fetchMqttDisplays, submitMqttConfig
 } from '../services/mqtt-commands.js';
@@ -114,6 +114,12 @@ export function useAdminMqtt(getRequestHeaders, handleUnauthorizedAccess, getTra
     catch (err) { console.error('Failed to send reboot-all command:', err); updateConfig({ connectedDisplaysMessage: `Failed to send reboot-all command: ${err.message}`, connectedDisplaysMessageType: 'error', mqttConfigMessage: 'Failed to send reboot-all command', mqttConfigMessageType: 'error' }); }
   }, [getRequestHeaders, handleUnauthorizedAccess, updateConfig]);
 
+  const handleMqttUpdateAll = useCallback(async () => {
+    if (!window.confirm('Update ALL Touchkio displays? Devices will restart after the update.')) return;
+    try { const r = await sendMqttUpdateAll(() => getRequestHeaders()); if (r.status === 401) { handleUnauthorizedAccess(); return; } if (r.ok) { updateConfig({ connectedDisplaysMessage: r.data.message || 'Update command sent to all displays', connectedDisplaysMessageType: 'success', mqttConfigMessage: r.data.message || 'Update command sent to all displays', mqttConfigMessageType: 'success' }); setTimeout(() => updateConfig({ connectedDisplaysMessage: null, connectedDisplaysMessageType: null }), 5000); } }
+    catch (err) { console.error('Failed to send update-all command:', err); updateConfig({ connectedDisplaysMessage: `Failed to send update-all command: ${err.message}`, connectedDisplaysMessageType: 'error', mqttConfigMessage: 'Failed to send update-all command', mqttConfigMessageType: 'error' }); }
+  }, [getRequestHeaders, handleUnauthorizedAccess, updateConfig]);
+
   // ---- Touchkio Modal ----
   const handleOpenTouchkioModal = useCallback((display) => {
     updateConfig({ showTouchkioModal: true, touchkioModalDisplay: display, touchkioModalMessage: null, touchkioModalMessageType: null, touchkioModalBrightness: undefined, touchkioModalVolume: undefined, touchkioModalZoom: undefined });
@@ -197,7 +203,7 @@ export function useAdminMqtt(getRequestHeaders, handleUnauthorizedAccess, getTra
     handleMqttPowerCommand, handleMqttBrightnessCommand, handleMqttKioskCommand,
     handleMqttThemeCommand, handleMqttVolumeCommand, handleMqttPageZoomCommand,
     handleMqttRefreshCommand, handleMqttRebootCommand, handleMqttShutdownCommand,
-    handleMqttRefreshAll, handleMqttRebootAll,
+    handleMqttRefreshAll, handleMqttRebootAll, handleMqttUpdateAll,
     handleOpenTouchkioModal, handleCloseTouchkioModal,
     handleMqttPowerCommandModal, handleMqttBrightnessCommandModal,
     handleMqttKioskCommandModal, handleMqttThemeCommandModal,

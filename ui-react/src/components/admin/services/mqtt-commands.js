@@ -197,6 +197,23 @@ export async function sendMqttRebootAll(getHeaders) {
 }
 
 /**
+ * Send update command to all Touchkio displays.
+ * @param {Function} getHeaders - Returns request headers
+ * @returns {Promise<{ok: boolean, data?: Object}>} Result
+ */
+export async function sendMqttUpdateAll(getHeaders) {
+  const response = await fetch('/api/mqtt-update-all', {
+    method: 'POST',
+    headers: getHeaders()
+  });
+  if (response.ok) {
+    const data = await response.json();
+    return { ok: true, data };
+  }
+  return { ok: false, status: response.status };
+}
+
+/**
  * Send page URL command to a specific MQTT display.
  * @param {Function} getHeaders - Returns request headers
  * @param {string} identifier - Display identifier

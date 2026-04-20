@@ -3648,6 +3648,42 @@ module.exports = function(app) {
     }
   });
 
+  // POST /api/mqtt-update-all — Sends an update command to ALL Touchkio displays
+  app.post('/api/mqtt-update-all', checkApiToken, function(req, res) {
+    try {
+      const mqttPowerBridge = require('./touchkio');
+      const displays = mqttPowerBridge.getAllDisplays();
+      
+      let successCount = 0;
+      let failCount = 0;
+      let skippedCount = 0;
+
+      displays.forEach(display => {
+        const identifier = display.deviceId || display.hostname;
+        const result = mqttPowerBridge.sendUpdateCommand(identifier);
+        if (result.success) {
+          successCount++;
+        } else if (result.error && result.error.includes('not found')) {
+          skippedCount++;
+        } else {
+          failCount++;
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Update command sent to ${successCount} display(s)`,
+        successCount,
+        failCount,
+        skippedCount,
+        total: displays.length
+      });
+    } catch (err) {
+      console.error('Error sending update-all command:', err);
+      res.status(500).json({ error: 'Failed to send update-all command' });
+    }
+  });
+
   // GET /api/mqtt-screenshot/:deviceId — Returns the latest screenshot image for a Touchkio device
   app.get('/api/mqtt-screenshot/:deviceId', checkApiToken, function(req, res) {
     try {

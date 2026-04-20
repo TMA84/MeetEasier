@@ -7,19 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- Touchkio OTA update: fallback command topic changed from `homeassistant/update/{deviceId}/touchkio/install` to `touchkio/{deviceId}/app/install` — aligns with native Touchkio MQTT topic structure instead of Home Assistant convention
-- Touchkio OTA update: MQTT publish payload changed from `install` to `update` to match Touchkio firmware command protocol
-- Refactored `touchkio.js` MQTT message handling — extracted individual handler functions (`handleHostname`, `handlePower`, `handleBrightness`, `handleStringState`, `handleIntState`, `handleKeyboard`, `handlePageUrl`, `handleErrors`) from monolithic `subscribeTouchkioStates()` callback
-- Introduced `TOPIC_HANDLERS` lookup table and `routeTouchkioMessage()` dispatcher for declarative topic-to-handler routing — replaces nested if/else chain in the `touchkio/#` subscriber
-- Extracted `checkUnsupportedHardware()` and `logErrorStateChange()` from inline error parsing logic for better separation of concerns
-- Added `topicMatches()` helper for consistent topic pattern matching against both `/state` and `/status` suffixes
+## [1.8.5] - 2026-04-20
 
 ### Added
-- Comprehensive JSDoc documentation for `touchkio.js` — file header, `@type` annotations for all module-level Maps and variables, `@param`/`@returns` tags on every exported and internal function, and `@example` on `extractDeviceId()`
-- Touchkio software version extraction from Home Assistant MQTT discovery config messages — `sw_version` is now parsed and stored in display state for each device
-- `swVersion` and `pageZoom` fields included in Touchkio display status API response — exposes software version and current page zoom level to admin clients
-- `.touchkio-update-current` style for displaying the current installed version in the Touchkio update UI — muted white text (`rgba(255, 255, 255, 0.4)`) to visually distinguish it from the available update version
+- Devices tab: version info and green UPDATE badge per device when update available
+- Devices tab: "Update All Touchkio" button with confirmation dialog
+- API route: `POST /api/mqtt-update-all` sends update command to all displays
+
+### Fixed
+- Touchkio `sw_version` parsing: strips `touchkio-v` prefix for clean version display
+- ESLint: fixed `!=` to `!==` in TouchkioModal, suppressed console warnings in main.jsx
+- Reduced verbose HA discovery logging (one log per new device instead of per entity)
+
+### Changed
+- Touchkio update command aligned with native format: `touchkio/{deviceId}/app/install` with payload `"update"`
 
 ## [1.8.4] - 2026-04-20
 

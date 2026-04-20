@@ -197,7 +197,7 @@ const SystemControls = ({ hostname, mqttIdentifier, displayData, updateInfo, onR
           <span>Touchkio: v{currentVersion}</span>
           {hasUpdate && <span className="touchkio-update-available"> → v{updateInfo.latestVersion} available</span>}
           {!hasUpdate && updateInfo?.latestVersion && <span className="touchkio-update-current"> (up to date)</span>}
-          {updateInfo?.inProgress && <span className="touchkio-update-progress"> (updating...{updateInfo.updatePercentage != null ? ` ${updateInfo.updatePercentage}%` : ''})</span>}
+          {updateInfo?.inProgress && <span className="touchkio-update-progress"> (updating...{updateInfo.updatePercentage !== null && updateInfo.updatePercentage !== undefined ? ` ${updateInfo.updatePercentage}%` : ''})</span>}
         </div>
       )}
       {canUpdate && onUpdateCommand && (

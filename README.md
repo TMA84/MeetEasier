@@ -580,6 +580,7 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 - `POST /api/mqtt-refresh-all` - Refresh all displays (requires token)
 - `POST /api/mqtt-reboot-all` - Reboot all displays (requires token)
 - `POST /api/mqtt-update/:hostname` - Trigger OTA app update on a display (requires token)
+- `POST /api/mqtt-update-all` - Trigger OTA app update on all displays (requires token)
 - `GET /api/mqtt-update-info` - Get update info for all MQTT devices (requires token)
 - `GET /api/mqtt-screenshot/:deviceId` - Get latest display screenshot as image (requires token)
 

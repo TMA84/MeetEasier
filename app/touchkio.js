@@ -537,8 +537,10 @@ function subscribeTouchkioStates() {
         const deviceId = extractDeviceId(topic);
         if (deviceId) {
             // Initialize display state if not already present
-            if (!displayStates.has(deviceId)) {
+            const isNew = !displayStates.has(deviceId);
+            if (isNew) {
             displayStates.set(deviceId, { deviceId });
+            console.log(`[Touchkio] Discovered device via Home Assistant: ${deviceId}`);
           }
 
           // Try to extract sw_version from any HA discovery config message
@@ -547,11 +549,11 @@ function subscribeTouchkioStates() {
             if (configPayload.device && configPayload.device.sw_version) {
               const state = displayStates.get(deviceId);
               if (state) {
-                state.swVersion = configPayload.device.sw_version;
-                console.log(`[Touchkio] sw_version for ${deviceId}: ${state.swVersion}`);
+                // Strip "touchkio-v" or "v" prefix for clean version string
+                state.swVersion = configPayload.device.sw_version.replace(/^touchkio-v?|^v/i, '');
               }
             }
-            // Also extract installed_version directly from update config (some Touchkio versions include it)
+            // Also extract installed_version directly from update config
             if (configPayload.installed_version) {
               const info = updateInfo.get(deviceId) || {};
               info.installedVersion = configPayload.installed_version;
@@ -592,8 +594,6 @@ function subscribeTouchkioStates() {
                 });
               }
             } catch (_e) { /* ignore parse errors on config */ }
-          } else {
-            console.log(`[Touchkio] Discovered device via Home Assistant: ${deviceId}`);
           }
         }
       }
