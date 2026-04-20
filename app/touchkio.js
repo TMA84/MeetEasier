@@ -461,6 +461,8 @@ function handleAppVersion(deviceId, displayState, payloadStr) {
   try {
     const data = JSON.parse(payloadStr);
     const info = updateInfo.get(deviceId) || {};
+    const oldInstalled = info.installedVersion;
+    const oldLatest = info.latestVersion;
     if (data.installed_version) {
       info.installedVersion = data.installed_version;
       displayState.swVersion = data.installed_version;
@@ -471,12 +473,13 @@ function handleAppVersion(deviceId, displayState, payloadStr) {
     if (data.release_summary) info.releaseSummary = data.release_summary;
     if (data.release_url) info.releaseUrl = data.release_url;
     if (data.title) info.title = data.title;
-    // Set fallback command topic if not discovered via HA
     if (!info.commandTopic) info.commandTopic = `touchkio/${deviceId}/app/install`;
     updateInfo.set(deviceId, info);
-    console.log(`[Touchkio] App version for ${deviceId}: installed=${info.installedVersion || '?'}, latest=${info.latestVersion || '?'}`);
+    // Only log on version changes
+    if (info.installedVersion !== oldInstalled || info.latestVersion !== oldLatest) {
+      console.log(`[Touchkio] App version for ${deviceId}: installed=${info.installedVersion || '?'}, latest=${info.latestVersion || '?'}`);
+    }
   } catch (_e) {
-    // Not JSON — might be a simple version string
     displayState.swVersion = payloadStr;
   }
 }
