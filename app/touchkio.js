@@ -986,16 +986,14 @@ function sendUpdateCommand(hostname) {
     return { success: false, error: `Device "${hostname}" not found` };
   }
 
-  const info = updateInfo.get(deviceId);
-  if (!info || !info.commandTopic) {
-    return { success: false, error: `No update entity discovered for "${hostname}". Device may not support MQTT updates or Touchkio < 1.3.0.` };
-  }
+  const info = updateInfo.get(deviceId) || {};
+  // Use discovered command topic, or fall back to standard HA update topic
+  const commandTopic = info.commandTopic || `homeassistant/update/${deviceId}/touchkio/install`;
 
-  const success = mqttClient.publish(info.commandTopic, 'install', { qos: 1, retain: false });
+  const success = mqttClient.publish(commandTopic, 'install', { qos: 1, retain: false });
 
   if (success) {
-    console.log(`[Touchkio] Sent update command to ${hostname} (${deviceId}) via ${info.commandTopic}`);
-    // Mark as in progress locally
+    console.log(`[Touchkio] Sent update command to ${hostname} (${deviceId}) via ${commandTopic}`);
     info.inProgress = true;
     updateInfo.set(deviceId, info);
   }

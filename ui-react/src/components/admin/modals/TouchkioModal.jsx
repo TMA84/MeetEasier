@@ -188,7 +188,7 @@ const KioskSection = ({ displayData, mqttIdentifier, onKioskCommand }) => (
 const SystemControls = ({ hostname, mqttIdentifier, displayData, updateInfo, onRebootCommand, onShutdownCommand, onUpdateCommand }) => {
   const hasUpdate = updateInfo && updateInfo.latestVersion && updateInfo.installedVersion && updateInfo.latestVersion !== updateInfo.installedVersion;
   const currentVersion = updateInfo?.installedVersion || displayData?.swVersion || null;
-  const canUpdate = updateInfo && updateInfo.commandTopic;
+  const canUpdate = !!currentVersion;
   return (
     <div className="touchkio-danger-section">
       <h4 className="touchkio-danger-title">System Controls</h4>
