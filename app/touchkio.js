@@ -468,6 +468,15 @@ function subscribeTouchkioStates() {
             displayStates.set(deviceId, { deviceId });
           }
 
+          // Try to extract sw_version from any HA discovery config message
+          try {
+            const config = JSON.parse(payload.toString());
+            if (config.device && config.device.sw_version) {
+              const state = displayStates.get(deviceId);
+              if (state) state.swVersion = config.device.sw_version;
+            }
+          } catch (_e) { /* not JSON or no device block */ }
+
           // Parse update entity discovery (homeassistant/update/{deviceId}/touchkio/config)
           if (topic.includes('/update/') && topic.includes('/touchkio/')) {
             try {

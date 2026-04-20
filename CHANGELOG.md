@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Touchkio software version extraction from Home Assistant MQTT discovery config messages — `sw_version` is now parsed and stored in display state for each device
+
 ## [1.8.4] - 2026-04-20
 
 ### Added

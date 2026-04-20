@@ -74,6 +74,7 @@ displayStates.set("rpi_1A4187", {
   deviceId: "rpi_1A4187",
   hostname: "piosk",
   hasDesiredConfig: true,
+  swVersion: "touchkio-v1.1.2",
   power: "ON",
   brightness: 100,
   kioskStatus: "Fullscreen",
@@ -231,4 +232,4 @@ Touchkio sendet auch Device-Informationen:
 }
 ```
 
-Diese Informationen könnten zukünftig im Admin Panel angezeigt werden.
+The `sw_version` field is automatically extracted from any Home Assistant MQTT discovery config message and stored as `swVersion` in the display state for each device. This happens during initial device discovery and whenever a config message is received.
