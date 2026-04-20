@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Touchkio app version MQTT handler now only logs when installed or latest version actually changes — suppresses duplicate log messages on repeated MQTT state updates
+
 ## [1.8.5] - 2026-04-20
 
 ### Added

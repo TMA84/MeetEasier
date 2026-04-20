@@ -115,6 +115,29 @@ class Flightboard extends Component {
       }
     });
     if (this.socket && this.socket.on) {
+      this.socket.on('connect', () => {
+        if (this._wasDisconnected) {
+          console.log('[Flightboard] Reconnected — refreshing data');
+          this._wasDisconnected = false;
+          this.getRoomData();
+          this.fetchSidebarConfig();
+        }
+      });
+
+      this.socket.on('disconnect', () => {
+        this._wasDisconnected = true;
+        this._disconnectReloadTimer = setTimeout(() => {
+          window.location.reload();
+        }, 2 * 60 * 1000);
+      });
+
+      this.socket.on('reconnect', () => {
+        if (this._disconnectReloadTimer) {
+          clearTimeout(this._disconnectReloadTimer);
+          this._disconnectReloadTimer = null;
+        }
+      });
+
       this.socket.on('maintenanceConfigUpdated', createMaintenanceHandler(this));
 
       this.socket.on('i18nConfigUpdated', (i18nConfig) => {
@@ -145,13 +168,9 @@ class Flightboard extends Component {
   }
 
   componentWillUnmount() {
-    if (this.socket) {
-      this.socket.disconnect();
-    }
-    // Clean up heartbeat interval
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-    }
+    if (this.socket) this.socket.disconnect();
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    if (this._disconnectReloadTimer) clearTimeout(this._disconnectReloadTimer);
   }
 
   render() {

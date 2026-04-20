@@ -114,6 +114,7 @@ class Display extends Component {
   componentWillUnmount() {
     if (this.socket) this.socket.disconnect();
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    if (this._disconnectReloadTimer) clearTimeout(this._disconnectReloadTimer);
     stopAutoReload();
   }
 
@@ -136,6 +137,16 @@ class Display extends Component {
 
     this.socket.on('connect', () => {
       console.log('[Display] Socket connected');
+
+      // If we were disconnected, refresh all data
+      if (this._wasDisconnected) {
+        console.log('[Display] Reconnected — refreshing data');
+        this._wasDisconnected = false;
+        this.getRoomsData();
+        this.fetchSidebarConfig();
+        this.fetchBookingConfig();
+      }
+
       this.socket.emit('request-identifier', (serverIdentifier) => {
         if (serverIdentifier) {
           console.log('[Display] Server-assigned identifier:', serverIdentifier);
@@ -146,6 +157,27 @@ class Display extends Component {
           initPowerManagement(this.displayClientId);
         }
       });
+    });
+
+    this.socket.on('disconnect', (reason) => {
+      console.log('[Display] Socket disconnected:', reason);
+      this._wasDisconnected = true;
+      this._disconnectedAt = Date.now();
+
+      // If disconnected for more than 2 minutes, force a full page reload
+      // This handles cases where the browser is too sluggish to reconnect properly
+      this._disconnectReloadTimer = setTimeout(() => {
+        console.log('[Display] Disconnected for 2 minutes — reloading page');
+        window.location.reload();
+      }, 2 * 60 * 1000);
+    });
+
+    this.socket.on('reconnect', () => {
+      // Clear the reload timer since we reconnected successfully
+      if (this._disconnectReloadTimer) {
+        clearTimeout(this._disconnectReloadTimer);
+        this._disconnectReloadTimer = null;
+      }
     });
 
     this.socket.on('sidebarConfigUpdated', (config) => {
