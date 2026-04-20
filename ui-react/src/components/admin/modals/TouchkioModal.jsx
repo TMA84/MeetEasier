@@ -336,7 +336,7 @@ const TouchkioModal = ({ show, display, getRequestHeaders, message, messageType,
             </div>
             <div>
               <KioskSection displayData={displayData} mqttIdentifier={mqttIdentifier} onKioskCommand={onKioskCommand} />
-              <SystemControls hostname={hostname} mqttIdentifier={mqttIdentifier} displayData={displayData} updateInfo={updateInfo} onRebootCommand={onRebootCommand} onShutdownCommand={onShutdownCommand} onUpdateCommand={onUpdateCommand} />
+              <SystemControls hostname={hostname} mqttIdentifier={mqttIdentifier} displayData={displayData} updateInfo={updateInfo || displayData?.updateInfo} onRebootCommand={onRebootCommand} onShutdownCommand={onShutdownCommand} onUpdateCommand={onUpdateCommand} />
             </div>
           </div>
           <RecentErrors recentErrors={recentErrors} />

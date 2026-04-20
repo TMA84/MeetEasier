@@ -988,7 +988,7 @@ socket.on('wifiConfigUpdated', (config) => {
 - Returns: MQTT client connection status
 
 **GET /api/mqtt-displays**
-- Returns: MQTT display states (power, brightness, kiosk, theme, etc.)
+- Returns: MQTT display states (power, brightness, kiosk, theme, volume, pageUrl, pageZoom, swVersion, etc.)
 
 **POST /api/mqtt-power-trigger/:hostname**
 - Body: `{ "powerState"?: boolean, "brightness"?: number }`

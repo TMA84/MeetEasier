@@ -470,10 +470,24 @@ function subscribeTouchkioStates() {
 
           // Try to extract sw_version from any HA discovery config message
           try {
-            const config = JSON.parse(payload.toString());
-            if (config.device && config.device.sw_version) {
+            const configPayload = JSON.parse(payload.toString());
+            if (configPayload.device && configPayload.device.sw_version) {
               const state = displayStates.get(deviceId);
-              if (state) state.swVersion = config.device.sw_version;
+              if (state) {
+                state.swVersion = configPayload.device.sw_version;
+                console.log(`[Touchkio] sw_version for ${deviceId}: ${state.swVersion}`);
+              }
+            }
+            // Also extract installed_version directly from update config (some Touchkio versions include it)
+            if (configPayload.installed_version) {
+              const info = updateInfo.get(deviceId) || {};
+              info.installedVersion = configPayload.installed_version;
+              updateInfo.set(deviceId, info);
+            }
+            if (configPayload.latest_version) {
+              const info = updateInfo.get(deviceId) || {};
+              info.latestVersion = configPayload.latest_version;
+              updateInfo.set(deviceId, info);
             }
           } catch (_e) { /* not JSON or no device block */ }
 

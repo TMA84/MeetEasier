@@ -3806,6 +3806,7 @@ module.exports = function(app) {
 
       const socketController = require('./socket-controller');
       const mqttPowerBridge = require('./touchkio');
+      const updateInfoMap = mqttPowerBridge.getUpdateInfo();
       
       // Load Socket.IO-connected displays
       const socketDisplays = typeof socketController.getConnectedDisplayClients === 'function'
@@ -3892,7 +3893,10 @@ module.exports = function(app) {
           lastErrorUpdate: mqtt.lastErrorUpdate,
           hasDesiredConfig: mqtt.hasDesiredConfig,
           hasScreenshot: mqtt.hasScreenshot,
-          screenshotTimestamp: mqtt.screenshotTimestamp
+          screenshotTimestamp: mqtt.screenshotTimestamp,
+          swVersion: mqtt.swVersion,
+          pageZoom: mqtt.pageZoom,
+          updateInfo: updateInfoMap[mqtt.deviceId] || null
         };
         
         if (existingDisplay) {

@@ -575,7 +575,7 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 - `GET /api/mqtt-config` - Get MQTT configuration (requires token)
 - `POST /api/mqtt-config` - Update MQTT configuration (requires token)
 - `GET /api/mqtt-status` - Get MQTT connection status (requires token)
-- `GET /api/mqtt-displays` - Get MQTT display states (requires token)
+- `GET /api/mqtt-displays` - Get MQTT display states including swVersion and pageZoom (requires token)
 - `POST /api/mqtt-power-trigger/:hostname` - Send power command (requires token)
 - `POST /api/mqtt-refresh-all` - Refresh all displays (requires token)
 - `POST /api/mqtt-reboot-all` - Reboot all displays (requires token)
@@ -666,6 +666,7 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 - Per-device update tracking (installed/latest version, progress)
 - Bulk operations (refresh all, reboot all)
 - Display health monitoring (CPU, memory, temperature, uptime)
+- Software version tracking (swVersion from Home Assistant MQTT discovery)
 - Auto-discovery of MQTT-connected devices
 - Merged display view combining Socket.IO and MQTT connections
 - Desired config persistence: brightness, URL, zoom, volume, and theme settings are saved per device and automatically re-applied after device reconnect
