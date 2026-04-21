@@ -77,3 +77,7 @@ docker-compose.override.yml
 
 # External Touchkio repository (submodule/clone)
 /touchkio/
+
+# Local maintenance scripts (contain IP addresses)
+/scripts/rpi-*.sh
+/scripts/setup-touchkio-devices.sh
