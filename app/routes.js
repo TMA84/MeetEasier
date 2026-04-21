@@ -940,6 +940,7 @@ function stripRoomsForFlightboard(rooms) {
     Name: room.Name,
     RoomAlias: room.RoomAlias,
     Busy: room.Busy,
+    Capacity: room.Capacity,
     ErrorMessage: room.ErrorMessage,
     Appointments: Array.isArray(room.Appointments)
       ? room.Appointments.slice(0, 2).map(a => ({

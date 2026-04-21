@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.7] - 2026-04-21
+
+### Changed
+- Room capacity now sourced from Microsoft Graph API instead of static config file
+- Seats column only shown when room has capacity > 0
+- Removed static `flightboard.seats.js` and its test
+- RPi disk cleanup added as Step 6 to device setup script with weekly cron job
+
+### Fixed
+- `Capacity` was stripped by `stripRoomsForFlightboard` — seats only appeared after Socket.IO update, not on initial load
+
+### Changed
+- Bumped package version from 1.8.6 to 1.8.7
+
 ## [1.8.6] - 2026-04-20
 
 ### Fixed

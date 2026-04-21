@@ -67,7 +67,7 @@ module.exports = {
     // Configure Graph API request for rooms within a room list
     const request = client
       .api(`/places/${email}/microsoft.graph.roomlist/rooms`)
-      .select('displayName,emailAddress')
+      .select('displayName,emailAddress,capacity')
       .orderby('displayName')
       .top(Math.min(30, maxItems));
 

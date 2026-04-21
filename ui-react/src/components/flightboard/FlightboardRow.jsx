@@ -3,7 +3,6 @@
 */
 import React from 'react';
 import PropTypes from 'prop-types';
-import seats from '../../config/flightboard.seats.js';
 import { formatTimeRange } from '../../utils/time-format.js';
 import { getFlightboardDisplayTranslations } from '../../config/display-translations.js';
 import { AppointmentShape } from '../shared/prop-types.js';
@@ -136,19 +135,6 @@ MeetingTime.propTypes = {
 };
 
 /**
-* Room seating capacity display
-* Shows configured seat count or 'xx' if not configured
-*/
-const Seats = ({ room }) => {
-  return seats.capacity[room.Name] === undefined ? 'xx' : seats.capacity[room.Name];
-};
-
-Seats.propTypes = {
-  room: PropTypes.shape({
-    Name: PropTypes.string.isRequired
-  }).isRequired
-};
-
 /**
 * Flightboard row component displaying room status and meeting information
 * Shows room availability, current meeting, and next meeting in a responsive row layout
@@ -196,15 +182,17 @@ const FlightboardRow = ({ room, filter = '' }) => {
                 </div>
               </div>
 
-              {/* Seating capacity */}
+              {/* Seating capacity (from Graph API) */}
+              {room.Capacity > 0 && (
               <div className="medium-1 columns">
                 <div className="seats-capacity">
-                  <Seats room={room} />
+                  {room.Capacity}
                 </div>
                 <div className="seats">
                   {config.board.seats}
                 </div>
               </div>
+              )}
 
               {/* Current meeting info */}
               <div className="medium-3 columns">

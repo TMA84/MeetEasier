@@ -366,7 +366,7 @@ There are four main directories in the `ui-react/src/` folder:
 
 - `flightboard.config.js` : Flightboard customization with multi-language support
 - `singleRoom.config.js` : Single room display customization with translations
-- `flightboard.seats.js` : Room capacity configuration
+- `flightboard.seats.js` : Static room capacity overrides (Graph API capacity is used first when available)
 
 ### Utils
 

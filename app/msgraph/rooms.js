@@ -119,6 +119,7 @@ module.exports = function(callback, msalClient) {
               room.Name = roomItem.displayName;
               room.RoomAlias = roomAlias;
               room.Email = email;
+              room.Capacity = roomItem.capacity || 0;
               roomAddresses.push(room);
             }
           });

@@ -146,11 +146,19 @@ describe('FlightboardRow Component', () => {
   });
 
   describe('Seating Capacity', () => {
-    it('displays seat capacity when configured', () => {
-      // Note: This depends on seats.capacity configuration
-      const { container } = render(<FlightboardRow room={mockRoom} filter="" />);
+    it('displays seat capacity from Graph API', () => {
+      const roomWithCapacity = { ...mockRoom, Capacity: 10 };
+      const { container } = render(<FlightboardRow room={roomWithCapacity} filter="" />);
       const seatsElement = container.querySelector('.seats-capacity');
       expect(seatsElement).toBeInTheDocument();
+      expect(seatsElement.textContent).toBe('10');
+    });
+
+    it('hides seats column when no capacity', () => {
+      const roomNoCapacity = { ...mockRoom, Capacity: 0 };
+      const { container } = render(<FlightboardRow room={roomNoCapacity} filter="" />);
+      const seatsElement = container.querySelector('.seats-capacity');
+      expect(seatsElement).toBeNull();
     });
   });
 

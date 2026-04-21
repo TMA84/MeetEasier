@@ -1727,6 +1727,7 @@ curl -X POST http://localhost:8080/api/logo \
     "Name": "Conference Room A",
     "RoomAlias": "conf-a",
     "Busy": false,
+    "Capacity": 10,
     "Appointments": [
       {
         "Subject": "Team Meeting",
