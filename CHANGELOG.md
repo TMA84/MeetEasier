@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.8] - 2026-04-22
+
+### Fixed
+- Dark mode flicker: displays with client-specific dark mode override briefly showed light theme when sidebar config was broadcast globally
+- Display now re-fetches client-specific config on sidebar updates instead of using the global broadcast value
+
 ## [1.8.7] - 2026-04-21
 
 ### Changed
