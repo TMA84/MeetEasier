@@ -180,15 +180,10 @@ class Display extends Component {
       }
     });
 
-    this.socket.on('sidebarConfigUpdated', (config) => {
-      console.log('Sidebar config updated via Socket.IO:', config);
-      const normalized = normalizeSidebarConfig(config);
-      this.setState({ sidebarConfig: normalized }, () => {
-        applyAutoReload(normalized);
-        // Re-apply colors with updated dark mode state
-        const isDark = !!normalized.singleRoomDarkMode || (typeof window !== 'undefined' && window.location.pathname.includes('/room-minimal/'));
-        applyColorsToCSS(this.state.colorsConfig, isDark);
-      });
+    this.socket.on('sidebarConfigUpdated', () => {
+      // Re-fetch client-specific config instead of using the broadcast
+      // (broadcast contains global config without client overrides)
+      this.fetchSidebarConfig();
     });
 
     this.socket.on('maintenanceConfigUpdated', createMaintenanceHandler(this));
@@ -258,8 +253,14 @@ class Display extends Component {
         const config = normalizeSidebarConfig(data);
         this.setState({ sidebarConfig: config }, () => {
           applyAutoReload(config);
-          // Fetch colors after sidebar config so dark mode state is available
-          this.fetchColorsConfig();
+          const isDark = !!config.singleRoomDarkMode || (typeof window !== 'undefined' && window.location.pathname.includes('/room-minimal/'));
+          // On initial load, fetch colors; on subsequent updates, just re-apply
+          if (this._colorsLoaded) {
+            applyColorsToCSS(this.state.colorsConfig, isDark);
+          } else {
+            this._colorsLoaded = true;
+            this.fetchColorsConfig();
+          }
         });
       })
       .catch(err => { console.error('Error fetching sidebar config:', err); });
