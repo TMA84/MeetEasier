@@ -424,11 +424,13 @@ class Display extends Component {
       );
     }
 
+    const isModalOpen = showBookingModal || showExtendModal || showErrorModal;
+
     return (
       <div style={{ position: 'relative' }}>
 
         {response ? (
-          <div className={`single-room-layout ${isDarkModeActive ? 'single-room-layout--dark' : ''}`} style={{ display: 'flex', height: '100vh' }}>
+          <div className={`single-room-layout ${isDarkModeActive ? 'single-room-layout--dark' : ''}`} style={{ display: 'flex', height: '100vh', visibility: isModalOpen ? 'hidden' : 'visible' }}>
             <RoomStatusBlock 
               room={room} 
               details={roomDetails} 

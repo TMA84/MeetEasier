@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.10] - 2026-04-22
+
+### Fixed
+- Status text flickering through booking/extend/error modals — room layout hidden while any modal is open
+
 ## [1.8.9] - 2026-04-22
 
 ### Fixed
