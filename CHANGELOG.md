@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.9] - 2026-04-22
+
+### Fixed
+- Status text ("Frei") bleeding through booking modal overlay — increased opacity (light: 0.85, dark: 0.92)
+
 ## [1.8.8] - 2026-04-22
 
 ### Fixed

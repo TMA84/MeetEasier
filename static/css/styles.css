@@ -1925,7 +1925,7 @@ body.flightboard-light .credentials-error {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.75);
+  background-color: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2363,7 +2363,7 @@ body.flightboard-light .credentials-error {
 }
 /* Booking Modal – Dark Mode Overrides (.minimal-display) */
 .booking-modal-overlay.minimal-display {
-  background-color: rgba(0, 0, 0, 0.85);
+  background-color: rgba(0, 0, 0, 0.92);
 }
 
 .minimal-display .booking-modal,
