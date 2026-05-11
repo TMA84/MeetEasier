@@ -249,6 +249,8 @@ app.use(express.static("static", {
 
 // Serve React build with custom cache control
 app.use(express.static(`${__dirname}/ui-react/build`, {
+  etag: true,
+  lastModified: true,
   setHeaders: (res, path) => {
     // Do not cache HTML files (index.html, etc.)
     if (path.endsWith('.html')) {
@@ -256,9 +258,13 @@ app.use(express.static(`${__dirname}/ui-react/build`, {
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
     }
-    // Cache assets with hash in filename for 1 year (immutable)
-    else if (path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    // Hashed assets: short cache with revalidation (prevents Electron/Chromium disk cache bloat)
+    else if (path.match(/\.(js|css)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+    }
+    // Images/fonts: moderate cache (1 day)
+    else if (path.match(/\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
     }
   }
 }));

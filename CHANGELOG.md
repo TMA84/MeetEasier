@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.11] - 2026-04-22
+
+### Fixed
+- Reduced aggressive caching for Touchkio/Electron displays: JS/CSS max-age from 1 year to 1 hour with must-revalidate, images/fonts to 1 day — prevents SD card filling up with stale cache
+- Static asset cache headers: JS/CSS files now use short cache with revalidation (`max-age=3600, must-revalidate`) instead of 1-year immutable to prevent Electron/Chromium disk cache bloat on kiosk displays
+- Images and fonts use moderate 1-day cache (`max-age=86400`) instead of 1-year immutable
+- Enabled `etag` and `lastModified` on Express static file serving for proper cache revalidation
+
 ## [1.8.10] - 2026-04-22
 
 ### Fixed

@@ -1331,7 +1331,18 @@ Time format is automatically determined by locale:
 - Keep `SEARCH_MAXDAYS` reasonable (7-14 days)
 - Don't set `SEARCH_MAXROOMS` too high (50-100 max)
 - Monitor server resources with many rooms
-- Use caching for static assets
+
+**Static Asset Cache Strategy:**
+
+MeetEasier uses a tiered cache strategy optimized for kiosk displays (Electron/Chromium on Raspberry Pi) to prevent disk cache bloat while still benefiting from caching:
+
+| Asset Type | Cache-Control | Rationale |
+|---|---|---|
+| HTML files | `no-cache, no-store, must-revalidate` | Always fetch fresh to pick up deployments |
+| JS / CSS | `public, max-age=3600, must-revalidate` | Short cache (1 hour) with revalidation via ETag/Last-Modified |
+| Images / Fonts | `public, max-age=86400` | Moderate cache (1 day) — these change infrequently |
+
+ETag and Last-Modified headers are enabled, so browsers can revalidate cached assets efficiently with conditional requests (304 Not Modified) instead of re-downloading.
 
 ### 3. Reliability
 
