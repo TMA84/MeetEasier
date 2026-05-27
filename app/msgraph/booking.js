@@ -165,8 +165,7 @@ function getAuthenticatedClient(msalClient) {
   
   // Configure client credentials request – .default scope for app permissions
   const clientCredentialRequest = {
-    scopes: ['.default'],
-    skipCache: true
+    scopes: ['https://graph.microsoft.com/.default']
   };
 
   // Initialize Graph client with custom auth provider

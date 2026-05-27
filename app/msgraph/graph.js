@@ -154,8 +154,8 @@ async function getPaginatedResults(request, maxItems) {
 * Creates an authenticated Microsoft Graph API client.
 *
 * Uses the MSAL client to obtain an access token via the
-* client credentials flow from Azure AD. The token is
-* requested fresh for each call (skipCache: true).
+* client credentials flow from Azure AD. MSAL automatically
+* caches tokens and only requests a new one when expired.
 *
 * @param {Object} msalClient - MSAL client instance for token acquisition
 * @returns {Object} Authenticated Microsoft Graph client
@@ -169,8 +169,7 @@ function getAuthenticatedClient(msalClient) {
   // Configure client credentials request
   // .default scope requests all configured app permissions
   const clientCredentialRequest = {
-    scopes: [ 'https://graph.microsoft.com/.default' ],
-    skipCache: true // (optional) Skip cache and force a new token from Azure AD
+    scopes: [ 'https://graph.microsoft.com/.default' ]
   };
 
   // Initialize Graph client with custom auth provider

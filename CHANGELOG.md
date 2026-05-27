@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- MSAL certificate auth client now includes `cache` config — enables token cache persistence for certificate-based authentication, preventing redundant token requests
+
+## [1.8.12] - 2026-05-27
+
+### Fixed
+- **Critical: Excessive Azure AD token requests** — removed `skipCache: true` from Graph API auth provider, reducing token requests from ~4,560/hour to ~1/hour (99.98% reduction)
+- Enabled MSAL file-system cache plugin for token persistence across server restarts
+
 ## [1.8.11] - 2026-04-22
 
 ### Fixed

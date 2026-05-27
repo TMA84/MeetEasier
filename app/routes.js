@@ -466,6 +466,7 @@ function refreshMsalClient() {
           authority: config.msalConfig.auth.authority,
           clientCertificate: certConfig
         },
+        cache: config.msalConfig.cache,
         system: config.msalConfig.system
       };
       msalClient = new msal.ConfidentialClientApplication(msalConfigCopy);

@@ -82,9 +82,9 @@ module.exports = {
         : 'OAUTH_CLIENT_SECRET_NOT_SET'
     },
 
-    /*  cache: {
-      cachePlugin
-      },*/
+    cache: {
+      cachePlugin: _cachePlugin
+    },
 
     system: {
       loggerOptions: {
