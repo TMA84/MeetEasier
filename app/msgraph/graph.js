@@ -248,6 +248,10 @@ function getAuthenticatedClient(msalClient) {
         console.log(JSON.stringify(err, Object.getOwnPropertyNames(err)));
         done(err, null);
       }
+    },
+    defaultVersion: 'v1.0',
+    fetchOptions: {
+      timeout: 15000 // 15 second timeout
     }
   });
 

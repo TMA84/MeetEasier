@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.15] - 2026-05-27
+
+### Fixed
+- Added 15-second timeout to Graph SDK clients (booking + polling) — prevents requests from hanging indefinitely when Microsoft throttles the app
+
 ## [1.8.14] - 2026-05-27
 
 ### Changed

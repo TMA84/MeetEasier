@@ -168,7 +168,7 @@ function getAuthenticatedClient(msalClient) {
     scopes: ['https://graph.microsoft.com/.default']
   };
 
-  // Initialize Graph client with custom auth provider
+  // Initialize Graph client with custom auth provider and timeout
   const client = graphModule.Client.init({
     authProvider: async (done) => {
       try {
@@ -178,6 +178,10 @@ function getAuthenticatedClient(msalClient) {
         console.error('Auth error:', err);
         done(err, null);
       }
+    },
+    defaultVersion: 'v1.0',
+    fetchOptions: {
+      timeout: 15000 // 15 second timeout for booking requests
     }
   });
 

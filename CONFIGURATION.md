@@ -299,6 +299,8 @@ GRAPH_FETCH_RETRY_BASE_MS=250
 - Uses exponential backoff: `retryBaseMs * 2^attempt`
 - Non-retryable errors (4xx except 429) fail immediately
 
+**Note:** Booking requests (create, extend, end meeting) use a separate hardcoded 15-second timeout to prevent calls from hanging indefinitely on slow or unresponsive Graph endpoints. This is independent of `GRAPH_FETCH_TIMEOUT_MS`, which applies to room data polling.
+
 ---
 
 #### Graph Webhook Configuration
