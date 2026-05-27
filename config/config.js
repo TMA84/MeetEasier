@@ -104,7 +104,7 @@ module.exports = {
     maxRoomLists: process.env.SEARCH_MAXROOMLISTS ? process.env.SEARCH_MAXROOMLISTS : 10,
     maxRooms: process.env.SEARCH_MAXROOMS ? process.env.SEARCH_MAXROOMS : 20,
     maxItems: process.env.SEARCH_MAXITEMS ? process.env.SEARCH_MAXITEMS : 6,
-    pollIntervalMs: process.env.SEARCH_POLL_INTERVAL_MS ? Math.max(parseInt(process.env.SEARCH_POLL_INTERVAL_MS, 10), 5000) : 15000
+    pollIntervalMs: process.env.SEARCH_POLL_INTERVAL_MS ? Math.max(parseInt(process.env.SEARCH_POLL_INTERVAL_MS, 10), 5000) : 30000
   },
 
   startupValidation: {

@@ -104,6 +104,68 @@ module.exports = {
 
     const events = await getPaginatedResults(request, maxItems);
     return { value: events };
+  },
+
+  /**
+  * Retrieves calendar views for multiple rooms in a single batched request.
+  * Uses Microsoft Graph JSON Batching (up to 20 requests per batch).
+  *
+  * @async
+  * @param {Object} msalClient - MSAL client instance for authentication
+  * @param {string[]} emails - Array of room email addresses
+  * @returns {Promise<Map<string, Object>>} Map of email → { value: appointments[] } or { error: message }
+  */
+  getCalendarViewBatch: async (msalClient, emails) => {
+    if (!emails || emails.length === 0) return new Map();
+
+    const maxItems = parseInt(config.calendarSearch.maxItems);
+    const start_datetime = new Date();
+    const end_datetime = addDays(start_datetime, parseInt(config.calendarSearch.maxDays));
+    const startISO = start_datetime.toISOString();
+    const endISO = end_datetime.toISOString();
+
+    const results = new Map();
+    const BATCH_SIZE = 20; // Graph API limit per batch
+
+    // Process in chunks of 20
+    for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+      const chunk = emails.slice(i, i + BATCH_SIZE);
+
+      const batchRequests = chunk.map((email, idx) => ({
+        id: String(i + idx),
+        method: 'GET',
+        url: `/users/${email}/calendar/calendarView?startDateTime=${startISO}&endDateTime=${endISO}&$select=id,organizer,subject,start,end,sensitivity&$orderby=Start/DateTime&$top=${Math.min(30, maxItems)}`
+      }));
+
+      try {
+        const client = getAuthenticatedClient(msalClient);
+        const batchResponse = await client
+          .api('/$batch')
+          .post({ requests: batchRequests });
+
+        if (batchResponse && batchResponse.responses) {
+          for (const resp of batchResponse.responses) {
+            const idx = parseInt(resp.id, 10);
+            const email = emails[idx];
+            if (resp.status === 200 && resp.body && resp.body.value) {
+              results.set(email, { value: resp.body.value.slice(0, maxItems) });
+            } else {
+              const errMsg = resp.body?.error?.message || `HTTP ${resp.status}`;
+              results.set(email, { error: errMsg });
+            }
+          }
+        }
+      } catch (err) {
+        // On batch failure, mark all rooms in this chunk as errored
+        for (const email of chunk) {
+          if (!results.has(email)) {
+            results.set(email, { error: err.message || 'Batch request failed' });
+          }
+        }
+      }
+    }
+
+    return results;
   }
 };
 

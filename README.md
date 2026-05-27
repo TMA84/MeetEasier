@@ -287,7 +287,7 @@ For production, prefer setting a secure token via environment/secrets manager.
 ## Root Folder Structure Explained
 
 - `app/` : Routes for Microsoft Graph API
-- `app/msgraph/` : All Microsoft Graph functionality with pagination support
+- `app/msgraph/` : All Microsoft Graph functionality with pagination, JSON batching, and room list caching
 - `app/startup-validation.js` : Startup configuration validator (checks OAuth, API token, polling, webhooks)
 - `app/demo-data.js` : Demo data generator (rooms & meetings without Graph API)
 - `app/wifi-manager.js` : WiFi configuration and QR code management
@@ -702,12 +702,14 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 - Dropdown syncs with URL parameter
 - Shareable filtered views
 
-### Pagination Support
+### Pagination & Batching
 
 - Microsoft Graph API pagination implemented
 - Automatically handles 30-item API limit
 - Fetches all pages of results
 - Supports large room lists and calendars
+- **JSON Batching**: Calendar views for all rooms are fetched in batches of 20 per HTTP request, reducing Graph API call volume proportionally to room count
+- **Room list caching**: Room metadata (lists, names, emails, capacity) is cached for 5 minutes and reused across polling cycles, eliminating redundant API calls
 
 ---
 

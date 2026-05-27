@@ -86,6 +86,8 @@ SEARCH_POLL_INTERVAL_MS=60000
 **Performance considerations:**
 - Higher values = more data = slower response times
 - Microsoft Graph API supports pagination, so these limits are soft
+- Room list metadata is cached for 5 minutes between polling cycles
+- Calendar views are fetched using JSON batching (20 rooms per request)
 - Recommended to keep defaults unless you have specific needs
 
 ---

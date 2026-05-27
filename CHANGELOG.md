@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.14] - 2026-05-27
+
+### Changed
+- **Graph API call reduction: ~97%** — from ~4,560 calls/hour to ~144 calls/hour
+- Room lists cached for 5 minutes (rooms rarely change)
+- Calendar views fetched via JSON Batching (up to 20 rooms per single HTTP request)
+- Default poll interval increased from 15s to 30s
+- `rooms.js` rewritten with async/await, room cache, and batch integration
+
+### Changed
+- Refactored `rooms.js` from nested promise chains to async/await with extracted pure functions (`getRoomAddresses`, `enrichRoomsWithAppointments`, `isRoomInBlacklist`, `processTime`) — improves readability and testability
+- Room objects are shallow-cloned before enrichment so cached metadata is never mutated
+
 ## [1.8.13] - 2026-05-27
 
 ### Fixed
