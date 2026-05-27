@@ -228,22 +228,13 @@ function getAuthenticatedClient(msalClient) {
     throw new Error(`Invalid MSAL state. Client: ${msalClient ? 'present' : 'missing'}`);
   }
 
-  // Configure client credentials request
-  // .default scope requests all configured app permissions
-  const clientCredentialRequest = {
-    scopes: [ 'https://graph.microsoft.com/.default' ]
-  };
-
   // Initialize Graph client with custom auth provider
-  // that obtains the token via the application's MSAL instance
+  // Uses application-level token cache to avoid redundant Azure AD calls
   const client = graph.Client.init({
     authProvider: async (done) => {
       try {
-        const response = await msalClient.acquireTokenByClientCredential(clientCredentialRequest);
-
-        // First parameter of the callback is the error,
-        // set to null on success
-        done(null, response.accessToken);
+        const token = await _getAccessToken(msalClient);
+        done(null, token);
       } catch (err) {
         console.log(JSON.stringify(err, Object.getOwnPropertyNames(err)));
         done(err, null);
@@ -251,9 +242,57 @@ function getAuthenticatedClient(msalClient) {
     },
     defaultVersion: 'v1.0',
     fetchOptions: {
-      timeout: 15000 // 15 second timeout
+      timeout: 15000
     }
   });
 
   return client;
 }
+
+/** @type {string|null} Application-level cached access token */
+let _cachedToken = null;
+/** @type {number} Token expiry timestamp (ms) */
+let _tokenExpiresAt = 0;
+/** @type {Promise|null} Pending token refresh (prevents concurrent refreshes) */
+let _tokenRefreshPromise = null;
+
+/**
+* Gets an access token, using an application-level cache.
+* Only calls Azure AD when the token is expired or about to expire (5 min buffer).
+* Prevents concurrent refresh calls via a shared promise.
+* @param {Object} msalClient - MSAL client instance
+* @returns {Promise<string>} Access token
+*/
+async function _getAccessToken(msalClient) {
+  const now = Date.now();
+  // Return cached token if still valid (with 5 min buffer before expiry)
+  if (_cachedToken && _tokenExpiresAt > now + 5 * 60 * 1000) {
+    return _cachedToken;
+  }
+
+  // If a refresh is already in progress, wait for it
+  if (_tokenRefreshPromise) {
+    return _tokenRefreshPromise;
+  }
+
+  // Start a new refresh
+  _tokenRefreshPromise = (async () => {
+    try {
+      const response = await msalClient.acquireTokenByClientCredential({
+        scopes: ['https://graph.microsoft.com/.default']
+      });
+
+      _cachedToken = response.accessToken;
+      _tokenExpiresAt = response.expiresOn ? response.expiresOn.getTime() : (now + 3600 * 1000);
+      console.log(`[Graph] New token acquired, expires at ${new Date(_tokenExpiresAt).toISOString()}`);
+      return _cachedToken;
+    } finally {
+      _tokenRefreshPromise = null;
+    }
+  })();
+
+  return _tokenRefreshPromise;
+}
+
+// Export token accessor for shared use by booking.js
+module.exports._getAccessToken = _getAccessToken;

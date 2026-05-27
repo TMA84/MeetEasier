@@ -1482,12 +1482,7 @@ function calculateEarlyEndTime(startDate, nowDate = new Date()) {
 * @throws {Error} If the event cannot be loaded or updated
 */
 async function endGraphEventEarly(roomEmail, appointmentId) {
-  const tokenRequest = {
-    scopes: ['https://graph.microsoft.com/.default']
-  };
-
-  const authResult = await msalClient.acquireTokenByClientCredential(tokenRequest);
-  const accessToken = authResult.accessToken;
+  const accessToken = await require('./msgraph/graph.js')._getAccessToken(msalClient);
   const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
 
   const eventResponse = await graphFetch(eventUrl, {
@@ -1537,12 +1532,7 @@ async function endGraphEventEarly(roomEmail, appointmentId) {
 * @throws {Error} If the start time cannot be updated
 */
 async function moveGraphEventStartToNow(roomEmail, appointmentId, nowDate = new Date()) {
-  const tokenRequest = {
-    scopes: ['https://graph.microsoft.com/.default']
-  };
-
-  const authResult = await msalClient.acquireTokenByClientCredential(tokenRequest);
-  const accessToken = authResult.accessToken;
+  const accessToken = await require('./msgraph/graph.js')._getAccessToken(msalClient);
   const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
 
   const response = await graphFetch(eventUrl, {
@@ -2207,11 +2197,7 @@ module.exports = function(app) {
       const graphApi = require('./msgraph/graph.js');
         
       // Get the access token
-      const tokenRequest = {
-        scopes: ['https://graph.microsoft.com/.default']
-      };
-      const authResult = await msalClient.acquireTokenByClientCredential(tokenRequest);
-      const accessToken = authResult.accessToken;
+      const accessToken = await require('./msgraph/graph.js')._getAccessToken(msalClient);
 
       // Load current event
       const eventUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;

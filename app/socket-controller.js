@@ -887,12 +887,7 @@ function fetchAndBroadcastRooms() {
 * @throws {Error} On failed Graph API request
 */
 async function deleteGraphEvent(roomEmail, appointmentId) {
-  const tokenRequest = {
-    scopes: ['https://graph.microsoft.com/.default']
-  };
-
-  const authResult = await msalClient.acquireTokenByClientCredential(tokenRequest);
-  const accessToken = authResult.accessToken;
+  const accessToken = await require('./msgraph/graph.js')._getAccessToken(msalClient);
   const deleteUrl = `https://graph.microsoft.com/v1.0/users/${roomEmail}/events/${appointmentId}`;
 
   const response = await graphFetch(deleteUrl, {

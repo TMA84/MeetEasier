@@ -162,18 +162,15 @@ function getAuthenticatedClient(msalClient) {
   }
 
   const graphModule = require('@microsoft/microsoft-graph-client');
-  
-  // Configure client credentials request – .default scope for app permissions
-  const clientCredentialRequest = {
-    scopes: ['https://graph.microsoft.com/.default']
-  };
 
-  // Initialize Graph client with custom auth provider and timeout
+  // Initialize Graph client — uses shared token cache from graph.js
   const client = graphModule.Client.init({
     authProvider: async (done) => {
       try {
-        const response = await msalClient.acquireTokenByClientCredential(clientCredentialRequest);
-        done(null, response.accessToken);
+        const graph = require('./graph');
+        // Reuse the application-level token cache from graph.js
+        const token = await graph._getAccessToken(msalClient);
+        done(null, token);
       } catch (err) {
         console.error('Auth error:', err);
         done(err, null);
@@ -181,7 +178,7 @@ function getAuthenticatedClient(msalClient) {
     },
     defaultVersion: 'v1.0',
     fetchOptions: {
-      timeout: 15000 // 15 second timeout for booking requests
+      timeout: 15000
     }
   });
 

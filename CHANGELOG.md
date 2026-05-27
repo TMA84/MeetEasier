@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Bumped version to 1.8.16
+- Graph API auth provider now uses application-level token cache (`_getAccessToken`) with 5-minute expiry buffer — avoids redundant `acquireTokenByClientCredential` calls across polling cycles
+- `deleteGraphEvent` now uses shared `_getAccessToken` helper instead of inline `acquireTokenByClientCredential` — consistent token caching across all Graph API operations
+
+## [1.8.16] - 2026-05-27
+
+### Fixed
+- **Token caching now works correctly** — application-level token cache in `graph.js` stores the access token in memory and only calls Azure AD when expired (5 min buffer before expiry)
+- All Graph API calls (polling, booking, extend, delete, check-in) share a single cached token
+- Booking.js reuses the same token cache via `graph._getAccessToken()`
+- Direct `acquireTokenByClientCredential` calls in routes.js and socket-controller.js replaced with shared cache
+- Expected result: ~1 token request per hour (was ~12/min due to MSAL file-cache overhead)
+
 ## [1.8.15] - 2026-05-27
 
 ### Fixed

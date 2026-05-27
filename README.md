@@ -710,6 +710,7 @@ Access the admin panel at `/admin` to manage WiFi and logo configurations.
 - Supports large room lists and calendars
 - **JSON Batching**: Calendar views for all rooms are fetched in batches of 20 per HTTP request, reducing Graph API call volume proportionally to room count
 - **Room list caching**: Room metadata (lists, names, emails, capacity) is cached for 5 minutes and reused across polling cycles, eliminating redundant API calls
+- **Token caching**: Access tokens are cached at the application level with a 5-minute expiry buffer, avoiding redundant Azure AD token requests across polling cycles
 
 ---
 
