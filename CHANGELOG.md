@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.13] - 2026-05-27
+
 ### Fixed
+- MSAL cache plugin missing in certificate-auth MSAL clients (socket-controller + routes) — tokens were not cached when using cert auth
+- Unified OAuth scope in booking.js to `https://graph.microsoft.com/.default` for consistent token cache key
 - MSAL certificate auth client now includes `cache` config — enables token cache persistence for certificate-based authentication, preventing redundant token requests
 
 ## [1.8.12] - 2026-05-27
