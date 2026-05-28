@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Graph API batch calendar requests now encode user email and date parameters with `encodeURIComponent()` — prevents malformed URLs or injection via specially crafted email addresses
+
 ### Changed
 - Bumped version to 1.8.16
 - Graph API auth provider now uses application-level token cache (`_getAccessToken`) with 5-minute expiry buffer — avoids redundant `acquireTokenByClientCredential` calls across polling cycles

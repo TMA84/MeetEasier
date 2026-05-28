@@ -165,6 +165,15 @@ module.exports = function(callback, msalClient) {
       const emails = roomAddresses.map(r => r.Email);
       const batchResults = await graph.getCalendarViewBatch(msalClient, emails);
 
+      // Log batch results summary
+      let roomsWithData = 0;
+      let roomsWithErrors = 0;
+      for (const [, result] of batchResults) {
+        if (result.error) roomsWithErrors++;
+        else if (result.value && result.value.length > 0) roomsWithData++;
+      }
+      console.log(`[Rooms] Batch results: ${batchResults.size} rooms, ${roomsWithData} with appointments, ${roomsWithErrors} errors`);
+
       // Step 3: Enrich rooms with appointment data
       // Clone room objects so cached metadata isn't mutated
       const rooms = roomAddresses.map(r => ({ ...r }));

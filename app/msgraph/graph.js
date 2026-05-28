@@ -147,13 +147,20 @@ module.exports = {
           for (const resp of batchResponse.responses) {
             const idx = parseInt(resp.id, 10);
             const email = emails[idx];
+            if (!email) {
+              console.warn(`[Graph Batch] Response id=${resp.id} has no matching email (idx=${idx}, emails.length=${emails.length})`);
+              continue;
+            }
             if (resp.status === 200 && resp.body && resp.body.value) {
               results.set(email, { value: resp.body.value.slice(0, maxItems) });
             } else {
               const errMsg = resp.body?.error?.message || `HTTP ${resp.status}`;
+              console.warn(`[Graph Batch] Error for ${email}: ${errMsg}`);
               results.set(email, { error: errMsg });
             }
           }
+        } else {
+          console.warn('[Graph Batch] No responses in batch result:', JSON.stringify(batchResponse).substring(0, 200));
         }
       } catch (err) {
         // On batch failure, mark all rooms in this chunk as errored
