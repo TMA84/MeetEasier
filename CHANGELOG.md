@@ -7,8 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.17] - 2026-05-28
+
+### Fixed
+- Added diagnostic logging to Graph batch calendar responses to debug rooms showing as free when booked
+
+### Fixed
+- Graph API batch response handling now validates email index before processing — skips responses with out-of-range IDs instead of crashing on undefined lookup
+- Added warning logs for Graph batch errors (per-room failures, missing responses, unmatched IDs) — improves debuggability of intermittent calendar sync issues
+
 ### Changed
-- Bumped version to 1.8.16
+- Bumped version to 1.8.17
 - Graph API auth provider now uses application-level token cache (`_getAccessToken`) with 5-minute expiry buffer — avoids redundant `acquireTokenByClientCredential` calls across polling cycles
 - `deleteGraphEvent` now uses shared `_getAccessToken` helper instead of inline `acquireTokenByClientCredential` — consistent token caching across all Graph API operations
 
