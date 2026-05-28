@@ -144,6 +144,7 @@ module.exports = {
           .post({ requests: batchRequests });
 
         if (batchResponse && batchResponse.responses) {
+          let hasAuthError = false;
           for (const resp of batchResponse.responses) {
             const idx = parseInt(resp.id, 10);
             const email = emails[idx];
@@ -154,16 +155,29 @@ module.exports = {
             if (resp.status === 200 && resp.body && resp.body.value) {
               results.set(email, { value: resp.body.value.slice(0, maxItems) });
             } else {
+              if (resp.status === 401 || resp.status === 403) hasAuthError = true;
               const errMsg = resp.body?.error?.message || `HTTP ${resp.status}`;
               console.warn(`[Graph Batch] Error for ${email}: ${errMsg}`);
               results.set(email, { error: errMsg });
             }
           }
+          // If auth errors occurred, invalidate token cache so next poll gets a fresh token
+          if (hasAuthError) {
+            console.warn('[Graph Batch] Auth error detected — invalidating token cache');
+            _cachedToken = null;
+            _tokenExpiresAt = 0;
+          }
         } else {
           console.warn('[Graph Batch] No responses in batch result:', JSON.stringify(batchResponse).substring(0, 200));
+          // Invalidate token in case the batch itself failed due to auth
+          _cachedToken = null;
+          _tokenExpiresAt = 0;
         }
       } catch (err) {
-        // On batch failure, mark all rooms in this chunk as errored
+        // On batch failure, invalidate token and mark all rooms as errored
+        console.error('[Graph Batch] Request failed:', err.message);
+        _cachedToken = null;
+        _tokenExpiresAt = 0;
         for (const email of chunk) {
           if (!results.has(email)) {
             results.set(email, { error: err.message || 'Batch request failed' });

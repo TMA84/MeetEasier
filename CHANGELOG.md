@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.18] - 2026-05-28
+
+### Fixed
+- Token cache invalidation on auth errors: if Graph batch returns 401/403, token is immediately cleared so next poll gets a fresh one (was: stale token cached for up to 1 hour causing all rooms to show as free)
+
 ## [1.8.17] - 2026-05-28
 
 ### Fixed
