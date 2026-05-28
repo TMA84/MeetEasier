@@ -1,8 +1,8 @@
 /**
 * @file rooms.js
 * @description Module for querying all meeting rooms and their appointments
-*              via the Microsoft Graph API. Uses room list caching and
-*              JSON batching for efficient API usage.
+*              via the Microsoft Graph API. Uses room list caching (5 min)
+*              and individual calendar view calls for reliable data.
 *
 * @requires ./graph - Graph API helper functions
 * @requires ../../config/room-blacklist.js - List of blocked room email addresses
@@ -21,8 +21,6 @@ const ROOM_CACHE_TTL = 5 * 60 * 1000;
 
 /**
 * Converts Graph API error messages into user-friendly error texts.
-* @param {Error|string} error - The original error
-* @returns {string} User-friendly error message
 */
 function toClientRoomErrorMessage(error) {
   const baseMessage = String(error?.message || error || '').trim();
@@ -37,31 +35,20 @@ function toClientRoomErrorMessage(error) {
   return baseMessage;
 }
 
-/**
-* Checks whether a room email address is on the blacklist.
-* @param {string} email - Email address of the room
-* @returns {boolean} true if the room is blocked
-*/
 function isRoomInBlacklist(email) {
   return blacklist.roomEmails.includes(email);
 }
 
-/**
-* Converts a UTC time string to a local timestamp.
-* @param {string} appointmentTime - Appointment time as UTC string
-* @returns {number} Local timestamp in milliseconds
-*/
 function processTime(appointmentTime) {
-  const date = new Date(appointmentTime);
-  const localOffset = -1 * date.getTimezoneOffset() * 60000;
-  return date.getTime() + localOffset;
+  // Graph API returns dateTime in UTC without 'Z' suffix
+  // Append 'Z' to ensure correct UTC parsing regardless of server timezone
+  const isoStr = appointmentTime.endsWith('Z') ? appointmentTime : appointmentTime + 'Z';
+  const date = new Date(isoStr);
+  return date.getTime();
 }
 
 /**
 * Retrieves room lists and rooms, using a 5-minute cache.
-* Only re-fetches from Graph API when cache is expired.
-* @param {Object} msalClient - MSAL client instance
-* @returns {Promise<Array>} Array of room objects with metadata
 */
 async function getRoomAddresses(msalClient) {
   const now = Date.now();
@@ -69,23 +56,19 @@ async function getRoomAddresses(msalClient) {
     return cachedRoomAddresses;
   }
 
-  // Fetch room lists
   const lists = await graph.getRoomList(msalClient);
   const roomLists = lists.value;
-
-  // Fetch rooms from each list
   const roomAddresses = [];
+
   for (const item of roomLists) {
     const rooms = await graph.getRooms(msalClient, item.emailAddress);
     for (const roomItem of rooms.value) {
       if (isRoomInBlacklist(roomItem.emailAddress)) continue;
-
-      const roomAlias = roomItem.displayName.toLowerCase().replace(/\s+/g, '-');
       roomAddresses.push({
         Roomlist: item.displayName,
         RoomlistAlias: roomlistAliasHelper.getAlias(item.displayName),
         Name: roomItem.displayName,
-        RoomAlias: roomAlias,
+        RoomAlias: roomItem.displayName.toLowerCase().replace(/\s+/g, '-'),
         Email: roomItem.emailAddress,
         Capacity: roomItem.capacity || 0
       });
@@ -98,54 +81,8 @@ async function getRoomAddresses(msalClient) {
 }
 
 /**
-* Enriches room objects with appointment data from a batch response.
-* @param {Array} roomAddresses - Array of room objects
-* @param {Map} batchResults - Map of email → { value: appointments[] } or { error }
-* @returns {Array} Enriched room objects sorted alphabetically
-*/
-function enrichRoomsWithAppointments(roomAddresses, batchResults) {
-  for (const room of roomAddresses) {
-    room.Appointments = [];
-    room.Busy = false;
-
-    const result = batchResults.get(room.Email);
-    if (!result) continue;
-
-    if (result.error) {
-      room.ErrorMessage = toClientRoomErrorMessage(result.error);
-      continue;
-    }
-
-    const appointments = result.value || [];
-    for (let index = 0; index < appointments.length; index++) {
-      const appt = appointments[index];
-      const start = processTime(appt.start.dateTime);
-      const end = processTime(appt.end.dateTime);
-      const now = Date.now();
-
-      if (index === 0) {
-        room.Busy = start < now && now < end;
-      }
-
-      const isPrivate = appt.sensitivity !== 'Normal';
-      room.Appointments.push({
-        Id: appt.id,
-        Subject: isPrivate ? 'Private' : appt.subject,
-        Organizer: appt.organizer.emailAddress.name,
-        Start: start,
-        End: end,
-        Private: isPrivate
-      });
-    }
-  }
-
-  roomAddresses.sort((a, b) => a.Name.toLowerCase().localeCompare(b.Name.toLowerCase()));
-  return roomAddresses;
-}
-
-/**
 * Main function: Loads all rooms with their appointments via the Graph API.
-* Uses room list caching (5 min) and JSON batching for calendar views.
+* Uses room list caching (5 min) and individual calendar view calls.
 *
 * @param {Function} callback - Callback function (err, rooms)
 * @param {Object} msalClient - MSAL client instance for authentication
@@ -161,25 +98,45 @@ module.exports = function(callback, msalClient) {
         return;
       }
 
-      // Step 2: Fetch all calendar views in batches of 20
-      const emails = roomAddresses.map(r => r.Email);
-      const batchResults = await graph.getCalendarViewBatch(msalClient, emails);
+      // Step 2: Fetch calendar views individually (reliable, no batch consistency issues)
+      const rooms = roomAddresses.map(r => ({ ...r, Appointments: [], Busy: false }));
 
-      // Log batch results summary
-      let roomsWithData = 0;
-      let roomsWithErrors = 0;
-      for (const [, result] of batchResults) {
-        if (result.error) roomsWithErrors++;
-        else if (result.value && result.value.length > 0) roomsWithData++;
-      }
-      console.log(`[Rooms] Batch results: ${batchResults.size} rooms, ${roomsWithData} with appointments, ${roomsWithErrors} errors`);
+      await Promise.all(rooms.map(async (room) => {
+        try {
+          // Timeout wrapper: abort if Graph API doesn't respond within 10 seconds
+          const response = await Promise.race([
+            graph.getCalendarView(msalClient, room.Email),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Calendar fetch timeout')), 10000))
+          ]);
+          const appointments = response.value || [];
 
-      // Step 3: Enrich rooms with appointment data
-      // Clone room objects so cached metadata isn't mutated
-      const rooms = roomAddresses.map(r => ({ ...r }));
-      const enriched = enrichRoomsWithAppointments(rooms, batchResults);
+          for (let index = 0; index < appointments.length; index++) {
+            const appt = appointments[index];
+            const start = processTime(appt.start.dateTime);
+            const end = processTime(appt.end.dateTime);
+            const now = Date.now();
 
-      callback(null, enriched);
+            if (index === 0) {
+              room.Busy = start < now && now < end;
+            }
+
+            const isPrivate = appt.sensitivity !== 'Normal';
+            room.Appointments.push({
+              Id: appt.id,
+              Subject: isPrivate ? 'Private' : appt.subject,
+              Organizer: appt.organizer.emailAddress.name,
+              Start: start,
+              End: end,
+              Private: isPrivate
+            });
+          }
+        } catch (error) {
+          room.ErrorMessage = toClientRoomErrorMessage(error);
+        }
+      }));
+
+      rooms.sort((a, b) => a.Name.toLowerCase().localeCompare(b.Name.toLowerCase()));
+      callback(null, rooms);
     } catch (err) {
       callback(err, null);
     }

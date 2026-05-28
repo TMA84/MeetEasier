@@ -7,11 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Security
-- Graph API batch calendar requests now encode user email and date parameters with `encodeURIComponent()` — prevents malformed URLs or injection via specially crafted email addresses
+### Added
+- `scripts/debug-neptun.js` — diagnostic script to debug calendar view data for a specific room (Neptun), comparing raw Graph API timestamps against `processTime` logic to identify busy/free mismatches
+- `scripts/test-processtime.js` — test script comparing old vs new `processTime` implementations to verify correct UTC timestamp handling of Graph API appointment times
+- 10-second timeout per room calendar fetch via `Promise.race` — prevents a single slow Graph API response from blocking the entire polling cycle
 
 ### Changed
-- Bumped version to 1.8.16
+- `rooms.js` now fetches calendar views individually per room via `Promise.all` instead of JSON batching — eliminates batch consistency issues where some rooms returned stale or empty data
+- Removed `enrichRoomsWithAppointments` helper function — appointment enrichment now happens inline during the parallel fetch loop
+- Removed verbose JSDoc `@param`/`@returns` annotations from internal helper functions (`toClientRoomErrorMessage`, `isRoomInBlacklist`, `processTime`, `getRoomAddresses`) — keeps module header docs, reduces noise
+
+### Removed
+- `graph.getCalendarViewBatch` usage — replaced by individual `graph.getCalendarView` calls per room for more reliable data retrieval
+
+## [1.8.19] - 2026-05-28
+
+### Fixed
+- Rooms flickering between busy/free: reverted from JSON Batching to individual calendar view calls — Graph batch has consistency issues where booked rooms intermittently return empty results
+- Room list caching and token caching still active (major optimizations preserved)
+
+## [1.8.18] - 2026-05-28
+
+### Fixed
+- Token cache invalidation on auth errors: if Graph batch returns 401/403, token is immediately cleared so next poll gets a fresh one (was: stale token cached for up to 1 hour causing all rooms to show as free)
+
+## [1.8.17] - 2026-05-28
+
+### Fixed
+- Added diagnostic logging to Graph batch calendar responses to debug rooms showing as free when booked
+
+### Fixed
+- Graph API batch response handling now validates email index before processing — skips responses with out-of-range IDs instead of crashing on undefined lookup
+- Added warning logs for Graph batch errors (per-room failures, missing responses, unmatched IDs) — improves debuggability of intermittent calendar sync issues
+
+### Changed
+- Bumped version to 1.8.17
 - Graph API auth provider now uses application-level token cache (`_getAccessToken`) with 5-minute expiry buffer — avoids redundant `acquireTokenByClientCredential` calls across polling cycles
 - `deleteGraphEvent` now uses shared `_getAccessToken` helper instead of inline `acquireTokenByClientCredential` — consistent token caching across all Graph API operations
 
