@@ -9,6 +9,12 @@
  * @returns {Object} Default state
  */
 export function getInitialState(alias) {
+  // Restore cached dark mode setting to prevent FOUC (flash of light mode)
+  let cachedDarkMode = false;
+  try {
+    cachedDarkMode = localStorage.getItem('meeteasier_darkMode') === 'true';
+  } catch (_) { /* localStorage not available */ }
+
   return {
     response: false,
     roomAlias: alias,
@@ -28,7 +34,7 @@ export function getInitialState(alias) {
     },
     sidebarConfig: {
       showMeetingTitles: false,
-      singleRoomDarkMode: false,
+      singleRoomDarkMode: cachedDarkMode,
       minimalHeaderStyle: 'filled'
     },
     bookingConfig: {

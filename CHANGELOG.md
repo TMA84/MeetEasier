@@ -7,18 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-06-05
+
 ### Added
-- `scripts/debug-neptun.js` — diagnostic script to debug calendar view data for a specific room (Neptun), comparing raw Graph API timestamps against `processTime` logic to identify busy/free mismatches
-- `scripts/test-processtime.js` — test script comparing old vs new `processTime` implementations to verify correct UTC timestamp handling of Graph API appointment times
-- 10-second timeout per room calendar fetch via `Promise.race` — prevents a single slow Graph API response from blocking the entire polling cycle
+- **Quarter-hour rounding for bookings and extensions**: End times are automatically rounded up to the next quarter-hour boundary (xx:00, xx:15, xx:30, xx:45)
+- Effective end time preview displayed in BookingModal and ExtendMeetingModal (HH:MM format, refreshed every 30 seconds)
+- Client-side conflict detection: prevents booking/extension when rounded end time overlaps with next scheduled meeting
+- Server-side rounding validation: `POST /api/rooms/:email/book` and `POST /api/extend-meeting` apply rounding before conflict check and Graph API calls
+- `effectiveEndTime` (ISO 8601) included in booking and extend API responses
+- HTTP 409 (Conflict) response when rounded end time overlaps next event
+- HTTP 400 (End of day exceeded) response when rounded end time crosses midnight non-trivially
+- `app/quarter-hour-rounding.js` — pure utility module with `roundUpToQuarterHour(date)` and `isQuarterHourBoundary(date)` (CommonJS)
+- `ui-react/src/utils/quarter-hour-rounding.js` — identical logic as ES module for client-side use
+- Property-based tests (fast-check, 200 runs each): boundary output, idempotency, bounded delta, hour/day rollover, conflict detection
+- Unit tests for server-side and client-side rounding modules
+- Integration tests for server-side rounding endpoints (booking + extend)
+- Unit tests for BookingModal and ExtendMeetingModal rounding integration
+
+### Fixed
+- **Display crash (TypeError: Cannot read 'Organizer' of undefined)**: Added null guard in RoomStatusBlock when appointment data is temporarily empty during Socket.IO updates
+- **Appointment ID missing on client**: Room serialization now includes `Id` field in appointment objects sent to displays — fixes extend/end meeting operations
+- **Dark mode FOUC (Flash of Light Mode)**: Dark mode setting is now cached in localStorage and applied immediately on page load, preventing the light-mode flash during config fetch
 
 ### Changed
-- `rooms.js` now fetches calendar views individually per room via `Promise.all` instead of JSON batching — eliminates batch consistency issues where some rooms returned stale or empty data
-- Removed `enrichRoomsWithAppointments` helper function — appointment enrichment now happens inline during the parallel fetch loop
-- Removed verbose JSDoc `@param`/`@returns` annotations from internal helper functions (`toClientRoomErrorMessage`, `isRoomInBlacklist`, `processTime`, `getRoomAddresses`) — keeps module header docs, reduces noise
-
-### Removed
-- `graph.getCalendarViewBatch` usage — replaced by individual `graph.getCalendarView` calls per room for more reliable data retrieval
+- BookingModal sends rounded `endTime` to the API instead of raw calculated time
+- ExtendMeetingModal sends rounded `endTime` to the API and checks conflicts client-side before submission
 
 ## [1.8.19] - 2026-05-28
 

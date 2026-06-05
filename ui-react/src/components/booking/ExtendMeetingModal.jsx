@@ -6,6 +6,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { getMeetingActionModalTranslations } from '../../config/display-translations.js';
 import { fetchAndApplyBookingButtonColor, fetchWithRetry } from './booking-utils.js';
+import { roundUpToQuarterHour } from '../../utils/quarter-hour-rounding.js';
 
 /**
 * ExtendMeetingModal - Modal dialog for extending the current meeting
@@ -20,33 +21,145 @@ class ExtendMeetingModal extends Component {
       customDuration: 30,
       isSubmitting: false,
       isEnding: false,
-      error: null
+      error: null,
+      effectiveNewEndTime: this.calculateEffectiveNewEndTimeFor(30)
     };
+
+    this.refreshTimer = null;
   }
 
   componentDidMount() {
     // Fetch and apply booking button color when modal opens
     fetchAndApplyBookingButtonColor(this.props.room, this.props.theme === 'dark');
+
+    // Start 30-second interval timer to recalculate effective new end time
+    this.refreshTimer = setInterval(() => {
+      this.recalculateEffectiveNewEndTime();
+    }, 30000);
+  }
+
+  componentWillUnmount() {
+    // Clear the refresh timer on unmount
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+      this.refreshTimer = null;
+    }
   }
 
   getTranslations() {
     return getMeetingActionModalTranslations();
   }
 
+  /**
+   * Get the current meeting end time from the room's active appointment.
+   * Returns a Date object or null if no active appointment exists.
+   *
+   * @returns {Date|null}
+   */
+  getCurrentMeetingEnd() {
+    const { room } = this.props;
+    if (!room || !room.Busy || !room.Appointments || room.Appointments.length === 0) {
+      return null;
+    }
+    const endTimestamp = parseInt(room.Appointments[0].End, 10);
+    if (isNaN(endTimestamp)) return null;
+    return new Date(endTimestamp);
+  }
+
+  /**
+   * Calculate the effective (rounded) new end time for a given extension duration.
+   * Computes currentMeetingEnd + duration, then applies roundUpToQuarterHour.
+   *
+   * @param {number} durationMinutes - Extension duration in minutes
+   * @returns {Date|null} Rounded new end time, or null if no active meeting
+   */
+  calculateEffectiveNewEndTimeFor(durationMinutes) {
+    const currentEnd = this.getCurrentMeetingEnd();
+    if (!currentEnd) return null;
+    const rawNewEnd = new Date(currentEnd.getTime() + durationMinutes * 60000);
+    return roundUpToQuarterHour(rawNewEnd);
+  }
+
+  /**
+   * Find the next scheduled meeting after the current one.
+   * Returns the start time of the next meeting as a Date, or null if none exists.
+   *
+   * @returns {Date|null}
+   */
+  getNextMeetingStart() {
+    const { room } = this.props;
+    if (!room || !room.Appointments || room.Appointments.length < 2) {
+      return null;
+    }
+
+    const currentEnd = this.getCurrentMeetingEnd();
+    if (!currentEnd) return null;
+
+    // Find the next appointment that starts at or after the current meeting ends
+    for (let i = 1; i < room.Appointments.length; i++) {
+      const startTimestamp = parseInt(room.Appointments[i].Start, 10);
+      if (isNaN(startTimestamp)) continue;
+      const startDate = new Date(startTimestamp);
+      if (startDate.getTime() >= currentEnd.getTime()) {
+        return startDate;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if the effective new end time conflicts with the next scheduled meeting.
+   *
+   * @param {Date|null} effectiveNewEndTime - The rounded new end time
+   * @returns {boolean} true if there is a conflict
+   */
+  hasConflictWithNextMeeting(effectiveNewEndTime) {
+    if (!effectiveNewEndTime) return false;
+    const nextMeetingStart = this.getNextMeetingStart();
+    if (!nextMeetingStart) return false;
+    return effectiveNewEndTime.getTime() > nextMeetingStart.getTime();
+  }
+
+  /**
+   * Recalculate the effective new end time based on the currently selected duration.
+   * Called by the 30-second interval timer and when duration changes.
+   */
+  recalculateEffectiveNewEndTime = () => {
+    const effectiveNewEndTime = this.calculateEffectiveNewEndTimeFor(this.state.selectedDuration);
+    this.setState({ effectiveNewEndTime });
+  };
+
+  /**
+   * Format a Date as HH:MM string (24h format).
+   * @param {Date} date
+   * @returns {string} e.g. "10:15"
+   */
+  formatTimeHHMM(date) {
+    if (!date) return '--:--';
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+
   handleQuickExtend = (durationMinutes) => {
+    const effectiveNewEndTime = this.calculateEffectiveNewEndTimeFor(durationMinutes);
     this.setState({
       selectedDuration: durationMinutes,
       customDuration: durationMinutes,
-      error: null
+      error: null,
+      effectiveNewEndTime
     });
   };
 
   handleCustomDurationChange = (e) => {
     const duration = parseInt(e.target.value, 10);
+    const effectiveNewEndTime = this.calculateEffectiveNewEndTimeFor(duration);
     this.setState({
       selectedDuration: duration,
       customDuration: duration,
-      error: null
+      error: null,
+      effectiveNewEndTime
     });
   };
 
@@ -64,6 +177,15 @@ class ExtendMeetingModal extends Component {
 
     const currentAppointment = room.Appointments[0];
 
+    // Calculate the rounded end time at the moment of submission
+    const effectiveNewEndTime = this.calculateEffectiveNewEndTimeFor(selectedDuration);
+
+    // Check if the effective new end time conflicts with the next scheduled meeting
+    if (this.hasConflictWithNextMeeting(effectiveNewEndTime)) {
+      this.setState({ error: t.conflictError });
+      return;
+    }
+
     this.setState({ isSubmitting: true, error: null });
 
     try {
@@ -76,7 +198,8 @@ class ExtendMeetingModal extends Component {
           roomEmail: room.Email,
           roomGroup: room.RoomlistAlias,
           appointmentId: currentAppointment.Id,
-          minutes: selectedDuration
+          minutes: selectedDuration,
+          endTime: effectiveNewEndTime ? effectiveNewEndTime.toISOString() : undefined
         })
       });
 
@@ -154,7 +277,7 @@ class ExtendMeetingModal extends Component {
 
   render() {
     const { onClose, theme } = this.props;
-    const { selectedDuration, customDuration, isSubmitting, isEnding, error } = this.state;
+    const { selectedDuration, customDuration, isSubmitting, isEnding, error, effectiveNewEndTime } = this.state;
     const isDark = theme === 'dark';
     const t = this.getTranslations();
 
@@ -223,6 +346,12 @@ class ExtendMeetingModal extends Component {
                 </div>
               </div>
 
+              {/* Effective new end time display */}
+              <div className="effective-end-time" data-testid="effective-new-end-time">
+                <span className="effective-end-time-label">{t.newEndTime || 'New end time'}:</span>{' '}
+                <span className="effective-end-time-value">{this.formatTimeHHMM(effectiveNewEndTime)}</span>
+              </div>
+
               <div className="booking-modal-actions">
                 <button
                   type="button"
@@ -262,7 +391,9 @@ ExtendMeetingModal.propTypes = {
     Email: PropTypes.string.isRequired,
     Busy: PropTypes.bool,
     Appointments: PropTypes.arrayOf(PropTypes.shape({
-      Id: PropTypes.string
+      Id: PropTypes.string,
+      Start: PropTypes.string,
+      End: PropTypes.string
     }))
   }).isRequired,
   onClose: PropTypes.func.isRequired,

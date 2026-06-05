@@ -7,6 +7,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { getBookingModalTranslations } from '../../config/display-translations.js';
 import { fetchAndApplyBookingButtonColor, fetchWithRetry } from './booking-utils.js';
+import { roundUpToQuarterHour } from '../../utils/quarter-hour-rounding.js';
 // Styles are loaded from /css/styles.css (compiled.scss from backend)
 
 /**
@@ -23,13 +24,29 @@ class BookingModal extends Component {
       selectedDuration: 30, // default 30 minutes
       customDuration: 30, // for dropdown selection
       isSubmitting: false,
-      error: null
+      error: null,
+      effectiveEndTime: this.calculateEffectiveEndTimeFor(30)
     };
+
+    this.refreshTimer = null;
   }
 
   componentDidMount() {
     // Fetch and apply booking button color when modal opens
     fetchAndApplyBookingButtonColor(this.props.room, this.props.theme === 'dark');
+
+    // Start 30-second interval timer to recalculate effective end time
+    this.refreshTimer = setInterval(() => {
+      this.recalculateEffectiveEndTime();
+    }, 30000);
+  }
+
+  componentWillUnmount() {
+    // Clear the refresh timer on unmount
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+      this.refreshTimer = null;
+    }
   }
 
   // Get default meeting subject based on browser language
@@ -41,6 +58,41 @@ class BookingModal extends Component {
   // Get translations for UI text
   getTranslations() {
     return getBookingModalTranslations();
+  }
+
+  /**
+   * Calculate the effective (rounded) end time for a given duration.
+   * Computes now + duration, then applies roundUpToQuarterHour.
+   * Used for initial state and can be called statically.
+   *
+   * @param {number} durationMinutes - Duration in minutes
+   * @returns {Date} Rounded end time
+   */
+  calculateEffectiveEndTimeFor(durationMinutes) {
+    const now = new Date();
+    const rawEnd = new Date(now.getTime() + durationMinutes * 60000);
+    return roundUpToQuarterHour(rawEnd);
+  }
+
+  /**
+   * Recalculate the effective end time based on the currently selected duration.
+   * Called by the 30-second interval timer and when duration changes.
+   */
+  recalculateEffectiveEndTime = () => {
+    const effectiveEndTime = this.calculateEffectiveEndTimeFor(this.state.selectedDuration);
+    this.setState({ effectiveEndTime });
+  };
+
+  /**
+   * Format a Date as HH:MM string (24h format).
+   * @param {Date} date
+   * @returns {string} e.g. "10:15"
+   */
+  formatTimeHHMM(date) {
+    if (!date) return '--:--';
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 
   // Round time to next 15-minute interval
@@ -64,7 +116,8 @@ class BookingModal extends Component {
     this.setState({
       selectedDuration: durationMinutes,
       customDuration: durationMinutes,
-      error: null
+      error: null,
+      effectiveEndTime: this.calculateEffectiveEndTimeFor(durationMinutes)
     });
   };
 
@@ -74,9 +127,29 @@ class BookingModal extends Component {
     this.setState({
       selectedDuration: duration,
       customDuration: duration,
-      error: null
+      error: null,
+      effectiveEndTime: this.calculateEffectiveEndTimeFor(duration)
     });
   };
+
+  /**
+   * Find the next appointment that starts after the current time.
+   * @returns {Object|null} The next appointment or null if none exists
+   */
+  getNextAppointment() {
+    const { room } = this.props;
+    if (!room || !room.Appointments || room.Appointments.length === 0) {
+      return null;
+    }
+
+    const now = Date.now();
+    // Find the first appointment whose start time is after now
+    const upcoming = room.Appointments
+      .filter(appt => parseInt(appt.Start, 10) > now)
+      .sort((a, b) => parseInt(a.Start, 10) - parseInt(b.Start, 10));
+
+    return upcoming.length > 0 ? upcoming[0] : null;
+  }
 
   handleSubmit = async (e) => {
     e.preventDefault();
@@ -84,10 +157,21 @@ class BookingModal extends Component {
     const { subject, selectedDuration } = this.state;
     const { room, onClose, onSuccess } = this.props;
 
-    // Calculate start and end times (start now, end = now + duration)
+    // Calculate start time and rounded end time
     const now = new Date();
     const start = now;
-    const end = new Date(now.getTime() + selectedDuration * 60000);
+    const end = roundUpToQuarterHour(new Date(now.getTime() + selectedDuration * 60000));
+
+    // Check for conflict with next appointment
+    const nextAppointment = this.getNextAppointment();
+    if (nextAppointment) {
+      const nextStart = parseInt(nextAppointment.Start, 10);
+      if (end.getTime() > nextStart) {
+        const t = this.getTranslations();
+        this.setState({ error: t.conflictError });
+        return;
+      }
+    }
 
     this.setState({ isSubmitting: true, error: null });
 
@@ -144,7 +228,7 @@ class BookingModal extends Component {
 
   render() {
     const { room: _room, onClose, theme } = this.props;
-    const { selectedDuration, customDuration, isSubmitting, error } = this.state;
+    const { selectedDuration, customDuration, isSubmitting, error, effectiveEndTime } = this.state;
     
     const isDark = theme === 'dark';
     const t = this.getTranslations();
@@ -215,6 +299,12 @@ class BookingModal extends Component {
                 </div>
               </div>
 
+              {/* Effective End Time Display */}
+              <div className="effective-end-time-section">
+                <span className="effective-end-time-label">{t.endTime || 'End Time:'}</span>
+                <span className="effective-end-time-value">{this.formatTimeHHMM(effectiveEndTime)}</span>
+              </div>
+
               {/* Action Buttons */}
               <div className="booking-modal-actions">
                 <button
@@ -244,7 +334,11 @@ class BookingModal extends Component {
 BookingModal.propTypes = {
   room: PropTypes.shape({
     Name: PropTypes.string.isRequired,
-    Email: PropTypes.string.isRequired
+    Email: PropTypes.string.isRequired,
+    Appointments: PropTypes.arrayOf(PropTypes.shape({
+      Start: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      End: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+    }))
   }).isRequired,
   onClose: PropTypes.func.isRequired,
   onSuccess: PropTypes.func,

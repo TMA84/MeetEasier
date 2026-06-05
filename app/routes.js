@@ -22,6 +22,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const roomlistAliasHelper = require('./roomlist-alias-helper');
+const { roundUpToQuarterHour } = require('./quarter-hour-rounding');
 const configManager = require('./config-manager');
 const certGenerator = require('./cert-generator');
 const { createRateLimiter } = require('./rate-limiter');
@@ -945,6 +946,7 @@ function stripRoomsForFlightboard(rooms) {
     ErrorMessage: room.ErrorMessage,
     Appointments: Array.isArray(room.Appointments)
       ? room.Appointments.slice(0, 2).map(a => ({
+        Id: a.Id,
         Organizer: a.Organizer,
         Start: a.Start,
         End: a.End
@@ -2118,10 +2120,56 @@ module.exports = function(app) {
     const normalizedStartTime = String(startTime || '').trim();
     const normalizedEndTime = String(endTime || '').trim();
 
+    // Parse and round end time to next quarter-hour boundary
+    const parsedEndTime = new Date(normalizedEndTime);
+    if (Number.isNaN(parsedEndTime.getTime())) {
+      return res.status(400).json({ error: 'Invalid end time' });
+    }
+    const roundedEndTime = roundUpToQuarterHour(parsedEndTime);
+
+    // End-of-day check: if rounded end time has a different date than start time
+    // and the time is not exactly 00:00 (midnight rollover to next day is allowed only at 00:00:00.000)
+    const parsedStartTime = new Date(normalizedStartTime);
+    if (!Number.isNaN(parsedStartTime.getTime())) {
+      const startDate = parsedStartTime.toISOString().slice(0, 10);
+      const endDate = roundedEndTime.toISOString().slice(0, 10);
+      const endHours = roundedEndTime.getUTCHours();
+      const endMinutes = roundedEndTime.getUTCMinutes();
+      const endSeconds = roundedEndTime.getUTCSeconds();
+      const endMs = roundedEndTime.getUTCMilliseconds();
+      const isMidnight = endHours === 0 && endMinutes === 0 && endSeconds === 0 && endMs === 0;
+
+      if (endDate !== startDate && !isMidnight) {
+        return res.status(400).json({ success: false, error: 'End of day exceeded' });
+      }
+    }
+
+    // Conflict check: verify rounded end time doesn't overlap with next scheduled event
+    try {
+      const graphApi = require('./msgraph/graph.js');
+      const calendarView = await graphApi.getCalendarView(msalClient, roomEmail);
+      const calendarEvents = calendarView.value || [];
+
+      // Find events that start after (or at) our booking start and check if rounded end overlaps
+      const hasConflict = calendarEvents.some(e => {
+        const eventStart = new Date(e.start.dateTime);
+        const eventEnd = new Date(e.end.dateTime);
+        // Check for overlap: our booking runs from parsedStartTime to roundedEndTime
+        return parsedStartTime < eventEnd && roundedEndTime > eventStart;
+      });
+
+      if (hasConflict) {
+        return res.status(409).json({ success: false, error: 'Conflict' });
+      }
+    } catch (conflictCheckError) {
+      logSanitizedError('Conflict check error during booking:', conflictCheckError, { roomEmail });
+      // If conflict check fails, proceed with booking — the Graph API will reject conflicts anyway
+    }
+
     const bookingDetails = {
       subject: normalizedSubject,
       startTime: normalizedStartTime,
-      endTime: normalizedEndTime,
+      endTime: roundedEndTime.toISOString(),
       description: normalizedDescription
     };
 
@@ -2129,7 +2177,7 @@ module.exports = function(app) {
       const bookRoom = require('./msgraph/booking.js');
       const result = await bookRoom(msalClient, roomEmail, bookingDetails);
       triggerRoomRefreshWithFollowUp();
-      res.json(result);
+      res.json({ ...result, effectiveEndTime: roundedEndTime.toISOString() });
     } catch (error) {
       logSanitizedError('Booking error:', error, { roomEmail });
       const rawErrorMessage = String(error?.message || '').toLowerCase();
@@ -2151,7 +2199,7 @@ module.exports = function(app) {
   app.post('/api/extend-meeting', checkDisplayOrigin, function(req, res, next) {
     return bookingRateLimiter(req, res, next);
   }, async function(req, res) {
-    const { roomEmail, appointmentId, minutes, roomGroup } = req.body;
+    const { roomEmail, appointmentId, minutes, roomGroup, endTime } = req.body;
 
     // Demo mode: Simulate meeting extension
     const systemConfig = configManager.getSystemConfig();
@@ -2222,10 +2270,39 @@ module.exports = function(app) {
         throw new Error(t.fetchError);
       }
 
-      const newEnd = new Date(currentEnd.getTime() + (minutesValue * 60 * 1000));
+      // Calculate new end time: use client-provided endTime if available, otherwise compute from currentEnd + minutes
+      let newEnd;
+      if (endTime) {
+        const parsedEndTime = new Date(endTime);
+        if (Number.isNaN(parsedEndTime.getTime())) {
+          return res.status(400).json({ error: 'Invalid end time' });
+        }
+        newEnd = parsedEndTime;
+      } else {
+        newEnd = new Date(currentEnd.getTime() + (minutesValue * 60 * 1000));
+      }
 
-      // Check for conflicts with the extension
-      // Check if the extension from currentEnd to newEnd overlaps with another meeting
+      // Apply quarter-hour rounding to the new end time
+      const roundedEndTime = roundUpToQuarterHour(newEnd);
+
+      // End-of-day check: if rounded end time has a different date than the event start
+      // and the time is not exactly 00:00 (midnight rollover to next day is allowed only at 00:00:00.000)
+      const startDate = currentStart.toISOString().slice(0, 10);
+      const endDate = roundedEndTime.toISOString().slice(0, 10);
+      const endHours = roundedEndTime.getUTCHours();
+      const endMinutes = roundedEndTime.getUTCMinutes();
+      const endSeconds = roundedEndTime.getUTCSeconds();
+      const endMs = roundedEndTime.getUTCMilliseconds();
+      const isMidnight = endHours === 0 && endMinutes === 0 && endSeconds === 0 && endMs === 0;
+
+      if (endDate !== startDate && !isMidnight) {
+        return res.status(400).json({
+          success: false,
+          error: 'End of day exceeded'
+        });
+      }
+
+      // Conflict check: verify rounded end time doesn't overlap with subsequent events
       const calendarView = await graphApi.getCalendarView(msalClient, roomEmail);
       const calendarEvents = calendarView.value || [];
 
@@ -2234,30 +2311,18 @@ module.exports = function(app) {
         const eventStart = new Date(e.start.dateTime);
         const eventEnd = new Date(e.end.dateTime);
         
-        // Check for overlap: (extendedStart < eventEnd) AND (extendedEnd > eventStart)
-        // The extended meeting runs from currentStart to newEnd
-        return currentStart < eventEnd && newEnd > eventStart;
+        // Check for overlap: the extended meeting runs from currentStart to roundedEndTime
+        return currentStart < eventEnd && roundedEndTime > eventStart;
       });
 
       if (hasConflict) {
         return res.status(409).json({
           success: false,
-          error: t.conflictError
+          error: 'Conflict'
         });
       }
 
-      // Additional check: Extension must not go beyond end of day
-      const maxEndTime = new Date(currentStart);
-      maxEndTime.setHours(23, 59, 59, 999); // End of day
-      
-      if (newEnd > maxEndTime) {
-        return res.status(400).json({
-          success: false,
-          error: t.endOfDayError
-        });
-      }
-
-      // Update event end time
+      // Update event end time using the rounded time
       const updateUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
       const updateResponse = await graphFetch(updateUrl, {
         method: 'PATCH',
@@ -2267,7 +2332,7 @@ module.exports = function(app) {
         },
         body: JSON.stringify({
           end: {
-            dateTime: formatDateForGraphInTimeZone(newEnd, eventEndTimeZone),
+            dateTime: formatDateForGraphInTimeZone(roundedEndTime, eventEndTimeZone),
             timeZone: eventEndTimeZone
           }
         })
@@ -2281,7 +2346,8 @@ module.exports = function(app) {
       res.json({ 
         success: true,
         message: `Meeting extended by ${minutesValue} minutes`,
-        newEndTime: newEnd.toISOString()
+        newEndTime: roundedEndTime.toISOString(),
+        effectiveEndTime: roundedEndTime.toISOString()
       });
       triggerRoomRefreshWithFollowUp();
     } catch (error) {

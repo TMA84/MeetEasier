@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchMaintenanceStatus, createMaintenanceHandler, setupHeartbeat } from './display-utils';
 
+vi.mock('../../utils/connection-monitor.js', () => ({
+  getConnectionMonitor: vi.fn(() => ({
+    setSocketActive: vi.fn()
+  }))
+}));
+
 describe('display-utils', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -72,7 +78,7 @@ describe('display-utils', () => {
   describe('setupHeartbeat', () => {
     it('returns an interval ID', () => {
       vi.useFakeTimers();
-      const socket = { connected: true, emit: vi.fn() };
+      const socket = { connected: true, emit: vi.fn(), on: vi.fn() };
       const intervalId = setupHeartbeat(socket);
       expect(intervalId).toBeDefined();
       clearInterval(intervalId);
@@ -81,7 +87,7 @@ describe('display-utils', () => {
 
     it('emits display-heartbeat when socket is connected', () => {
       vi.useFakeTimers();
-      const socket = { connected: true, emit: vi.fn() };
+      const socket = { connected: true, emit: vi.fn(), on: vi.fn() };
       const intervalId = setupHeartbeat(socket);
 
       vi.advanceTimersByTime(30000);
@@ -93,11 +99,46 @@ describe('display-utils', () => {
 
     it('does not emit when socket is disconnected', () => {
       vi.useFakeTimers();
-      const socket = { connected: false, emit: vi.fn() };
+      const socket = { connected: false, emit: vi.fn(), on: vi.fn() };
       const intervalId = setupHeartbeat(socket);
 
       vi.advanceTimersByTime(30000);
       expect(socket.emit).not.toHaveBeenCalled();
+
+      clearInterval(intervalId);
+      vi.useRealTimers();
+    });
+
+    it('registers a heartbeat-ack listener on the socket', () => {
+      vi.useFakeTimers();
+      const socket = { connected: true, emit: vi.fn(), on: vi.fn() };
+      const intervalId = setupHeartbeat(socket);
+
+      expect(socket.on).toHaveBeenCalledWith('heartbeat-ack', expect.any(Function));
+
+      clearInterval(intervalId);
+      vi.useRealTimers();
+    });
+
+    it('calls setSocketActive(true) on heartbeat-ack', async () => {
+      const { getConnectionMonitor } = await import('../../utils/connection-monitor.js');
+      const mockSetSocketActive = vi.fn();
+      getConnectionMonitor.mockReturnValue({ setSocketActive: mockSetSocketActive });
+
+      vi.useFakeTimers();
+      const listeners = {};
+      const socket = {
+        connected: true,
+        emit: vi.fn(),
+        on: vi.fn((event, cb) => { listeners[event] = cb; })
+      };
+
+      const intervalId = setupHeartbeat(socket);
+
+      // Simulate server sending heartbeat-ack
+      listeners['heartbeat-ack']();
+
+      expect(mockSetSocketActive).toHaveBeenCalledWith(true);
 
       clearInterval(intervalId);
       vi.useRealTimers();

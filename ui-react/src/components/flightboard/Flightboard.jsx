@@ -15,6 +15,7 @@ import { applyI18nConfig, getMaintenanceCopy, loadMaintenanceMessages } from '..
 import { getDisplayClientId } from '../../utils/display-client-id.js';
 import { initPowerManagement } from '../../utils/power-management.js';
 import { fetchMaintenanceStatus, setupHeartbeat, createMaintenanceHandler } from '../shared/display-utils.js';
+import { getConnectionMonitor } from '../../utils/connection-monitor.js';
 
 /**
 * Flightboard component - Main display showing all meeting rooms
@@ -116,16 +117,50 @@ class Flightboard extends Component {
     });
     if (this.socket && this.socket.on) {
       this.socket.on('connect', () => {
-        if (this._wasDisconnected) {
-          console.log('[Flightboard] Reconnected — refreshing data');
+        getConnectionMonitor().setSocketActive(true);
+
+        // Clear the 2-minute reload timer on successful reconnect
+        if (this._disconnectReloadTimer) {
+          clearTimeout(this._disconnectReloadTimer);
+          this._disconnectReloadTimer = null;
+        }
+
+        // If we were disconnected, apply time-based reconnect strategy
+        if (this._wasDisconnected && this._disconnectedAt) {
+          const disconnectDuration = Date.now() - this._disconnectedAt;
+          console.log(`[Flightboard] Reconnected after ${Math.round(disconnectDuration / 1000)}s disconnect`);
+
+          if (disconnectDuration > 120000) {
+            // > 120s: Full page reload for consistent state
+            console.log('[Flightboard] Long disconnect (>120s) — full page reload');
+            window.location.reload();
+            return;
+          } else if (disconnectDuration > 30000) {
+            // 30-120s: Data refresh + state reset
+            console.log('[Flightboard] Medium disconnect (30-120s) — data refresh + state reset');
+            this.setState({
+              response: false,
+              error: false,
+              rooms: []
+            }, () => {
+              this.getRoomData();
+              this.fetchSidebarConfig();
+            });
+          } else {
+            // < 30s: Just data refresh (server sends cache on connect)
+            console.log('[Flightboard] Short disconnect (<30s) — data refresh only');
+            this.getRoomData();
+          }
+
           this._wasDisconnected = false;
-          this.getRoomData();
-          this.fetchSidebarConfig();
+          this._disconnectedAt = null;
         }
       });
 
       this.socket.on('disconnect', () => {
+        getConnectionMonitor().setSocketActive(false);
         this._wasDisconnected = true;
+        this._disconnectedAt = Date.now();
         this._disconnectReloadTimer = setTimeout(() => {
           window.location.reload();
         }, 2 * 60 * 1000);
@@ -159,6 +194,7 @@ class Flightboard extends Component {
 
       // Listen for real-time room updates (replaces separate Socket component)
       this.socket.on('updatedRooms', (rooms) => {
+        getConnectionMonitor().setSocketActive(true);
         this.setState({ response: true, rooms });
       });
     }

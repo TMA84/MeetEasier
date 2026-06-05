@@ -195,6 +195,79 @@ describe('ConnectionMonitor', () => {
       await monitor.checkConnection();
       expect(monitor.isOnline).toBe(true);
     });
+
+    it('resets consecutiveFailures to 0 on successful check', async () => {
+      monitor = new ConnectionMonitor();
+      monitor.consecutiveFailures = 2;
+      global.fetch = vi.fn().mockResolvedValue({ ok: true });
+      await monitor.checkConnection();
+      expect(monitor.consecutiveFailures).toBe(0);
+    });
+
+    it('calls handleOnline immediately on success if currently offline', async () => {
+      monitor = new ConnectionMonitor();
+      monitor.isOnline = false;
+      monitor.consecutiveFailures = 3;
+      global.fetch = vi.fn().mockResolvedValue({ ok: true });
+      const cb = vi.fn();
+      monitor.addListener(cb);
+      await monitor.checkConnection();
+      expect(monitor.isOnline).toBe(true);
+      expect(monitor.consecutiveFailures).toBe(0);
+      expect(cb).toHaveBeenCalledWith(expect.objectContaining({ type: 'online' }));
+    });
+  });
+
+  describe('setSocketActive', () => {
+    it('sets socketActive to the given value', () => {
+      monitor = new ConnectionMonitor();
+      monitor.setSocketActive(true);
+      expect(monitor.socketActive).toBe(true);
+      monitor.setSocketActive(false);
+      expect(monitor.socketActive).toBe(false);
+    });
+
+    it('resets consecutiveFailures to 0 when active is true', () => {
+      monitor = new ConnectionMonitor();
+      monitor.consecutiveFailures = 2;
+      monitor.setSocketActive(true);
+      expect(monitor.consecutiveFailures).toBe(0);
+    });
+
+    it('calls handleOnline when active is true and monitor is offline', () => {
+      monitor = new ConnectionMonitor();
+      monitor.isOnline = false;
+      const cb = vi.fn();
+      monitor.addListener(cb);
+      monitor.setSocketActive(true);
+      expect(monitor.isOnline).toBe(true);
+      expect(cb).toHaveBeenCalledWith(expect.objectContaining({ type: 'online' }));
+    });
+
+    it('does not call handleOnline when active is true but monitor is already online', () => {
+      monitor = new ConnectionMonitor();
+      monitor.isOnline = true;
+      const cb = vi.fn();
+      monitor.addListener(cb);
+      monitor.setSocketActive(true);
+      // Should not receive online event since already online
+      const onlineCalls = cb.mock.calls.filter(c => c[0].type === 'online');
+      expect(onlineCalls).toHaveLength(0);
+    });
+
+    it('does not reset consecutiveFailures when active is false', () => {
+      monitor = new ConnectionMonitor();
+      monitor.consecutiveFailures = 2;
+      monitor.setSocketActive(false);
+      expect(monitor.consecutiveFailures).toBe(2);
+    });
+
+    it('does not call handleOnline when active is false even if offline', () => {
+      monitor = new ConnectionMonitor();
+      monitor.isOnline = false;
+      monitor.setSocketActive(false);
+      expect(monitor.isOnline).toBe(false);
+    });
   });
 
   describe('startChecking / stopChecking', () => {

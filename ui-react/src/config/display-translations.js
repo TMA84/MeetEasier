@@ -95,6 +95,7 @@ export const getMeetingActionModalTranslations = () => ({
   ending: getText('displayMeetingModalEndingLabel', 'Ending...'),
   noActiveMeeting: getText('displayMeetingModalNoActiveExtendLabel', 'No active meeting to extend.'),
   noActiveMeetingEnd: getText('displayMeetingModalNoActiveEndLabel', 'No active meeting to end.'),
+  conflictError: getText('displayMeetingModalConflictErrorLabel', 'Extension conflicts with the next scheduled meeting.'),
   genericError: getText('displayMeetingModalExtendErrorLabel', 'Failed to extend meeting. Please try again.'),
   endGenericError: getText('displayMeetingModalEndErrorLabel', 'Failed to end meeting. Please try again.'),
   ipNotWhitelistedError: getText('displayIpNotWhitelistedErrorLabel', 'Your device is not authorized. Please contact your administrator.'),

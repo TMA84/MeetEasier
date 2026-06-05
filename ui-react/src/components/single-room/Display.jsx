@@ -24,6 +24,7 @@ import { initPowerManagement } from '../../utils/power-management.js';
 import { getDeviceTypeString } from '../../utils/device-detection.js';
 import { fetchMaintenanceStatus as fetchMaintenanceStatusUtil, setupHeartbeat, createMaintenanceHandler } from '../shared/display-utils.js';
 import { applyAutoReload, stopAutoReload } from '../../utils/auto-reload.js';
+import { getConnectionMonitor } from '../../utils/connection-monitor.js';
 
 import { getInitialState, processRoomDetails, normalizeSidebarConfig, normalizeBookingConfig, normalizeColorsConfig, applyColorsToCSS, resolveBookingButtonColor, contrastTextColor, normalizeCheckInStatus, getEmptyCheckInStatus, isExtendMeetingAllowed, isExtendBlockedByOverbooking } from './display-logic.js';
 import { fetchRoomData, fetchSidebarConfig as fetchSidebarConfigAPI, fetchBookingConfig as fetchBookingConfigAPI, fetchColorsConfig as fetchColorsConfigAPI, fetchCheckInStatus as fetchCheckInStatusAPI, performCheckIn, performExtendMeeting } from './display-service.js';
@@ -137,14 +138,40 @@ class Display extends Component {
 
     this.socket.on('connect', () => {
       console.log('[Display] Socket connected');
+      getConnectionMonitor().setSocketActive(true);
 
-      // If we were disconnected, refresh all data
-      if (this._wasDisconnected) {
-        console.log('[Display] Reconnected — refreshing data');
+      // Clear the 2-minute reload timer on successful reconnect
+      if (this._disconnectReloadTimer) {
+        clearTimeout(this._disconnectReloadTimer);
+        this._disconnectReloadTimer = null;
+      }
+
+      // If we were disconnected, apply time-based reconnect strategy
+      if (this._wasDisconnected && this._disconnectedAt) {
+        const disconnectDuration = Date.now() - this._disconnectedAt;
+        console.log(`[Display] Reconnected after ${Math.round(disconnectDuration / 1000)}s disconnect`);
+
+        if (disconnectDuration > 120000) {
+          // > 120s: Full page reload for consistent state
+          console.log('[Display] Long disconnect (>120s) — full page reload');
+          window.location.reload();
+          return;
+        } else if (disconnectDuration > 30000) {
+          // 30-120s: Data refresh + state reset
+          console.log('[Display] Medium disconnect (30-120s) — data refresh + state reset');
+          this.setState(getInitialState(this.props.alias), () => {
+            this.getRoomsData();
+            this.fetchSidebarConfig();
+            this.fetchBookingConfig();
+          });
+        } else {
+          // < 30s: Just data refresh (server sends cache on connect)
+          console.log('[Display] Short disconnect (<30s) — data refresh only');
+          this.getRoomsData();
+        }
+
         this._wasDisconnected = false;
-        this.getRoomsData();
-        this.fetchSidebarConfig();
-        this.fetchBookingConfig();
+        this._disconnectedAt = null;
       }
 
       this.socket.emit('request-identifier', (serverIdentifier) => {
@@ -161,6 +188,7 @@ class Display extends Component {
 
     this.socket.on('disconnect', (reason) => {
       console.log('[Display] Socket disconnected:', reason);
+      getConnectionMonitor().setSocketActive(false);
       this._wasDisconnected = true;
       this._disconnectedAt = Date.now();
 
@@ -233,16 +261,8 @@ class Display extends Component {
 
     this.socket.on('updatedRoom', (room) => {
       if (room && room.RoomAlias === this.state.roomAlias) {
+        getConnectionMonitor().setSocketActive(true);
         this.setState({ rooms: [room], room }, () => this.processRoomDetails());
-      }
-    });
-
-    this.socket.on('updatedRooms', (rooms) => {
-      if (Array.isArray(rooms)) {
-        const room = rooms.find(r => r.RoomAlias === this.state.roomAlias);
-        if (room) {
-          this.setState({ rooms: [room], room }, () => this.processRoomDetails());
-        }
       }
     });
   }
@@ -251,6 +271,8 @@ class Display extends Component {
     fetchSidebarConfigAPI(this.displayClientId)
       .then(data => {
         const config = normalizeSidebarConfig(data);
+        // Cache dark mode setting to prevent FOUC on next page load
+        try { localStorage.setItem('meeteasier_darkMode', config.singleRoomDarkMode ? 'true' : 'false'); } catch (_) {}
         this.setState({ sidebarConfig: config }, () => {
           applyAutoReload(config);
           const isDark = !!config.singleRoomDarkMode || (typeof window !== 'undefined' && window.location.pathname.includes('/room-minimal/'));

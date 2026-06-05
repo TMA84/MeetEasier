@@ -4,6 +4,8 @@
 *              Extracts common patterns: maintenance status fetching and heartbeat setup.
 */
 
+import { getConnectionMonitor } from '../../utils/connection-monitor.js';
+
 /**
 * Fetch maintenance status from API and update component state.
 *
@@ -44,11 +46,16 @@ export function createMaintenanceHandler(component) {
 
 /**
 * Set up a heartbeat interval that emits 'display-heartbeat' every 30 seconds.
+* Also listens for 'heartbeat-ack' from the server to confirm the connection is alive.
 *
 * @param {Object} socket - Socket.IO socket instance
 * @returns {number} Interval ID (for cleanup with clearInterval)
 */
 export function setupHeartbeat(socket) {
+  socket.on('heartbeat-ack', () => {
+    getConnectionMonitor().setSocketActive(true);
+  });
+
   return setInterval(() => {
     if (socket && socket.connected) {
       socket.emit('display-heartbeat');

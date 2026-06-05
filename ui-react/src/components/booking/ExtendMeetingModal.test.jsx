@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import ExtendMeetingModal from './ExtendMeetingModal';
 
 vi.mock('../../config/display-translations.js', () => ({
@@ -15,10 +15,12 @@ vi.mock('../../config/display-translations.js', () => ({
     ending: 'Ending...',
     noActiveMeeting: 'No active meeting',
     noActiveMeetingEnd: 'No active meeting to end',
+    conflictError: 'Extension conflicts with the next scheduled meeting.',
     genericError: 'An error occurred',
     endGenericError: 'Could not end meeting',
     ipNotWhitelistedError: 'IP not whitelisted',
     originNotAllowedError: 'Origin not allowed',
+    newEndTime: 'New end time',
   }),
 }));
 
@@ -219,6 +221,190 @@ describe('ExtendMeetingModal', () => {
     fireEvent.click(screen.getByText('End Now'));
     await waitFor(() => {
       expect(screen.getByText('Origin not allowed')).toBeInTheDocument();
+    });
+  });
+});
+
+
+describe('ExtendMeetingModal - Rounding Integration', () => {
+  let onClose;
+  let onSuccess;
+
+  /**
+   * Helper: creates a Date in local time at specific hour:minute on a fixed date.
+   * Using local time ensures formatTimeHHMM (which uses getHours/getMinutes) produces predictable output.
+   */
+  function localDate(hours, minutes, seconds = 0, ms = 0) {
+    const d = new Date(2024, 5, 15, hours, minutes, seconds, ms); // June 15, 2024 local
+    return d;
+  }
+
+  // Current meeting ends at 10:03 local (not on a quarter-hour boundary)
+  const meetingStart = localDate(10, 0);
+  const meetingEnd = localDate(10, 3);
+
+  const roomWithMeeting = {
+    Name: 'Test Room',
+    Email: 'room@test.com',
+    RoomlistAlias: 'floor1',
+    Busy: true,
+    Appointments: [
+      { Id: 'appt-1', Start: String(meetingStart.getTime()), End: String(meetingEnd.getTime()) }
+    ]
+  };
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    onClose = vi.fn();
+    onSuccess = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('displays effective new end time after Quick-Extend button selection', () => {
+    render(<ExtendMeetingModal room={roomWithMeeting} onClose={onClose} />);
+
+    // Click the 15 min quick-extend button
+    const buttons = screen.getAllByRole('button');
+    const btn15 = buttons.find(b => b.textContent === '15 min' && b.classList.contains('quick-book-btn'));
+    fireEvent.click(btn15);
+
+    // 10:03 + 15 = 10:18, rounded up to 10:30
+    const endTimeDisplay = screen.getByTestId('effective-new-end-time');
+    expect(endTimeDisplay.textContent).toContain('10:30');
+  });
+
+  it('displays effective new end time after slider change', () => {
+    render(<ExtendMeetingModal room={roomWithMeeting} onClose={onClose} />);
+
+    // Change slider to 45 minutes
+    const slider = screen.getByRole('slider');
+    fireEvent.change(slider, { target: { value: '45' } });
+
+    // 10:03 + 45 = 10:48, rounded up to 11:00
+    const endTimeDisplay = screen.getByTestId('effective-new-end-time');
+    expect(endTimeDisplay.textContent).toContain('11:00');
+  });
+
+  it('recalculates effective new end time every 30 seconds via timer', () => {
+    vi.useFakeTimers();
+
+    // Meeting end time at 10:03 - with default 30 min -> 10:03 + 30 = 10:33 -> rounded to 10:45
+    render(<ExtendMeetingModal room={roomWithMeeting} onClose={onClose} />);
+
+    const endTimeDisplay = screen.getByTestId('effective-new-end-time');
+    // Initial: 10:03 + 30 = 10:33 -> 10:45
+    expect(endTimeDisplay.textContent).toContain('10:45');
+
+    // Advance 30 seconds to trigger timer recalculation
+    act(() => {
+      vi.advanceTimersByTime(30000);
+    });
+
+    // Still 10:45 since the meeting end time hasn't changed (room prop is static)
+    // The test verifies the timer fires and re-renders without error
+    expect(endTimeDisplay.textContent).toContain('10:45');
+  });
+
+  it('shows no-active-meeting error when room is not busy', async () => {
+    const roomNotBusy = {
+      Name: 'Empty Room',
+      Email: 'empty@test.com',
+      RoomlistAlias: 'floor1',
+      Busy: false,
+      Appointments: []
+    };
+
+    render(<ExtendMeetingModal room={roomNotBusy} onClose={onClose} />);
+
+    // Submit the form
+    fireEvent.submit(screen.getByText('Extend').closest('form'));
+
+    await waitFor(() => {
+      expect(screen.getByText('No active meeting')).toBeInTheDocument();
+    });
+  });
+
+  it('shows no-active-meeting error when room has no appointments', async () => {
+    const roomNoAppointments = {
+      Name: 'Busy Room',
+      Email: 'busy@test.com',
+      RoomlistAlias: 'floor1',
+      Busy: true,
+      Appointments: []
+    };
+
+    render(<ExtendMeetingModal room={roomNoAppointments} onClose={onClose} />);
+
+    fireEvent.submit(screen.getByText('Extend').closest('form'));
+
+    await waitFor(() => {
+      expect(screen.getByText('No active meeting')).toBeInTheDocument();
+    });
+  });
+
+  it('shows conflict error when effective new end time overlaps with next meeting', async () => {
+    // Next meeting starts at 10:20 local - current meeting ends at 10:03 local
+    // Selecting 15 min extension: 10:03 + 15 = 10:18, rounded up to 10:30
+    // 10:30 > 10:20 → conflict!
+    const nextMeetingStart = localDate(10, 20);
+    const roomWithNextMeeting = {
+      Name: 'Test Room',
+      Email: 'room@test.com',
+      RoomlistAlias: 'floor1',
+      Busy: true,
+      Appointments: [
+        { Id: 'appt-1', Start: String(meetingStart.getTime()), End: String(meetingEnd.getTime()) },
+        { Id: 'appt-2', Start: String(nextMeetingStart.getTime()), End: String(nextMeetingStart.getTime() + 3600000) }
+      ]
+    };
+
+    render(<ExtendMeetingModal room={roomWithNextMeeting} onClose={onClose} />);
+
+    // Select 15 min extension → effective end = 10:30 local, conflicts with next at 10:20 local
+    const buttons = screen.getAllByRole('button');
+    const btn15 = buttons.find(b => b.textContent === '15 min' && b.classList.contains('quick-book-btn'));
+    fireEvent.click(btn15);
+
+    // Submit the form
+    fireEvent.submit(screen.getByText('Extend').closest('form'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Extension conflicts with the next scheduled meeting.')).toBeInTheDocument();
+    });
+  });
+
+  it('submits successfully when no conflict with next meeting', async () => {
+    const { fetchWithRetry } = await import('./booking-utils.js');
+    fetchWithRetry.mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+
+    // Next meeting starts at 12:00 local - far enough away
+    const nextMeetingStart = localDate(12, 0);
+    const roomWithFarNextMeeting = {
+      Name: 'Test Room',
+      Email: 'room@test.com',
+      RoomlistAlias: 'floor1',
+      Busy: true,
+      Appointments: [
+        { Id: 'appt-1', Start: String(meetingStart.getTime()), End: String(meetingEnd.getTime()) },
+        { Id: 'appt-2', Start: String(nextMeetingStart.getTime()), End: String(nextMeetingStart.getTime() + 3600000) }
+      ]
+    };
+
+    render(<ExtendMeetingModal room={roomWithFarNextMeeting} onClose={onClose} onSuccess={onSuccess} />);
+
+    // Default 30 min → effective end = 10:03 + 30 = 10:33 → rounded to 10:45
+    // 10:45 < 12:00 → no conflict
+    fireEvent.submit(screen.getByText('Extend').closest('form'));
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalled();
     });
   });
 });

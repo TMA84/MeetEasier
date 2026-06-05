@@ -322,6 +322,16 @@ describe('Single Room Display Component', () => {
       expect(io).toHaveBeenCalled();
     });
 
+    it('includes roomAlias in socket query for reconnect support', async () => {
+      setupDisplayFetchMocks(global.fetch);
+      render(<Display alias="conference-a" />);
+      expect(io).toHaveBeenCalledWith(expect.objectContaining({
+        query: expect.objectContaining({
+          roomAlias: 'conference-a'
+        })
+      }));
+    });
+
     it('registers socket event handlers', async () => {
       setupDisplayFetchMocks(global.fetch);
       render(<Display alias="conference-a" />);
@@ -334,7 +344,8 @@ describe('Single Room Display Component', () => {
       expect(registeredEvents).toContain('bookingConfigUpdated');
       expect(registeredEvents).toContain('colorsConfigUpdated');
       expect(registeredEvents).toContain('updatedRoom');
-      expect(registeredEvents).toContain('updatedRooms');
+      // updatedRooms listener removed — single-room displays only listen to updatedRoom (task 6.1)
+      expect(registeredEvents).not.toContain('updatedRooms');
       expect(registeredEvents).toContain('power-management-update');
       expect(registeredEvents).toContain('power-management-global-update');
     });
@@ -430,40 +441,6 @@ describe('Single Room Display Component', () => {
       updatedRoomHandler[1]({ Name: 'Other Room', RoomAlias: 'other-room', Appointments: [] });
 
       // Should still show original room
-      expect(screen.getByText('Conference Room A')).toBeInTheDocument();
-    });
-
-    it('handles updatedRooms socket event with matching room', async () => {
-      setupDisplayFetchMocks(global.fetch);
-      render(<Display alias="conference-a" />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Conference Room A')).toBeInTheDocument();
-      });
-
-      const updatedRoomsHandler = mockSocket.on.mock.calls.find(c => c[0] === 'updatedRooms');
-      expect(updatedRoomsHandler).toBeDefined();
-      updatedRoomsHandler[1]([
-        { Name: 'Updated Room A', RoomAlias: 'conference-a', Appointments: [], Busy: false },
-        { Name: 'Room B', RoomAlias: 'room-b', Appointments: [] }
-      ]);
-
-      await waitFor(() => {
-        expect(screen.getByText('Updated Room A')).toBeInTheDocument();
-      });
-    });
-
-    it('ignores updatedRooms when no matching room', async () => {
-      setupDisplayFetchMocks(global.fetch);
-      render(<Display alias="conference-a" />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Conference Room A')).toBeInTheDocument();
-      });
-
-      const updatedRoomsHandler = mockSocket.on.mock.calls.find(c => c[0] === 'updatedRooms');
-      updatedRoomsHandler[1]([{ Name: 'Other', RoomAlias: 'other', Appointments: [] }]);
-
       expect(screen.getByText('Conference Room A')).toBeInTheDocument();
     });
 

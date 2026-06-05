@@ -11,6 +11,9 @@ class ConnectionMonitor {
     this.checkInterval = options.checkInterval || 5000; // 5 seconds
     this.maxRetries = options.maxRetries || 60; // 5 minutes
     this.retryCount = 0;
+    this.consecutiveFailures = 0;
+    this.requiredFailures = 3;
+    this.socketActive = false;
     this.checkTimer = null;
     this.listeners = [];
     this.lastOnlineTime = Date.now();
@@ -71,17 +74,24 @@ class ConnectionMonitor {
       clearTimeout(timeoutId);
 
       if (response.ok) {
+        this.consecutiveFailures = 0;
         if (!this.isOnline) {
           this.handleOnline();
         }
         this.retryCount = 0;
         return true;
       } else {
-        this.handleOffline();
+        this.consecutiveFailures++;
+        if (this.consecutiveFailures >= this.requiredFailures && !this.socketActive) {
+          this.handleOffline();
+        }
         return false;
       }
     } catch (error) {
-      this.handleOffline();
+      this.consecutiveFailures++;
+      if (this.consecutiveFailures >= this.requiredFailures && !this.socketActive) {
+        this.handleOffline();
+      }
       return false;
     }
   }
@@ -118,6 +128,16 @@ class ConnectionMonitor {
       console.log('[ConnectionMonitor] Max retries reached');
       this.notifyListeners('maxRetries');
       this.stopChecking();
+    }
+  }
+
+  setSocketActive(active) {
+    this.socketActive = active;
+    if (active) {
+      this.consecutiveFailures = 0;
+      if (!this.isOnline) {
+        this.handleOnline();
+      }
     }
   }
 

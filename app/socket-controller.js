@@ -72,6 +72,8 @@ refreshMsalClient();
 
 /** @type {boolean} Indicates whether the polling loop is already running */
 let isRunning = false;
+/** @type {boolean} Indicates whether a polling cycle is currently in progress (prevents parallel execution) */
+let isFetchInProgress = false;
 /** @type {string|null} ISO timestamp of the last synchronization */
 let lastSyncTime = null;
 /** @type {boolean|null} Success/failure of the last synchronization */
@@ -424,6 +426,21 @@ function normalizeDisplayClientId(value) {
 }
 
 /**
+* Returns the number of display clients that have at least one active socket connection.
+* Entries retained for tracking (socketIds.size === 0) are not counted.
+* @returns {number} Count of actively connected display clients
+*/
+function getActiveClientCount() {
+  let count = 0;
+  for (const entry of connectedDisplayClients.values()) {
+    if (entry.socketIds.size > 0) {
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
 * Sends the current list of connected display clients to all Socket.IO clients.
 * Called on every change to the client list (connection/disconnection).
 */
@@ -595,6 +612,7 @@ function registerConnectedClient(socket) {
     ipAddress,
     connectedAt: nowIso,
     lastSeenAt: nowIso,
+    potentiallyDisconnected: false,
     socketIds: new Set()
   };
 
@@ -602,6 +620,7 @@ function registerConnectedClient(socket) {
   existing.roomAlias = roomAlias || existing.roomAlias;
   existing.ipAddress = ipAddress; // Update IP on reconnect
   existing.lastSeenAt = nowIso;
+  existing.potentiallyDisconnected = false; // Reset on reconnect
   existing.socketIds.add(socket.id);
   connectedDisplayClients.set(identifier, existing);
   socket.data.displayIdentifier = identifier;
@@ -669,10 +688,13 @@ function cleanupOldDisplays() {
   const cutoffTime = new Date(now.getTime() - retentionMs);
   
   for (const [identifier, entry] of connectedDisplayClients.entries()) {
-    const lastSeen = new Date(entry.lastSeenAt);
-    if (lastSeen < cutoffTime) {
-      connectedDisplayClients.delete(identifier);
-      console.log(`Removed old display client: ${identifier} (last seen: ${entry.lastSeenAt}, retention: ${trackingConfig.retentionHours}h)`);
+    // Only remove entries that have no active sockets AND are older than retention period
+    if (entry.socketIds.size === 0) {
+      const lastSeen = new Date(entry.lastSeenAt);
+      if (lastSeen < cutoffTime) {
+        connectedDisplayClients.delete(identifier);
+        console.log(`Removed old display client: ${identifier} (last seen: ${entry.lastSeenAt}, retention: ${trackingConfig.retentionHours}h)`);
+      }
     }
   }
 }
@@ -694,6 +716,7 @@ function getConnectedDisplayClients() {
       ipAddress: entry.ipAddress,
       connectedAt: entry.connectedAt,
       lastSeenAt: entry.lastSeenAt,
+      potentiallyDisconnected: entry.potentiallyDisconnected || false,
       sockets: entry.socketIds.size
     }))
     .sort((a, b) => a.clientId.localeCompare(b.clientId));
@@ -797,6 +820,23 @@ function fetchAndBroadcastRooms() {
       return;
     }
 
+    // Prevent parallel polling cycles (Requirement 2.5)
+    if (isFetchInProgress) {
+      resolve(false);
+      return;
+    }
+
+    // Skip polling cycle when no display clients are connected.
+    // Note: This intentionally also applies in demo mode — if no clients are
+    // connected, there's no one to receive the data. When the first client
+    // connects, the connection handler triggers an immediate fetch which will
+    // reach the demo mode path below and populate the cache for future connects.
+    if (getActiveClientCount() === 0) {
+      console.log('Polling paused (no clients connected)');
+      resolve(false);
+      return;
+    }
+
     // Demo mode: broadcast demo data instead of fetching from Graph
     const systemConfig = configManager.getSystemConfig();
     if (systemConfig.demoMode) {
@@ -834,8 +874,18 @@ function fetchAndBroadcastRooms() {
     }
 
     const api = require('./msgraph/rooms.js');
+    const startTime = Date.now();
+
+    isFetchInProgress = true;
 
     api(function(err, result) {
+      isFetchInProgress = false;
+      const duration = Date.now() - startTime;
+      const pollInterval = getEffectivePollIntervalMs();
+      if (duration > 0.8 * pollInterval) {
+        console.warn(`Polling cycle took ${duration}ms (>${Math.round(0.8 * pollInterval)}ms threshold)`);
+      }
+
       lastSyncTime = new Date().toISOString();
 
       if (result) {
@@ -1074,6 +1124,27 @@ module.exports = function(io) {
     cleanupOldDisplays();
   }, 24 * 60 * 60 * 1000);
 
+  // Check for potentially disconnected display clients every 30 seconds
+  // Clients without a heartbeat for 90 seconds are marked as potentiallyDisconnected
+  setInterval(() => {
+    const now = Date.now();
+    const HEARTBEAT_TIMEOUT_MS = 90000; // 90 seconds
+
+    for (const [identifier, entry] of connectedDisplayClients.entries()) {
+      if (entry.socketIds.size === 0) {
+        continue; // Skip already disconnected clients
+      }
+      const lastSeen = new Date(entry.lastSeenAt).getTime();
+      if (now - lastSeen > HEARTBEAT_TIMEOUT_MS) {
+        if (!entry.potentiallyDisconnected) {
+          entry.potentiallyDisconnected = true;
+          connectedDisplayClients.set(identifier, entry);
+          console.log(`[Heartbeat] Client ${identifier} marked as potentiallyDisconnected (no heartbeat for ${Math.round((now - lastSeen) / 1000)}s)`);
+        }
+      }
+    }
+  }, 30000);
+
   /**
   * Handles new Socket.IO connections.
   * Starts the API polling loop on the first connection.
@@ -1093,9 +1164,30 @@ module.exports = function(io) {
       socket.join(`room:${roomAlias}`);
     }
 
+    // Send cached room data immediately if available and not stale
+    if (lastRoomsCache && lastRoomsCache.length > 0) {
+      const cacheAgeMs = lastRoomsCacheTime ? (Date.now() - lastRoomsCacheTime) : Infinity;
+      const CACHE_STALE_THRESHOLD_MS = 180000; // 180 seconds
+
+      if (cacheAgeMs < CACHE_STALE_THRESHOLD_MS) {
+        if (roomAlias) {
+          const room = lastRoomsCache.find(r => r.RoomAlias === roomAlias);
+          if (room) {
+            socket.emit('updatedRoom', room);
+          }
+        } else {
+          socket.emit('updatedRooms', lastRoomsCache);
+        }
+      }
+    }
+
     // Start API polling loop only once (on the first client)
     if (!isRunning) {
-    startPollingLoop();
+      startPollingLoop();
+    } else if (getActiveClientCount() === 1) {
+      // First client connected after polling was paused — trigger immediate polling cycle
+      console.log('Polling resumed (client connected)');
+      fetchAndBroadcastRooms();
     }
 
     isRunning = true;
@@ -1109,14 +1201,16 @@ module.exports = function(io) {
       }
     });
 
-    // Process heartbeat messages to update lastSeenAt
+    // Process heartbeat messages to update lastSeenAt and respond with ack
     socket.on('display-heartbeat', function() {
       const identifier = socket?.data?.displayIdentifier;
       if (identifier && connectedDisplayClients.has(identifier)) {
         const entry = connectedDisplayClients.get(identifier);
         entry.lastSeenAt = new Date().toISOString();
+        entry.potentiallyDisconnected = false;
         connectedDisplayClients.set(identifier, entry);
       }
+      socket.emit('heartbeat-ack');
     });
 
     // Handle client disconnection with reason logging

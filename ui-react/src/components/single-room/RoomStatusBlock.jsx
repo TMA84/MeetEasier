@@ -81,11 +81,11 @@ const RoomStatusBlock = ({
 
           {/* Meeting cards container */}
           <div className="meetings-container">
-            {details.appointmentExists && (
+            {details.appointmentExists && room.Appointments && room.Appointments[0] && (
               <MeetingCard appointment={room.Appointments[0]} label={details.nextUp || config.currentMeeting} sidebarConfig={sidebarConfig} config={config} isNext={false} />
             )}
 
-            {room.Busy && room.Appointments && room.Appointments.length > 1 && (
+            {room.Busy && room.Appointments && room.Appointments.length > 1 && room.Appointments[1] && (
               <MeetingCard appointment={room.Appointments[1]} label={config.upcomingTitle || 'Next Meeting'} sidebarConfig={sidebarConfig} config={config} isNext={true} />
             )}
           </div>

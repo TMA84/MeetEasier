@@ -282,7 +282,8 @@ ENABLE_BOOKING=true
 #### Graph Fetch Configuration
 
 ```env
-# Timeout for Graph API requests (milliseconds)
+# Timeout for the entire Graph Batch API request (milliseconds)
+# Applies to each batch of up to 20 rooms fetched in a single HTTP request
 # Default: 10000, minimum: 1000
 GRAPH_FETCH_TIMEOUT_MS=10000
 
@@ -299,8 +300,9 @@ GRAPH_FETCH_RETRY_BASE_MS=250
 - Retries on: timeouts, network errors, HTTP 429 (rate limit), HTTP 5xx
 - Uses exponential backoff: `retryBaseMs * 2^attempt`
 - Non-retryable errors (4xx except 429) fail immediately
+- Individual room errors within a batch do not trigger retries — only the affected room is marked as errored
 
-**Note:** Booking requests (create, extend, end meeting) use a separate hardcoded 15-second timeout to prevent calls from hanging indefinitely on slow or unresponsive Graph endpoints. This is independent of `GRAPH_FETCH_TIMEOUT_MS`, which applies to room data polling.
+**Note:** Booking requests (create, extend, end meeting) use a separate hardcoded 15-second timeout to prevent calls from hanging indefinitely on slow or unresponsive Graph endpoints. This is independent of `GRAPH_FETCH_TIMEOUT_MS`, which applies to room data polling via the Batch API.
 
 ---
 

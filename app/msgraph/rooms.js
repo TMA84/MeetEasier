@@ -18,6 +18,8 @@ let cachedRoomAddresses = null;
 let roomCacheTime = 0;
 /** @type {number} Cache duration for room lists (5 minutes) */
 const ROOM_CACHE_TTL = 5 * 60 * 1000;
+/** @type {number} Timeout for the entire batch API call in milliseconds */
+const GRAPH_FETCH_TIMEOUT_MS = parseInt(process.env.GRAPH_FETCH_TIMEOUT_MS || '30000', 10);
 
 /**
 * Converts Graph API error messages into user-friendly error texts.
@@ -98,18 +100,48 @@ module.exports = function(callback, msalClient) {
         return;
       }
 
-      // Step 2: Fetch calendar views individually (reliable, no batch consistency issues)
+      // Step 2: Fetch calendar views via Graph Batch API (max 20 per batch, sequential)
       const rooms = roomAddresses.map(r => ({ ...r, Appointments: [], Busy: false }));
+      const emails = rooms.map(r => r.Email);
 
-      await Promise.all(rooms.map(async (room) => {
-        try {
-          // Timeout wrapper: abort if Graph API doesn't respond within 10 seconds
-          const response = await Promise.race([
-            graph.getCalendarView(msalClient, room.Email),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Calendar fetch timeout')), 10000))
-          ]);
-          const appointments = response.value || [];
+      let batchResults;
+      try {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Batch API timeout')), GRAPH_FETCH_TIMEOUT_MS)
+        );
+        batchResults = await Promise.race([
+          graph.getCalendarViewBatch(msalClient, emails),
+          timeoutPromise
+        ]);
+      } catch (batchError) {
+        // Complete batch API failure (e.g. 401 Auth) - fall back to individual queries
+        console.warn('Batch API failed, falling back to individual queries:', batchError.message);
+        batchResults = new Map();
+        const individualResults = await Promise.all(
+          emails.map(async (email) => {
+            try {
+              const result = await graph.getCalendarView(msalClient, email);
+              return { email, result };
+            } catch (individualError) {
+              return { email, error: individualError.message || 'Individual request failed' };
+            }
+          })
+        );
+        for (const item of individualResults) {
+          if (item.error) {
+            batchResults.set(item.email, { error: item.error });
+          } else {
+            batchResults.set(item.email, item.result);
+          }
+        }
+      }
 
+      for (const room of rooms) {
+        const result = batchResults.get(room.Email);
+        if (result?.error) {
+          room.ErrorMessage = toClientRoomErrorMessage({ message: result.error });
+        } else if (result?.value) {
+          const appointments = result.value;
           for (let index = 0; index < appointments.length; index++) {
             const appt = appointments[index];
             const start = processTime(appt.start.dateTime);
@@ -130,10 +162,8 @@ module.exports = function(callback, msalClient) {
               Private: isPrivate
             });
           }
-        } catch (error) {
-          room.ErrorMessage = toClientRoomErrorMessage(error);
         }
-      }));
+      }
 
       rooms.sort((a, b) => a.Name.toLowerCase().localeCompare(b.Name.toLowerCase()));
       callback(null, rooms);
