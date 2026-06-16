@@ -613,7 +613,8 @@ function registerConnectedClient(socket) {
     connectedAt: nowIso,
     lastSeenAt: nowIso,
     potentiallyDisconnected: false,
-    socketIds: new Set()
+    socketIds: new Set(),
+    cleanupTimer: null
   };
 
   existing.displayType = displayType || existing.displayType;
@@ -649,12 +650,13 @@ function unregisterConnectedClient(socket) {
     // Don't delete immediately, just update lastSeenAt
     connectedDisplayClients.set(identifier, entry);
     
-    // Schedule cleanup after configured delay
+    // Schedule cleanup after configured delay — clear any pending timer first to avoid accumulation
     const trackingConfig = getDisplayTrackingConfig();
     const cleanupDelayMs = trackingConfig.cleanupMinutes * 60 * 1000;
-    
+
     if (cleanupDelayMs > 0) {
-      setTimeout(() => {
+      clearTimeout(entry.cleanupTimer);
+      entry.cleanupTimer = setTimeout(() => {
         const currentEntry = connectedDisplayClients.get(identifier);
         // Only delete if still disconnected (no sockets)
         if (currentEntry && currentEntry.socketIds.size === 0) {
@@ -802,8 +804,8 @@ function broadcastRoomUpdates(rooms) {
     socketIO.of('/').to(`room:${alias}`).emit('updatedRoom', room);
   }
 
-  // Send full array to all clients (flightboard, admin, etc.)
-  socketIO.of('/').emit('updatedRooms', rooms);
+  // Send full array only to global clients (flightboard, admin) — not to single-room displays
+  socketIO.of('/').to('display:global').emit('updatedRooms', rooms);
 }
 
 /**
@@ -938,7 +940,7 @@ function fetchAndBroadcastRooms() {
 */
 async function deleteGraphEvent(roomEmail, appointmentId) {
   const accessToken = await require('./msgraph/graph.js')._getAccessToken(msalClient);
-  const deleteUrl = `https://graph.microsoft.com/v1.0/users/${roomEmail}/events/${appointmentId}`;
+  const deleteUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(roomEmail)}/events/${encodeURIComponent(appointmentId)}`;
 
   const response = await graphFetch(deleteUrl, {
     method: 'DELETE',
@@ -1157,11 +1159,14 @@ module.exports = function(io) {
     console.log(`[Socket] Client connected: ip=${clientIp}, displayClientId=${displayClientId}, displayType=${displayType}, transport=${socket.conn?.transport?.name || 'unknown'}`);
     registerConnectedClient(socket);
 
-    // Have the client join the room-specific Socket.IO room for targeted updates
+    // Have the client join the room-specific Socket.IO room for targeted updates,
+    // or the global room for clients that need the full rooms array (flightboard, admin).
     const rawRoomAlias = String(socket.handshake.query?.roomAlias || '').trim();
     const roomAlias = /^[a-zA-Z0-9 _.-]{0,100}$/.test(rawRoomAlias) ? rawRoomAlias : '';
     if (roomAlias) {
       socket.join(`room:${roomAlias}`);
+    } else {
+      socket.join('display:global');
     }
 
     // Send cached room data immediately if available and not stale

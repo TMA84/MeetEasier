@@ -240,7 +240,7 @@ class ExtendMeetingModal extends Component {
     this.setState({ isEnding: true, error: null });
 
     try {
-      const response = await fetch('/api/end-meeting', {
+      const response = await fetchWithRetry('/api/end-meeting', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

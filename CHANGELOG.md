@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-06-16
+
+### Fixed
+- **UTC timezone bug in conflict checks**: Graph API returns datetimes without trailing `Z` — parsed as local time on non-UTC servers (e.g. Europe/Berlin), causing missed booking conflicts. Both booking and extend-meeting conflict checks now append `Z` before parsing, consistent with `rooms.js`
+- **`deleteGraphEvent` missing URL encoding**: No-show auto-release used raw template strings for the Graph API URL. Graph event IDs are base64 and contain `/` characters — now using `encodeURIComponent` on both `roomEmail` and `appointmentId`, consistent with all other Graph URLs in the codebase
+- **`handleEndMeeting` used bare `fetch` instead of `fetchWithRetry`**: End-meeting requests on kiosk displays with flaky WiFi would fail without retry. Now uses `fetchWithRetry` (already used by the extend path in the same component)
+- **`isDisplayOriginAllowed` returned wrong error reason**: When Origin/Referer are absent and IP is not whitelisted, the function returned `reason: 'origin_not_allowed'` instead of `'ip_not_whitelisted'` — the specific admin-facing error message ("Contact your administrator to add this device") was never shown
+
+### Performance
+- **Socket.IO bandwidth**: Single-room kiosk displays no longer receive the full rooms array on every poll cycle. Displays with a `roomAlias` join `room:<alias>` (targeted updates only); displays without a `roomAlias` (flightboard, admin) join `display:global` and receive `updatedRooms`
+- **Individual Graph fallback timeout**: When the batch API times out and falls back to individual calendar view calls, each call is now wrapped in a `Promise.race` timeout (`min(GRAPH_FETCH_TIMEOUT_MS, 15s)`). Previously `fetchOptions.timeout` was silently ignored on Node.js 18+ (native fetch) — a hung Graph endpoint could block `isFetchInProgress` indefinitely, freezing the kiosk
+- **`Date.now()` hoisted out of appointment loop**: Was called once per appointment per room; now called once before the outer loop
+- **Cache stampede prevention in `getRoomAddresses`**: Concurrent poll cycles that all see an expired room-list cache no longer each issue their own full Graph room-list fetch — uses the same in-flight promise pattern already applied to `_getAccessToken`
+- **Timer handle accumulation on flaky connections**: `unregisterConnectedClient` now stores the cleanup `setTimeout` handle on the entry and calls `clearTimeout` before creating a new one — prevents handle accumulation when a display disconnects/reconnects rapidly
+
 ## [1.9.0] - 2026-06-05
 
 ### Added

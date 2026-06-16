@@ -843,7 +843,7 @@ function isDisplayOriginAllowed(req) {
   }
 
   // No Origin, no Referer, no token, not on whitelist → reject
-  return { allowed: false, reason: 'origin_not_allowed' };
+  return { allowed: false, reason: 'ip_not_whitelisted' };
 }
 
 /**
@@ -2151,9 +2151,12 @@ module.exports = function(app) {
       const calendarEvents = calendarView.value || [];
 
       // Find events that start after (or at) our booking start and check if rounded end overlaps
+      // Graph API returns datetimes in UTC without 'Z' — append it to ensure correct UTC parsing
       const hasConflict = calendarEvents.some(e => {
-        const eventStart = new Date(e.start.dateTime);
-        const eventEnd = new Date(e.end.dateTime);
+        const startStr = e.start.dateTime.endsWith('Z') ? e.start.dateTime : e.start.dateTime + 'Z';
+        const endStr = e.end.dateTime.endsWith('Z') ? e.end.dateTime : e.end.dateTime + 'Z';
+        const eventStart = new Date(startStr);
+        const eventEnd = new Date(endStr);
         // Check for overlap: our booking runs from parsedStartTime to roundedEndTime
         return parsedStartTime < eventEnd && roundedEndTime > eventStart;
       });
@@ -2306,10 +2309,13 @@ module.exports = function(app) {
       const calendarView = await graphApi.getCalendarView(msalClient, roomEmail);
       const calendarEvents = calendarView.value || [];
 
+      // Graph API returns datetimes in UTC without 'Z' — append it to ensure correct UTC parsing
       const hasConflict = calendarEvents.some(e => {
         if (e.id === appointmentId) return false; // Skip current meeting
-        const eventStart = new Date(e.start.dateTime);
-        const eventEnd = new Date(e.end.dateTime);
+        const startStr = e.start.dateTime.endsWith('Z') ? e.start.dateTime : e.start.dateTime + 'Z';
+        const endStr = e.end.dateTime.endsWith('Z') ? e.end.dateTime : e.end.dateTime + 'Z';
+        const eventStart = new Date(startStr);
+        const eventEnd = new Date(endStr);
         
         // Check for overlap: the extended meeting runs from currentStart to roundedEndTime
         return currentStart < eventEnd && roundedEndTime > eventStart;

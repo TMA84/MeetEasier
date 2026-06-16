@@ -18,6 +18,8 @@ let cachedRoomAddresses = null;
 let roomCacheTime = 0;
 /** @type {number} Cache duration for room lists (5 minutes) */
 const ROOM_CACHE_TTL = 5 * 60 * 1000;
+/** @type {Promise|null} In-flight room address fetch (prevents cache stampede) */
+let roomAddressRefreshPromise = null;
 /** @type {number} Timeout for the entire batch API call in milliseconds */
 const GRAPH_FETCH_TIMEOUT_MS = parseInt(process.env.GRAPH_FETCH_TIMEOUT_MS || '30000', 10);
 
@@ -58,28 +60,40 @@ async function getRoomAddresses(msalClient) {
     return cachedRoomAddresses;
   }
 
-  const lists = await graph.getRoomList(msalClient);
-  const roomLists = lists.value;
-  const roomAddresses = [];
-
-  for (const item of roomLists) {
-    const rooms = await graph.getRooms(msalClient, item.emailAddress);
-    for (const roomItem of rooms.value) {
-      if (isRoomInBlacklist(roomItem.emailAddress)) continue;
-      roomAddresses.push({
-        Roomlist: item.displayName,
-        RoomlistAlias: roomlistAliasHelper.getAlias(item.displayName),
-        Name: roomItem.displayName,
-        RoomAlias: roomItem.displayName.toLowerCase().replace(/\s+/g, '-'),
-        Email: roomItem.emailAddress,
-        Capacity: roomItem.capacity || 0
-      });
-    }
+  if (roomAddressRefreshPromise) {
+    return roomAddressRefreshPromise;
   }
 
-  cachedRoomAddresses = roomAddresses;
-  roomCacheTime = now;
-  return roomAddresses;
+  roomAddressRefreshPromise = (async () => {
+    try {
+      const lists = await graph.getRoomList(msalClient);
+      const roomLists = lists.value;
+      const roomAddresses = [];
+
+      for (const item of roomLists) {
+        const rooms = await graph.getRooms(msalClient, item.emailAddress);
+        for (const roomItem of rooms.value) {
+          if (isRoomInBlacklist(roomItem.emailAddress)) continue;
+          roomAddresses.push({
+            Roomlist: item.displayName,
+            RoomlistAlias: roomlistAliasHelper.getAlias(item.displayName),
+            Name: roomItem.displayName,
+            RoomAlias: roomItem.displayName.toLowerCase().replace(/\s+/g, '-'),
+            Email: roomItem.emailAddress,
+            Capacity: roomItem.capacity || 0
+          });
+        }
+      }
+
+      cachedRoomAddresses = roomAddresses;
+      roomCacheTime = Date.now();
+      return roomAddresses;
+    } finally {
+      roomAddressRefreshPromise = null;
+    }
+  })();
+
+  return roomAddressRefreshPromise;
 }
 
 /**
@@ -117,10 +131,14 @@ module.exports = function(callback, msalClient) {
         // Complete batch API failure (e.g. 401 Auth) - fall back to individual queries
         console.warn('Batch API failed, falling back to individual queries:', batchError.message);
         batchResults = new Map();
+        const INDIVIDUAL_TIMEOUT_MS = Math.min(GRAPH_FETCH_TIMEOUT_MS, 15000);
         const individualResults = await Promise.all(
           emails.map(async (email) => {
             try {
-              const result = await graph.getCalendarView(msalClient, email);
+              const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Individual request timeout')), INDIVIDUAL_TIMEOUT_MS)
+              );
+              const result = await Promise.race([graph.getCalendarView(msalClient, email), timeoutPromise]);
               return { email, result };
             } catch (individualError) {
               return { email, error: individualError.message || 'Individual request failed' };
@@ -136,6 +154,7 @@ module.exports = function(callback, msalClient) {
         }
       }
 
+      const now = Date.now();
       for (const room of rooms) {
         const result = batchResults.get(room.Email);
         if (result?.error) {
@@ -146,7 +165,6 @@ module.exports = function(callback, msalClient) {
             const appt = appointments[index];
             const start = processTime(appt.start.dateTime);
             const end = processTime(appt.end.dateTime);
-            const now = Date.now();
 
             if (index === 0) {
               room.Busy = start < now && now < end;
