@@ -73,7 +73,8 @@ describe('ExtendMeetingModal coverage', () => {
   });
 
   it('handles 403 ip_not_whitelisted on end meeting', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    const { fetchWithRetry } = await import('./booking-utils.js');
+    fetchWithRetry.mockResolvedValue({
       ok: false,
       status: 403,
       json: async () => ({ error: 'ip_not_whitelisted' }),
@@ -86,7 +87,8 @@ describe('ExtendMeetingModal coverage', () => {
   });
 
   it('handles non-success response body on end meeting', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    const { fetchWithRetry } = await import('./booking-utils.js');
+    fetchWithRetry.mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({ success: false, message: 'Cannot end' }),
@@ -138,7 +140,8 @@ describe('ExtendMeetingModal coverage', () => {
   });
 
   it('disables all buttons while ending meeting', async () => {
-    global.fetch = vi.fn().mockImplementation(() => new Promise(() => {})); // never resolves
+    const { fetchWithRetry } = await import('./booking-utils.js');
+    fetchWithRetry.mockImplementation(() => new Promise(() => {})); // never resolves
     render(<ExtendMeetingModal room={mockRoom} onClose={onClose} />);
     fireEvent.click(screen.getByText('End Now'));
     await waitFor(() => {
@@ -162,7 +165,8 @@ describe('ExtendMeetingModal coverage', () => {
   });
 
   it('handles end meeting error without message property', async () => {
-    global.fetch = vi.fn().mockRejectedValue({ message: '' });
+    const { fetchWithRetry } = await import('./booking-utils.js');
+    fetchWithRetry.mockRejectedValue({ message: '' });
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(<ExtendMeetingModal room={mockRoom} onClose={onClose} />);
     fireEvent.click(screen.getByText('End Now'));

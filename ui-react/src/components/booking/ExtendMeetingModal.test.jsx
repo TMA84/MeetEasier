@@ -154,7 +154,8 @@ describe('ExtendMeetingModal', () => {
   });
 
   it('handles end meeting successfully', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    const { fetchWithRetry } = await import('./booking-utils.js');
+    fetchWithRetry.mockResolvedValue({
       ok: true,
       json: async () => ({ success: true }),
     });
@@ -176,7 +177,8 @@ describe('ExtendMeetingModal', () => {
   });
 
   it('shows error on failed end meeting request', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    const { fetchWithRetry } = await import('./booking-utils.js');
+    fetchWithRetry.mockResolvedValue({
       ok: false,
       status: 500,
       json: async () => ({ error: 'End failed' }),
@@ -201,7 +203,8 @@ describe('ExtendMeetingModal', () => {
   });
 
   it('handles network error during end meeting', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network down'));
+    const { fetchWithRetry } = await import('./booking-utils.js');
+    fetchWithRetry.mockRejectedValue(new Error('Network down'));
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(<ExtendMeetingModal room={mockRoom} onClose={onClose} />);
     fireEvent.click(screen.getByText('End Now'));
@@ -212,7 +215,8 @@ describe('ExtendMeetingModal', () => {
   });
 
   it('shows origin not allowed error on 403 for end meeting', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    const { fetchWithRetry } = await import('./booking-utils.js');
+    fetchWithRetry.mockResolvedValue({
       ok: false,
       status: 403,
       json: async () => ({ error: 'origin_not_allowed' }),
