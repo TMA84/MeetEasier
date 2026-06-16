@@ -272,7 +272,7 @@ class Display extends Component {
       .then(data => {
         const config = normalizeSidebarConfig(data);
         // Cache dark mode setting to prevent FOUC on next page load
-        try { localStorage.setItem('meeteasier_darkMode', config.singleRoomDarkMode ? 'true' : 'false'); } catch (_) {}
+        try { localStorage.setItem('meeteasier_darkMode', config.singleRoomDarkMode ? 'true' : 'false'); } catch (_) { /* localStorage not available */ }
         this.setState({ sidebarConfig: config }, () => {
           applyAutoReload(config);
           const isDark = !!config.singleRoomDarkMode || (typeof window !== 'undefined' && window.location.pathname.includes('/room-minimal/'));
