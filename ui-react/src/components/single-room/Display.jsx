@@ -113,7 +113,9 @@ class Display extends Component {
     this.heartbeatInterval = setupHeartbeat(this.socket);
 
     // Watchdog: if socket stops reconnecting on its own, force it back.
-    // socket.connect() resets socket.io.skipReconnect via Manager.open() — safe to call anytime.
+    // _watchdogNudged prevents calling socket.connect() on every 60s tick during normal backoff.
+    // _disconnectedAt is cleared before socket.connect() so the connect handler sees duration=0
+    // and does not trigger a page reload for a watchdog-assisted reconnect.
     this._socketWatchdog = setInterval(() => {
       if (!this.socket || !this.socket.disconnected) return;
       const since = this._disconnectedAt ?? this._socketCreatedAt;
@@ -123,9 +125,12 @@ class Display extends Component {
         // 60 minutes with no connection — reload as last resort
         console.log('[Display] Watchdog: socket stuck 60+ min — reloading page');
         window.location.reload();
-      } else if (stuckFor > 3 * 60 * 1000) {
-        // 3 minutes — socket.io may have given up; nudge it back
+      } else if (stuckFor > 3 * 60 * 1000 && !this._watchdogNudged) {
+        // 3+ minutes and not yet nudged — socket.io may have given up; force it back once
         console.log('[Display] Watchdog: socket stuck disconnected — forcing socket.connect()');
+        this._watchdogNudged = true;
+        this._wasDisconnected = false;
+        this._disconnectedAt = null;
         this.socket.connect();
       }
     }, 60 * 1000);
@@ -204,6 +209,7 @@ class Display extends Component {
       getConnectionMonitor().setSocketActive(false);
       this._wasDisconnected = true;
       this._disconnectedAt = Date.now();
+      this._watchdogNudged = false;
       // Keep showing last known room data — reconnect logic in 'connect' handles recovery
     });
 

@@ -101,6 +101,11 @@ class ConnectionMonitor {
     this.isOnline = true;
     this.retryCount = 0;
 
+    // Restart health polling if it was stopped (e.g. after maxRetries)
+    if (!this.checkTimer) {
+      this.startChecking();
+    }
+
     console.log('[ConnectionMonitor] Connection restored');
     this.notifyListeners('online');
 
