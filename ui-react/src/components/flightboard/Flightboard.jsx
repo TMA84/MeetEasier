@@ -185,12 +185,32 @@ class Flightboard extends Component {
     }
 
     // Send heartbeat every 30 seconds to keep display status active
+    this._socketCreatedAt = Date.now();
     this.heartbeatInterval = setupHeartbeat(this.socket);
+
+    // Watchdog: if socket stops reconnecting on its own, force it back.
+    // socket.connect() resets socket.io.skipReconnect via Manager.open() — safe to call anytime.
+    this._socketWatchdog = setInterval(() => {
+      if (!this.socket || !this.socket.disconnected) return;
+      const since = this._disconnectedAt ?? this._socketCreatedAt;
+      if (!since) return;
+      const stuckFor = Date.now() - since;
+      if (stuckFor > 60 * 60 * 1000) {
+        // 60 minutes with no connection — reload as last resort
+        console.log('[Flightboard] Watchdog: socket stuck 60+ min — reloading page');
+        window.location.reload();
+      } else if (stuckFor > 3 * 60 * 1000) {
+        // 3 minutes — socket.io may have given up; nudge it back
+        console.log('[Flightboard] Watchdog: socket stuck disconnected — forcing socket.connect()');
+        this.socket.connect();
+      }
+    }, 60 * 1000);
   }
 
   componentWillUnmount() {
     if (this.socket) this.socket.disconnect();
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    if (this._socketWatchdog) clearInterval(this._socketWatchdog);
   }
 
   render() {
