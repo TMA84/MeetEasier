@@ -2,7 +2,8 @@
 // Network-first strategy for app assets, cache-first only for vendor libs
 
 const CACHE_NAME = 'meeteasier-__BUILD_HASH__';
-const RUNTIME_CACHE = 'meeteasier-runtime';
+// RUNTIME_CACHE is versioned with CACHE_NAME so it's wiped on every build update
+const RUNTIME_CACHE = 'meeteasier-runtime-__BUILD_HASH__';
 
 // Vendor assets that never change — cache-first is safe
 const IMMUTABLE_PREFIXES = [
@@ -23,7 +24,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());
 });
 
-// Activate event - clean up ALL old caches
+// Activate event - clean up ALL old caches (including old unversioned runtime cache)
 self.addEventListener('activate', (event) => {
   console.log('[ServiceWorker] Activating...');
   event.waitUntil(

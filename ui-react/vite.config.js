@@ -38,7 +38,7 @@ function versionServiceWorker() {
       try {
         let sw = fs.readFileSync(swPath, 'utf-8');
         const buildHash = crypto.randomBytes(8).toString('hex');
-        sw = sw.replace('__BUILD_HASH__', buildHash);
+        sw = sw.replaceAll('__BUILD_HASH__', buildHash);
         fs.writeFileSync(swPath, sw, 'utf-8');
         console.log(`[versionServiceWorker] Stamped SW with hash: ${buildHash}`);
       } catch (err) {
