@@ -5,6 +5,7 @@ const mockSocket = {
   emit: vi.fn(),
   disconnect: vi.fn(),
   connect: vi.fn(),
+  removeAllListeners: vi.fn(),
   connected: true,
   id: 'mock-socket-id'
 };

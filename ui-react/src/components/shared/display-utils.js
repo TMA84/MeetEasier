@@ -52,13 +52,15 @@ export function createMaintenanceHandler(component) {
 * @returns {number} Interval ID (for cleanup with clearInterval)
 */
 export function setupHeartbeat(socket) {
-  socket.on('heartbeat-ack', () => {
-    getConnectionMonitor().setSocketActive(true);
-  });
+  const onAck = () => { getConnectionMonitor().setSocketActive(true); };
+  socket.on('heartbeat-ack', onAck);
 
-  return setInterval(() => {
+  const intervalId = setInterval(() => {
     if (socket && socket.connected) {
       socket.emit('display-heartbeat');
     }
   }, 30000);
+
+  // Return both IDs so callers can clean up the listener too
+  return { intervalId, cleanup: () => socket.off('heartbeat-ack', onAck) };
 }

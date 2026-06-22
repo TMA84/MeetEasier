@@ -110,7 +110,9 @@ class Display extends Component {
     // Colors are fetched after sidebar config to ensure dark mode state is known
     this._socketCreatedAt = Date.now();
     this.setupSocket();
-    this.heartbeatInterval = setupHeartbeat(this.socket);
+    const { intervalId, cleanup } = setupHeartbeat(this.socket);
+    this.heartbeatInterval = intervalId;
+    this.heartbeatCleanup = cleanup;
 
     // Watchdog: if socket stops reconnecting on its own, force it back.
     // _watchdogNudged prevents calling socket.connect() on every 60s tick during normal backoff.
@@ -137,7 +139,11 @@ class Display extends Component {
   }
 
   componentWillUnmount() {
-    if (this.socket) this.socket.disconnect();
+    if (this.heartbeatCleanup) this.heartbeatCleanup();
+    if (this.socket) {
+      if (this.socket.removeAllListeners) this.socket.removeAllListeners();
+      this.socket.disconnect();
+    }
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
     if (this._socketWatchdog) clearInterval(this._socketWatchdog);
     stopAutoReload();

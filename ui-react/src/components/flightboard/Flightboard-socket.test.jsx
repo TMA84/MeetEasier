@@ -9,6 +9,7 @@ vi.mock('socket.io-client', () => ({
   default: vi.fn(() => ({
     on: vi.fn((event, handler) => { socketHandlers[event] = handler; }),
     disconnect: mockDisconnect,
+    removeAllListeners: vi.fn(),
   })),
 }));
 
@@ -28,7 +29,7 @@ vi.mock('../../utils/power-management.js', () => ({
 
 vi.mock('../shared/display-utils.js', () => ({
   fetchMaintenanceStatus: vi.fn(),
-  setupHeartbeat: vi.fn(() => 456),
+  setupHeartbeat: vi.fn(() => ({ intervalId: 456, cleanup: vi.fn() })),
   createMaintenanceHandler: vi.fn(() => vi.fn()),
 }));
 
