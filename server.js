@@ -351,7 +351,7 @@ const theserver = app.listen(port, function() {
   // Initialize MQTT client and power bridge
   const mqttClient = require('./app/mqtt-client');
   const mqttPowerBridge = require('./app/touchkio');
-  
+
   try {
     mqttClient.init();
     mqttPowerBridge.init();
@@ -359,6 +359,22 @@ const theserver = app.listen(port, function() {
   } catch (error) {
     console.error('[MQTT] Failed to initialize:', error);
   }
+
+  // Graceful shutdown — close HTTP server and Socket.IO on SIGTERM/SIGINT.
+  // Without this, Docker's "docker stop" sends SIGTERM and after 10s forces SIGKILL (exit 137).
+  const shutdown = (signal) => {
+    console.log(`${signal} received — shutting down gracefully`);
+    io.close(() => {
+      theserver.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+      });
+    });
+    // Force exit after 8s in case connections don't drain in time
+    setTimeout(() => { process.exit(0); }, 8000).unref();
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT',  () => shutdown('SIGINT'));
 
   // Confirmation that the server started successfully
   console.log(`Started on port: ${port}`);
