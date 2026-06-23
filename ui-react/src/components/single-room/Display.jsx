@@ -216,7 +216,11 @@ class Display extends Component {
       this._wasDisconnected = true;
       this._disconnectedAt = Date.now();
       this._watchdogNudged = false;
-      // Keep showing last known room data — reconnect logic in 'connect' handles recovery
+      // "io server disconnect" means the server explicitly closed the socket (graceful restart).
+      // Socket.IO sets skipReconnect=true for this reason, so we re-enable reconnection manually.
+      if (reason === 'io server disconnect') {
+        this.socket.connect();
+      }
     });
 
     this.socket.on('sidebarConfigUpdated', () => {
