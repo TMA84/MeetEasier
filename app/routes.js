@@ -3547,6 +3547,26 @@ module.exports = function(app) {
     }
   });
 
+  // DELETE /api/mqtt-desired-config/:hostname — Clears the persisted desired
+  // config for a display (e.g. to discard a bad auto-captured room URL)
+  app.delete('/api/mqtt-desired-config/:hostname', checkApiToken, function(req, res) {
+    try {
+      const { hostname } = req.params;
+      const mqttPowerBridge = require('./touchkio');
+
+      const cleared = mqttPowerBridge.clearDesiredConfig(hostname);
+
+      if (cleared) {
+        res.json({ success: true, message: 'Desired config cleared' });
+      } else {
+        res.status(404).json({ error: 'No stored desired config found for this device' });
+      }
+    } catch (err) {
+      console.error('Error clearing desired config:', err);
+      res.status(500).json({ error: 'Failed to clear desired config' });
+    }
+  });
+
   // POST /api/mqtt-refresh/:hostname — Sends a refresh command to a display
   app.post('/api/mqtt-refresh/:hostname', checkApiToken, function(req, res) {
     try {

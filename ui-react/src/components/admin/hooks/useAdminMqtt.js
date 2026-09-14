@@ -9,7 +9,7 @@ import {
   sendMqttRefreshCommand, sendMqttRebootCommand, sendMqttShutdownCommand,
   sendMqttRefreshAll, sendMqttRebootAll, sendMqttUpdateAll, sendMqttPageUrlCommand,
   sendMqttUpdateCommand, fetchMqttUpdateInfo,
-  fetchMqttDisplays, submitMqttConfig
+  fetchMqttDisplays, submitMqttConfig, clearMqttDesiredConfig
 } from '../services/mqtt-commands.js';
 
 /**
@@ -169,6 +169,19 @@ export function useAdminMqtt(getRequestHeaders, handleUnauthorizedAccess, getTra
     } catch (err) { console.error('Failed to send page URL command:', err); updateConfig({ touchkioModalMessage: 'Failed to update page URL', touchkioModalMessageType: 'error' }); }
   }, [getRequestHeaders, configRef, updateConfig, handleLoadConnectedDisplays]);
 
+  const handleResetDesiredConfigModal = useCallback(async (identifier) => {
+    try {
+      const response = await clearMqttDesiredConfig(() => getRequestHeaders(), identifier);
+      if (response.ok) {
+        updateConfig({ touchkioModalMessage: 'Stored config cleared — will be re-captured on next reconnect', touchkioModalMessageType: 'success' });
+        setTimeout(async () => { await handleLoadConnectedDisplays(); const displays = configRef.current.connectedDisplays || []; const ud = displays.find(d => d.mqtt?.deviceId === identifier || d.mqtt?.hostname === identifier); if (ud) updateConfig({ touchkioModalDisplay: ud }); }, 2000);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        updateConfig({ touchkioModalMessage: data.error || 'Failed to clear stored config', touchkioModalMessageType: 'error' });
+      }
+    } catch (err) { console.error('Failed to clear desired config:', err); updateConfig({ touchkioModalMessage: 'Failed to clear stored config', touchkioModalMessageType: 'error' }); }
+  }, [getRequestHeaders, configRef, updateConfig, handleLoadConnectedDisplays]);
+
   const handleMqttRefreshCommandModal = useCallback(async (hostname) => { await handleMqttRefreshCommand(hostname); updateConfig({ touchkioModalMessage: 'Refresh command sent', touchkioModalMessageType: 'success' }); }, [handleMqttRefreshCommand, updateConfig]);
   const handleMqttRebootCommandModal = useCallback(async (hostname) => { await handleMqttRebootCommand(hostname); updateConfig({ touchkioModalMessage: 'Reboot command sent', touchkioModalMessageType: 'warning' }); }, [handleMqttRebootCommand, updateConfig]);
   const handleMqttShutdownCommandModal = useCallback(async (hostname) => { await handleMqttShutdownCommand(hostname); updateConfig({ touchkioModalMessage: 'Shutdown command sent', touchkioModalMessageType: 'warning' }); }, [handleMqttShutdownCommand, updateConfig]);
@@ -208,7 +221,7 @@ export function useAdminMqtt(getRequestHeaders, handleUnauthorizedAccess, getTra
     handleMqttPowerCommandModal, handleMqttBrightnessCommandModal,
     handleMqttKioskCommandModal, handleMqttThemeCommandModal,
     handleMqttVolumeCommandModal, handleMqttPageZoomCommandModal,
-    handleMqttPageUrlCommandModal, handleMqttRefreshCommandModal,
+    handleMqttPageUrlCommandModal, handleResetDesiredConfigModal, handleMqttRefreshCommandModal,
     handleMqttRebootCommandModal, handleMqttShutdownCommandModal,
     handleMqttUpdateCommandModal, handleLoadUpdateInfo
   };

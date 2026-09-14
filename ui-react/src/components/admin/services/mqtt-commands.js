@@ -229,6 +229,20 @@ export async function sendMqttPageUrlCommand(getHeaders, identifier, url) {
 }
 
 /**
+ * Clears the persisted desired config for a display (e.g. to discard a bad
+ * auto-captured room URL).
+ * @param {Function} getHeaders - Returns request headers
+ * @param {string} identifier - Display identifier
+ * @returns {Promise<Response>} Fetch response
+ */
+export async function clearMqttDesiredConfig(getHeaders, identifier) {
+  return fetch(`/api/mqtt-desired-config/${identifier}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+}
+
+/**
  * Load MQTT configuration.
  * @param {Function} getHeaders - Returns request headers (no content-type)
  * @returns {Promise<Object|null>} Config data or null

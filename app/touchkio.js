@@ -159,8 +159,30 @@ function setDesiredValue(deviceId, key, value) {
   const config = desiredConfig.get(deviceId) || {};
   config[key] = value;
   config.lastUpdated = new Date().toISOString();
+  config.source = 'admin';
   desiredConfig.set(deviceId, config);
   saveDesiredConfig();
+}
+
+/**
+* Clears the persisted desired config for a device, e.g. to discard a bad
+* auto-captured pageUrl (see captureInitialConfig). After this, the device
+* is treated as unrecognized again: reapplyDesiredConfig() will no longer
+* re-push anything to it, and if it reconnects while displaying a room
+* page, auto-capture may run again and adopt whatever it shows at that
+* moment - callers should make sure the device is showing the correct page
+* (or send a new pageUrl via sendPageUrlCommand) around the same time.
+* @param {string} hostname - Display hostname or device ID
+* @returns {boolean} true if a stored config was found and cleared
+*/
+function clearDesiredConfig(hostname) {
+  const deviceId = getDeviceIdFromHostname(hostname);
+  if (!deviceId || !desiredConfig.has(deviceId)) return false;
+
+  desiredConfig.delete(deviceId);
+  saveDesiredConfig();
+  console.log(`[Touchkio] Cleared desired config for ${hostname} (${deviceId})`);
+  return true;
 }
 
 /**
@@ -294,6 +316,22 @@ function captureInitialConfig(deviceId) {
   for (const field of captureFields) {
     if (state[field] !== undefined) {
       initial[field] = state[field];
+    }
+  }
+
+  // Never auto-capture a pageUrl that's already assigned to a different
+  // device - two physical kiosks (e.g. a room's door display and its
+  // in-room display) ending up on the same stored room URL is exactly how
+  // a device can permanently show another room's data after this. Require
+  // an admin to set the URL explicitly in that case instead.
+  if (initial.pageUrl) {
+    const duplicateEntry = [...desiredConfig.entries()].find(([id, cfg]) => id !== deviceId && cfg.pageUrl === initial.pageUrl);
+    if (duplicateEntry) {
+      const [duplicateDeviceId] = duplicateEntry;
+      const hn = deviceIdToHostname.get(deviceId) || deviceId;
+      const dupHn = deviceIdToHostname.get(duplicateDeviceId) || duplicateDeviceId;
+      console.warn(`[Touchkio] Skipping auto-capture of pageUrl for ${hn} (${deviceId}) — already assigned to ${dupHn} (${duplicateDeviceId}). Set the correct URL manually via the admin panel.`);
+      delete initial.pageUrl;
     }
   }
 
@@ -1256,6 +1294,7 @@ module.exports = {
   sendKeyboardCommand,
   sendPageZoomCommand,
   sendPageUrlCommand,
+  clearDesiredConfig,
   sendRefreshCommand,
   sendRebootCommand,
   sendShutdownCommand,

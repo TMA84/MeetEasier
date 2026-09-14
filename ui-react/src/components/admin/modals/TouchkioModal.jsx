@@ -82,7 +82,7 @@ const ScreenshotSection = ({ hasMqttConnection, screenshotUrl, screenshotLoading
   );
 };
 
-const PageUrlSection = ({ currentPageUrl, editingUrl, urlInput, setUrlInput, handleStartEditUrl, handleSaveUrl, handleCancelEditUrl }) => (
+const PageUrlSection = ({ currentPageUrl, editingUrl, urlInput, setUrlInput, handleStartEditUrl, handleSaveUrl, handleCancelEditUrl, handleResetDesiredConfig }) => (
   <div className="touchkio-section">
     <div className="touchkio-section-label">Page URL</div>
     {!editingUrl ? (
@@ -93,6 +93,16 @@ const PageUrlSection = ({ currentPageUrl, editingUrl, urlInput, setUrlInput, han
         <button type="button" className="admin-secondary-button admin-btn-sm admin-btn-nowrap" onClick={handleStartEditUrl}>
           {currentPageUrl ? 'Edit URL' : 'Set URL'}
         </button>
+        {handleResetDesiredConfig && (
+          <button
+            type="button"
+            className="admin-secondary-button admin-btn-sm admin-btn-nowrap"
+            title="Discard the stored URL/brightness/theme/etc. for this device. It will be freshly auto-captured from whatever it displays next, or you can set a new URL above."
+            onClick={() => { if (window.confirm('Discard the stored config for this device? It will be re-captured from whatever it currently displays on next reconnect.')) handleResetDesiredConfig(); }}
+          >
+            Reset Stored Config
+          </button>
+        )}
       </div>
     ) : (
       <div>
@@ -255,7 +265,7 @@ function getRecentErrors(displayData) {
   return errors;
 }
 
-const TouchkioModal = ({ show, display, getRequestHeaders, message, messageType, brightness, volume, zoom, updateInfo, onClose, onBrightnessChange, onVolumeChange, onZoomChange, onPowerCommand, onRefreshCommand, onKioskCommand, onThemeCommand, onRebootCommand, onShutdownCommand, onUpdateCommand, onPageUrlChange, onRefreshDisplay }) => {
+const TouchkioModal = ({ show, display, getRequestHeaders, message, messageType, brightness, volume, zoom, updateInfo, onClose, onBrightnessChange, onVolumeChange, onZoomChange, onPowerCommand, onRefreshCommand, onKioskCommand, onThemeCommand, onRebootCommand, onShutdownCommand, onUpdateCommand, onPageUrlChange, onResetDesiredConfig, onRefreshDisplay }) => {
   const [editingUrl, setEditingUrl] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [screenshotUrl, setScreenshotUrl] = useState(null);
@@ -327,6 +337,7 @@ const TouchkioModal = ({ show, display, getRequestHeaders, message, messageType,
   const handleStartEditUrl = () => { setUrlInput(currentPageUrl); setEditingUrl(true); };
   const handleSaveUrl = () => { if (onPageUrlChange) { onPageUrlChange(mqttIdentifier, urlInput); } setEditingUrl(false); };
   const handleCancelEditUrl = () => { setEditingUrl(false); setUrlInput(''); };
+  const handleResetDesiredConfig = onResetDesiredConfig ? () => onResetDesiredConfig(mqttIdentifier) : null;
 
   return (
     <div className="admin-modal-overlay" onClick={onClose}>
@@ -340,7 +351,7 @@ const TouchkioModal = ({ show, display, getRequestHeaders, message, messageType,
           <HardwareWarning powerSupported={powerSupported} brightnessSupported={brightnessSupported} />
           <StatusGrid displayData={displayData} powerSupported={powerSupported} brightnessSupported={brightnessSupported} powerColorClass={powerColorClass} />
           <ScreenshotSection hasMqttConnection={hasMqttConnection} screenshotUrl={screenshotUrl} screenshotLoading={screenshotLoading} screenshotError={screenshotError} screenshotExpanded={screenshotExpanded} setScreenshotExpanded={setScreenshotExpanded} loadScreenshot={loadScreenshot} />
-          <PageUrlSection currentPageUrl={currentPageUrl} editingUrl={editingUrl} urlInput={urlInput} setUrlInput={setUrlInput} handleStartEditUrl={handleStartEditUrl} handleSaveUrl={handleSaveUrl} handleCancelEditUrl={handleCancelEditUrl} />
+          <PageUrlSection currentPageUrl={currentPageUrl} editingUrl={editingUrl} urlInput={urlInput} setUrlInput={setUrlInput} handleStartEditUrl={handleStartEditUrl} handleSaveUrl={handleSaveUrl} handleCancelEditUrl={handleCancelEditUrl} handleResetDesiredConfig={handleResetDesiredConfig} />
           <div className="touchkio-controls-grid">
             <div>
               <QuickControls displayData={displayData} powerSupported={powerSupported} mqttIdentifier={mqttIdentifier} onPowerCommand={onPowerCommand} onThemeCommand={onThemeCommand} onRefreshCommand={onRefreshCommand} />

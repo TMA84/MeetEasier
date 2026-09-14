@@ -607,6 +607,7 @@ const Admin = () => {
             onUpdateCommand={mqtt.handleMqttUpdateCommandModal}
             updateInfo={config.mqttUpdateInfo?.[config.touchkioModalDisplay?.mqtt?.deviceId]}
             onPageUrlChange={mqtt.handleMqttPageUrlCommandModal}
+            onResetDesiredConfig={mqtt.handleResetDesiredConfigModal}
             onRefreshDisplay={async () => {
               await submissions.handleLoadConnectedDisplays();
               const s = configRef.current;
