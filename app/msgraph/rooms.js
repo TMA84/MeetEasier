@@ -43,6 +43,44 @@ function isRoomInBlacklist(email) {
   return blacklist.roomEmails.includes(email);
 }
 
+/**
+* Deduplicates rooms that appear more than once (e.g. a room can be a member
+* of several room lists) and resolves RoomAlias collisions between genuinely
+* different rooms whose names normalize to the same alias. Without this,
+* two different rooms could silently share one `room:<alias>` socket channel,
+* causing a kiosk to intermittently receive another room's data.
+* Resolution order is by Email (stable across polls), not array/insertion
+* order, so which room "keeps" the plain alias doesn't flap between cycles.
+*/
+function resolveRoomAliasCollisions(roomAddresses) {
+  const byEmail = new Map();
+  for (const room of roomAddresses) {
+    byEmail.set(room.Email, room);
+  }
+  const dedupedRooms = [...byEmail.values()];
+
+  const byAlias = new Map();
+  for (const room of dedupedRooms) {
+    if (!byAlias.has(room.RoomAlias)) byAlias.set(room.RoomAlias, []);
+    byAlias.get(room.RoomAlias).push(room);
+  }
+
+  for (const [alias, group] of byAlias) {
+    if (group.length <= 1) continue;
+    console.warn(
+      `RoomAlias collision detected for alias "${alias}": ${group.map(r => r.Email).join(', ')}. ` +
+      'Disambiguating with an email-based suffix to avoid cross-room data delivery.'
+    );
+    group.sort((a, b) => a.Email.localeCompare(b.Email));
+    for (let i = 1; i < group.length; i++) {
+      const suffix = group[i].Email.split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      group[i].RoomAlias = `${alias}-${suffix}`;
+    }
+  }
+
+  return dedupedRooms;
+}
+
 function processTime(appointmentTime) {
   // Graph API returns dateTime in UTC without 'Z' suffix
   // Append 'Z' to ensure correct UTC parsing regardless of server timezone
@@ -85,9 +123,9 @@ async function getRoomAddresses(msalClient) {
         }
       }
 
-      cachedRoomAddresses = roomAddresses;
+      cachedRoomAddresses = resolveRoomAliasCollisions(roomAddresses);
       roomCacheTime = Date.now();
-      return roomAddresses;
+      return cachedRoomAddresses;
     } finally {
       roomAddressRefreshPromise = null;
     }

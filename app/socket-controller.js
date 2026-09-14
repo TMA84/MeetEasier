@@ -582,8 +582,8 @@ function validateDisplayParams(socket) {
 * @param {Object} socket - The Socket.IO socket object of the connected client
 */
 function registerConnectedClient(socket) {
-  const identifier = generateDisplayIdentifier(socket);
-  if (!identifier) {
+  const baseIdentifier = generateDisplayIdentifier(socket);
+  if (!baseIdentifier) {
     return;
   }
 
@@ -593,14 +593,38 @@ function registerConnectedClient(socket) {
   }
 
   const { displayType, roomAlias } = params;
+
+  // Two physically different kiosks can end up with the same displayClientId
+  // (e.g. disk-imaged/cloned devices that copied the same localStorage value).
+  // If the existing entry under this identifier is still actively connected
+  // AND represents a different display (different room/type), treat this as
+  // a collision rather than merging - otherwise config pushes and power
+  // management for one kiosk would silently cross-wire onto the other.
+  const existingForBase = connectedDisplayClients.get(baseIdentifier);
+  let identifier = baseIdentifier;
+  if (
+    existingForBase &&
+    existingForBase.socketIds.size > 0 &&
+    (existingForBase.roomAlias !== roomAlias || existingForBase.displayType !== displayType)
+  ) {
+    identifier = `${baseIdentifier}::${roomAlias || displayType}`;
+    console.warn(
+      `Display identifier collision detected for "${baseIdentifier}" ` +
+      `(existing: ${existingForBase.displayType}/${existingForBase.roomAlias}, ` +
+      `new: ${displayType}/${roomAlias}). Tracking separately as "${identifier}". ` +
+      'This usually means two kiosk devices share the same displayClientId (cloned image) - ' +
+      'consider resetting the client id on one of them.'
+    );
+  }
+
   const nowIso = new Date().toISOString();
-  
+
   // Extract IP address from socket
   const rawIpAddress = socket?.handshake?.headers?.['x-forwarded-for']?.split(',')[0]?.trim()
     || socket?.handshake?.headers?.['x-real-ip']
     || socket?.handshake?.address
     || 'unknown';
-  
+
   console.log(`Raw IP address for client ${identifier}: ${rawIpAddress}`);
   const ipAddress = normalizeIpAddress(rawIpAddress);
   console.log(`Normalized IP address for client ${identifier}: ${ipAddress}`);
