@@ -4,6 +4,7 @@
 * and custom). Provides the complete set of UI labels, messages, and configuration
 * text used throughout the admin interface, with runtime override support.
 */
+import { getAppLanguage } from '../utils/app-language.js';
 
 const defaultAdminTranslations = {
   "de": {
@@ -854,13 +855,11 @@ const normalizeAdminTranslations = (rawTranslations) => {
 };
 
 /**
-* Detects the admin panel language from the browser locale.
+* Detects the admin panel language (respects a `?lang=` override, falling
+* back to the browser locale).
 * @returns {string} Two-letter language code
 */
-export const getAdminLanguage = () => {
-  const browserLang = navigator.language || navigator.userLanguage || 'en';
-  return browserLang.split('-')[0].toLowerCase();
-};
+export const getAdminLanguage = () => getAppLanguage();
 
 /**
 * Returns the default admin translations object.

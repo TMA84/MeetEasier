@@ -1302,6 +1302,19 @@ Language is automatically detected from browser settings:
 - `navigator.language` or `navigator.userLanguage`
 - Falls back to English if language not supported
 
+#### Forcing a Language via URL
+
+Add `?lang=<code>` to any display URL to override the browser/OS locale (both
+UI text and date/time formatting), e.g.:
+
+```
+http://your-server:8080/single-room/venus?lang=fr
+http://your-server:8080/flightboard?lang=fr
+```
+
+Useful when a kiosk's OS locale can't be changed but the displayed language
+should differ from it. Falls back to browser detection if omitted or invalid.
+
 #### Time Format
 
 Time format is automatically determined by locale:

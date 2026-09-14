@@ -10,6 +10,7 @@ import { toOverrideState, fromOverrideState, getLanguageDisplayName } from './he
 import { hexToHSL, hslToHex } from './helpers/color-helpers.js';
 import { normalizeOverrideKey, ADMIN_TAB_SECTIONS, TAB_TO_SECTION, BASE_TRANSLATION_GROUP_COLLAPSE_STATE } from './helpers/admin-utils.js';
 import { loadSidebarConfig } from './services/admin-config-loader.js';
+import { getAppLanguage } from '../../utils/app-language.js';
 
 import { useAdminAuth } from './hooks/useAdminAuth.js';
 import { useAdminConfig } from './hooks/useAdminConfig.js';
@@ -264,8 +265,7 @@ const Admin = () => {
   const selectedAdminTranslation = { ...(defaultAdminTranslations.en || {}), ...(defaultAdminTranslations[activeTranslationLanguage] || {}), ...(config.currentAdminTranslations?.[activeTranslationLanguage] || {}) };
   const roomOverrideEntries = Object.entries(config.roomFeatureFlags || {}).sort(([a], [b]) => a.localeCompare(b));
   const roomGroupOverrideEntries = Object.entries(config.roomGroupFeatureFlags || {}).sort(([a], [b]) => a.localeCompare(b));
-  const browserLang = navigator.language || navigator.userLanguage;
-  const lang = browserLang.split('-')[0];
+  const lang = getAppLanguage();
   const apiTokenSourceLabelMap = { unset: t.apiTokenSourceUnset || 'Not configured', default: t.apiTokenSourceDefault || 'Default', runtime: t.apiTokenSourceRuntime || 'Admin Runtime', env: t.apiTokenSourceEnv || 'Environment (.env)' };
 
   const sectionDefinitions = [

@@ -5,6 +5,7 @@
 *              settings such as webhook configuration, fetch timeout, and retry parameters.
 */
 import React from 'react';
+import { getAppLocale } from '../../../utils/app-language.js';
 
 const OAuthCurrentConfig = ({ t, currentOauthClientId, currentOauthAuthority, currentOauthHasClientSecret, oauthLastUpdated, authMethod }) => (
   <div className="admin-current-config">
@@ -67,9 +68,9 @@ const CertificateActive = ({ t, certificateInfo, onDownloadCertificate, onDelete
       <div className="config-item"><span className="config-label">{t.certThumbprintLabel || 'Thumbprint (SHA-256)'}</span><span className="config-value" style={{ fontFamily: 'monospace', fontSize: '0.85em', wordBreak: 'break-all' }}>{certificateInfo.thumbprintSHA256}</span></div>
       <div className="config-item"><span className="config-label">{t.certThumbprintSha1Label || 'Thumbprint (SHA-1)'}</span><span className="config-value" style={{ fontFamily: 'monospace', fontSize: '0.85em', wordBreak: 'break-all' }}>{certificateInfo.thumbprintSHA1 || '-'}</span></div>
       <div className="config-item"><span className="config-label">{t.certCommonNameLabel || 'Common Name'}</span><span className="config-value">{certificateInfo.commonName}</span></div>
-      <div className="config-item"><span className="config-label">{t.certValidFromLabel || 'Valid From'}</span><span className="config-value">{certificateInfo.notBefore ? new Date(certificateInfo.notBefore).toLocaleDateString(navigator.language || 'de-DE') : '-'}</span></div>
-      <div className="config-item"><span className="config-label">{t.certValidUntilLabel || 'Valid Until'}</span><span className="config-value">{certificateInfo.notAfter ? new Date(certificateInfo.notAfter).toLocaleDateString(navigator.language || 'de-DE') : '-'}</span></div>
-      <div className="config-item"><span className="config-label">{t.certCreatedAtLabel || 'Created'}</span><span className="config-value">{certificateInfo.createdAt ? new Date(certificateInfo.createdAt).toLocaleString(navigator.language || 'de-DE') : '-'}</span></div>
+      <div className="config-item"><span className="config-label">{t.certValidFromLabel || 'Valid From'}</span><span className="config-value">{certificateInfo.notBefore ? new Date(certificateInfo.notBefore).toLocaleDateString(getAppLocale()) : '-'}</span></div>
+      <div className="config-item"><span className="config-label">{t.certValidUntilLabel || 'Valid Until'}</span><span className="config-value">{certificateInfo.notAfter ? new Date(certificateInfo.notAfter).toLocaleDateString(getAppLocale()) : '-'}</span></div>
+      <div className="config-item"><span className="config-label">{t.certCreatedAtLabel || 'Created'}</span><span className="config-value">{certificateInfo.createdAt ? new Date(certificateInfo.createdAt).toLocaleString(getAppLocale()) : '-'}</span></div>
     </div>
     <div style={{ marginTop: '1em', display: 'flex', gap: '0.5em', flexWrap: 'wrap' }}>
       <button type="button" className="admin-submit-button" onClick={onDownloadCertificate}>{t.certDownloadButton || 'Download Certificate (.pem)'}</button>

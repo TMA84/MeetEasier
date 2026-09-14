@@ -4,13 +4,15 @@
 * to detect the browser locale, determine 12-hour vs 24-hour clock preference,
 * and format times and time ranges accordingly.
 */
+import { getAppLocale } from './app-language.js';
 
 /**
-* Gets the browser locale string.
-* @returns {string} Browser locale
+* Gets the app's resolved locale string (respects a `?lang=` override,
+* falling back to the browser locale).
+* @returns {string} Locale
 */
 export function getLocale() {
-  return navigator.language || navigator.userLanguage || 'en-US';
+  return getAppLocale();
 }
 
 /**

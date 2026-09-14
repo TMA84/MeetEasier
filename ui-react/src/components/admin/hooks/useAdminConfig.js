@@ -14,8 +14,9 @@ import {
   loadSyncStatus as fetchSyncStatus, loadVersion as fetchVersion
 } from '../services/admin-config-loader.js';
 import { fetchMqttConfig, fetchMqttStatus } from '../services/mqtt-commands.js';
+import { getAppLocale } from '../../../utils/app-language.js';
 
-const fmtDate = (d) => d ? new Date(d).toLocaleString(navigator.language || 'de-DE') : '-';
+const fmtDate = (d) => d ? new Date(d).toLocaleString(getAppLocale()) : '-';
 const pInt = (v, min, def) => Number.isFinite(Number(v)) ? Math.max(parseInt(v, 10), min) : def;
 
 /** Initial config state — all domain state in one object for batch updates. */

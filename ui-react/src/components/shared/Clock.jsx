@@ -5,6 +5,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { formatTime } from '../../utils/time-format.js';
+import { getAppLocale } from '../../utils/app-language.js';
 
 /**
 * Shared Clock component
@@ -43,17 +44,7 @@ class Clock extends Component {
     clearInterval(this.timerID);
   }
 
-  /**
-  * Get browser language for date formatting
-  * @returns {string} Language code (e.g., 'en', 'de')
-  */
-  getLanguage = () => {
-    const browserLang = navigator.language || navigator.userLanguage;
-    return browserLang.split('-')[0];
-  }
-
   render() {
-    const lang = this.getLanguage();
     const { variant } = this.props;
     const dateOptions = {
       weekday: 'long',
@@ -61,7 +52,7 @@ class Clock extends Component {
       month: 'long',
       day: 'numeric'
     };
-    const locale = lang === 'de' ? 'de-DE' : 'en-US';
+    const locale = getAppLocale();
 
     if (variant === 'navbar') {
       return (

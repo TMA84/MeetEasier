@@ -7,6 +7,7 @@
 */
 
 import { applyDisplayI18nConfig } from './display-translations.js';
+import { getAppLanguage } from '../utils/app-language.js';
 
 const defaultMaintenanceMessages = {
   en: {
@@ -118,12 +119,12 @@ export const loadMaintenanceMessages = async () => {
 };
 
 /**
-* Detects the maintenance language from the browser locale.
+* Detects the maintenance language (respects a `?lang=` override, falling
+* back to the browser locale).
 * @returns {string} Two-letter language code
 */
 export const getMaintenanceLanguage = () => {
-  const browserLang = navigator.language || navigator.userLanguage || 'en';
-  const language = browserLang.split('-')[0].toLowerCase();
+  const language = getAppLanguage();
   return maintenanceMessages[language] ? language : 'en';
 };
 

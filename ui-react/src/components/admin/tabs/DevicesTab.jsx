@@ -3,6 +3,7 @@
 * @description Admin panel tab for managing connected displays and devices. Shows a table of displays with status, connection type, metrics, and actions (power management, MQTT refresh/reboot). Also provides tracking settings, IP whitelist configuration, and reverse proxy options.
 */
 import React from 'react';
+import { getAppLocale } from '../../../utils/app-language.js';
 
 function getDisplayStatus(display) {
   const hasSocketIO = display.socketIO && display.socketIO.connected;
@@ -69,7 +70,7 @@ const DisplayRow = ({ display, onOpenPowerManagement, onOpenTouchkioModal, onMqt
       </td>
       <td className="devices-metrics-cell">
         {hasMQTT && (<div><div>CPU: {display.mqtt.cpuUsage !== undefined ? `${display.mqtt.cpuUsage.toFixed(1)}%` : '-'}</div><div>Mem: {display.mqtt.memoryUsage !== undefined ? `${display.mqtt.memoryUsage.toFixed(1)}%` : '-'}</div><div>Temp: {display.mqtt.temperature !== undefined ? `${display.mqtt.temperature.toFixed(1)}°C` : '-'}</div></div>)}
-        {hasSocketIO && !hasMQTT && (<div className="devices-timestamp">{display.socketIO.connectedAt ? new Date(display.socketIO.connectedAt).toLocaleTimeString() : '-'}</div>)}
+        {hasSocketIO && !hasMQTT && (<div className="devices-timestamp">{display.socketIO.connectedAt ? new Date(display.socketIO.connectedAt).toLocaleTimeString(getAppLocale()) : '-'}</div>)}
       </td>
       <td>
         <div className="devices-actions-cell">

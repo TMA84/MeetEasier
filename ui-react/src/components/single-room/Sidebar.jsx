@@ -5,7 +5,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 
 import Clock from './Clock';
-import { uses12HourFormat } from '../../utils/time-format';
+import { uses12HourFormat, getLocale } from '../../utils/time-format';
 import { AppointmentShape } from '../shared/prop-types.js';
 
 /**
@@ -186,12 +186,12 @@ class Sidebar extends Component {
                   if (appointment.Start && appointment.End) {
                     try {
                       const hour12 = uses12HourFormat();
-                      const startTime = new Date(parseInt(appointment.Start, 10)).toLocaleTimeString([], {
+                      const startTime = new Date(parseInt(appointment.Start, 10)).toLocaleTimeString(getLocale(), {
                         hour: '2-digit',
                         minute: '2-digit',
                         hour12: hour12
                       });
-                      const endTime = new Date(parseInt(appointment.End, 10)).toLocaleTimeString([], {
+                      const endTime = new Date(parseInt(appointment.End, 10)).toLocaleTimeString(getLocale(), {
                         hour: '2-digit',
                         minute: '2-digit',
                         hour12: hour12
