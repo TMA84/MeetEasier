@@ -16,6 +16,7 @@ import { getDisplayClientId } from '../../utils/display-client-id.js';
 import { initPowerManagement } from '../../utils/power-management.js';
 import { fetchMaintenanceStatus, setupHeartbeat, createMaintenanceHandler } from '../shared/display-utils.js';
 import { getConnectionMonitor } from '../../utils/connection-monitor.js';
+import { fetchWithRetry } from '../../utils/fetch-with-timeout.js';
 
 /**
 * Flightboard component - Main display showing all meeting rooms
@@ -48,10 +49,13 @@ class Flightboard extends Component {
 
   /**
   * Fetch room data from the API
-  * Called on component mount to get initial room data
+  * Called on component mount to get initial room data.
+  * Uses a timeout + retry so a stalled connection (e.g. a kiosk on
+  * marginal Wi-Fi) fails fast and is retried, instead of leaving the
+  * loading spinner stuck forever.
   */
   getRoomData() {
-    return fetch('/api/rooms')
+    return fetchWithRetry('/api/rooms')
       .then((response) => response.json())
       .then((data) => {
         if (!data.error) {

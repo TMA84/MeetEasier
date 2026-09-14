@@ -3,16 +3,20 @@
  * @description Data fetching service for the single-room Display component.
  *              Pure async functions with no React dependency — easy to test.
  */
+import { fetchWithRetry } from '../../utils/fetch-with-timeout.js';
 
 /**
  * Fetch single room data from API.
+ * Uses a timeout + retry so a stalled connection (e.g. a kiosk on marginal
+ * Wi-Fi) fails fast and is retried, instead of leaving the caller's promise
+ * - and the loading spinner it gates - pending forever.
  * @param {string} alias - Room alias
  * @returns {Promise<Object|null>} Room object or null if not found
  */
 export async function fetchRoomData(alias) {
   if (!alias) return null;
 
-  const response = await fetch(`/api/rooms/${encodeURIComponent(alias)}`);
+  const response = await fetchWithRetry(`/api/rooms/${encodeURIComponent(alias)}`);
 
   if (response.status === 404) {
     return { Name: '', Busy: true, NotFound: true, Appointments: [] };

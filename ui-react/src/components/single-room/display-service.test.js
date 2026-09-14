@@ -37,7 +37,7 @@ describe('display-service', () => {
 
       const result = await fetchRoomData('room-a');
       expect(result).toEqual(room);
-      expect(fetchMock).toHaveBeenCalledWith('/api/rooms/room-a');
+      expect(fetchMock).toHaveBeenCalledWith('/api/rooms/room-a', expect.objectContaining({ signal: expect.any(AbortSignal) }));
     });
 
     it('returns NotFound object for 404', async () => {
@@ -51,7 +51,7 @@ describe('display-service', () => {
     it('encodes alias in URL', async () => {
       fetchMock.mockResolvedValue({ status: 200, json: async () => ({}) });
       await fetchRoomData('room with spaces');
-      expect(fetchMock).toHaveBeenCalledWith('/api/rooms/room%20with%20spaces');
+      expect(fetchMock).toHaveBeenCalledWith('/api/rooms/room%20with%20spaces', expect.objectContaining({ signal: expect.any(AbortSignal) }));
     });
   });
 

@@ -119,7 +119,7 @@ describe('Single Room Display Component', () => {
       setupDisplayFetchMocks(global.fetch);
       render(<Display alias="conference-a" />);
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/api/rooms/conference-a');
+        expect(global.fetch).toHaveBeenCalledWith('/api/rooms/conference-a', expect.objectContaining({ signal: expect.any(AbortSignal) }));
       });
     });
 
@@ -193,10 +193,11 @@ describe('Single Room Display Component', () => {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       });
       render(<Display alias="conference-a" />);
+      // fetchRoomData() retries on failure (fetchWithRetry), so this can take a few seconds
       await waitFor(() => {
         expect(screen.getByTestId('room-status-block')).toBeInTheDocument();
-      });
-    });
+      }, { timeout: 8000 });
+    }, 10000);
   });
 
   describe('Error Boundary', () => {

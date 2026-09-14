@@ -90,11 +90,12 @@ describe('Flightboard coverage', () => {
       return Promise.resolve({ json: () => Promise.resolve({ flightboardDarkMode: true }) });
     });
     render(<Flightboard filter="" />);
+    // getRoomData() retries on failure (fetchWithRetry), so this can take a few seconds
     await waitFor(() => {
       expect(screen.getByText('Failed to fetch room data')).toBeInTheDocument();
-    });
+    }, { timeout: 8000 });
     consoleSpy.mockRestore();
-  });
+  }, 10000);
 
   it('renders maintenance mode when enabled', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {

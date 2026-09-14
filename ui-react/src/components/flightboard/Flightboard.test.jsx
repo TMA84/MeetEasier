@@ -102,7 +102,7 @@ describe('Flightboard Component', () => {
       render(<Flightboard />);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/api/rooms');
+        expect(global.fetch).toHaveBeenCalledWith('/api/rooms', expect.objectContaining({ signal: expect.any(AbortSignal) }));
       });
     });
   });
@@ -125,14 +125,15 @@ describe('Flightboard Component', () => {
     });
 
     it('displays error message when fetch fails', async () => {
-      global.fetch.mockRejectedValueOnce(new Error('Network error'));
+      global.fetch.mockRejectedValue(new Error('Network error'));
 
       render(<Flightboard />);
 
+      // getRoomData() retries on failure (fetchWithRetry), so this can take a few seconds
       await waitFor(() => {
         expect(screen.getByText(/Failed to fetch room data/)).toBeInTheDocument();
-      });
-    });
+      }, { timeout: 8000 });
+    }, 10000);
   });
 
   describe('Filtering', () => {
