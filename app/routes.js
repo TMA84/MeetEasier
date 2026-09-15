@@ -4062,25 +4062,29 @@ module.exports = function(app) {
     }
   });
 
-  // DELETE /api/connected-clients/:clientId — Removes a disconnected display client
+  // DELETE /api/connected-clients/:clientId — Removes a disconnected display client.
+  // A display row can be backed by a Socket.IO-tracked entry, an MQTT/Touchkio-tracked
+  // entry, or both (see GET /api/displays merge logic) - try both stores and succeed
+  // if either had something to remove, so offline MQTT-only kiosks can be deleted too.
   app.delete('/api/connected-clients/:clientId', checkApiToken, function(req, res) {
     try {
       const socketController = require('./socket-controller');
+      const mqttPowerBridge = require('./touchkio');
       const clientId = req.params.clientId;
-      
+
       if (!clientId) {
         return res.status(400).json({ error: 'Client ID is required' });
       }
 
-      if (typeof socketController.removeDisplayClient === 'function') {
-        const removed = socketController.removeDisplayClient(clientId);
-        if (removed) {
-          res.json({ success: true, message: 'Display client removed successfully' });
-        } else {
-          res.status(404).json({ error: 'Display client not found or still connected' });
-        }
+      const removedSocketClient = typeof socketController.removeDisplayClient === 'function'
+        && socketController.removeDisplayClient(clientId);
+      const removedMqttDevice = typeof mqttPowerBridge.removeDisplayState === 'function'
+        && mqttPowerBridge.removeDisplayState(clientId);
+
+      if (removedSocketClient || removedMqttDevice) {
+        res.json({ success: true, message: 'Display client removed successfully' });
       } else {
-        res.status(500).json({ error: 'Remove function not available' });
+        res.status(404).json({ error: 'Display client not found or still connected' });
       }
     } catch (err) {
       console.error('Error removing display client:', err);

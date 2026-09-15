@@ -1251,6 +1251,32 @@ function getAllDisplays() {
 }
 
 /**
+* Removes a device's tracked MQTT state (hostname mapping, desired config,
+* screenshot cache) so it no longer appears in the admin panel's device
+* list. Only allowed while the device is offline (no MQTT message within
+* the same 5-minute window used elsewhere to consider it "connected") -
+* otherwise its next routine status message would just recreate the entry.
+* @param {string} hostname - Display hostname or device ID
+* @returns {boolean} true if a tracked, offline device was found and removed
+*/
+function removeDisplayState(hostname) {
+  const deviceId = getDeviceIdFromHostname(hostname);
+  if (!deviceId || !displayStates.has(deviceId)) return false;
+
+  const state = displayStates.get(deviceId);
+  const isOnline = !!(state.lastSeen && (Date.now() - new Date(state.lastSeen).getTime()) < 5 * 60 * 1000);
+  if (isOnline) return false;
+
+  displayStates.delete(deviceId);
+  deviceIdToHostname.delete(deviceId);
+  desiredConfig.delete(deviceId);
+  saveDesiredConfig();
+  screenshotCache.delete(deviceId);
+  console.log(`[Touchkio] Removed tracked device: ${hostname} (${deviceId})`);
+  return true;
+}
+
+/**
 * Returns the latest screenshot for a device.
 * @param {string} deviceIdOrHostname - Device ID or hostname
 * @returns {Object|null} { data: Buffer, timestamp: string, contentType: string } or null
@@ -1303,6 +1329,7 @@ module.exports = {
   fetchLatestTouchkioVersion,
   getDisplayStates,
   getAllDisplays,
+  removeDisplayState,
   getScreenshot,
   triggerPowerCommand
 };
