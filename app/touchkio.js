@@ -444,7 +444,63 @@ function handlePageUrl(deviceId, displayState, payloadStr) {
       console.log(`[Touchkio] Page URL updated: ${payloadStr}`);
     }
   }
-  if (!desiredConfig.has(deviceId)) { captureInitialConfig(deviceId); }
+  if (!desiredConfig.has(deviceId)) {
+    captureInitialConfig(deviceId);
+  } else if (displayState._justRebooted) {
+    displayState._justRebooted = false;
+    trustReportedPageUrlAfterReboot(deviceId, displayState);
+  }
+}
+
+/**
+* Handles the device's reported uptime and detects an actual device reboot
+* (uptime resets to a smaller value than last seen - unlike a server
+* restart, which just clears our in-memory state entirely).
+*/
+function handleUptime(deviceId, displayState, payload) {
+  const newUptime = parseFloat(payload);
+  const oldUptime = displayState.uptime;
+  const rebooted = typeof oldUptime === 'number' && !isNaN(oldUptime) && !isNaN(newUptime) && newUptime < oldUptime;
+  displayState.uptime = newUptime;
+  if (!rebooted) return;
+
+  displayState._justRebooted = true;
+  if (displayState.pageUrl) {
+    displayState._justRebooted = false;
+    trustReportedPageUrlAfterReboot(deviceId, displayState);
+  }
+}
+
+/**
+* Trusts a freshly-rebooted device's own reported pageUrl over whatever is
+* stored as its desired config. Unlike the stored value (which can be a
+* stale/bad auto-captured entry), the URL a device shows right after its
+* own reboot is a reliable ground truth - it comes from the device's own
+* local kiosk startup configuration, not from us re-pushing anything. Runs
+* through the same duplicate check as the initial auto-capture.
+*/
+function trustReportedPageUrlAfterReboot(deviceId, displayState) {
+  const url = displayState.pageUrl;
+  if (!url) return;
+
+  const hn = deviceIdToHostname.get(deviceId) || deviceId;
+  const duplicateEntry = [...desiredConfig.entries()].find(([id, cfg]) => id !== deviceId && cfg.pageUrl === url);
+  if (duplicateEntry) {
+    const [duplicateDeviceId] = duplicateEntry;
+    const dupHn = deviceIdToHostname.get(duplicateDeviceId) || duplicateDeviceId;
+    console.warn(`[Touchkio] Not trusting post-reboot pageUrl for ${hn} (${deviceId}) — "${url}" is already assigned to ${dupHn} (${duplicateDeviceId}). Set the correct URL manually via the admin panel.`);
+    return;
+  }
+
+  const config = desiredConfig.get(deviceId) || {};
+  if (config.pageUrl === url) return;
+
+  console.log(`[Touchkio] Device ${hn} (${deviceId}) rebooted and reports "${url}" — correcting stored pageUrl (was "${config.pageUrl || 'none'}").`);
+  config.pageUrl = url;
+  config.lastUpdated = new Date().toISOString();
+  config.source = 'device-reboot';
+  desiredConfig.set(deviceId, config);
+  saveDesiredConfig();
 }
 
 /**
@@ -538,7 +594,7 @@ const TOPIC_HANDLERS = [
   { pattern: 'processor_usage', handler: (ctx) => { ctx.displayState.cpuUsage = Math.round(parseFloat(ctx.payload) * 10) / 10; } },
   { pattern: 'memory_usage', handler: (ctx) => { ctx.displayState.memoryUsage = Math.round(parseFloat(ctx.payload) * 10) / 10; } },
   { pattern: 'processor_temperature', handler: (ctx) => { ctx.displayState.temperature = Math.round(parseFloat(ctx.payload) * 10) / 10; } },
-  { pattern: 'up_time', handler: (ctx) => { ctx.displayState.uptime = parseFloat(ctx.payload); } },
+  { pattern: 'up_time', handler: (ctx) => handleUptime(ctx.deviceId, ctx.displayState, ctx.payload) },
   { pattern: 'network_address', handler: (ctx) => handleStringState(ctx.deviceId, ctx.displayState, 'networkAddress', ctx.payloadStr, 'Network address') },
   { pattern: 'app/version', handler: (ctx) => handleAppVersion(ctx.deviceId, ctx.displayState, ctx.payloadStr) },
 ];
