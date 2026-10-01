@@ -91,7 +91,7 @@ async function fetchLatestTouchkioVersion() {
   try {
     const https = require('https');
     const data = await new Promise((resolve, reject) => {
-      const req = https.get('https://api.github.com/repos/leukipp/touchkio/releases/latest', {
+      const req = https.get('https://api.github.com/repos/TMA84/touchkio/releases/latest', {
         headers: { 'User-Agent': 'MeetEasier', 'Accept': 'application/vnd.github.v3+json' },
         timeout: 5000
       }, (res) => {
