@@ -59,6 +59,15 @@ const desiredConfig = new Map();
 const lastErrorState = new Map();
 
 /**
+* Tracks the most recent "Load Error" log entry (time + message) already
+* responded to per device, to avoid re-sending a refresh command every
+* time the error history is republished while the same failure is still
+* the latest one reported.
+* @type {Map<string, string>}
+*/
+const lastHandledLoadError = new Map();
+
+/**
 * Stores the latest screenshot image per device as a Buffer.
 * Key: deviceId, Value: { data: Buffer, timestamp: string, contentType: string }
 * @type {Map<string, Object>}
@@ -91,7 +100,7 @@ async function fetchLatestTouchkioVersion() {
   try {
     const https = require('https');
     const data = await new Promise((resolve, reject) => {
-      const req = https.get('https://api.github.com/repos/TMA84/touchkio/releases/latest', {
+      const req = https.get('https://api.github.com/repos/leukipp/touchkio/releases/latest', {
         headers: { 'User-Agent': 'MeetEasier', 'Accept': 'application/vnd.github.v3+json' },
         timeout: 5000
       }, (res) => {
@@ -513,9 +522,57 @@ function handleErrors(deviceId, displayState, payloadStr) {
     displayState.lastErrorUpdate = new Date().toISOString();
     checkUnsupportedHardware(displayState, errorData);
     logErrorStateChange(deviceId, errorData);
+    checkLoadErrorRecovery(deviceId, errorData);
   } catch (e) {
     console.error(`[Touchkio] Failed to parse error data for ${deviceId}:`, e);
   }
+}
+
+/**
+* Finds the most recent "Load Error" entry in Touchkio's error history
+* (grouped by minute, newest first - see updateErrors() in
+* leukipp/touchkio js/integration.js).
+* @returns {string|null} "<minute>|<message>" for the latest load error, or null
+*/
+function findLatestLoadError(errorData) {
+  for (const timeKey of Object.keys(errorData)) {
+    for (const log of errorData[timeKey]) {
+      if (typeof log.ERROR === 'string' && log.ERROR.startsWith('Load Error:')) {
+        return `${timeKey}|${log.ERROR}`;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+* Detects a webview load failure (e.g. a transient network drop) reported
+* via Touchkio's stock "errors" MQTT topic and sends a refresh command to
+* recover it - no fork/patch of Touchkio itself required.
+*
+* Touchkio's own page_url reporting masks a failed load as its normal
+* target URL (publishPageUrl in js/integration.js substitutes the
+* configured default URL whenever the webview's current URL starts with
+* "data:", which is what its internal error page uses), so there is no
+* other reliable server-side signal that a device is stuck - without
+* this, only a manual refresh/reboot recovers it, even long after
+* connectivity returns.
+*
+* Safe to call liberally: the refresh command reloads the default URL
+* when currently on the data: error page, or just refreshes the current
+* page otherwise (see reloadView() in js/webview.js) - a harmless no-op
+* if the device isn't actually stuck.
+*/
+function checkLoadErrorRecovery(deviceId, errorData) {
+  const latest = findLatestLoadError(errorData);
+  if (!latest || lastHandledLoadError.get(deviceId) === latest) {
+    return;
+  }
+  lastHandledLoadError.set(deviceId, latest);
+
+  const hostname = deviceIdToHostname.get(deviceId) || deviceId;
+  console.log(`[Touchkio] Detected stuck load for ${hostname} (${deviceId}), sending refresh: ${latest}`);
+  sendRefreshCommand(deviceId);
 }
 
 /**
